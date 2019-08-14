@@ -1,10 +1,3 @@
-##############################################################################
-# JSON serialization defaults
-# This is a much more primitive version of https://jsonpickle.github.io/,
-# In particular, it does not handle the case of circular object references
-# (and in fact has an infinite loop if they exist), but I don't want any
-# external package dependencies, and this is good enough for our case.
-
 from abc import abstractmethod, ABC
 from _ctypes import PyObj_FromPtr
 import json
@@ -18,7 +11,7 @@ class JSONSerializable(ABC):
         raise NotImplementedError()
 
 
-def json_encode(obj: JSONSerializable):
+def json_encode(obj: JSONSerializable) -> str:
     return json.dumps(obj.to_json_serializable(), cls=SuppressableIndentEncoder, indent=2)
 
 
@@ -39,13 +32,14 @@ class SuppressableIndentEncoder(json.JSONEncoder):
     option given by :func:`json.dumps` with argument `indent` set
     (which is unreadably sparse since it puts every single container item in
     the whole JSON tree on a separate line),
-    and the (also unreadable) default with no whitespace.
+    and the (also unreadable) minified default with no whitespace.
     Classes should define themselves as a subclass of :any:`json_utils.JSONSerializable`,
-    define a `to_json_serializable` method,
+    define a `to_json_serializable` method (which should return a serializable Python object
+    as defined here: https://docs.python.org/3/library/json.html#py-to-json-table),
     and wrap anything that should not be indented in :any:`json_utils.NoIndent`.
     The subtree underneath cannot contain another :any:`json_utils.NoIndent`,
     i.e., every root-to-left path should contain at most one :any:`json_utils.NoIndent`.
-    Taken from
+    Code taken from
     https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
     """
 
@@ -105,7 +99,14 @@ if __name__ == '__main__':
 ##############################################################################
 
 
-# old code below here
+# old code below here; decided not to automate the JSON as much, which allows fine-grain indent control
+
+##############################################################################
+# JSON serialization defaults
+# Below is a much more primitive version of https://jsonpickle.github.io/,
+# In particular, it does not handle the case of circular object references
+# (and in fact has an infinite loop if they exist), but I don't want any
+# external package dependencies, and this is good enough for our case.
 
 # def _is_json_serializable(obj):
 #     # This check is based on the following table:

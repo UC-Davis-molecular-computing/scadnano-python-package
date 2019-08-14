@@ -1,6 +1,6 @@
 import scadnano as sc
 
-if __name__ == "__main__":
+def main():
     helices = []
     num_helices,max_bases = 30,2000
     # num_helices, max_bases = 20, 1000
@@ -14,3 +14,6 @@ if __name__ == "__main__":
     # design.write_to_file("output_designs/few-small-helices.dna")
     # design.write_to_file("output_designs/few-small-helices-11-bases.dna")
     # design.write_to_file("output_designs/1-helix-3-bases.dna")
+
+if __name__ == "__main__":
+    main()

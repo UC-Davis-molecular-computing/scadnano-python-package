@@ -5,23 +5,11 @@ by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_.
 
 import enum
 from dataclasses import dataclass, field
-from typing import Tuple, List, Dict, Set
-import m13
+from typing import Tuple, List, Dict
 from collections import defaultdict, OrderedDict
 
 from json_utils import JSONSerializable, json_encode, NoIndent
-
-CURRENT_VERSION = "0.0.1"
-
-Y_GRID_COORDINATE_SCALE = 30
-"""The default main view SVG y-coordinate of a :any:`Helix` with index `idx` is 
-`idx * Y_GRID_COORDINATE_SCALE`."""
-
-m13_sequence = m13.sequence
-"""
-The M13mp18 DNA sequence, starting from cyclic rotation 5588, as defined in
-`GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
-"""  # noqa (suppress PEP warning)
+import m13
 
 
 ##############################################################################
@@ -44,7 +32,6 @@ class Color(JSONSerializable):
     def to_json_serializable(self):
         # Return object representing this Color that is JSON serializable.
         return NoIndent(self.__dict__)
-
 
 class ColorCycler:
     """
@@ -118,73 +105,166 @@ class Grid(str, enum.Enum):
     hex = "hex"
     """Hexagonal lattice."""
 
+    honeycomb = "honeycomb"
+    """Honeycomb lattice."""
 
-@enum.unique
-class Direction(str, enum.Enum):
-    """Two directions one can move on a :any:`Helix`.
-    Corresponds to left and right in the main view."""
-
-    left = "left"
-    """ Direction of smaller base offset values on a :any:`Helix`.
-    The leftmost offset of a :any:`Substrand` is :any:`Substrand.start`. """
-
-    right = "right"
-    """ Direction of larger base offset values on a :any:`Helix`.
-    The rightmost offset of a :any:`Substrand` is :any:`Substrand.end`-1. """
+    none = "none"
+    """No fixed grid."""
 
 
 # convenience names for users
-left = Direction.left
-right = Direction.right
+left = False
+right = True
 square = Grid.square
 hexagonal = Grid.hex  # should not use identifier "hex" because that's a Python built-in function
+honeycomb = Grid.honeycomb
+
+##########################################################################
+## constants
+
+current_version: str = "0.0.1"
+
+default_major_tick_distance: int = 8
+
+default_grid: Grid = Grid.none
+
+base_width_svg: float = 10.0
+"""Width of a single base in the SVG main view of scadnano."""
+
+base_height_svg: float = 10.0
+"""Height of a single base in the SVG main view of scadnano."""
+
+distance_between_helices_svg: float = (base_width_svg * 2.5 / 0.34)
+"""Distance between tops of two consecutive helices (using default positioning rules).
+
+This is set to (base_width_svg * 2.5/0.34) based on the following calculation,
+to attempt to make the DNA appear to scale in 2D drawings:
+The width of one base pair of double-stranded DNA bp is 0.34 nm.
+In a DNA origami, AFM images estimate that the average distance between adjacent double helices is 2.5 nm.
+(A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
+in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
+lattices---is larger than 2 nm.)
+Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
+"""
+
+DNA_base_wildcard = '?'
+"""Symbol to insert when a DNA sequence has been assigned to a strand through complementarity, but
+some regions of the strand are not bound to the strand that was just assigned. Also used in case the
+DNA sequence assigned to a strand is too short; the sequence is padded to make its length the same
+as the length of the strand."""
+
+y_grid_coordinate_scale = 30
+"""The default main view SVG y-coordinate of a :any:`Helix` with index `idx` is 
+`idx * y_grid_coordinate_scale`."""
+
+m13_sequence = m13.sequence
+"""
+The M13mp18 DNA sequence, starting from cyclic rotation 5588, as defined in
+`GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
+"""  # noqa (suppress PEP warning)
 
 
-def opposite(d: Direction) -> Direction:
-    return Direction.right if d is Direction.left else Direction.left
+##################
+## keys
+
+# DNADesign keys
+version_key = 'version'
+grid_key = 'grid'
+major_tick_distance_key = 'major_tick_distance'
+helices_key = 'helices'
+strands_key = 'strands'
+
+# Helix keys
+idx_key = 'idx'
+max_bases_key = 'max_bases'
+grid_position_key = 'grid_position'
+svg_position_key = 'svg_position'
+#position_key = 'position'; # support in the future
+
+# Strand keys
+color_key = 'color'
+dna_sequence_key = 'dna_sequence'
+substrands_key = 'substrands'
+
+# Substrand keys
+helix_idx_key = 'helix_idx'
+right_key = 'right'
+start_key = 'start'
+end_key = 'end'
+deletions_key = 'deletions'
+insertions_key = 'insertions'
+
+## end keys
+##################
+
+## end constants
+##########################################################################
 
 
 @dataclass
 class Helix(JSONSerializable):
     idx: int
-    """ idx: Index of helix (used helices must be given indices 0..num_helices-1). """
+    """ idx: Index of helix (used helices must be given indices 0..num_helices-1, 
+    unused helices must be given a negative index). """
 
-    max_bases: int
-    """Maximum length of :any:`Substrand` that can be drawn on this :any:`Helix`."""
+    max_bases: int = -1
+    """Maximum length of :any:`Substrand` that can be drawn on this :any:`Helix`. If unspecified,
+    it is calculated when the :any:`DNADesign` is instantiated as the largest :any:`Substrand.end`
+    index of any :any:`Substrand` in the design."""
 
     major_tick_distance: int = -1
     """If positive, overrides :any:`DNADesign.major_tick_distance`."""
 
-    grid_position: Tuple[int, int] = None
-    """`(x,y)` position of this helix in the side view grid, 
-    if :const:`Grid.square` or :const:`Grid.hex` is used
+    grid_position: Tuple[int, int, int] = None
+    """`(h,v,b)` position of this helix in the side view grid,
+    if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`DNADesign` containing this helix.
+    `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
+    and incrementing `v` moves down one helix in the grid. (down and to the left in the case of
+    the hexagonal or honeycomb lattice)
+    `b` goes in and out of the screen in the side view, and it is in units of "bases".
+    Incrementing `b` moves the whole helix one base into the screen.
+    In the main view, a helix with `b` = 1 would have its base offset 0 line up with base offset 1
+    of a helix with `b` = 0.
+    However, the default y svg_position for helices does not otherwise depend on grid_position.
+    The default is to list the y-coordinates in order by helix idx.
     
-    Default is `x` = 0, `y` = :any:`Helix.idx` ."""
+    Default is `h` = 0, `v` = :any:`Helix.idx`, `b` = 0."""
 
-    position: Tuple[float, float] = None
+    svg_position: Tuple[float, float] = None
     """`(x,y)` SVG coordinates of base offset 0 of this Helix in the main view. 
     
-    Default is `x` = 0, `y` = :any:`Helix.idx` * :any:`Y_GRID_COORDINATE_SCALE`."""
+    If `grid_position` and `position` are both omitted, then the default is 
+    `x` = 0, `y` = :any:`Helix.idx` * :any:`y_grid_coordinate_scale`.
+    
+    If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
+    `x` = b * BASE_WIDTH_SVG, `y` = :any:`Helix.idx` * :any:`y_grid_coordinate_scale`."""
 
-    used: bool = True
-    """If ``False``, this helix has :any:`Helix.idx` = ``None`` and appears only in the side view, 
-    not the main view. If ``True``, it appears in the main view and has a positive integer value
-    for :any:`Helix.idx`, though it may not actually have any :any:`Substrand`'s on it."""
+    @property
+    def used(self):
+        """If ``False``, this helix has :any:`Helix.idx` = ``None`` and appears only in the side view,
+        not the main view. If ``True``, it appears in the main view and has a positive integer value
+        for :any:`Helix.idx`, though it may not actually have any :any:`Substrand`'s on it."""
+        return self.idx >= 0
 
     def to_json_serializable(self):
         dct = self.__dict__
+
         if self.major_tick_distance <= 0:
-            del dct['major_tick_distance']
+            del dct[major_tick_distance_key]
+
+        if self.grid_position[2] == 0: # don't bother writing grid position base coordinate if it is 0
+            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+
         return NoIndent(dct)
 
     def __post_init__(self):
         if self.grid_position is None:
             # default to same x-coordinate 0, and y-coordinate = idx
-            self.grid_position = (0, self.idx)
-        if self.position is None:
+            self.grid_position = (0, self.idx, 0)
+        if self.svg_position is None:
             # default to same x- and z-coordinates 0, and y-coordinate scales with idx
-            self.position = (0, self.idx * Y_GRID_COORDINATE_SCALE)
+            self.svg_position = (0, self.idx * y_grid_coordinate_scale)
 
 
 @dataclass
@@ -197,21 +277,22 @@ class Substrand(JSONSerializable):
     helix_idx: int
     """:any:`Helix.idx` of the :any:`Helix` where this Substrand resides."""
 
-    direction: Direction
-    """The direction that the 3' end of this Substrand points along its :any:`Helix`."""
+    right: bool
+    """Whether the strand "points" right (i.e., its 3' end has a larger offset than its 5' end)."""
 
     start: int
     """
     The smallest offset position of any base on this Substrand
-    (3' end if :any:`Substrand.direction` = :any:`Direction.left`,
-    5' end if :any:`Substrand.direction` = :any:`Direction.right`).
+    (3' end if :any:`Substrand.right` = ``False``,
+    5' end if :any:`Substrand.right` = ``True``).
     """
 
+    # TODO: give option to user in constructor to specify that end is inclusive (default exclusive)
     end: int
     """
     1 plus the largest offset position of any base on this Substrand
-    (5' end if :any:`Substrand.direction` = :any:`Direction.left`,
-    3' end if :any:`Substrand.direction` = :any:`Direction.right`).
+    (5' end if :any:`Substrand.right` = ``False``,
+    3' end if :any:`Substrand.right` = ``True``).
     Note that the set of base offsets occupied by this Substrand is {start, start+1, ..., end-1},
     the same convention used in Python for slices of lists and strings.
     (e.g., :samp:`"abcdef"[1:3] == "bc"`)
@@ -229,14 +310,14 @@ class Substrand(JSONSerializable):
 
     def to_json_serializable(self):
         dct = OrderedDict()
-        dct['helix_idx'] = self.helix_idx
-        dct['direction'] = self.direction
-        dct['start'] = self.start
-        dct['end'] = self.end
+        dct[helix_idx_key] = self.helix_idx
+        dct[right_key] = self.right
+        dct[start_key] = self.start
+        dct[end_key] = self.end
         if len(self.deletions) > 0:
-            dct['deletions'] = self.deletions
+            dct[deletions_key] = self.deletions
         if len(self.insertions) > 0:
-            dct['insertions'] = self.insertions
+            dct[insertions_key] = self.insertions
         return NoIndent(dct)
 
     def dna_length(self):
@@ -262,33 +343,39 @@ class Substrand(JSONSerializable):
         return self.start <= offset < self.end
 
     def dna_sequence(self) -> str:
-        return self.dna_sequence_in(0, self.dna_length())
+        """Return DNA sequence of this Substrand."""
+        return self.dna_sequence_in(self.start, self.end - 1)
 
-    def dna_sequence_in(self, interval_left: int, interval_right: int):
-        """ Return DNA sequence of this Substrand in the interval of offsets given by
-        (`interval_left`, `interval_right`). """
+    def dna_sequence_in(self, offset_left: int, offset_right: int):
+        """Return DNA sequence of this Substrand in the interval of offsets given by
+        [`left`, `right`], INCLUSIVE.
+
+        WARNING: This is inclusive on both ends,
+        unlike other parts of this API where the right endpoint is exclusive.
+        This is to make the notion well-defined when one of the endpoints is on an offset with a
+        deletion or insertion."""
         strand_seq = self._parent_strand.dna_sequence
         if strand_seq is None:
             return None
 
-        # scaf index: 2     3  4     5
-        # offset:     0 D1  2  3 D4  5
-        #             +     -  -     +
-        #            /C     A  T     C\
-        #           | G     T  A     G |
-        # helix 0   | <     +  +     ] |
-        #           |       |  |       |
-        # helix 1   | [     +  +     > |
-        #           | T     T  A     C |
-        #            \A     A  T     G/
-        #             +     ]  <     +
-        # offset:     0 D1  2  3 D4  5
-        # scaf index: 1     0  7     6
-        str_idx_left = self.offset_to_str_idx(interval_left)
-        str_idx_right = self.offset_to_str_idx(interval_right)
-        if self.direction == Direction.left:  # these will be out of order and 1 too small if strand is left
-            str_idx_left, str_idx_right = str_idx_right + 1, str_idx_left + 1
-        subseq = strand_seq[str_idx_left:str_idx_right]
+        # if on a deletion, move inward until we are off of it
+        while offset_left in self.deletions:
+            offset_left += 1
+        while offset_right in self.deletions:
+            offset_right -= 1
+
+        if offset_left > offset_right:
+            return ''
+        if offset_left >= self.end:
+            return ''
+        if offset_right < 0:
+            return ''
+
+        str_idx_left = self.offset_to_str_idx(offset_left, self.right)
+        str_idx_right = self.offset_to_str_idx(offset_right, not self.right)
+        if not self.right:  # these will be out of order if strand is left
+            str_idx_left, str_idx_right = str_idx_right, str_idx_left
+        subseq = strand_seq[str_idx_left:str_idx_right + 1]
         return subseq
 
     def get_seq_start_idx(self) -> int:
@@ -302,30 +389,36 @@ class Substrand(JSONSerializable):
                                  for prev_substrand in substrands[:self_substrand_idx])
         return self_seq_idx_start
 
-    def offset_to_str_idx(self, offset: int) -> int:
-        """Convert from offset on this :any:`Substrand`'s :any:`Helix`
-        to string index on the parent :any:`Strand`'s DNA sequence."""
+    def offset_to_str_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
+        """ Convert from offset on this :any:`Substrand`'s :any:`Helix`
+        to string index on the parent :any:`Strand`'s DNA sequence.
+
+        If `offset_closer_to_5p` is ``True``, (this only matters if `offset` contains an insertion)
+        then the only leftmost string index corresponding to this offset is included,
+        otherwise up to the rightmost string index (including all insertions) is included."""
+        if offset in self.deletions:
+            raise ValueError(f'offset {offset} illegally contains a deletion from {self.deletions}')
+
+        # length adjustment for insertions depends on whether this is a left or right offset
+        len_adjust = self._net_ins_del_length_increase_from_5p_to(offset, offset_closer_to_5p)
 
         # get string index assuming this Substrand is first on Strand
-        if self.direction == Direction.right:
-            # account for insertions and deletions
-            offset += self._net_ins_del_length_increase_from_5p_to(offset)
+        if self.right:
+            offset += len_adjust  # account for insertions and deletions
             ss_str_idx = offset - self.start
         else:
             # account for insertions and deletions
-            offset -= self._net_ins_del_length_increase_from_5p_to(offset)
+            offset -= len_adjust  # account for insertions and deletions
             ss_str_idx = self.end - 1 - offset
 
         # correct for existence of previous Substrands on this Strand
         return ss_str_idx + self.get_seq_start_idx()
 
-    # offsets:  3  4  5  I  I  6  7 D8  9 10
-    # indexes:  0  1  2  3  4  5  6  7  8  9
+    def _net_ins_del_length_increase_from_5p_to(self, offset_edge: int, offset_closer_to_5p: bool) -> int:
+        """Net number of insertions from 5'/3' end to offset_edge,
+        INCLUSIVE on 5'/3' end, EXCLUSIVE on offset_edge.
 
-    def _net_ins_del_length_increase_from_5p_to(self, offset_edge: int) -> int:
-        """Net number of insertions from 5' end to offset_edge.
-
-        Check is inclusive on the left and exclusive on the right (which is 5' depends on direction)."""
+        Set `five_p` ``= False`` to test from 3' end to `offset_edge`."""
         length_increase = 0
         for deletion in self.deletions:
             if self._between_5p_and_offset(deletion, offset_edge):
@@ -333,62 +426,22 @@ class Substrand(JSONSerializable):
         for (insertion_offset, insertion_length) in self.insertions:
             if self._between_5p_and_offset(insertion_offset, offset_edge):
                 length_increase += insertion_length
+        # special case for when offset_edge is an endpoint closer to the 3' end,
+        # we add its extra insertions also in this case
+        if not offset_closer_to_5p:
+            insertion_map: Dict[int, int] = dict(self.insertions)
+            if offset_edge in insertion_map:
+                insertion_length = insertion_map[offset_edge]
+                length_increase += insertion_length
         return length_increase
 
     def _between_5p_and_offset(self, offset_to_test: int, offset_edge: int) -> bool:
-        """Net number of insertions from 5p end to offset_edge.
+        return ((self.right and self.start <= offset_to_test < offset_edge) or
+                (not self.right and offset_edge < offset_to_test < self.end))
 
-        Check is inclusive on the left and exclusive on the right (which is 5' depends on direction)."""
-        return ((self.direction == Direction.right and self.start <= offset_to_test < offset_edge) or
-                (self.direction == Direction.left and offset_edge <= offset_to_test < self.end))
-
-    def str_idx_to_offset(self, str_idx: int) -> int:
-        """Convert from string index on parent :any:`Strand`
-        to offset on :any:`Substrand`'s :any:`Helix`."""
-
-        # offsets: 0D 1 2D 3 4 5D 6 7 8 I I  9
-        # indexes:    0 1    2 3    4 5 6 7 8 10
-
-        # first correct for existence of previous Substrands on this Strand
-        ss_str_idx = str_idx - self.get_seq_start_idx()
-
-        deletions_set: Set[int] = set(self.deletions)
-        insertions_map: Dict[int, int] = dict(self.insertions)
-
-        # offsets: 01 2D 34 5D 67
-        # indexes: 01    23    45
-
-        # then get offset assuming this Substrand is first on Strand
-        going_right = self.direction == Direction.right
-        offset_delta = 1 if going_right else -1
-        offset = self.start if going_right else self.end - 1
-        idx = 0
-        while idx < ss_str_idx:
-            if offset in deletions_set:
-                offset += offset_delta
-            elif offset in insertions_map:
-                idx += 1 + insertions_map[offset]
-                offset += offset_delta
-            else:
-                offset += offset_delta
-                idx += 1
-        while offset in deletions_set:
-            offset += offset_delta
-
-        # finally correct for true starting offset of this Substrand
-        return offset
-
-    # def completely_bound(self, other: 'Substrand'):
-    #     """Indicates if this substrand's set of offsets (the set
-    #     :math:`\{x \in \mathbb{N} \mid`
-    #     ``self.start``
-    #     :math:`\leq x \leq`
-    #     ``self.end``
-    #     :math:`\}`)
-    #     is a subset of the set of offsets of `other`."""  # noqa (suppress PEP warning)
-    #     return (self.helix_idx == other.helix_idx and (
-    #             self.start >= other.start and
-    #             self.end <= other.end))
+    # def _between_3p_and_offset(self, offset_to_test: int, offset_edge: int) -> bool:
+    #     return ((self.direction == Direction.left and self.start <= offset_to_test < offset_edge) or
+    #             (self.direction == Direction.right and offset_edge < offset_to_test < self.end))
 
     # The type hint 'Substrand' must be in quotes since Substrand is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
@@ -403,7 +456,7 @@ class Substrand(JSONSerializable):
         and they appear on the same helix,
         and they point in opposite directions."""  # noqa (suppress PEP warning)
         return (self.helix_idx == other.helix_idx and
-                self.direction == opposite(other.direction) and
+                self.right == (not other.right) and
                 self.compute_overlap(other)[0] >= 0)
 
     def overlaps_illegally(self, other: 'Substrand'):
@@ -417,7 +470,7 @@ class Substrand(JSONSerializable):
         and they appear on the same helix,
         and they point in the same direction."""  # noqa (suppress PEP warning)
         return (self.helix_idx == other.helix_idx and
-                self.direction == other.direction and
+                self.right == other.right and
                 self.compute_overlap(other)[0] >= 0)
 
     def compute_overlap(self, other: 'Substrand') -> Tuple[int, int]:
@@ -427,12 +480,13 @@ class Substrand(JSONSerializable):
         of the same helix)."""
         overlap_start = max(self.start, other.start)
         overlap_end = min(self.end, other.end)
-        # have_overlap = (self.helix_idx == other.helix_idx and (
-        #         self.start <= other.end and
-        #         other.start <= self.end))
         if overlap_start >= overlap_end:  # overlap is empty
             return -1, -1
         return overlap_start, overlap_end
+
+    def insertion_offsets(self):
+        """Return offsets of insertions (but not their lengths)."""
+        return [ins_off for (ins_off, _) in self.insertions]
 
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
@@ -462,7 +516,7 @@ class Strand(JSONSerializable):
 
         import scadnano as sc
 
-        scaffold_substrands = ...
+        scaffold_substrands = [ ... ]
         scaffold_strand = sc.Strand(substrands=scaffold_substrands, color=sc.default_scaffold_color)
     """
 
@@ -481,26 +535,29 @@ class Strand(JSONSerializable):
     a color is assigned by cycling through a list of defaults given by 
     :meth:`ColorCycler.colors`"""
 
+    automatically_assign_color: bool = field(repr=False, default=True)
+    """If `automatically_assign_color` = ``False`` and `color` = ``None``, do not automatically
+    assign a :any:`Color` to this Strand."""
+
     # not serialized; efficient way to see a list of all substrands on a given helix
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
         init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self):
         dct = OrderedDict()
-        dct['color'] = self.color.to_json_serializable()
-        # dct['is_scaffold'] = self.is_scaffold
+        if self.color is not None:
+            dct[color_key] = self.color.to_json_serializable()
         if self.dna_sequence is not None:
-            dct['dna_sequence'] = self.dna_sequence
-        dct['substrands'] = [substrand.to_json_serializable() for substrand in self.substrands]
+            dct[dna_sequence_key] = self.dna_sequence
+        dct[substrands_key] = [substrand.to_json_serializable() for substrand in self.substrands]
         return dct
 
     def __post_init__(self):
         # if color not specified, pick one by cycling through list of staple colors,
-        # or assign default scaffold color
+        # unless caller specified not to
         global color_cycler
-        if self.color is None:
+        if self.color is None and self.automatically_assign_color:
             self.color = next(color_cycler)
-            # self.color = color_cycler.scaffold_color if self.is_scaffold else next(color_cycler)
         self._helix_idx_substrand_map = defaultdict(list)
         for substrand in self.substrands:
             self._helix_idx_substrand_map[substrand.helix_idx].append(substrand)
@@ -514,17 +571,6 @@ class Strand(JSONSerializable):
             acc += substrand.dna_length()
         return acc
         # return sum(len(substrand) for substrand in self.substrands)
-
-    # def completely_bound(self, other: 'Strand'):
-    #     """Indicates whether `self` is completely bound to `other_strand`, meaning that
-    #     the set of offsets occupied by `self` are a subset of those occupied by `other_strand`."""
-    #     for helix_idx, substrands_on_helix in self._helix_idx_substrand_map.items():
-    #         other_substrands_on_helix = other._helix_idx_substrand_map[helix_idx]
-    #         for substrand in substrands_on_helix:
-    #             for other_substrand in other_substrands_on_helix:
-    #                 if substrand.completely_bound(other_substrand):
-    #                     return True
-    #     return False
 
     def overlaps(self, other: 'Strand'):
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
@@ -543,10 +589,6 @@ class Strand(JSONSerializable):
         a DNA sequence to a strand. It will figure out which other Strands need
         to be assigned via this method."""
 
-        # if not self.overlaps(other):
-        #     raise ValueError(f"{self} and {other} do not overlap, "
-        #                      f"so DNA cannot be assigned to the former from the latter")
-        # TODO: this has a bug and is not assigning properly; add some unit tests and get it working
         strand_complement_builder = []
         for helix_idx, substrands_on_helix_self in self._helix_idx_substrand_map.items():
             substrands_on_helix_other = other._helix_idx_substrand_map[helix_idx]
@@ -565,67 +607,99 @@ class Strand(JSONSerializable):
                 start_idx = substrand_self.start
                 # repeatedly insert wildcards into gaps, then reverse WC complement
                 for ((overlap_left, overlap_right), substrand_other) in overlaps:
-                    wildcards = '?' * (overlap_left - start_idx)
-                    other_seq = substrand_other.dna_sequence_in(overlap_left, overlap_right)
+                    wildcards = DNA_base_wildcard * (overlap_left - start_idx)
+                    other_seq = substrand_other.dna_sequence_in(overlap_left, overlap_right - 1)
                     overlap_complement = wc(other_seq)
                     substrand_complement_builder.append(wildcards)
                     substrand_complement_builder.append(overlap_complement)
-                    start_idx = overlap_right + 1
+                    start_idx = overlap_right
 
                 # last wildcard for gap between last overlap and end
-                last_wildcards = '?' * (substrand_self.end + 1 - start_idx)
+                last_wildcards = DNA_base_wildcard * (substrand_self.end - start_idx)
                 substrand_complement_builder.append(last_wildcards)
+
+                # each individual overlap sequence was reverse orientation in wc(), but not the list
+                # of all of them put together until now.
+                substrand_complement_builder.reverse()
+
                 strand_complement_builder.extend(substrand_complement_builder)
 
         strand_complement = ''.join(strand_complement_builder)
-        # TODO: combine new sequence with possible existing (replace '?'s with bases where appropriate)
-        self.dna_sequence = strand_complement
+        new_dna_sequence = strand_complement
+        if self.dna_sequence != None:
+            new_dna_sequence = string_union_wildcard(self.dna_sequence, new_dna_sequence, DNA_base_wildcard)
+        self.dna_sequence = new_dna_sequence
+
+
+def string_union_wildcard(s1: str, s2: str, wildcard: str) -> str:
+    """Takes a "union" of two equal-length strings `s1` and `s2`.
+    Whenever one has a symbol `wildcard` and the other does not, the result has the non-wildcard symbol.
+
+    Raises :py:class:`ValueError` if `s1` and `s2` are not the same length or do not agree on non-wildcard
+    symbols at any position."""
+    if len(s1) != len(s2):
+        raise ValueError(f's1={s1} and s2={s2} are not the same length.')
+    union_builder = []
+    for i in range(len(s1)):
+        c1, c2 = s1[i], s2[i]
+        if c1 == wildcard:
+            union_builder.append(c2)
+        elif c2 == wildcard:
+            union_builder.append(c1)
+        elif c1 != c2:
+            raise ValueError(f's1={s1} and s2={s2} have unequal symbols {c1} and {c2} at position {i}.')
+    return ''.join(union_builder)
 
 
 class IllegalDNADesignError(ValueError):
     """Indicates that some aspect of the DNADesign object is illegal."""
 
 
-# called "Model" in the scadnano source code.
 @dataclass
 class DNADesign(JSONSerializable):
+    """Object representing the entire design of the DNA structure."""
+
     helices: List[Helix]
     """All of the helices in this DNADesign."""
 
     strands: List[Strand]
     """All of the strands in this DNADesign."""
 
-    grid: Grid = None
-    """TODO explain this."""
+    grid: Grid = Grid.none
+    """Common choices for how to arrange helices relative to each other."""
 
     major_tick_distance: int = -1
     """Distance between major ticks (bold) delimiting boundaries between bases.
     
-    If negative then no major ticks are drawn.
-    If :any:`DNADesign.grid` = :any:`Grid.square` then `major_tick_distance` is set to 8.
-    If :any:`DNADesign.grid` = :any:`Grid.hex` then `major_tick_distance` is set to 7."""
-
-    helix_substrand_map: Dict[int, List[Substrand]] = None
+    Default value is 8 unless overridden by the grid type.
+    If 0 then no major ticks are drawn.
+    If negative then the default value is assumed, but `major_tick_distance` is not stored in the JSON file
+    when serialized.
+    If :any:`DNADesign.grid` = :any:`Grid.square` then the default value is 8.
+    If :any:`DNADesign.grid` = :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
 
     # for optimization; maps helix index to list of substrands on that Helix
-
-    def to_json_serializable(self):
-        dct = OrderedDict()
-        dct['version'] = CURRENT_VERSION
-        dct['grid'] = self.grid
-        dct['major_tick_distance'] = self.major_tick_distance
-        dct['helices'] = [helix.to_json_serializable() for helix in self.helices]
-        dct['strands'] = [strand.to_json_serializable() for strand in self.strands]
-        return dct
+    helix_substrand_map: Dict[int, List[Substrand]] = None
 
     def __post_init__(self):
         if self.major_tick_distance < 0:
-            if self.grid == Grid.square:
-                self.major_tick_distance = 8
-            elif self.grid == Grid.hexagonal:
+            if self.grid in (Grid.hex, Grid.honeycomb):
                 self.major_tick_distance = 7
+            else:
+                self.major_tick_distance = default_major_tick_distance
         self._build_helix_substrand_map()
         self._check_legal_design()
+
+    def to_json_serializable(self):
+        dct = OrderedDict()
+        dct[version_key] = current_version
+        if self.grid != default_grid:
+            dct[grid_key] = self.grid
+        if self.major_tick_distance > 0:
+            dct[major_tick_distance_key] = self.major_tick_distance
+        dct[helices_key] = [helix.to_json_serializable() for helix in self.helices]
+        dct[strands_key] = [strand.to_json_serializable() for strand in self.strands]
+        return dct
 
     def used_helices(self):
         """Return list of all helices that are used."""
@@ -670,14 +744,14 @@ class DNADesign(JSONSerializable):
                 ss_cur: Substrand = substrands[ss_idx]
                 if ss_prev.end > ss_cur.start:
                     # overlap found! but it's okay if they point in opposite directions
-                    if ss_prev.direction == ss_cur.direction:
+                    if ss_prev.right == ss_cur.right:
                         raise IllegalDNADesignError(err_msg(ss_prev, ss_cur, helix_idx))
                     elif ss_idx + 1 < len(substrands):
                         # check next substrand to ensure don't have all three overlapping
                         ss_next: Substrand = substrands[ss_idx + 1]
                         if ss_prev.end > ss_next.start:
                             # overlap found! okay if they point in opposite directions
-                            if ss_prev.direction == ss_cur.direction:
+                            if ss_prev.right == ss_cur.right:
                                 raise IllegalDNADesignError(err_msg(ss_prev, ss_next, helix_idx))
                             else:
                                 # okay if prev and next are opposite, but if we're here
@@ -700,7 +774,7 @@ class DNADesign(JSONSerializable):
 
         If constructed properly, this list should have 0, 1, or 2 elements, but no such check is done."""
         substrands_on_helix = self.helix_substrand_map[helix_idx]
-        # TODO: replace this with a more clever algorithm using binary search
+        # TODO: replace this with a faster algorithm using binary search
         return [substrand for substrand in substrands_on_helix if substrand.contains_offset(offset)]
 
     def _build_helix_substrand_map(self):
@@ -723,6 +797,16 @@ class DNADesign(JSONSerializable):
             if substrand.contains_offset(offset):
                 substrand.deletions.append(offset)
 
+    def add_insertion(self, helix_idx: int, offset: int, length: int):
+        """Adds an insertion with the given length to every :class:`scadnano.Strand`
+        at the given helix and base offset, with the given length."""
+        substrands = self.substrands_at(helix_idx, offset)
+        if len(substrands) == 0:
+            raise IllegalDNADesignError(f"no substrands are at helix {helix_idx} offset {offset}")
+        for substrand in substrands:
+            if substrand.contains_offset(offset):
+                substrand.insertions.append((offset, length))
+
     def assign_dna(self, strand: Strand, sequence: str):
         """
         Assigns `sequence` as DNA sequence of `strand`.
@@ -730,17 +814,17 @@ class DNADesign(JSONSerializable):
         If any :class:`scadnano.Strand` is bound to `strand`,
         it is assigned the reverse Watson-Crick complement of the relevant portion,
         and any remaining portions
-        of the other strand are assigned to be the symbol ``?``.
+        of the other strand are assigned to be the symbol :py:data:`DNA_base_wildcard`.
 
         Before assigning, `sequence` is first forced to be the same length as `strand`
         as follows:
         If `sequence` is longer, it is truncated.
-        If `sequence` is shorter, it is padded with ``?``'s.
+        If `sequence` is shorter, it is padded with :py:data:`DNA_base_wildcard`'s.
         """
         if len(sequence) > strand.dna_length():
             sequence = sequence[:strand.dna_length()]
         elif len(sequence) < strand.dna_length():
-            sequence += '?' * (strand.dna_length() - len(sequence))
+            sequence += DNA_base_wildcard * (strand.dna_length() - len(sequence))
         strand.dna_sequence = sequence
 
         for other_strand in self.strands:
@@ -748,7 +832,3 @@ class DNADesign(JSONSerializable):
                 continue
             if other_strand.overlaps(strand):
                 other_strand.assign_dna_complement_from(strand)
-
-
-if __name__ == "__main__":
-    pass

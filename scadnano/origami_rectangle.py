@@ -37,7 +37,7 @@ odd = NickPattern.odd
 instead of :const:`origami_rectangle.NickPattern.odd`."""
 
 
-def create(num_helices: int, num_cols: int, assign_seq: bool = True,
+def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
            nick_pattern: NickPattern = NickPattern.staggered,
            twist_correction_deletion_spacing: int = 0, num_flanking_columns: int = 1,
            custom_scaffold: str = None) -> sc.DNADesign:
@@ -73,7 +73,7 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True,
         H7 +--------------- ---------------- ---------------- ---------------- ---------------- ---------------] <--------------- ---------------- ---------------- ---------------- ---------------- ---------------+
 
 
-    Helix indices are labelled ``H0``, ``H1``, x... and column indices are labeled ``C0``, ``C1``, ...
+    Helix indices are labelled ``H0``, ``H1``, ... and column indices are labeled ``C0``, ``C1``, ...
     Each single symbol ``-``, ``+``, ``<``, ``>``, ``[``, ``]``, ``+``
     represents one DNA base, so each column is 16 bases wide.
     The ``#`` is a visual delimiter between columns and does not represent any bases,
@@ -116,6 +116,12 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True,
     but does not otherwise cause an error.
 
     `num_cols` must be even.
+    
+    `seam_left_column` specifies the location of the seam. (i.e., scaffold crossovers in the middle of the
+    origami.) 
+    If positive, the seam occupies two columns, and `seam_left_column` specifies the column on the left.
+    To make the crossover geometry work out, a nonnegative `seam_left_column` must be odd. 
+    If negative, it is calculated automatically to be roughly in the middle.  
 
     If `twist_correction_deletion_spacing > 0`, adds deletions between crossovers in one out of
     every `twist_correction_deletion_spacing` columns. (TODO: cite Sungwook's paper)
@@ -148,21 +154,27 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True,
 
     if num_cols % 2 != 0:
         raise ValueError(f'num_cols must be even but is {num_cols}')
+    if num_cols < 4:
+        raise ValueError(f'num_cols must be at least 4 but is {num_cols}')
     if num_helices % 2 != 0:
         raise ValueError(f'num_helices must be even but is {num_helices}')
     if num_cols * num_helices * BASES_PER_COLUMN > 7249:
         print(f'WARNING: you chose {num_cols} columns and {num_helices} helices, '
               f'which requires {num_cols * num_helices * BASES_PER_COLUMN} bases, '
               f'greater than the 7249 available in standard M13.')
+    if seam_left_column % 2 == 0:
+        raise ValueError(f'seam_left_column must be even but is {seam_left_column}')
+    if seam_left_column < 0:
+        seam_left_column = num_cols // 2 - 1
 
-    # allow an empty "flanking" column on each side
+    # allow empty "flanking" columns on each side
     num_bases_per_helix = BASES_PER_COLUMN * (num_cols + 2 * num_flanking_columns)
     # leftmost x offset
-    offset_start = BASES_PER_COLUMN
+    offset_start = BASES_PER_COLUMN * num_flanking_columns
     # rightmost x offset
     offset_end = offset_start + BASES_PER_COLUMN * num_cols
     # x offset just to left of seam
-    offset_mid = offset_start + BASES_PER_COLUMN * (num_cols // 2)
+    offset_mid = offset_start + BASES_PER_COLUMN * (seam_left_column + 1)
 
     helices = _create_helices(num_helices, num_bases_per_helix)
     scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices)
@@ -188,16 +200,16 @@ def _create_helices(num_helices: int, num_bases_per_helix: int):
 
 
 def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int):
-    top_substrand = sc.Substrand(helix_idx=0, direction=sc.right,
+    top_substrand = sc.Substrand(helix_idx=0, right=True,
                                  start=offset_start, end=offset_end)
     substrands_left = []
     substrands_right = []
     for helix_idx in range(1, num_helices):
         # otherwise there's a nick (bottom helix) or the seam crossover (all other than top and bottom)
-        direction = sc.right if helix_idx % 2 == 0 else sc.left
-        left_substrand = sc.Substrand(helix_idx=helix_idx, direction=direction,
+        right = (helix_idx % 2 == 0)
+        left_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
                                       start=offset_start, end=offset_mid)
-        right_substrand = sc.Substrand(helix_idx=helix_idx, direction=direction,
+        right_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
                                        start=offset_mid, end=offset_end)
         substrands_left.append(left_substrand)
         substrands_right.append(right_substrand)
@@ -210,7 +222,8 @@ def _create_staples(offset_start, offset_end, offset_mid, num_helices, num_cols,
     left_edge_staples = _create_left_edge_staples(offset_start, num_helices)
     right_edge_staples = _create_right_edge_staples(offset_end, num_helices)
     seam_staples = _create_seam_staples(offset_mid, num_helices)
-    inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_cols, nick_pattern)
+    inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_cols,
+                                          nick_pattern)
     return left_edge_staples + right_edge_staples + seam_staples + inner_staples
 
 
@@ -221,13 +234,13 @@ def _create_seam_staples(offset_mid, num_helices):
         crossover_right = offset_mid + BASES_PER_COLUMN
         nick_bot = crossover_left + 8
         nick_top = crossover_right - 8
-        ss_5p_top = sc.Substrand(helix_idx=helix_idx, direction=sc.left,
+        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=False,
                                  start=crossover_left, end=nick_top)
-        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.right,
+        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
                                  start=crossover_left, end=nick_bot)
-        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.right,
+        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
                                  start=nick_bot, end=crossover_right)
-        ss_3p_top = sc.Substrand(helix_idx=helix_idx, direction=sc.left,
+        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=False,
                                  start=nick_top, end=crossover_right)
         staple_5p_top = sc.Strand(substrands=[ss_5p_top, ss_3p_bot])
         staple_5p_bot = sc.Strand(substrands=[ss_5p_bot, ss_3p_top])
@@ -240,9 +253,9 @@ def _create_left_edge_staples(offset_start, num_helices):
     staples = []
     crossover_right = offset_start + BASES_PER_COLUMN
     for helix_idx in range(0, num_helices, 2):
-        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.right,
+        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
                                  start=offset_start, end=crossover_right)
-        ss_3p_top = sc.Substrand(helix_idx=helix_idx, direction=sc.left,
+        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=False,
                                  start=offset_start, end=crossover_right)
         staple = sc.Strand(substrands=[ss_5p_bot, ss_3p_top])
         staples.append(staple)
@@ -253,9 +266,9 @@ def _create_right_edge_staples(offset_end, num_helices):
     staples = []
     crossover_left = offset_end - BASES_PER_COLUMN
     for helix_idx in range(0, num_helices, 2):
-        ss_5p_top = sc.Substrand(helix_idx=helix_idx, direction=sc.left,
+        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=False,
                                  start=crossover_left, end=offset_end)
-        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.right,
+        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
                                  start=crossover_left, end=offset_end)
         staple = sc.Strand(substrands=[ss_5p_top, ss_3p_bot])
         staples.append(staple)
@@ -283,38 +296,38 @@ def _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num
             continue
         if col % 2 == 1:
             # special staple in odd column is 24-base staple along top helix
-            ss_top_5p_h0 = sc.Substrand(helix_idx=0, direction=sc.left,
+            ss_top_5p_h0 = sc.Substrand(helix_idx=0, right=False,
                                         start=x_l, end=x_mid_col + BASES_PER_COLUMN)
-            ss_top_3p_h1 = sc.Substrand(helix_idx=1, direction=sc.right,
+            ss_top_3p_h1 = sc.Substrand(helix_idx=1, right=True,
                                         start=x_l, end=x_mid_col)
             staple_top = sc.Strand(substrands=[ss_top_5p_h0, ss_top_3p_h1])
             staples.append(staple_top)
 
             for helix_idx in range(1, num_helices - 2, 2):
-                ss_helix_i = sc.Substrand(helix_idx=helix_idx, direction=sc.right,
+                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=True,
                                           start=x_mid_col, end=x_r)
-                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.left,
+                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=False,
                                             start=x_l, end=x_r)
-                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, direction=sc.right,
+                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=True,
                                             start=x_l, end=x_mid_col)
                 staple = sc.Strand(substrands=[ss_helix_i, ss_helix_ip1, ss_helix_ip2])
                 staples.append(staple)
 
         else:
             # special staple in even column is 24-base staple along bottom helix
-            ss_bot_5p_hm1 = sc.Substrand(helix_idx=num_helices - 1, direction=sc.right,
+            ss_bot_5p_hm1 = sc.Substrand(helix_idx=num_helices - 1, right=True,
                                          start=x_mid_col - BASES_PER_COLUMN, end=x_r)
-            ss_bot_3p_hm2 = sc.Substrand(helix_idx=num_helices - 2, direction=sc.left,
+            ss_bot_3p_hm2 = sc.Substrand(helix_idx=num_helices - 2, right=False,
                                          start=x_mid_col, end=x_r)
             staple_bot = sc.Strand(substrands=[ss_bot_5p_hm1, ss_bot_3p_hm2])
             staples.append(staple_bot)
 
             for helix_idx in range(0, num_helices - 3, 2):
-                ss_helix_i = sc.Substrand(helix_idx=helix_idx, direction=sc.left,
+                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=False,
                                           start=x_mid_col, end=x_r)
-                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, direction=sc.right,
+                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=True,
                                             start=x_l, end=x_r)
-                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, direction=sc.left,
+                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=False,
                                             start=x_l, end=x_mid_col)
                 staple = sc.Strand(substrands=[ss_helix_ip2, ss_helix_ip1, ss_helix_i])
                 staples.append(staple)
@@ -354,8 +367,8 @@ def valid_deletion_offset(design: sc.DNADesign, helix_idx: int, offset: int):
             return False  # already an insertion there
         if offset == ss.start:
             return False  # no 5' end
-        if offset == ss.end-1:
-            return False # no 3' end
+        if offset == ss.end - 1:
+            return False  # no 3' end
     return True
 
 
@@ -367,14 +380,3 @@ def add_twist_correction_deletions(design: sc.DNADesign, twist_correct_deletion_
         if col % twist_correct_deletion_spacing == twist_correct_deletion_spacing - 1:
             for helix in design.used_helices():
                 add_deletion_in_range(design, helix.idx, col_start + 1, col_end - 1)
-
-
-# here's an example of using `origami_rectangle.create` to create a 16-helix rectangle
-if __name__ == "__main__":
-    rect_num_helices = 16
-    rect_num_cols = 24  # XXX: ensure num_cols is even since we divide it by 2
-    rect_design = create(num_helices=rect_num_helices, num_cols=rect_num_cols, nick_pattern=staggered)
-    rect_design.write_to_file("16_helix_rectangle.dna")
-    # TODO: for debugging; set back to 16 helix when done
-    # small_design = create(num_helices=6, num_cols=12, nick_pattern=staggered, custom_scaffold='T' * 1200)
-    # small_design.write_to_file("6_helix_rectangle.dna")
