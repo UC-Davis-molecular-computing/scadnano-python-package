@@ -11,6 +11,7 @@ from collections import defaultdict, OrderedDict
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
+#TODO: add support for writing 3D positions (as opposed to 2D svg_positions)
 
 ##############################################################################
 # Colors
