@@ -1,0 +1,36 @@
+{
+  "version": "0.0.1",
+  "grid": "square",
+  "major_tick_distance": 8,
+  "helices": [
+    {"idx": 0, "max_bases": 32, "grid_position": [0, 0], "position": [0, 0]},
+    {"idx": 1, "max_bases": 32, "grid_position": [0, 1], "position": [0, 30]}
+  ],
+  "strands": [
+    {
+      "color": {"r": 51, "g": 51, "b": 51},
+      "dna_sequence": "TTAGTTAGTTAGTTAGTTTTAGTTAGTTAGTTAG",
+      "substrands": [
+        {"helix_idx": 1, "right": true, "start": 0, "end": 16, "deletions": [12], "insertions": [[6, 3]]},
+        {"helix_idx": 0, "right": false, "start": 0, "end": 16, "deletions": [12], "insertions": [[6, 1]]}
+      ]
+    },
+    {
+      "color": {"r": 50, "g": 0, "b": 150},
+      "dna_sequence": "GTTAGTTAGTTAGTTAGTTAGTTAGTTAGTTAGTTA",
+      "substrands": [
+        {"helix_idx": 0, "right": false, "start": 16, "end": 32, "deletions": [24], "insertions": [[18, 2]]},
+        {"helix_idx": 1, "right": true, "start": 16, "end": 32, "deletions": [24], "insertions": [[18, 4]]}
+      ]
+    },
+    {
+      "color": {"r": 0, "g": 102, "b": 204},
+      "dna_sequence": "AACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAACTAA",
+      "substrands": [
+        {"helix_idx": 1, "right": false, "start": 0, "end": 16, "deletions": [12], "insertions": [[6, 3]]},
+        {"helix_idx": 0, "right": true, "start": 0, "end": 32, "deletions": [12, 24], "insertions": [[6, 1], [18, 2]]},
+        {"helix_idx": 1, "right": false, "start": 16, "end": 32, "deletions": [24], "insertions": [[18, 4]]}
+      ]
+    }
+  ]
+}

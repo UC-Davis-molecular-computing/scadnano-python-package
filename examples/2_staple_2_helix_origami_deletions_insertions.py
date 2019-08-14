@@ -1,6 +1,6 @@
 import scadnano as sc
 
-if __name__ == "__main__":
+def main():
     helices = [sc.Helix(0, 32), sc.Helix(1, 32)]
     stap_left_ss1 = sc.Substrand(1, sc.right, 0, 16)
     stap_left_ss0 = sc.Substrand(0, sc.left, 0, 16)
@@ -18,5 +18,12 @@ if __name__ == "__main__":
     design.add_deletion(helix_idx=0, offset=24)
     design.add_deletion(helix_idx=1, offset=12)
     design.add_deletion(helix_idx=1, offset=24)
-    design.assign_dna(scaf, 'AACT'*16)
-    design.write_to_file("output_designs/2_staple_2_helix_origami.dna")
+    design.add_insertion(helix_idx=0, offset=6, length=1)
+    design.add_insertion(helix_idx=0, offset=18, length=2)
+    design.add_insertion(helix_idx=1, offset=6, length=3)
+    design.add_insertion(helix_idx=1, offset=18, length=4)
+    design.assign_dna(scaf, 'AACT'*18)
+    design.write_to_file("output_designs/2_staple_2_helix_origami_deletions_insertions.dna")
+
+if __name__ == "__main__":
+    main()
