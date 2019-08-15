@@ -11,7 +11,10 @@ from collections import defaultdict, OrderedDict
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
-#TODO: add support for writing 3D positions (as opposed to 2D svg_positions)
+
+# TODO: add support for writing 3D positions (in addition to 2D svg_positions)
+
+# TODO: add check for whether RUNNING_IN_BROWSER is true and change behavior of write_to_file or provide some means of exporting DNADesign as JSON to Dart
 
 ##############################################################################
 # Colors
@@ -33,6 +36,7 @@ class Color(JSONSerializable):
     def to_json_serializable(self):
         # Return object representing this Color that is JSON serializable.
         return NoIndent(self.__dict__)
+
 
 class ColorCycler:
     """
@@ -121,11 +125,12 @@ hexagonal = Grid.hex  # should not use identifier "hex" because that's a Python 
 honeycomb = Grid.honeycomb
 
 ##########################################################################
-## constants
+# constants
 
 current_version: str = "0.0.1"
 
-default_major_tick_distance: int = 8
+def default_major_tick_distance(grid: Grid) -> int:
+    return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 default_grid: Grid = Grid.none
 
@@ -164,9 +169,8 @@ The M13mp18 DNA sequence, starting from cyclic rotation 5588, as defined in
 `GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
 """  # noqa (suppress PEP warning)
 
-
 ##################
-## keys
+# keys
 
 # DNADesign keys
 version_key = 'version'
@@ -180,7 +184,7 @@ idx_key = 'idx'
 max_bases_key = 'max_bases'
 grid_position_key = 'grid_position'
 svg_position_key = 'svg_position'
-#position_key = 'position'; # support in the future
+# position_key = 'position'; # support in the future
 
 # Strand keys
 color_key = 'color'
@@ -195,10 +199,11 @@ end_key = 'end'
 deletions_key = 'deletions'
 insertions_key = 'insertions'
 
-## end keys
+
+# end keys
 ##################
 
-## end constants
+# end constants
 ##########################################################################
 
 
@@ -254,7 +259,7 @@ class Helix(JSONSerializable):
         if self.major_tick_distance <= 0:
             del dct[major_tick_distance_key]
 
-        if self.grid_position[2] == 0: # don't bother writing grid position base coordinate if it is 0
+        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
             dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
 
         return NoIndent(dct)
@@ -627,7 +632,7 @@ class Strand(JSONSerializable):
 
         strand_complement = ''.join(strand_complement_builder)
         new_dna_sequence = strand_complement
-        if self.dna_sequence != None:
+        if self.dna_sequence is not None:
             new_dna_sequence = string_union_wildcard(self.dna_sequence, new_dna_sequence, DNA_base_wildcard)
         self.dna_sequence = new_dna_sequence
 
@@ -684,10 +689,7 @@ class DNADesign(JSONSerializable):
 
     def __post_init__(self):
         if self.major_tick_distance < 0:
-            if self.grid in (Grid.hex, Grid.honeycomb):
-                self.major_tick_distance = 7
-            else:
-                self.major_tick_distance = default_major_tick_distance
+            self.major_tick_distance = default_major_tick_distance(self.grid)
         self._build_helix_substrand_map()
         self._check_legal_design()
 
@@ -696,7 +698,8 @@ class DNADesign(JSONSerializable):
         dct[version_key] = current_version
         if self.grid != default_grid:
             dct[grid_key] = self.grid
-        if self.major_tick_distance > 0:
+        if self.major_tick_distance >= 0 and (
+                self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
         dct[helices_key] = [helix.to_json_serializable() for helix in self.helices]
         dct[strands_key] = [strand.to_json_serializable() for strand in self.strands]

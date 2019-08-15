@@ -221,8 +221,6 @@ TEST_OFFSETS_AT_DELETION_INSERTIONS = False
 
 class TestSubstrandDNASequenceIn(unittest.TestCase):
 
-    # TODO: add tests for all suffices of each substrand's sequence
-    # TODO: add tests for individual offsets of deletions/insertions
 
     def test_dna_sequence_in__right_then_left(self):
         ss0 = sc.Substrand(0, sc.right, 0, 10)
