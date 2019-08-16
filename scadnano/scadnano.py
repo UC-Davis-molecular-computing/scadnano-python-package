@@ -153,13 +153,24 @@ lattices---is larger than 2 nm.)
 Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
 """
 
-DNA_base_wildcard = '?'
+DNA_base_wildcard: str = '?'
 """Symbol to insert when a DNA sequence has been assigned to a strand through complementarity, but
 some regions of the strand are not bound to the strand that was just assigned. Also used in case the
 DNA sequence assigned to a strand is too short; the sequence is padded to make its length the same
 as the length of the strand."""
 
-y_grid_coordinate_scale = 30
+BASE_WIDTH_SVG: float = 10;
+BASE_HEIGHT_SVG: float = 10;
+
+# DISTANCE_BETWEEN_HELICES_SVG is set to (BASE_WIDTH_SVG * 2.5/0.34) based on the following calculation,
+# to attempt to make the DNA appear to scale in 2D drawings:
+# The width of one base pair of double-stranded DNA bp is 0.34 nm.
+# In a DNA origami, AFM images estimate that the average distance between adjacent double helices is 2.5 nm.
+# (A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
+# in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
+# lattices---is larger than 2 nm.)
+# Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
+DISTANCE_BETWEEN_HELICES_SVG: float = (BASE_WIDTH_SVG * 2.5 / 0.34);
 """The default main view SVG y-coordinate of a :any:`Helix` with index `idx` is 
 `idx * y_grid_coordinate_scale`."""
 
@@ -259,6 +270,11 @@ class Helix(JSONSerializable):
         if self.major_tick_distance <= 0:
             del dct[major_tick_distance_key]
 
+        print(f'self.svg_position()    = {self.svg_position}')
+        print(f'default_svg_position() = {self.default_svg_position()}')
+        if self.svg_position == self.default_svg_position():
+            del dct[svg_position_key]
+
         if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
             dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
 
@@ -270,7 +286,10 @@ class Helix(JSONSerializable):
             self.grid_position = (0, self.idx, 0)
         if self.svg_position is None:
             # default to same x- and z-coordinates 0, and y-coordinate scales with idx
-            self.svg_position = (0, self.idx * y_grid_coordinate_scale)
+            self.svg_position = self.default_svg_position()
+
+    def default_svg_position(self):
+        return (0, self.idx * DISTANCE_BETWEEN_HELICES_SVG)
 
 
 @dataclass
@@ -729,7 +748,7 @@ class DNADesign(JSONSerializable):
     def _check_strands_overlap_legally(self):
         def err_msg(ss1, ss2, h_idx):
             return f"two substrands overlap on helix {h_idx}:" \
-                   f"{ss1} and {ss2} but have the same direction"
+                f"{ss1} and {ss2} but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
