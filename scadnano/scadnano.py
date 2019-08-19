@@ -129,8 +129,10 @@ honeycomb = Grid.honeycomb
 
 current_version: str = "0.0.1"
 
+
 def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
+
 
 default_grid: Grid = Grid.none
 
@@ -218,6 +220,17 @@ insertions_key = 'insertions'
 ##########################################################################
 
 
+def in_browser() -> bool:
+    """Test if this code is running in the browser.
+
+    Checks for existence of package "browser" used in Brython. If present it is assumed the code is
+    running in the browser."""
+    try:
+        import browser
+        return True
+    except:
+        return False
+
 @dataclass
 class Helix(JSONSerializable):
     idx: int
@@ -270,9 +283,10 @@ class Helix(JSONSerializable):
         if self.major_tick_distance <= 0:
             del dct[major_tick_distance_key]
 
-        print(f'self.svg_position()    = {self.svg_position}')
-        print(f'default_svg_position() = {self.default_svg_position()}')
-        if self.svg_position == self.default_svg_position():
+        # print(f'self.svg_position()    = {self.svg_position}')
+        # print(f'default_svg_position() = {self.default_svg_position()}')
+        default_x, default_y = self.default_svg_position()
+        if close(self.svg_position[0], default_x) and close(self.svg_position[1], default_y):
             del dct[svg_position_key]
 
         if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
@@ -290,6 +304,10 @@ class Helix(JSONSerializable):
 
     def default_svg_position(self):
         return (0, self.idx * DISTANCE_BETWEEN_HELICES_SVG)
+
+
+def close(x1: float, x2: float):
+    return abs(x1 - x2) < 0.000001
 
 
 @dataclass
@@ -748,7 +766,7 @@ class DNADesign(JSONSerializable):
     def _check_strands_overlap_legally(self):
         def err_msg(ss1, ss2, h_idx):
             return f"two substrands overlap on helix {h_idx}:" \
-                f"{ss1} and {ss2} but have the same direction"
+                   f"{ss1} and {ss2} but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
@@ -807,9 +825,16 @@ class DNADesign(JSONSerializable):
                 self.helix_substrand_map[substrand.helix_idx].append(substrand)
 
     def write_to_file(self, filename: str):
-        """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano."""
+        """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano.
+
+        Writes the string returned by :meth:`DNADesign.to_json`."""
         with open(filename, 'w') as out_file:
-            out_file.write(json_encode(self))
+            out_file.write(self.to_json())
+
+    def to_json(self):
+        """Return string representing this DNADesign, suitable for reading by scadnano if written to
+        a JSON file."""
+        return json_encode(self)
 
     def add_deletion(self, helix_idx: int, offset: int):
         """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""

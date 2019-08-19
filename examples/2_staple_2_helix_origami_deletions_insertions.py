@@ -24,6 +24,7 @@ def main():
     design.add_insertion(helix_idx=1, offset=18, length=4)
     design.assign_dna(scaf, 'AACT'*18)
     design.write_to_file("output_designs/2_staple_2_helix_origami_deletions_insertions.dna")
+    # return design
 
 if __name__ == "__main__":
     main()
