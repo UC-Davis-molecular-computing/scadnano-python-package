@@ -7,6 +7,8 @@ import enum
 from dataclasses import dataclass, field
 from typing import Tuple, List, Dict
 from collections import defaultdict, OrderedDict
+import sys
+import os.path
 
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
@@ -161,21 +163,6 @@ some regions of the strand are not bound to the strand that was just assigned. A
 DNA sequence assigned to a strand is too short; the sequence is padded to make its length the same
 as the length of the strand."""
 
-BASE_WIDTH_SVG: float = 10;
-BASE_HEIGHT_SVG: float = 10;
-
-# DISTANCE_BETWEEN_HELICES_SVG is set to (BASE_WIDTH_SVG * 2.5/0.34) based on the following calculation,
-# to attempt to make the DNA appear to scale in 2D drawings:
-# The width of one base pair of double-stranded DNA bp is 0.34 nm.
-# In a DNA origami, AFM images estimate that the average distance between adjacent double helices is 2.5 nm.
-# (A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
-# in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
-# lattices---is larger than 2 nm.)
-# Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
-DISTANCE_BETWEEN_HELICES_SVG: float = (BASE_WIDTH_SVG * 2.5 / 0.34);
-"""The default main view SVG y-coordinate of a :any:`Helix` with index `idx` is 
-`idx * y_grid_coordinate_scale`."""
-
 m13_sequence = m13.sequence
 """
 The M13mp18 DNA sequence, starting from cyclic rotation 5588, as defined in
@@ -228,8 +215,9 @@ def in_browser() -> bool:
     try:
         import browser
         return True
-    except:
+    except ModuleNotFoundError:
         return False
+
 
 @dataclass
 class Helix(JSONSerializable):
@@ -265,10 +253,10 @@ class Helix(JSONSerializable):
     """`(x,y)` SVG coordinates of base offset 0 of this Helix in the main view. 
     
     If `grid_position` and `position` are both omitted, then the default is 
-    `x` = 0, `y` = :any:`Helix.idx` * :any:`y_grid_coordinate_scale`.
+    `x` = 0, `y` = :any:`Helix.idx` * :any:`scadnano.distance_between_helices_svg`.
     
     If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
-    `x` = b * BASE_WIDTH_SVG, `y` = :any:`Helix.idx` * :any:`y_grid_coordinate_scale`."""
+    `x` = b * BASE_WIDTH_SVG, `y` = :any:`Helix.idx` * :any:`scadnano.distance_between_helices_svg`."""
 
     @property
     def used(self):
@@ -303,7 +291,7 @@ class Helix(JSONSerializable):
             self.svg_position = self.default_svg_position()
 
     def default_svg_position(self):
-        return (0, self.idx * DISTANCE_BETWEEN_HELICES_SVG)
+        return 0, self.idx * distance_between_helices_svg
 
 
 def close(x1: float, x2: float):
@@ -766,7 +754,7 @@ class DNADesign(JSONSerializable):
     def _check_strands_overlap_legally(self):
         def err_msg(ss1, ss2, h_idx):
             return f"two substrands overlap on helix {h_idx}:" \
-                   f"{ss1} and {ss2} but have the same direction"
+                f"{ss1} and {ss2} but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
@@ -824,13 +812,6 @@ class DNADesign(JSONSerializable):
             for substrand in strand.substrands:
                 self.helix_substrand_map[substrand.helix_idx].append(substrand)
 
-    def write_to_file(self, filename: str):
-        """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano.
-
-        Writes the string returned by :meth:`DNADesign.to_json`."""
-        with open(filename, 'w') as out_file:
-            out_file.write(self.to_json())
-
     def to_json(self):
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file."""
@@ -880,3 +861,21 @@ class DNADesign(JSONSerializable):
                 continue
             if other_strand.overlaps(strand):
                 other_strand.assign_dna_complement_from(strand)
+
+    def write_file(self, directory: str = '.', filename=None):
+        """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano,
+        with the output file having the same name as the running script but with ``.py`` changed to ``.dna``.
+
+        For instance, if the script is named ``my_origami.py``, then the design will be written to ``my_origami.dna``
+        unless filename is explicitly given.
+
+        `directory` specifies an optional directory in which to place the file, either absolute or relative to
+        the current working directory. Default is the current working directory.
+
+        The string written is that returned by :meth:`DNADesign.to_json`.
+        """
+        if filename is None:
+            filename = os.path.basename(sys.argv[0])[:-3] + '.dna'
+        relative_filename = os.path.join(directory, filename)
+        with open(relative_filename, 'w') as out_file:
+            out_file.write(self.to_json())

@@ -1,6 +1,6 @@
 import scadnano as sc
 
-if __name__ == "__main__":
+def main():
     length = 9
     helices = [sc.Helix(0, length)]
     stap_ss = sc.Substrand(0, sc.right, 0, length)
@@ -11,5 +11,9 @@ if __name__ == "__main__":
     design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
     design.add_deletion(helix_idx=0, offset=2)
     design.assign_dna(scaf, 'AACT' * (length // 4))
-    design.write_to_file("output_designs/1_staple_1_helix_origami.dna")
 
+    return design
+
+if not sc.in_browser() and __name__ == '__main__':
+    design = main()
+    design.write_file(directory='output_designs')
