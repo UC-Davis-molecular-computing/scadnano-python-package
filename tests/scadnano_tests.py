@@ -8,6 +8,32 @@ import unittest
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
+
+    def test_overlapping_caught_in_strange_counterexample(self):
+        # found this counterexample as a simplified version of something caught in practice
+        helices = [sc.Helix(0, 25), sc.Helix(1, 25)]
+
+        s1_left_ss0 = sc.Substrand(0, sc.left, 0, 5)
+        s1_ss1 = sc.Substrand(0, sc.right, 0, 15)
+        s1_right_ss0 = sc.Substrand(0, sc.left, 5, 15)
+        s1 = sc.Strand([s1_left_ss0, s1_ss1, s1_right_ss0])
+
+        s2_ss1 = sc.Substrand(0, sc.right, 10, 20)
+        s2_ss0 = sc.Substrand(0, sc.left, 10, 20)
+        s2 = sc.Strand([s2_ss1, s2_ss0])
+
+        strands = [s1, s2]
+
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+
+    def test_major_tick_outside_range(self):
+        with self.assertRaises(sc.IllegalDNADesignError):
+            helix = sc.Helix(idx=0, max_bases=9, major_ticks=[2, 5, 10])
+
+    def test_major_tick_just_inside_range(self):
+        helix = sc.Helix(idx=0, max_bases=9, major_ticks=[0, 5, 9])
+
     def test_two_illegally_overlapping_strands(self):
         helix = sc.Helix(idx=0, max_bases=9)
         ss_bot = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=9)
@@ -70,6 +96,76 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
 class TestAssignDNA(unittest.TestCase):
 
+    def test_assign_dna__dna_sequence_shorter_than_complementary_strand_right_strand_longer(self):
+        # <---]
+        # CAAAA
+        # GTTTT?????
+        # [-------->
+        helix = sc.Helix(idx=0, max_bases=10)
+        ss_long = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
+        ss_short = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        strand_long = sc.Strand(substrands=[ss_long])
+        strand_short = sc.Strand(substrands=[ss_short])
+        strands = [strand_long, strand_short]
+        design = sc.DNADesign(grid=sc.square, helices=[helix], strands=strands)
+        design.assign_dna(strand_short, 'AAAAC')
+        self.assertEqual('GTTTT?????', strand_long.dna_sequence)
+
+    def test__assign_dna__dna_sequence_shorter_than_complementary_strand_left_strand_longer(self):
+        # [--->
+        # AAAAC
+        # TTTTG?????
+        # <--------]
+        helix = sc.Helix(idx=0, max_bases=10)
+        ss_long = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=10)
+        ss_short = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
+        strand_long = sc.Strand(substrands=[ss_long])
+        strand_short = sc.Strand(substrands=[ss_short])
+        strands = [strand_long, strand_short]
+        design = sc.DNADesign(grid=sc.square, helices=[helix], strands=strands)
+        design.assign_dna(strand_short, 'AAAAC')
+        self.assertEqual('?????GTTTT', strand_long.dna_sequence)
+
+    def test_assign_dna__dna_sequence_with_uncomplemented_substrand_on_different_helix(self):
+        # <---]
+        # CAAAA
+        # GTTTT?????
+        # [--------+
+        #          |
+        #        <-+
+        #        ???
+        helix0 = sc.Helix(idx=0, max_bases=10)
+        helix1 = sc.Helix(idx=1, max_bases=10)
+        ss_long = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
+        ss_long_h1 = sc.Substrand(helix_idx=0, right=sc.left, start=7, end=10)
+        ss_short = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        strand_long = sc.Strand(substrands=[ss_long, ss_long_h1])
+        strand_short = sc.Strand(substrands=[ss_short])
+        strands = [strand_long, strand_short]
+        design = sc.DNADesign(grid=sc.square, helices=[helix0,helix1], strands=strands)
+        design.assign_dna(strand_short, 'AAAAC')
+        self.assertEqual('GTTTT????????', strand_long.dna_sequence)
+
+    def test_assign_dna__dna_sequence_with_uncomplemented_substrand_on_different_helix_wildcards_both_ends(self):
+        #      <---]
+        #      CAAAA
+        # ?????GTTTT
+        # [--------+
+        #          |
+        #        <-+
+        #        ???
+        helix0 = sc.Helix(idx=0, max_bases=10)
+        helix1 = sc.Helix(idx=1, max_bases=10)
+        ss_long_h0 = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
+        ss_long_h1 = sc.Substrand(helix_idx=1, right=sc.left, start=7, end=10)
+        ss_short_h0 = sc.Substrand(helix_idx=0, right=sc.left, start=5, end=10)
+        strand_long = sc.Strand(substrands=[ss_long_h0, ss_long_h1])
+        strand_short = sc.Strand(substrands=[ss_short_h0])
+        strands = [strand_long, strand_short]
+        design = sc.DNADesign(grid=sc.square, helices=[helix0,helix1], strands=strands)
+        design.assign_dna(strand_short, 'AAAAC')
+        self.assertEqual('?????GTTTT???', strand_long.dna_sequence)
+
     def test_assign_dna__one_helix_with_one_bottom_strand_and_three_top_strands(self):
         #  012   345   678
         # -TTT> -GGG> -CCC>
@@ -90,6 +186,36 @@ class TestAssignDNA(unittest.TestCase):
         self.assertEqual('CCC', strand_top1.dna_sequence)
         self.assertEqual('GGG', strand_top2.dna_sequence)
         self.assertEqual('TTT', strand_top3.dna_sequence)
+
+    def test_assign_dna__two_helices_with_multiple_substrand_intersections(self):
+        #         012    345   678    901
+        # M13   [-ACC----TAA---GAA----AAC---+
+        #       +-TGG-]<-ATT-+ CTT----TTG-+ |
+        #       |            | |          | |
+        #       +-GAT----TTC-+ ATG->[-AGT-+ |
+        #       <-CTA----AAG---TAC----TCA---+
+        h0 = sc.Helix(idx=0, max_bases=12)
+        h1 = sc.Helix(idx=1, max_bases=12)
+
+        scaf0_ss = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=12)
+        scaf1_ss = sc.Substrand(helix_idx=1, right=sc.left, start=0, end=12)
+        scaf = sc.Strand(substrands=[scaf0_ss, scaf1_ss])
+
+        first_stap0_left_ss = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=3)
+        first_stap1_ss = sc.Substrand(helix_idx=1, right=sc.right, start=0, end=6)
+        first_stap0_right_ss = sc.Substrand(helix_idx=0, right=sc.left, start=3, end=6)
+        first_stap = sc.Strand(substrands=[first_stap0_left_ss, first_stap1_ss, first_stap0_right_ss])
+
+        second_stap1_right_ss = sc.Substrand(helix_idx=1, right=sc.right, start=9, end=12)
+        second_stap0_ss = sc.Substrand(helix_idx=0, right=sc.left, start=6, end=12)
+        second_stap1_left_ss = sc.Substrand(helix_idx=1, right=sc.right, start=6, end=9)
+        second_stap = sc.Strand(substrands=[second_stap1_right_ss, second_stap0_ss, second_stap1_left_ss])
+
+        strands = [scaf, first_stap, second_stap]
+        design = sc.DNADesign(grid=sc.square, helices=[h0, h1], strands=strands)
+        design.assign_dna(scaf, 'ACC TAA GAA AAC ACT CAT GAA ATC'.replace(' ', ''))
+        self.assertEqual('GGT GAT TTC TTA'.replace(' ', ''), first_stap.dna_sequence)
+        self.assertEqual('AGT GTT TTC ATG'.replace(' ', ''), second_stap.dna_sequence)
 
     def test_assign_dna__upper_left_edge_staple_of_16H_origami_rectangle(self):
         # staple <ACATAAGAAAACGGAG--+

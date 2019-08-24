@@ -141,11 +141,10 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     .. code-block:: Python
 
         import origami_rectangle as rect
-
-        num_helices = 16
-        num_cols = 24  # XXX: ensure num_cols is even since we divide it by 2
-        design = rect.create(num_helices=num_helices, num_cols=num_cols, nick_pattern=rect.staggered)
-        design.write_to_file("16_helix_rectangle.dna")
+        
+        # XXX: ensure num_cols is even since we divide it by 2
+        design = rect.create(num_helices=16, num_cols=24, nick_pattern=rect.staggered)
+        design.write_file()
 
     However, we caution that :any:`origami_rectangle.create` is not intended to be very
     extensible for creating many different types of DNA origami. It is more intended as an

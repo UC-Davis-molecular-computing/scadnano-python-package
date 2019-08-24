@@ -5,16 +5,13 @@ import json
 class JSONSerializable(ABC):
 
     @abstractmethod
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         raise NotImplementedError()
 
 
-def json_encode(obj: JSONSerializable) -> str:
-    return json.dumps(obj.to_json_serializable(), cls=SuppressableIndentEncoder, indent=2)
-
-
-##############################################################################
-# SuppressableIndentEncoder
+def json_encode(obj: JSONSerializable, suppress_indent: bool = True) -> str:
+    encoder = SuppressableIndentEncoder if suppress_indent else json.JSONEncoder
+    return json.dumps(obj.to_json_serializable(suppress_indent=suppress_indent), cls=encoder, indent=2)
 
 
 class NoIndent(object):
@@ -47,6 +44,21 @@ class SuppressableIndentEncoder(json.JSONEncoder):
         for k, v in self._replacement_map.items():
             result = result.replace('"@@%s@@"' % (k,), v)
         return result
+
+
+# class KeepIndentEncoder(json.JSONEncoder):
+#     def __init__(self, *args, **kwargs):
+#         self.unique_id = 0
+#         super(KeepIndentEncoder, self).__init__(*args, **kwargs)
+#         self.kwargs = dict(kwargs)
+#         del self.kwargs['indent']
+#         self._replacement_map = {}
+#
+#     def default(self, o):
+#         if isinstance(o, NoIndent):
+#             return o.value
+#         else:
+#             return super(KeepIndentEncoder, self).default(o)
 
 
 # class SuppressableIndentEncoder(json.JSONEncoder):
@@ -116,112 +128,6 @@ if __name__ == '__main__':
         }
     }
 
-    # print(json.dumps(data_structure, cls=NoIndentEncoder, sort_keys=True, indent=2))
-    print(json.dumps(data_structure, cls=SuppressableIndentEncoder, sort_keys=True, indent=2))
-
-# END CustomIndentEncoder
-##############################################################################
-
-
-# old code below here; decided not to automate the JSON as much, which allows fine-grain indent control
-
-##############################################################################
-# JSON serialization defaults
-# Below is a much more primitive version of https://jsonpickle.github.io/,
-# In particular, it does not handle the case of circular object references
-# (and in fact has an infinite loop if they exist), but I don't want any
-# external package dependencies, and this is good enough for our case.
-
-# def _is_json_serializable(obj):
-#     # This check is based on the following table:
-#     # https://docs.python.org/3/library/json.html#py-to-json-table
-#     return (obj is None
-#             or type(obj) in [str, int, float, bool, list, tuple, dict]
-#             or issubclass(type(obj), enum.Enum))
-#
-#
-# def _default_json_encode(obj):
-#     # This check is based on the following table:
-#     # https://docs.python.org/3/library/json.html#py-to-json-table
-#     obj_type = type(obj)
-#     if obj is None or obj_type in [str, int, float, bool] or issubclass(obj_type, enum.Enum):
-#         return obj
-#     elif obj_type == list:
-#         return [_default_json_encode(elt) for elt in obj]
-#     elif obj_type == tuple:
-#         return (_default_json_encode(elt) for elt in obj)
-#     elif obj_type == dict:
-#         return {key: _default_json_encode(val) for (key, val) in obj.items()}
-#     else:
-#         fields = dict(obj.__dict__)
-#         non_serializable_fields = {}
-#         for (key, val) in fields.items():
-#             if not _is_json_serializable(val):
-#                 non_serializable_fields[key] = _default_json_encode(val)
-#         fields.update(non_serializable_fields)
-#         return fields
-#
-#
-# class _ObjectTreeJSONEncoder(json.JSONEncoder):
-# # class _ObjectTreeJSONEncoder(jci.CustomIndentEncoder):
-#     """Assumes that object containment is a tree (XXX: has infinite recursion otherwise!!)
-#     and makes a default JSON encoder for each object that is not already serializable,
-#     using the object's __dict__."""
-#
-#     def default(self, obj):
-#         obj_custom_indent = _default_json_encode(obj)
-#
-#         return super(obj_custom_indent)
-#
-#
-# class JSONMixin:
-#     """Gives the class a method called to_json() that uses the _ObjectTreeJSONEncoder
-#     to create JSON.
-#
-#     This is a mixin class intended to be subclassed.
-#
-#     WARNING: it assumes the object hierarchy is a tree and will have an infinite loop
-#     if there is a cycle in the object graph."""
-#
-#     def to_json(self, indent=2) -> str:
-#         """Return a JSON string representing this object.
-#
-#         Default indent is 2; use indent=i to make it i or None to turn it off."""
-#         json_str = json.dumps(self, cls=_ObjectTreeJSONEncoder, indent=indent)
-#         return json_str
-#         # return remove_indent_beyond(js=json_str, indent=indent, max_level=2, max_line_length=120)
-#
-#
-# def remove_indent_beyond(js: str, indent: int, max_level: int, max_line_length: int):
-#     """Kludgy way to remove indents from JSON strings formatted with the `indent` argument.
-#
-#     Replaces newlines followed by too many spaces (more than indent*max_level)
-#     with empty string."""
-#
-#     pattern_spaces = r'\s' * (indent * max_level) + r'\s*'
-#     pattern_end_dict = r'\s' * (indent * (max_level - 1)) + '}'
-#     pattern_end_list = r'\s' * (indent * (max_level - 1)) + ']'
-#     pattern_full = '^(' + pattern_spaces + ')|(' + pattern_end_dict + ')|(' + pattern_end_list + ')'
-#     pattern_end_container = '^(' + pattern_end_dict + ')|(' + pattern_end_list + ')'
-#
-#     def chop(line):
-#         return re.sub(r'^\s*', '', line)
-#
-#     new_lines = []
-#     merged_line_builder = []
-#
-#     for line in js.split('\n'):
-#         if not re.match(pattern_full, line):
-#             new_lines.append(line)
-#         else:
-#             merged_line_builder.append(line)
-#             if re.match(pattern_end_container, line):
-#                 chopped_line_builder = [chop(l) for l in merged_line_builder]
-#                 merged_line = ''.join(chopped_line_builder)
-#                 merged_line_builder = []
-#                 if len(merged_line) < max_line_length:
-#                     new_lines.append(merged_line)
-#                 else:
-#                     new_lines.extend(merged_line_builder)
-#
-#     return '\n'.join(new_lines)
+    # print(json.dumps(data_structure, cls=SuppressableIndentEncoder, sort_keys=True, indent=2))
+    # print(json.dumps(data_structure, cls=json.JSONEncoder, sort_keys=True, indent=2))
+    # print(json_encode(data_structure, suppress_indent=True))

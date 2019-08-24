@@ -16,8 +16,6 @@ import m13
 
 # TODO: add support for writing 3D positions (in addition to 2D svg_positions)
 
-# TODO: add check for whether RUNNING_IN_BROWSER is true and change behavior of write_to_file or provide some means of exporting DNADesign as JSON to Dart
-
 ##############################################################################
 # Colors
 # As with JSON serialization, there are external libraries to handle colors
@@ -35,9 +33,9 @@ class Color(JSONSerializable):
     b: int = 0
     """Blue component: 0-255"""
 
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         # Return object representing this Color that is JSON serializable.
-        return NoIndent(self.__dict__)
+        return NoIndent(self.__dict__) if suppress_indent else self.__dict__
 
 
 class ColorCycler:
@@ -176,6 +174,7 @@ The M13mp18 DNA sequence, starting from cyclic rotation 5588, as defined in
 version_key = 'version'
 grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
+major_ticks_key = 'major_ticks'
 helices_key = 'helices'
 strands_key = 'strands'
 
@@ -210,10 +209,10 @@ insertions_key = 'insertions'
 def in_browser() -> bool:
     """Test if this code is running in the browser.
 
-    Checks for existence of package "browser" used in Brython. If present it is assumed the code is
+    Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
     running in the browser."""
     try:
-        import browser
+        import pyodide
         return True
     except ModuleNotFoundError:
         return False
@@ -232,6 +231,10 @@ class Helix(JSONSerializable):
 
     major_tick_distance: int = -1
     """If positive, overrides :any:`DNADesign.major_tick_distance`."""
+
+    major_ticks: List[int] = None
+    """If not None, overrides :any:`DNADesign.major_tick_distance` and :any:`Helix.major_tick_distance`
+    to specify a list of offsets at which to put major ticks."""
 
     grid_position: Tuple[int, int, int] = None
     """`(h,v,b)` position of this helix in the side view grid,
@@ -265,11 +268,14 @@ class Helix(JSONSerializable):
         for :any:`Helix.idx`, though it may not actually have any :any:`Substrand`'s on it."""
         return self.idx >= 0
 
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         dct = self.__dict__
 
         if self.major_tick_distance <= 0:
             del dct[major_tick_distance_key]
+
+        if self.major_ticks is None:
+            del dct[major_ticks_key]
 
         # print(f'self.svg_position()    = {self.svg_position}')
         # print(f'default_svg_position() = {self.default_svg_position()}')
@@ -280,7 +286,7 @@ class Helix(JSONSerializable):
         if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
             dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
 
-        return NoIndent(dct)
+        return NoIndent(dct) if suppress_indent else dct
 
     def __post_init__(self):
         if self.grid_position is None:
@@ -289,6 +295,12 @@ class Helix(JSONSerializable):
         if self.svg_position is None:
             # default to same x- and z-coordinates 0, and y-coordinate scales with idx
             self.svg_position = self.default_svg_position()
+        if self.major_ticks is not None:
+            for major_tick in self.major_ticks:
+                if major_tick > self.max_bases:
+                    raise IllegalDNADesignError(f'major tick {major_tick} in list {self.major_ticks} is '
+                                                f'outside the range of available offsets since max_bases = '
+                                                f'{self.max_bases}')
 
     def default_svg_position(self):
         return 0, self.idx * distance_between_helices_svg
@@ -335,11 +347,14 @@ class Substrand(JSONSerializable):
     insertions: List[Tuple[int, int]] = field(default_factory=list)
     """List of (position,num_insertions) pairs on this Substrand."""
 
+    # not serialized; for efficiency
     _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
 
-    # not serialized; for efficiency
+    def __post_init__(self):
+        if self.start >= self.end:
+            raise IllegalDNADesignError(f'start = {self.start} must be less than end = {self.end}')
 
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[helix_idx_key] = self.helix_idx
         dct[right_key] = self.right
@@ -349,7 +364,7 @@ class Substrand(JSONSerializable):
             dct[deletions_key] = self.deletions
         if len(self.insertions) > 0:
             dct[insertions_key] = self.insertions
-        return NoIndent(dct)
+        return NoIndent(dct) if suppress_indent else dct
 
     def dna_length(self):
         """Number of bases in this Substrand."""
@@ -520,6 +535,7 @@ class Substrand(JSONSerializable):
         return [ins_off for (ins_off, _) in self.insertions]
 
 
+
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
@@ -574,13 +590,14 @@ class Strand(JSONSerializable):
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
         init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         if self.color is not None:
-            dct[color_key] = self.color.to_json_serializable()
+            dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
             dct[dna_sequence_key] = self.dna_sequence
-        dct[substrands_key] = [substrand.to_json_serializable() for substrand in self.substrands]
+        dct[substrands_key] = [substrand.to_json_serializable(suppress_indent) for substrand in
+                               self.substrands]
         return dct
 
     def __post_init__(self):
@@ -620,46 +637,55 @@ class Strand(JSONSerializable):
         a DNA sequence to a strand. It will figure out which other Strands need
         to be assigned via this method."""
 
+        # put DNA sequences to assign to substrands in List, one position per substrand
         strand_complement_builder = []
-        for helix_idx, substrands_on_helix_self in self._helix_idx_substrand_map.items():
+
+        for substrand_self in self.substrands:
+            helix_idx = substrand_self.helix_idx
+
+        #for helix_idx, substrands_on_helix_self in self._helix_idx_substrand_map.items():
             substrands_on_helix_other = other._helix_idx_substrand_map[helix_idx]
-            for substrand_self in substrands_on_helix_self:
-                overlaps = []
-                for substrand_other in substrands_on_helix_other:
-                    if substrand_self.overlaps(substrand_other):
-                        overlap = substrand_self.compute_overlap(substrand_other)
-                        overlaps.append((overlap, substrand_other))
-                if len(overlaps) == 0:
-                    continue
+            #for substrand_self in substrands_on_helix_self:
+            overlaps = []
+            for substrand_other in substrands_on_helix_other:
+                if substrand_self.overlaps(substrand_other):
+                    overlap = substrand_self.compute_overlap(substrand_other)
+                    overlaps.append((overlap, substrand_other))
+            if len(overlaps) == 0:
+                continue
 
-                overlaps.sort()
+            overlaps.sort()
 
-                substrand_complement_builder = []
-                start_idx = substrand_self.start
-                # repeatedly insert wildcards into gaps, then reverse WC complement
-                for ((overlap_left, overlap_right), substrand_other) in overlaps:
-                    wildcards = DNA_base_wildcard * (overlap_left - start_idx)
-                    other_seq = substrand_other.dna_sequence_in(overlap_left, overlap_right - 1)
-                    overlap_complement = wc(other_seq)
-                    substrand_complement_builder.append(wildcards)
-                    substrand_complement_builder.append(overlap_complement)
-                    start_idx = overlap_right
+            substrand_complement_builder = []
+            start_idx = substrand_self.start
+            # repeatedly insert wildcards into gaps, then reverse WC complement
+            for ((overlap_left, overlap_right), substrand_other) in overlaps:
+                wildcards = DNA_base_wildcard * (overlap_left - start_idx)
+                other_seq = substrand_other.dna_sequence_in(overlap_left, overlap_right - 1)
+                overlap_complement = wc(other_seq)
+                substrand_complement_builder.append(wildcards)
+                substrand_complement_builder.append(overlap_complement)
+                start_idx = overlap_right
 
-                # last wildcard for gap between last overlap and end
-                last_wildcards = DNA_base_wildcard * (substrand_self.end - start_idx)
-                substrand_complement_builder.append(last_wildcards)
+            # last wildcard for gap between last overlap and end
+            last_wildcards = DNA_base_wildcard * (substrand_self.end - start_idx)
+            substrand_complement_builder.append(last_wildcards)
 
-                # each individual overlap sequence was reverse orientation in wc(), but not the list
-                # of all of them put together until now.
+            # If pointing left, each individual overlap sequence was reverse orientation in wc(),
+            # but not the list of all of them put together until now.
+            if not substrand_self.right:
                 substrand_complement_builder.reverse()
 
-                strand_complement_builder.extend(substrand_complement_builder)
+            substrand_self_dna_sequence = ''.join(substrand_complement_builder)
+            strand_complement_builder.append(substrand_self_dna_sequence)
 
         strand_complement = ''.join(strand_complement_builder)
         new_dna_sequence = strand_complement
         if self.dna_sequence is not None:
             new_dna_sequence = string_union_wildcard(self.dna_sequence, new_dna_sequence, DNA_base_wildcard)
-        self.dna_sequence = new_dna_sequence
+
+        # self.dna_sequence = new_dna_sequence
+        self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
 
 def string_union_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -718,16 +744,16 @@ class DNADesign(JSONSerializable):
         self._build_helix_substrand_map()
         self._check_legal_design()
 
-    def to_json_serializable(self):
+    def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[version_key] = current_version
         if self.grid != default_grid:
-            dct[grid_key] = self.grid
+            dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
-        dct[helices_key] = [helix.to_json_serializable() for helix in self.helices]
-        dct[strands_key] = [strand.to_json_serializable() for strand in self.strands]
+        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
+        dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
         return dct
 
     def used_helices(self):
@@ -753,8 +779,8 @@ class DNADesign(JSONSerializable):
 
     def _check_strands_overlap_legally(self):
         def err_msg(ss1, ss2, h_idx):
-            return f"two substrands overlap on helix {h_idx}:" \
-                f"{ss1} and {ss2} but have the same direction"
+            return f"two substrands overlap on helix {h_idx}: " \
+                   f"{ss1} and {ss2} but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
@@ -765,29 +791,59 @@ class DNADesign(JSONSerializable):
         for helix_idx, substrands in helix_idx_substrands_map.items():
             if len(substrands) == 0:
                 continue
-            # check all consecutive substrands on the same helix, sorted by start index
-            # TODO: work out a proof that it suffices to check only consecutive triples
-            substrands.sort(key=lambda ss: ss.start)
-            ss_prev: Substrand = substrands[0]
-            for ss_idx in range(1, len(substrands)):
-                ss_cur: Substrand = substrands[ss_idx]
-                if ss_prev.end > ss_cur.start:
-                    # overlap found! but it's okay if they point in opposite directions
-                    if ss_prev.right == ss_cur.right:
-                        raise IllegalDNADesignError(err_msg(ss_prev, ss_cur, helix_idx))
-                    elif ss_idx + 1 < len(substrands):
-                        # check next substrand to ensure don't have all three overlapping
-                        ss_next: Substrand = substrands[ss_idx + 1]
-                        if ss_prev.end > ss_next.start:
-                            # overlap found! okay if they point in opposite directions
-                            if ss_prev.right == ss_cur.right:
-                                raise IllegalDNADesignError(err_msg(ss_prev, ss_next, helix_idx))
-                            else:
-                                # okay if prev and next are opposite, but if we're here
-                                # it means prev and cur are also opposite, so cur and next
-                                # are same direction, so cannot overlap
-                                if ss_cur.end > ss_next.start:
-                                    raise IllegalDNADesignError(err_msg(ss_cur, ss_next, helix_idx))
+
+            # check all consecutive substrands on the same helix, sorted by start/end indices
+            offsets_data = []
+            for substrand in substrands:
+                offsets_data.append((substrand.start, True, substrand))
+                offsets_data.append((substrand.end, False, substrand))
+            offsets_data.sort(key=lambda offset_data: offset_data[0])
+
+            current_substrands: List[Substrand] = []
+            for offset, is_start, substrand in offsets_data:
+                if is_start:
+                    if len(current_substrands) >= 2:
+                        if offset >= current_substrands[1].end:
+                            del current_substrands[1]
+                    if len(current_substrands) >= 1:
+                        if offset >= current_substrands[0].end:
+                            del current_substrands[0]
+                    current_substrands.append(substrand)
+                    if len(current_substrands) > 2:
+                        ss0, ss1, ss2 = current_substrands[0:3]
+                        for s_first, s_second in [(ss0, ss1), (ss1, ss2), (ss0, ss2)]:
+                            if s_first.right == s_second.right:
+                                raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
+                        raise AssertionError(
+                            f"since current_substrands = {current_substrands} has at least three substrands, "
+                            f"I expected to find a pair of illegally overlapping substrands")
+                    elif len(current_substrands) == 2:
+                        s_first, s_second = current_substrands
+                        if s_first.right == s_second.right:
+                            raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
+
+            # # TODO: work out a proof that it suffices to check only consecutive triples
+            # substrands.sort(key=lambda ss: ss.start)
+            # ss_prev: Substrand = substrands[0]
+            # for ss_idx in range(1, len(substrands)):
+            #     ss_cur: Substrand = substrands[ss_idx]
+            #     if ss_prev.end > ss_cur.start:
+            #         # overlap found! but it's okay if they point in opposite directions
+            #         if ss_prev.right == ss_cur.right:
+            #             raise IllegalDNADesignError(err_msg(ss_prev, ss_cur, helix_idx))
+            #         elif ss_idx + 1 < len(substrands):
+            #             # check next substrand to ensure don't have all three overlapping
+            #             ss_next: Substrand = substrands[ss_idx + 1]
+            #             if ss_prev.end > ss_next.start:
+            #                 # overlap found! okay if they point in opposite directions
+            #                 if ss_prev.right == ss_cur.right:
+            #                     raise IllegalDNADesignError(err_msg(ss_prev, ss_next, helix_idx))
+            #                 else:
+            #                     # okay if prev and next are opposite, but if we're here
+            #                     # it means prev and cur are also opposite, so cur and next
+            #                     # are same direction, so cannot overlap
+            #                     if ss_cur.end > ss_next.start:
+            #                         raise IllegalDNADesignError(err_msg(ss_cur, ss_next, helix_idx))
 
     def _check_strands_reference_legal_helices(self):
         # ensure each strand refers to an existing helix
@@ -812,10 +868,10 @@ class DNADesign(JSONSerializable):
             for substrand in strand.substrands:
                 self.helix_substrand_map[substrand.helix_idx].append(substrand)
 
-    def to_json(self):
+    def to_json(self, suppress_indent=True):
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file."""
-        return json_encode(self)
+        return json_encode(self, suppress_indent)
 
     def add_deletion(self, helix_idx: int, offset: int):
         """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""
@@ -850,11 +906,7 @@ class DNADesign(JSONSerializable):
         If `sequence` is longer, it is truncated.
         If `sequence` is shorter, it is padded with :py:data:`DNA_base_wildcard`'s.
         """
-        if len(sequence) > strand.dna_length():
-            sequence = sequence[:strand.dna_length()]
-        elif len(sequence) < strand.dna_length():
-            sequence += DNA_base_wildcard * (strand.dna_length() - len(sequence))
-        strand.dna_sequence = sequence
+        strand.dna_sequence = _pad_dna(sequence, strand.dna_length())
 
         for other_strand in self.strands:
             if strand == other_strand:
@@ -864,12 +916,12 @@ class DNADesign(JSONSerializable):
 
     def write_file(self, directory: str = '.', filename=None):
         """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano,
-        with the output file having the same name as the running script but with ``.py`` changed to ``.dna``.
+        with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
+        unless `filename` is explicitly specified.
 
-        For instance, if the script is named ``my_origami.py``, then the design will be written to ``my_origami.dna``
-        unless filename is explicitly given.
+        For instance, if the script is named ``my_origami.py``, then the design will be written to ``my_origami.dna``.
 
-        `directory` specifies an optional directory in which to place the file, either absolute or relative to
+        `directory` specifies a directory in which to place the file, either absolute or relative to
         the current working directory. Default is the current working directory.
 
         The string written is that returned by :meth:`DNADesign.to_json`.
@@ -879,3 +931,15 @@ class DNADesign(JSONSerializable):
         relative_filename = os.path.join(directory, filename)
         with open(relative_filename, 'w') as out_file:
             out_file.write(self.to_json())
+
+
+def _pad_dna(sequence: str, length: int) -> str:
+    """Return `sequence` modified to have length `length`.
+
+    If len(sequence) < length, pad with  :py:data:`DNA_base_wildcard`.
+    If len(sequence) > length, remove extra symbols."""
+    if len(sequence) > length:
+        sequence = sequence[:length]
+    elif len(sequence) < length:
+        sequence += DNA_base_wildcard * (length - len(sequence))
+    return sequence
