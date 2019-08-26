@@ -535,7 +535,6 @@ class Substrand(JSONSerializable):
         return [ins_off for (ins_off, _) in self.insertions]
 
 
-
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
@@ -643,9 +642,9 @@ class Strand(JSONSerializable):
         for substrand_self in self.substrands:
             helix_idx = substrand_self.helix_idx
 
-        #for helix_idx, substrands_on_helix_self in self._helix_idx_substrand_map.items():
+            # for helix_idx, substrands_on_helix_self in self._helix_idx_substrand_map.items():
             substrands_on_helix_other = other._helix_idx_substrand_map[helix_idx]
-            #for substrand_self in substrands_on_helix_self:
+            # for substrand_self in substrands_on_helix_self:
             overlaps = []
             for substrand_other in substrands_on_helix_other:
                 if substrand_self.overlaps(substrand_other):
@@ -857,10 +856,15 @@ class DNADesign(JSONSerializable):
     def substrands_at(self, helix_idx, offset):
         """Return list of substrands that overlap `offset` on helix with idx `helix_idx`.
 
-        If constructed properly, this list should have 0, 1, or 2 elements, but no such check is done."""
+        If constructed properly, this list should have 0, 1, or 2 elements."""
         substrands_on_helix = self.helix_substrand_map[helix_idx]
         # TODO: replace this with a faster algorithm using binary search
-        return [substrand for substrand in substrands_on_helix if substrand.contains_offset(offset)]
+        substrands_on_helix = [substrand for substrand in substrands_on_helix if
+                               substrand.contains_offset(offset)]
+        if len(substrands_on_helix) not in [0, 1, 2]:
+            raise AssertionError(f'There should be at most 2 substrands on helix {helix_idx}, '
+                                 f'but there are {len(substrands_on_helix)}:\n{substrands_on_helix}')
+        return substrands_on_helix
 
     def _build_helix_substrand_map(self):
         self.helix_substrand_map = defaultdict(list)

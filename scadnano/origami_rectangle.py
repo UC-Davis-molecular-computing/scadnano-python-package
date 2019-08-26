@@ -38,8 +38,8 @@ instead of :const:`origami_rectangle.NickPattern.odd`."""
 
 
 def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
-           nick_pattern: NickPattern = NickPattern.staggered,
-           twist_correction_deletion_spacing: int = 0, num_flanking_columns: int = 1,
+           nick_pattern: NickPattern = NickPattern.staggered, twist_correction_deletion_spacing: int = 0,
+           num_flanking_columns: int = 1, num_flanking_helices=0,
            custom_scaffold: str = None) -> sc.DNADesign:
     """
     Creates a DNA origami rectangle with a given number of helices and
@@ -162,7 +162,7 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
               f'which requires {num_cols * num_helices * BASES_PER_COLUMN} bases, '
               f'greater than the 7249 available in standard M13.')
     if seam_left_column % 2 == 0:
-        raise ValueError(f'seam_left_column must be even but is {seam_left_column}')
+        raise ValueError(f'seam_left_column must be odd but is {seam_left_column}')
     if seam_left_column < 0:
         seam_left_column = num_cols // 2 - 1
 
@@ -175,9 +175,10 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     # x offset just to left of seam
     offset_mid = offset_start + BASES_PER_COLUMN * (seam_left_column + 1)
 
-    helices = _create_helices(num_helices, num_bases_per_helix)
-    scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices)
-    staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_cols, nick_pattern)
+    helices = _create_helices(num_helices + 2 * num_flanking_helices, num_bases_per_helix)
+    scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices)
+    staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
+                              num_cols, nick_pattern)
 
     design = sc.DNADesign(helices=helices, strands=[scaffold] + staples, grid=sc.square)
 
@@ -198,14 +199,15 @@ def _create_helices(num_helices: int, num_bases_per_helix: int):
     return [sc.Helix(idx=idx, max_bases=num_bases_per_helix) for idx in range(num_helices)]
 
 
-def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int):
-    top_substrand = sc.Substrand(helix_idx=0, right=True,
+def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
+                     num_flanking_helices: int):
+    top_substrand = sc.Substrand(helix_idx=0 + num_flanking_helices, right=True,
                                  start=offset_start, end=offset_end)
     substrands_left = []
     substrands_right = []
-    for helix_idx in range(1, num_helices):
+    for helix_idx in range(1 + num_flanking_helices, num_helices + num_flanking_helices):
         # otherwise there's a nick (bottom helix) or the seam crossover (all other than top and bottom)
-        right = (helix_idx % 2 == 0)
+        right = (helix_idx % 2 == num_flanking_helices % 2)
         left_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
                                       start=offset_start, end=offset_mid)
         right_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
@@ -217,29 +219,32 @@ def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_he
     return sc.Strand(substrands=substrands, color=sc.default_scaffold_color)
 
 
-def _create_staples(offset_start, offset_end, offset_mid, num_helices, num_cols, nick_pattern):
-    left_edge_staples = _create_left_edge_staples(offset_start, num_helices)
-    right_edge_staples = _create_right_edge_staples(offset_end, num_helices)
-    seam_staples = _create_seam_staples(offset_mid, num_helices)
-    inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_cols,
+def _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices, num_cols,
+                    nick_pattern):
+    left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices)
+    right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices)
+    seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices)
+    inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices,
+                                          num_flanking_helices, num_cols,
                                           nick_pattern)
     return left_edge_staples + right_edge_staples + seam_staples + inner_staples
 
 
-def _create_seam_staples(offset_mid, num_helices):
+def _create_seam_staples(offset_mid, num_helices, num_flanking_helices):
     staples = []
-    for helix_idx in range(0, num_helices, 2):
+    for helix_idx in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
         crossover_left = offset_mid - BASES_PER_COLUMN
         crossover_right = offset_mid + BASES_PER_COLUMN
         nick_bot = crossover_left + 8
         nick_top = crossover_right - 8
-        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=False,
+        bot_helix_right = True
+        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=not bot_helix_right,
                                  start=crossover_left, end=nick_top)
-        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
+        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=bot_helix_right,
                                  start=crossover_left, end=nick_bot)
-        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
+        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=bot_helix_right,
                                  start=nick_bot, end=crossover_right)
-        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=False,
+        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=not bot_helix_right,
                                  start=nick_top, end=crossover_right)
         staple_5p_top = sc.Strand(substrands=[ss_5p_top, ss_3p_bot])
         staple_5p_bot = sc.Strand(substrands=[ss_5p_bot, ss_3p_top])
@@ -248,33 +253,36 @@ def _create_seam_staples(offset_mid, num_helices):
     return staples
 
 
-def _create_left_edge_staples(offset_start, num_helices):
+def _create_left_edge_staples(offset_start, num_helices, num_flanking_helices):
     staples = []
     crossover_right = offset_start + BASES_PER_COLUMN
-    for helix_idx in range(0, num_helices, 2):
-        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
+    for helix_idx in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
+        bot_helix_right = True
+        ss_5p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=bot_helix_right,
                                  start=offset_start, end=crossover_right)
-        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=False,
+        ss_3p_top = sc.Substrand(helix_idx=helix_idx, right=not bot_helix_right,
                                  start=offset_start, end=crossover_right)
         staple = sc.Strand(substrands=[ss_5p_bot, ss_3p_top])
         staples.append(staple)
     return staples
 
 
-def _create_right_edge_staples(offset_end, num_helices):
+def _create_right_edge_staples(offset_end, num_helices, num_flanking_helices):
     staples = []
     crossover_left = offset_end - BASES_PER_COLUMN
-    for helix_idx in range(0, num_helices, 2):
-        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=False,
+    for helix_idx in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
+        bot_helix_right = True
+        ss_5p_top = sc.Substrand(helix_idx=helix_idx, right=not bot_helix_right,
                                  start=crossover_left, end=offset_end)
-        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=True,
+        ss_3p_bot = sc.Substrand(helix_idx=helix_idx + 1, right=bot_helix_right,
                                  start=crossover_left, end=offset_end)
         staple = sc.Strand(substrands=[ss_5p_top, ss_3p_bot])
         staples.append(staple)
     return staples
 
 
-def _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_cols, nick_pattern):
+def _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices, num_cols,
+                          nick_pattern):
     if nick_pattern is not NickPattern.staggered:
         raise NotImplementedError("Currently can only handle staggered nick pattern")
     if ((num_cols - 4) // 2) % 2 != 0:
@@ -295,38 +303,43 @@ def _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num
             continue
         if col % 2 == 1:
             # special staple in odd column is 24-base staple along top helix
-            ss_top_5p_h0 = sc.Substrand(helix_idx=0, right=False,
+            h1_right = True
+            ss_top_5p_h0 = sc.Substrand(helix_idx=0 + num_flanking_helices, right=not h1_right,
                                         start=x_l, end=x_mid_col + BASES_PER_COLUMN)
-            ss_top_3p_h1 = sc.Substrand(helix_idx=1, right=True,
+            ss_top_3p_h1 = sc.Substrand(helix_idx=1 + num_flanking_helices, right=h1_right,
                                         start=x_l, end=x_mid_col)
             staple_top = sc.Strand(substrands=[ss_top_5p_h0, ss_top_3p_h1])
             staples.append(staple_top)
 
-            for helix_idx in range(1, num_helices - 2, 2):
-                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=True,
+            for helix_idx in range(1 + num_flanking_helices, num_helices + num_flanking_helices - 2, 2):
+                helix_i_right = True
+                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=helix_i_right,
                                           start=x_mid_col, end=x_r)
-                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=False,
+                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=not helix_i_right,
                                             start=x_l, end=x_r)
-                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=True,
+                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=helix_i_right,
                                             start=x_l, end=x_mid_col)
                 staple = sc.Strand(substrands=[ss_helix_i, ss_helix_ip1, ss_helix_ip2])
                 staples.append(staple)
 
         else:
-            # special staple in even column is 24-base staple along bottom helix
-            ss_bot_5p_hm1 = sc.Substrand(helix_idx=num_helices - 1, right=True,
+            # special staple in even column is 24-base staple along bottom helix (hm1="helix minus 1")
+            hm1_right = True
+            ss_bot_5p_hm1 = sc.Substrand(helix_idx=num_helices + num_flanking_helices - 1, right=hm1_right,
                                          start=x_mid_col - BASES_PER_COLUMN, end=x_r)
-            ss_bot_3p_hm2 = sc.Substrand(helix_idx=num_helices - 2, right=False,
+            ss_bot_3p_hm2 = sc.Substrand(helix_idx=num_helices + num_flanking_helices - 2,
+                                         right=not hm1_right,
                                          start=x_mid_col, end=x_r)
             staple_bot = sc.Strand(substrands=[ss_bot_5p_hm1, ss_bot_3p_hm2])
             staples.append(staple_bot)
 
-            for helix_idx in range(0, num_helices - 3, 2):
-                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=False,
+            for helix_idx in range(0 + num_flanking_helices, num_helices + num_flanking_helices - 3, 2):
+                helix_i_right = False
+                ss_helix_i = sc.Substrand(helix_idx=helix_idx, right=helix_i_right,
                                           start=x_mid_col, end=x_r)
-                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=True,
+                ss_helix_ip1 = sc.Substrand(helix_idx=helix_idx + 1, right=not helix_i_right,
                                             start=x_l, end=x_r)
-                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=False,
+                ss_helix_ip2 = sc.Substrand(helix_idx=helix_idx + 2, right=helix_i_right,
                                             start=x_l, end=x_mid_col)
                 staple = sc.Strand(substrands=[ss_helix_ip2, ss_helix_ip1, ss_helix_i])
                 staples.append(staple)
