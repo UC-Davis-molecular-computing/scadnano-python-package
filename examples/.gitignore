@@ -3,5 +3,5 @@
 /doc/
 /other/
 /__pycache__/
-/overlapping_strands.py
+/tests/overlapping_strands.py
 /seed_sst.py

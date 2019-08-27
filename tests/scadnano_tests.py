@@ -6,6 +6,17 @@ import scadnano as sc
 
 import unittest
 
+#TODO: add tests for mutation methods on DNADesign
+
+#TODO: mutator methods let me create this strand (which should be illegal); add a test for it
+# {
+#   "color": {"r": 51, "g": 51, "b": 51},
+#   "substrands": [
+#     {"helix_idx": 2, "right": false, "start": 40, "end": 48},
+#     {"helix_idx": 2, "right": false, "start": 32, "end": 48, "deletions": [44]},
+#     {"helix_idx": 3, "right": true, "start": 32, "end": 40}
+#   ]
+# }
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
@@ -96,6 +107,158 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
 class TestAssignDNA(unittest.TestCase):
 
+    def test_assign_dna__two_equal_length_strands_on_one_helix(self):
+        # <---]
+        # CAAAA
+        # GTTTT
+        # [--->
+        helix = sc.Helix(idx=0, max_bases=5)
+        ss_bot = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
+        ss_top = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        strand_bot = sc.Strand(substrands=[ss_bot])
+        strand_top = sc.Strand(substrands=[ss_top])
+        strands = [strand_bot, strand_top]
+        design = sc.DNADesign(grid=sc.square, helices=[helix], strands=strands)
+        design.assign_dna(strand_top, 'AAAAC')
+        self.assertEqual('GTTTT', strand_bot.dna_sequence)
+
+    def test_assign_dna__one_strand_assigned_by_complement_from_two_other_strands(self):
+        #   0123     4567
+        # <-AAAC-] <-GGGA-]
+        # [-TTTG-----CCCT->
+        helix=sc.Helix(idx=0, max_bases=8)
+        ss_top_left = sc.Substrand(0, sc.left, 0, 4)
+        ss_top_right = sc.Substrand(0, sc.left, 4, 8)
+        ss_bot = sc.Substrand(0,sc.right, 0, 8)
+        st_top_left = sc.Strand([ss_top_left])
+        st_top_right = sc.Strand([ss_top_right])
+        st_bot = sc.Strand([ss_bot])
+        design = sc.DNADesign(helices=[helix], strands=[st_bot, st_top_left, st_top_right])
+        design.assign_dna(st_top_left, 'CAAA')
+        self.assertEqual('TTTG????', st_bot.dna_sequence)
+        design.assign_dna(st_top_right, 'AGGG')
+        self.assertEqual('TTTGCCCT', st_bot.dna_sequence)
+
+    def test_assign_dna__adapter_assigned_from_scaffold_and_tiles(self):
+        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # tile0 first, then to tile1, and adap is connected to each of them on different helices.
+        # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
+        # keep the old information and don't discard it by simply padding the shorter portion of it on
+        # helix 1 with ?'s, but remember the old DNA sequence.
+
+        #        01 2345     6789  01
+        # adap    [-TTTC-----CATT-------+
+        # scaf <-GT-AAAG-+ <-GTAA--AA-] |
+        #                |              |
+        #      [-AA-TTTG-+ [-TGCC--GG-> |
+        #         <-AAAC-----ACGG-------+
+        h0=sc.Helix(idx=0, max_bases=12)
+        h1=sc.Helix(idx=1, max_bases=12)
+        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf = sc.Strand([scaf1_ss, scaf0_ss])
+        adap = sc.Strand([adap0_ss, adap1_ss])
+        tile0 = sc.Strand([tile0_ss])
+        tile1 = sc.Strand([tile1_ss])
+
+        design = sc.DNADesign(helices=[h0, h1], strands=[scaf, adap, tile0, tile1])
+
+        design.assign_dna(tile0, 'AA AATG')
+        self.assertEqual('???? CATT ???? ????'.replace(' ',''), adap.dna_sequence)
+
+        design.assign_dna(tile1, 'TGCC GG')
+        self.assertEqual('???? CATT GGCA ????'.replace(' ',''), adap.dna_sequence)
+
+        design.assign_dna(scaf, 'AA TTTG GAAA TG')
+        self.assertEqual('TTTC CATT GGCA CAAA'.replace(' ',''), adap.dna_sequence)
+
+    def test_assign_dna__adapter_assigned_from_scaffold_and_tiles_with_deletions(self):
+        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # tile0 first, then to tile1, and adap is connected to each of them on different helices.
+        # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
+        # keep the old information and don't discard it by simply padding the shorter portion of it on
+        # helix 1 with ?'s, but remember the old DNA sequence.
+
+        #        01 2345     6789  01
+        #            X         X           deletions
+        # adap    [-T TC-----CA T-------+
+        # scaf <-GT-A AG-+ <-GT A--AA-] |
+        #                |              |
+        #      [-AA-TTTG-+ [-TG C--GG-> |
+        #         <-AAAC-----AC G-------+
+        #                      X           deletions
+        h0=sc.Helix(idx=0, max_bases=12)
+        h1=sc.Helix(idx=1, max_bases=12)
+        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf = sc.Strand([scaf1_ss, scaf0_ss])
+        adap = sc.Strand([adap0_ss, adap1_ss])
+        tile0 = sc.Strand([tile0_ss])
+        tile1 = sc.Strand([tile1_ss])
+
+        design = sc.DNADesign(helices=[h0, h1], strands=[scaf, adap, tile0, tile1])
+        design.add_deletion(0, 3)
+        design.add_deletion(0, 8)
+        design.add_deletion(1, 8)
+
+        design.assign_dna(tile0, 'AA ATG')
+        self.assertEqual('??? CAT ??? ????'.replace(' ',''), adap.dna_sequence)
+
+        design.assign_dna(tile1, 'TGC GG')
+        self.assertEqual('??? CAT GCA ????'.replace(' ',''), adap.dna_sequence)
+
+        design.assign_dna(scaf, 'AA TTTG GAA TG')
+        self.assertEqual('TTC CAT GCA CAAA'.replace(' ',''), adap.dna_sequence)
+
+    def test_assign_dna__adapter_assigned_from_scaffold_and_tiles_with_insertions(self):
+        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # tile0 first, then to tile1, and adap is connected to each of them on different helices.
+        # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
+        # keep the old information and don't discard it by simply padding the shorter portion of it on
+        # helix 1 with ?'s, but remember the old DNA sequence.
+
+        #        01 2345     678I9  01
+        #                       I          insertions
+        # adap    [-TTTC-----CATTT-------+
+        # scaf <-GT-AAAG-+ <-GTAAA--AA-] |
+        #                |              |
+        #      [-AA-TTTG-+ [-TGCCC--GG-> |
+        #         <-AAAC-----ACGGG-------+
+        #                       I          insertions
+        h0=sc.Helix(idx=0, max_bases=12)
+        h1=sc.Helix(idx=1, max_bases=12)
+        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf = sc.Strand([scaf1_ss, scaf0_ss])
+        adap = sc.Strand([adap0_ss, adap1_ss])
+        tile0 = sc.Strand([tile0_ss])
+        tile1 = sc.Strand([tile1_ss])
+
+        design = sc.DNADesign(helices=[h0, h1], strands=[scaf, adap, tile0, tile1])
+        design.add_insertion(0, 8, 1)
+        design.add_insertion(1, 8, 1)
+
+        design.assign_dna(tile0, 'AA AAATG')
+        self.assertEqual('???? CATTT ????? ????'.replace(' ', ''), adap.dna_sequence)
+
+        design.assign_dna(tile1, 'TGCCC GG')
+        self.assertEqual('???? CATTT GGGCA ????'.replace(' ', ''), adap.dna_sequence)
+
+        design.assign_dna(scaf, 'AA TTTG GAAA TG')
+        self.assertEqual('TTTC CATTT GGGCA CAAA'.replace(' ', ''), adap.dna_sequence)
+
     def test_assign_dna__dna_sequence_shorter_than_complementary_strand_right_strand_longer(self):
         # <---]
         # CAAAA
@@ -111,7 +274,7 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('GTTTT?????', strand_long.dna_sequence)
 
-    def test__assign_dna__dna_sequence_shorter_than_complementary_strand_left_strand_longer(self):
+    def test_assign_dna__dna_sequence_shorter_than_complementary_strand_left_strand_longer(self):
         # [--->
         # AAAAC
         # TTTTG?????
