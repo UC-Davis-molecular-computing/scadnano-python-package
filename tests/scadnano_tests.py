@@ -6,9 +6,10 @@ import scadnano as sc
 
 import unittest
 
-#TODO: add tests for mutation methods on DNADesign
 
-#TODO: mutator methods let me create this strand (which should be illegal); add a test for it
+# TODO: add tests for mutation methods on DNADesign
+
+# TODO: mutator methods let me create this strand (which should be illegal); add a test for it
 # {
 #   "color": {"r": 51, "g": 51, "b": 51},
 #   "substrands": [
@@ -17,6 +18,7 @@ import unittest
 #     {"helix_idx": 3, "right": true, "start": 32, "end": 40}
 #   ]
 # }
+
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
@@ -122,14 +124,29 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_top, 'AAAAC')
         self.assertEqual('GTTTT', strand_bot.dna_sequence)
 
+    def test_assign_dna__assign_seq_with_wildcards(self):
+        # <---]
+        # C??AA
+        # G??TT
+        # [--->
+        helix = sc.Helix(idx=0, max_bases=5)
+        ss_bot = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
+        ss_top = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        strand_bot = sc.Strand(substrands=[ss_bot])
+        strand_top = sc.Strand(substrands=[ss_top])
+        strands = [strand_bot, strand_top]
+        design = sc.DNADesign(grid=sc.square, helices=[helix], strands=strands)
+        design.assign_dna(strand_top, 'AA??C')
+        self.assertEqual('G??TT', strand_bot.dna_sequence)
+
     def test_assign_dna__one_strand_assigned_by_complement_from_two_other_strands(self):
         #   0123     4567
         # <-AAAC-] <-GGGA-]
         # [-TTTG-----CCCT->
-        helix=sc.Helix(idx=0, max_bases=8)
+        helix = sc.Helix(idx=0, max_bases=8)
         ss_top_left = sc.Substrand(0, sc.left, 0, 4)
         ss_top_right = sc.Substrand(0, sc.left, 4, 8)
-        ss_bot = sc.Substrand(0,sc.right, 0, 8)
+        ss_bot = sc.Substrand(0, sc.right, 0, 8)
         st_top_left = sc.Strand([ss_top_left])
         st_top_right = sc.Strand([ss_top_right])
         st_bot = sc.Strand([ss_bot])
@@ -140,7 +157,7 @@ class TestAssignDNA(unittest.TestCase):
         self.assertEqual('TTTGCCCT', st_bot.dna_sequence)
 
     def test_assign_dna__adapter_assigned_from_scaffold_and_tiles(self):
-        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
         # tile0 first, then to tile1, and adap is connected to each of them on different helices.
         # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
         # keep the old information and don't discard it by simply padding the shorter portion of it on
@@ -152,8 +169,8 @@ class TestAssignDNA(unittest.TestCase):
         #                |              |
         #      [-AA-TTTG-+ [-TGCC--GG-> |
         #         <-AAAC-----ACGG-------+
-        h0=sc.Helix(idx=0, max_bases=12)
-        h1=sc.Helix(idx=1, max_bases=12)
+        h0 = sc.Helix(idx=0, max_bases=12)
+        h1 = sc.Helix(idx=1, max_bases=12)
         scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
         scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
         tile1_ss = sc.Substrand(1, sc.right, 6, 12)
@@ -168,16 +185,16 @@ class TestAssignDNA(unittest.TestCase):
         design = sc.DNADesign(helices=[h0, h1], strands=[scaf, adap, tile0, tile1])
 
         design.assign_dna(tile0, 'AA AATG')
-        self.assertEqual('???? CATT ???? ????'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('???? CATT ???? ????'.replace(' ', ''), adap.dna_sequence)
 
         design.assign_dna(tile1, 'TGCC GG')
-        self.assertEqual('???? CATT GGCA ????'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('???? CATT GGCA ????'.replace(' ', ''), adap.dna_sequence)
 
         design.assign_dna(scaf, 'AA TTTG GAAA TG')
-        self.assertEqual('TTTC CATT GGCA CAAA'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('TTTC CATT GGCA CAAA'.replace(' ', ''), adap.dna_sequence)
 
     def test_assign_dna__adapter_assigned_from_scaffold_and_tiles_with_deletions(self):
-        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
         # tile0 first, then to tile1, and adap is connected to each of them on different helices.
         # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
         # keep the old information and don't discard it by simply padding the shorter portion of it on
@@ -191,8 +208,8 @@ class TestAssignDNA(unittest.TestCase):
         #      [-AA-TTTG-+ [-TG C--GG-> |
         #         <-AAAC-----AC G-------+
         #                      X           deletions
-        h0=sc.Helix(idx=0, max_bases=12)
-        h1=sc.Helix(idx=1, max_bases=12)
+        h0 = sc.Helix(idx=0, max_bases=12)
+        h1 = sc.Helix(idx=1, max_bases=12)
         scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
         scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
         tile1_ss = sc.Substrand(1, sc.right, 6, 12)
@@ -210,16 +227,16 @@ class TestAssignDNA(unittest.TestCase):
         design.add_deletion(1, 8)
 
         design.assign_dna(tile0, 'AA ATG')
-        self.assertEqual('??? CAT ??? ????'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('??? CAT ??? ????'.replace(' ', ''), adap.dna_sequence)
 
         design.assign_dna(tile1, 'TGC GG')
-        self.assertEqual('??? CAT GCA ????'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('??? CAT GCA ????'.replace(' ', ''), adap.dna_sequence)
 
         design.assign_dna(scaf, 'AA TTTG GAA TG')
-        self.assertEqual('TTC CAT GCA CAAA'.replace(' ',''), adap.dna_sequence)
+        self.assertEqual('TTC CAT GCA CAAA'.replace(' ', ''), adap.dna_sequence)
 
     def test_assign_dna__adapter_assigned_from_scaffold_and_tiles_with_insertions(self):
-        #XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
+        # XXX: it appears the behavior this tests (which the other tests miss) is assigning DNA to
         # tile0 first, then to tile1, and adap is connected to each of them on different helices.
         # This means that when tile1 is assigned, we need to ensure when assigning to adap that we
         # keep the old information and don't discard it by simply padding the shorter portion of it on
@@ -233,8 +250,8 @@ class TestAssignDNA(unittest.TestCase):
         #      [-AA-TTTG-+ [-TGCCC--GG-> |
         #         <-AAAC-----ACGGG-------+
         #                       I          insertions
-        h0=sc.Helix(idx=0, max_bases=12)
-        h1=sc.Helix(idx=1, max_bases=12)
+        h0 = sc.Helix(idx=0, max_bases=12)
+        h1 = sc.Helix(idx=1, max_bases=12)
         scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
         scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
         tile1_ss = sc.Substrand(1, sc.right, 6, 12)
@@ -305,11 +322,12 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(substrands=[ss_long, ss_long_h1])
         strand_short = sc.Strand(substrands=[ss_short])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, helices=[helix0,helix1], strands=strands)
+        design = sc.DNADesign(grid=sc.square, helices=[helix0, helix1], strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('GTTTT????????', strand_long.dna_sequence)
 
-    def test_assign_dna__dna_sequence_with_uncomplemented_substrand_on_different_helix_wildcards_both_ends(self):
+    def test_assign_dna__dna_sequence_with_uncomplemented_substrand_on_different_helix_wildcards_both_ends(
+            self):
         #      <---]
         #      CAAAA
         # ?????GTTTT
@@ -325,7 +343,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(substrands=[ss_long_h0, ss_long_h1])
         strand_short = sc.Strand(substrands=[ss_short_h0])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, helices=[helix0,helix1], strands=strands)
+        design = sc.DNADesign(grid=sc.square, helices=[helix0, helix1], strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('?????GTTTT???', strand_long.dna_sequence)
 
@@ -466,7 +484,6 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_top2, 'GGA')
         self.assertEqual('AGGTCCGAA', strand_bot.dna_sequence)
 
-
     def test_assign_dna__wildcards_multiple_overlaps(self):
         #  012   345   678   901   234   567
         #       +---------------+
@@ -487,8 +504,8 @@ class TestAssignDNA(unittest.TestCase):
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top_small0 = sc.Strand(substrands=[ss_top0])
         strand_top_small12 = sc.Strand(substrands=[ss_top12])
-        strand_top_big9 = sc.Strand(substrands=[ss_top9,ss_top3])
-        strand_top_big6 = sc.Strand(substrands=[ss_top6,ss_top15])
+        strand_top_big9 = sc.Strand(substrands=[ss_top9, ss_top3])
+        strand_top_big6 = sc.Strand(substrands=[ss_top6, ss_top15])
         strands = [strand_bot, strand_top_small0, strand_top_small12, strand_top_big9, strand_top_big6]
         design = sc.DNADesign(grid=sc.square, helices=[helix], strands=strands)
 
@@ -509,7 +526,6 @@ TEST_OFFSETS_AT_DELETION_INSERTIONS = False
 
 
 class TestSubstrandDNASequenceIn(unittest.TestCase):
-
 
     def test_dna_sequence_in__right_then_left(self):
         ss0 = sc.Substrand(0, sc.right, 0, 10)
@@ -650,45 +666,45 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         self.assertEqual("TAC", ss1.dna_sequence_in(6, 6))
         self.assertEqual("AC", ss1.dna_sequence_in(2, 2))
         #
-        self.assertEqual("A",            ss0.dna_sequence_in(0, 0))
-        self.assertEqual("AA",           ss0.dna_sequence_in(0, 1))
-        self.assertEqual("AAAA",         ss0.dna_sequence_in(0, 2))
-        self.assertEqual("AAAAC",        ss0.dna_sequence_in(0, 3))
-        self.assertEqual("AAAAC",        ss0.dna_sequence_in(0, 4))
-        self.assertEqual("AAAACC",       ss0.dna_sequence_in(0, 5))
-        self.assertEqual("AAAACCCCG",    ss0.dna_sequence_in(0, 6))
-        self.assertEqual("AAAACCCCGG",   ss0.dna_sequence_in(0, 7))
-        self.assertEqual("AAAACCCCGGG",  ss0.dna_sequence_in(0, 8))
+        self.assertEqual("A", ss0.dna_sequence_in(0, 0))
+        self.assertEqual("AA", ss0.dna_sequence_in(0, 1))
+        self.assertEqual("AAAA", ss0.dna_sequence_in(0, 2))
+        self.assertEqual("AAAAC", ss0.dna_sequence_in(0, 3))
+        self.assertEqual("AAAAC", ss0.dna_sequence_in(0, 4))
+        self.assertEqual("AAAACC", ss0.dna_sequence_in(0, 5))
+        self.assertEqual("AAAACCCCG", ss0.dna_sequence_in(0, 6))
+        self.assertEqual("AAAACCCCGG", ss0.dna_sequence_in(0, 7))
+        self.assertEqual("AAAACCCCGGG", ss0.dna_sequence_in(0, 8))
         self.assertEqual("AAAACCCCGGGG", ss0.dna_sequence_in(0, 9))
-        self.assertEqual( "AAACCCCGGGG", ss0.dna_sequence_in(1, 9))
-        self.assertEqual(  "AACCCCGGGG", ss0.dna_sequence_in(2, 9))
-        self.assertEqual(    "CCCCGGGG", ss0.dna_sequence_in(3, 9))
-        self.assertEqual(     "CCCGGGG", ss0.dna_sequence_in(4, 9))
-        self.assertEqual(     "CCCGGGG", ss0.dna_sequence_in(5, 9))
-        self.assertEqual(      "CCGGGG", ss0.dna_sequence_in(6, 9))
-        self.assertEqual(         "GGG", ss0.dna_sequence_in(7, 9))
-        self.assertEqual(          "GG", ss0.dna_sequence_in(8, 9))
-        self.assertEqual(           "G", ss0.dna_sequence_in(9, 9))
+        self.assertEqual("AAACCCCGGGG", ss0.dna_sequence_in(1, 9))
+        self.assertEqual("AACCCCGGGG", ss0.dna_sequence_in(2, 9))
+        self.assertEqual("CCCCGGGG", ss0.dna_sequence_in(3, 9))
+        self.assertEqual("CCCGGGG", ss0.dna_sequence_in(4, 9))
+        self.assertEqual("CCCGGGG", ss0.dna_sequence_in(5, 9))
+        self.assertEqual("CCGGGG", ss0.dna_sequence_in(6, 9))
+        self.assertEqual("GGG", ss0.dna_sequence_in(7, 9))
+        self.assertEqual("GG", ss0.dna_sequence_in(8, 9))
+        self.assertEqual("G", ss0.dna_sequence_in(9, 9))
         #
-        self.assertEqual("T",            ss1.dna_sequence_in(9, 9))
-        self.assertEqual("TT",           ss1.dna_sequence_in(8, 9))
-        self.assertEqual("TTT",          ss1.dna_sequence_in(7, 9))
-        self.assertEqual("TTTTAC",       ss1.dna_sequence_in(6, 9))
-        self.assertEqual("TTTTACG",      ss1.dna_sequence_in(5, 9))
-        self.assertEqual("TTTTACG",      ss1.dna_sequence_in(4, 9))
-        self.assertEqual("TTTTACGT",     ss1.dna_sequence_in(3, 9))
-        self.assertEqual("TTTTACGTAC",   ss1.dna_sequence_in(2, 9))
-        self.assertEqual("TTTTACGTACG",  ss1.dna_sequence_in(1, 9))
+        self.assertEqual("T", ss1.dna_sequence_in(9, 9))
+        self.assertEqual("TT", ss1.dna_sequence_in(8, 9))
+        self.assertEqual("TTT", ss1.dna_sequence_in(7, 9))
+        self.assertEqual("TTTTAC", ss1.dna_sequence_in(6, 9))
+        self.assertEqual("TTTTACG", ss1.dna_sequence_in(5, 9))
+        self.assertEqual("TTTTACG", ss1.dna_sequence_in(4, 9))
+        self.assertEqual("TTTTACGT", ss1.dna_sequence_in(3, 9))
+        self.assertEqual("TTTTACGTAC", ss1.dna_sequence_in(2, 9))
+        self.assertEqual("TTTTACGTACG", ss1.dna_sequence_in(1, 9))
         self.assertEqual("TTTTACGTACGT", ss1.dna_sequence_in(0, 9))
-        self.assertEqual( "TTTACGTACGT", ss1.dna_sequence_in(0, 8))
-        self.assertEqual(  "TTACGTACGT", ss1.dna_sequence_in(0, 7))
-        self.assertEqual(   "TACGTACGT", ss1.dna_sequence_in(0, 6))
-        self.assertEqual(      "GTACGT", ss1.dna_sequence_in(0, 5))
-        self.assertEqual(       "TACGT", ss1.dna_sequence_in(0, 4))
-        self.assertEqual(       "TACGT", ss1.dna_sequence_in(0, 3))
-        self.assertEqual(        "ACGT", ss1.dna_sequence_in(0, 2))
-        self.assertEqual(          "GT", ss1.dna_sequence_in(0, 1))
-        self.assertEqual(           "T", ss1.dna_sequence_in(0, 0))
+        self.assertEqual("TTTACGTACGT", ss1.dna_sequence_in(0, 8))
+        self.assertEqual("TTACGTACGT", ss1.dna_sequence_in(0, 7))
+        self.assertEqual("TACGTACGT", ss1.dna_sequence_in(0, 6))
+        self.assertEqual("GTACGT", ss1.dna_sequence_in(0, 5))
+        self.assertEqual("TACGT", ss1.dna_sequence_in(0, 4))
+        self.assertEqual("TACGT", ss1.dna_sequence_in(0, 3))
+        self.assertEqual("ACGT", ss1.dna_sequence_in(0, 2))
+        self.assertEqual("GT", ss1.dna_sequence_in(0, 1))
+        self.assertEqual("T", ss1.dna_sequence_in(0, 0))
 
         # if TEST_OFFSETS_AT_DELETION_INSERTIONS:
         #     self.assertEqual("AAAA", ss0.dna_sequence_in(0, 3))

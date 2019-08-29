@@ -23,6 +23,7 @@ import m13
 # in Python, but I want this to be a simple, single-file library, so we just
 # implement what we need below.
 
+
 @dataclass
 class Color(JSONSerializable):
     r: int = 0
@@ -130,6 +131,9 @@ honeycomb = Grid.honeycomb
 
 current_version: str = "0.0.1"
 
+default_idt_scale = "25nm"
+default_idt_purification = "STD"
+
 
 def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
@@ -190,6 +194,7 @@ svg_position_key = 'svg_position'
 color_key = 'color'
 dna_sequence_key = 'dna_sequence'
 substrands_key = 'substrands'
+idt_key = 'idt'
 
 # Substrand keys
 helix_idx_key = 'helix_idx'
@@ -281,7 +286,7 @@ class Helix(JSONSerializable):
         # print(f'self.svg_position()    = {self.svg_position}')
         # print(f'default_svg_position() = {self.default_svg_position()}')
         default_x, default_y = self.default_svg_position()
-        if close(self.svg_position[0], default_x) and close(self.svg_position[1], default_y):
+        if _is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1], default_y):
             del dct[svg_position_key]
 
         if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
@@ -307,8 +312,8 @@ class Helix(JSONSerializable):
         return 0, self.idx * distance_between_helices_svg
 
 
-def close(x1: float, x2: float):
-    return abs(x1 - x2) < 0.000001
+def _is_close(x1: float, x2: float):
+    return abs(x1 - x2) < 0.00000001
 
 
 @dataclass
@@ -378,14 +383,14 @@ class Substrand(JSONSerializable):
         self.end = new_end
         self._check_start_end()
 
-    def offset_5p(self):
+    def offset_5p(self) -> int:
         if self.right:
             return self.start
         else:
             return self.end - 1
         # return self.start if self.right else self.end - 1
 
-    def offset_3p(self):
+    def offset_3p(self) -> int:
         return self.end - 1 if self.right else self.start
 
     def _num_insertions(self) -> int:
@@ -400,11 +405,11 @@ class Substrand(JSONSerializable):
         then it contains the offset 7 even though there is no base 7 positions from the start."""
         return self.start <= offset < self.end
 
-    def dna_length(self):
+    def dna_length(self) -> int:
         """Number of bases in this Substrand."""
         return self.end - self.start - len(self.deletions) + self._num_insertions()
 
-    def dna_length_in(self, left, right):
+    def dna_length_in(self, left, right) -> int:
         """Number of bases in this Substrand between left and right (INCLUSIVE)."""
         if not left <= right + 1:
             raise ValueError(f'left = {left} and right = {right} but we should have left <= right + 1')
@@ -416,7 +421,7 @@ class Substrand(JSONSerializable):
         num_insertions = sum(length for (offset, length) in self.insertions if left <= offset <= right)
         return (right - left + 1) - num_deletions + num_insertions
 
-    def visual_length(self):
+    def visual_length(self) -> int:
         """Distance between left offset and right offset.
 
         This can be more or less than the :meth:`Substrand.dna_length` due to insertions and deletions."""
@@ -426,7 +431,7 @@ class Substrand(JSONSerializable):
         """Return DNA sequence of this Substrand."""
         return self.dna_sequence_in(self.start, self.end - 1)
 
-    def dna_sequence_in(self, offset_left: int, offset_right: int):
+    def dna_sequence_in(self, offset_left: int, offset_right: int) -> str:
         """Return DNA sequence of this Substrand in the interval of offsets given by
         [`left`, `right`], INCLUSIVE.
 
@@ -564,7 +569,7 @@ class Substrand(JSONSerializable):
             return -1, -1
         return overlap_start, overlap_end
 
-    def insertion_offsets(self):
+    def insertion_offsets(self) -> List[Tuple[int, int]]:
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
@@ -575,6 +580,44 @@ _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 def wc(seq: str) -> str:
     """Return reverse Watson-Crick complement of seq"""
     return seq.translate(_wctable)[::-1]
+
+
+@dataclass
+class IDTFields(JSONSerializable):
+    name: str
+    """Name of the strand (first field in IDT bulk input).
+    Non-optional field."""
+
+    scale: str = default_idt_scale
+    """Synthesis scale at which to synthesize the strand (second field in IDT bulk input).
+    Choices supplied by IDT at the time this was written: 
+    ``"25nm"``, ``"100nm"``, ``"250nm"``, ``"1um"``, ``"5um"``, ``"10um"``, ``"4nmU"``, ``"20nmU"``, 
+    ``"PU"``, ``"25nmS"``.
+    Optional field.
+    """
+
+    purification: str = default_idt_purification
+    """Purification options. 
+    Choices supplied by IDT at the time this was written: 
+    ``"STD"``, ``"PAGE"``, ``"HPLC"``, ``"IEHPLC"``, ``"RNASE"``, ``"DUALHPLC"``, ``"PAGEHPLC"``.
+    Optional field.
+    """
+
+    def __post_init__(self):
+        _check_idt_string_not_none_or_empty(self.name, 'name')
+        _check_idt_string_not_none_or_empty(self.scale, 'scale')
+        _check_idt_string_not_none_or_empty(self.purification, 'purification')
+
+    def to_json_serializable(self, suppress_indent=True):
+        dct = self.__dict__
+        return NoIndent(dct)
+
+
+def _check_idt_string_not_none_or_empty(value: str, field_name: str):
+    if value is None:
+        raise IllegalDNADesignError(f'field {field_name} in IDTFields cannot be None')
+    if len(value) == 0:
+        raise IllegalDNADesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
 @dataclass
@@ -617,7 +660,14 @@ class Strand(JSONSerializable):
 
     automatically_assign_color: bool = field(repr=False, default=True)
     """If `automatically_assign_color` = ``False`` and `color` = ``None``, do not automatically
-    assign a :any:`Color` to this Strand."""
+    assign a :any:`Color` to this Strand. (So color will be set to its default None and will not be
+    written to the JSON with :any:`DNADesign.write_scadnano_file` or :any:`DNADesign.to_json`."""
+
+    idt: IDTFields = None
+    """Fields used when ordering strands from the synthesis company IDT 
+    (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
+    then the method :meth:`DNADesign.generate_idt_bulk_input_file` can be called to automatically
+    generate an IDT file for ordering strands: https://eu.idtdna.com/site/order/oligoentry"""
 
     # not serialized; efficient way to see a list of all substrands on a given helix
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
@@ -629,6 +679,8 @@ class Strand(JSONSerializable):
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
             dct[dna_sequence_key] = self.dna_sequence
+        if self.idt is not None:
+            dct[idt_key] = self.idt.to_json_serializable(suppress_indent)
         dct[substrands_key] = [substrand.to_json_serializable(suppress_indent) for substrand in
                                self.substrands]
         return dct
@@ -994,6 +1046,10 @@ class DNADesign(JSONSerializable):
         a JSON file."""
         return json_encode(self, suppress_indent)
 
+    #TODO: create version of add_deltion and add_insertion that simply changes the major tick distance
+    #  on the helix at that position, as well as updating the end offset of the substrand (and subsequent
+    #  substrands on the same helix)
+
     def add_deletion(self, helix_idx: int, offset: int):
         """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""
         substrands = self.substrands_at(helix_idx, offset)
@@ -1060,7 +1116,7 @@ class DNADesign(JSONSerializable):
         """
         sequence = re.sub(r'\s*', '', sequence)
         sequence = sequence.upper()
-        #TODO: check if wildcards already assigned and merge if necessary
+        # TODO: check if wildcards already assigned and merge if necessary
         # if self.dna_sequence is not None:
         #     new_dna_sequence = _string_merge_wildcard(self.dna_sequence, new_dna_sequence, DNA_base_wildcard)
         strand.dna_sequence = _pad_dna(sequence, strand.dna_length())
@@ -1071,7 +1127,28 @@ class DNADesign(JSONSerializable):
             if other_strand.overlaps(strand):
                 other_strand.assign_dna_complement_from(strand)
 
-    def write_file(self, directory: str = '.', filename=None):
+    def to_idt_bulk_input_format(self, delimiter: str = ',', warn_on_non_idt_strands: bool = False) -> str:
+        """Return string that is written to the file in the method :any:`DNADesign.write_idt_file`.
+
+        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+
+        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
+        :any:`Strand.idt`. Such strands will not be part of the output.
+        """
+        strands_to_output = []
+        for strand in self.strands:
+            if strand.idt is not None:
+                strands_to_output.append(strand)
+            elif warn_on_non_idt_strands:
+                print(f"WARNING: strand with 5' end on helix {strand.first_substrand().helix_idx} "
+                      f"does not have a field idt, so will not be part of IDT output.")
+        idt_lines = [
+            delimiter.join([strand.idt.name, strand.dna_sequence, strand.idt.scale, strand.idt.purification])
+            for strand in strands_to_output]
+        idt_string = '\n'.join(idt_lines)
+        return idt_string
+
+    def write_scadnano_file(self, directory: str = '.', filename=None):
         """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
         unless `filename` is explicitly specified.
@@ -1084,11 +1161,42 @@ class DNADesign(JSONSerializable):
 
         The string written is that returned by :meth:`DNADesign.to_json`.
         """
-        if filename is None:
-            filename = os.path.basename(sys.argv[0])[:-3] + '.dna'
-        relative_filename = os.path.join(directory, filename)
-        with open(relative_filename, 'w') as out_file:
-            out_file.write(self.to_json())
+        contents = self.to_json()
+        _write_file(contents, 'dna', directory, filename)
+
+    def write_idt_file(self, directory: str = '.', filename=None, delimiter: str = ',',
+                       warn_on_non_idt_strands=False):
+        """Write ``.idt`` file encoding the strands of this DNADesign with the field
+        :any:`Strand.idt`, suitable for pasting into the "Bulk input" field of IDT
+        (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
+        with the output file having the same name as the running script but with ``.py`` changed to ``.idt``,
+        unless `filename` is explicitly specified.
+
+        For instance, if the script is named ``my_origami.py``,
+        then the design will be written to ``my_origami.idt``.
+
+        `directory` specifies a directory in which to place the file, either absolute or relative to
+        the current working directory. Default is the current working directory.
+
+        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+
+        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
+        :any:`Strand.idt`. Such strands will not be output into the file.
+
+        The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
+        """
+        contents = self.to_idt_bulk_input_format(delimiter, warn_on_non_idt_strands)
+        _write_file(contents, 'idt', directory, filename)
+
+
+def _write_file(contents: str, extension: str, directory: str = '.', filename=None):
+    if filename is None:
+        filename = os.path.basename(sys.argv[0])[:-3] + f'.{extension}'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    relative_filename = os.path.join(directory, filename)
+    with open(relative_filename, 'w') as out_file:
+        out_file.write(contents)
 
 
 def _pad_dna(sequence: str, length: int) -> str:

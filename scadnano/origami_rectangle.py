@@ -38,18 +38,20 @@ odd = NickPattern.odd
 """Convenience reference defined so one can type :const:`origami_rectangle.odd` 
 instead of :const:`origami_rectangle.NickPattern.odd`."""
 
+
 # @dataclass
 # class OrigamiDNADesign(sc.DNADesign):
 #     scaffold: sc.Strand = None
 
-#TODO: figure out how to make create return a subclass that has a scaffold field
+# TODO: figure out how to make create return a subclass that has a scaffold field
 
 def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
            nick_pattern: NickPattern = NickPattern.staggered,
            twist_correction_deletion_spacing: int = 0, twist_correction_start_col: int = 1,
            twist_correction_deletion_offset=-1,
            num_flanking_columns: int = 1, num_flanking_helices=0,
-           custom_scaffold: str = None, edge_staples: bool = True) -> sc.DNADesign:
+           custom_scaffold: str = None, edge_staples: bool = True,
+           scaffold_nick_offset: int = -1) -> sc.DNADesign:
     """
     Creates a DNA origami rectangle with a given number of helices and
     "columns" (16-base-wide region in each helix). The columns include
@@ -148,10 +150,15 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     
     `custom_scaffold` is the scaffold sequence to use. 
     If set to ``None``, the standard 7249-base M13 is used.
+    
+    `scaffold_nick_offset` is the position of the "nick" on the scaffold (the M13 scaffold is circular,
+    so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
+    form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
 
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
-    16-helix rectangle and write it to a file ``16_helix_rectangle.dna``
-    readable by scadnano.
+    16-helix rectangle and write it to a file readable by scadnano.
+    (By default the output file name is the same as the script calling :any:`DNADesign.write_scadnano_file`
+    but with the extension ``.py`` changed to ``.dna``.)
 
     .. code-block:: Python
 
@@ -159,7 +166,7 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
         
         # XXX: ensure num_cols is even since we divide it by 2
         design = rect.create(num_helices=16, num_cols=24, nick_pattern=rect.staggered)
-        design.write_file()
+        design.write_scadnano_file()
 
     However, we caution that :any:`origami_rectangle.create` is not intended to be very
     extensible for creating many different types of DNA origami. It is more intended as an
@@ -193,7 +200,8 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     offset_mid = offset_start + BASES_PER_COLUMN * (seam_left_column + 1)
 
     helices = _create_helices(num_helices + 2 * num_flanking_helices, num_bases_per_helix)
-    scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices)
+    scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
+                                scaffold_nick_offset)
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                               num_cols, nick_pattern, edge_staples)
 
@@ -226,18 +234,23 @@ def _create_helices(num_helices: int, num_bases_per_helix: int):
 
 
 def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
-                     num_flanking_helices: int):
+                     num_flanking_helices: int, scaffold_nick_offset: int):
+    # top substrand is continguous
     top_substrand = sc.Substrand(helix_idx=0 + num_flanking_helices, right=True,
                                  start=offset_start, end=offset_end)
     substrands_left = []
     substrands_right = []
+    if scaffold_nick_offset < 0:
+        scaffold_nick_offset = offset_mid
     for helix_idx in range(1 + num_flanking_helices, num_helices + num_flanking_helices):
         # otherwise there's a nick (bottom helix) or the seam crossover (all other than top and bottom)
+        # possibly nick on bottom helix is not along seam
+        center_offset = offset_mid if helix_idx < num_helices + num_flanking_helices - 1 else scaffold_nick_offset
         right = (helix_idx % 2 == num_flanking_helices % 2)
         left_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
-                                      start=offset_start, end=offset_mid)
+                                      start=offset_start, end=center_offset)
         right_substrand = sc.Substrand(helix_idx=helix_idx, right=right,
-                                       start=offset_mid, end=offset_end)
+                                       start=center_offset, end=offset_end)
         substrands_left.append(left_substrand)
         substrands_right.append(right_substrand)
     substrands_left.reverse()
@@ -250,7 +263,7 @@ def _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flank
     if edge_staples:
         left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices)
         right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices)
-    else :
+    else:
         left_edge_staples = []
         right_edge_staples = []
     seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices)
