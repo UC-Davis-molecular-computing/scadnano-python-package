@@ -14,7 +14,7 @@ def main():
     design.add_insertion(helix_idx=0, offset=2, length=insertion_length)
     design.add_insertion(helix_idx=0, offset=8, length=insertion_length)
     scaf.set_dna_sequence('AG' + 'A' * (length + 2*insertion_length - 2))
-    stap.set_dna_sequence('TTTCTCTTGCTTTTTTCT')
+    stap.set_dna_sequence('ATTCTCTTGCTTTTTTCA')
 
     return design
 
