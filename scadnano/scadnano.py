@@ -15,6 +15,10 @@ from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
 
+# TODO: make explicit rules about when strands can be added and sequences assigned.
+#  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
+#  should the complement be automatically assigned?
+
 # TODO: add support for writing 3D positions (in addition to 2D svg_positions)
 
 ##############################################################################
@@ -150,7 +154,7 @@ base_height_svg: float = 10.0
 distance_between_helices_svg: float = (base_width_svg * 2.5 / 0.34)
 """Distance between tops of two consecutive helices (using default positioning rules).
 
-This is set to (base_width_svg * 2.5/0.34) based on the following calculation,
+This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
 to attempt to make the DNA appear to scale in 2D drawings:
 The width of one base pair of double-stranded DNA bp is 0.34 nm.
 In a DNA origami, AFM images estimate that the average distance between adjacent double helices is 2.5 nm.
@@ -163,8 +167,8 @@ Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a sin
 DNA_base_wildcard: str = '?'
 """Symbol to insert when a DNA sequence has been assigned to a strand through complementarity, but
 some regions of the strand are not bound to the strand that was just assigned. Also used in case the
-DNA sequence assigned to a strand is too short; the sequence is padded to make its length the same
-as the length of the strand."""
+DNA sequence assigned to a strand is too short; the sequence is padded with :any:`DNA_base_wildcard` to 
+make its length the same as the length of the strand."""
 
 m13_sequence = m13.sequence
 """
@@ -359,6 +363,19 @@ class Substrand(JSONSerializable):
     def __post_init__(self):
         self._check_start_end()
 
+    def __repr__(self):
+        rep = f'Substrand(helix_idx={self.helix_idx}' \
+              f', dir={"right" if self.right else "left"}' \
+              f', start={self.start}' \
+              f', end={self.end}' \
+              '' if len(self.deletions) == 0 else f', deletions={self.deletions}' \
+              '' if len(self.insertions) == 0 else f', insertions={self.insertions}' \
+              ')'
+        return rep
+
+    def __str__(self):
+        return repr(self)
+
     def _check_start_end(self):
         if self.start >= self.end:
             raise IllegalDNADesignError(f'start = {self.start} must be less than end = {self.end}')
@@ -531,7 +548,7 @@ class Substrand(JSONSerializable):
     # The type hint 'Substrand' must be in quotes since Substrand is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
     def overlaps(self, other: 'Substrand') -> bool:
-        """Indicates if this substrand's set of offsets (the set
+        r"""Indicates if this substrand's set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
         :math:`\leq x \leq`
@@ -545,7 +562,7 @@ class Substrand(JSONSerializable):
                 self.compute_overlap(other)[0] >= 0)
 
     def overlaps_illegally(self, other: 'Substrand'):
-        """Indicates if this substrand's set of offsets (the set
+        r"""Indicates if this substrand's set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
         :math:`\leq x \leq`
@@ -561,7 +578,7 @@ class Substrand(JSONSerializable):
     def compute_overlap(self, other: 'Substrand') -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Substrand and `other`.
 
-        Return ``(-1,-1))`` if they do not overlap (different helices, or non-overlapping regions
+        Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
         of the same helix)."""
         overlap_start = max(self.start, other.start)
         overlap_end = min(self.end, other.end)
@@ -581,6 +598,9 @@ def wc(seq: str) -> str:
     """Return reverse Watson-Crick complement of seq"""
     return seq.translate(_wctable)[::-1]
 
+
+# TODO: print set of strands with unique names (but give error if two different strands with the same
+#  name have different sequences, and give warning even if the have the same sequence)
 
 @dataclass
 class IDTFields(JSONSerializable):
@@ -651,7 +671,8 @@ class Strand(JSONSerializable):
     # some custom behavior (e.g., scaffold color is always the same)."""
 
     dna_sequence: str = None
-    """Do not assign directly to this field. Always use :any:`DNADesign.assign_dna`."""
+    """Do not assign directly to this field. Always use :any:`DNADesign.assign_dna` 
+    (for complementarity checking) or :any:`Strand.set_dna_sequence` (to allow mismatches)."""
 
     color: Color = None
     """Color to show this strand in the main view. If not specified in the constructor,
@@ -703,6 +724,26 @@ class Strand(JSONSerializable):
     def last_substrand(self):
         return self.substrands[-1]
 
+    def set_dna_sequence(self, sequence: str):
+        """Sets this Strand's DNA sequence to `seq` WITHOUT checking for complementarity with overlapping
+        Strands or automatically assigning their sequences. To assign a sequence to a Strand and have
+        the overlapping Strands automatically have the appropriate Watson-Crick complements assigned,
+        use :any:`DNADesign.assign_dna`.
+
+        All whitespace in `sequence` is removed,
+        and lowercase bases 'a', 'c', 'g', 't' are converted to uppercase.
+
+        `sequence`, after all whitespace is removed, must be exactly the same length as ``self.dna_length``.
+        Wildcard symbols (:const:`DNA_case_wildcard`) are allowed to leave part of the DNA unassigned.
+        """
+        trimmed_seq = _remove_whitespace_and_uppercase(sequence)
+        if len(trimmed_seq) != self.dna_length():
+            ss = self.first_substrand()
+            raise IllegalDNADesignError(f"strand starting at helix {ss.helix_idx} offset {ss.offset_5p()} "
+                                        f"has length {self.dna_length()}, but you attempted to assign a "
+                                        f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
+        self.dna_sequence = trimmed_seq
+
     def dna_length(self):
         """Return sum of DNA length of Substrands of this Strand."""
         acc = 0
@@ -732,7 +773,11 @@ class Strand(JSONSerializable):
 
         Generally this is not called directly; use :any:`DNADesign.assign_dna` to assign
         a DNA sequence to a strand. It will figure out which other Strands need
-        to be assigned via this method."""
+        to be assigned via this method. However, it is permitted to assign this field directly
+        (for instance, to assign a DNA sequence to a strand that is not bound to any strand
+        that is not already assigned a sequence where they overlap). In this case no error checking
+        about sequence complementarity is done. Thus this can be used to intentionally assign mismatching
+        DNA strands that are overlapping on a Helix."""
 
         # put DNA sequences to assign to substrands in List, one position per substrand
         strand_complement_builder = []
@@ -787,19 +832,21 @@ class Strand(JSONSerializable):
                 new_dna_sequence = _string_merge_wildcard(self.dna_sequence, new_dna_sequence,
                                                           DNA_base_wildcard)
             except ValueError as err:
-                # hopefully this code never runs if the sequence assignment is bug-free
                 ss_self = self.first_substrand()
                 ss_other = other.first_substrand()
-                msg = f'strand starting at helix {ss_self.helix_idx}, offset {ss_self.offset_5p()} has length ' \
+                msg = f'strand starting at helix {ss_self.helix_idx}, offset {ss_self.offset_5p()} has ' \
+                      f'length ' \
                       f'{self.dna_length()} and already has a partial DNA sequence assignment of length ' \
                       f'{len(self.dna_sequence)}, which is \n' \
                       f'{self.dna_sequence}, ' \
                       f'but you tried to assign sequence of length {len(new_dna_sequence)} to it, which ' \
-                      f'is\n{new_dna_sequence}. This occurred while assigned a DNA sequence to strand ' \
-                      f'starting at helix {ss_other.helix_idx} of length {other.dna_length()}'
+                      f'is\n{new_dna_sequence} (this assignment was indirect, since you assigned directly ' \
+                      f'to a strand bound to this one). This occurred while directly assigning a DNA ' \
+                      f'sequence to the strand whose 5\' end is at helix {ss_other.helix_idx}, and is of ' \
+                      f'length {other.dna_length()}.'
                 raise IllegalDNADesignError(msg)
 
-        self.dna_sequence = new_dna_sequence
+        self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
     def _insert_substrand(self, order, substrand):
@@ -832,6 +879,10 @@ def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
             union_builder.append(c1)
         elif c1 != c2:
             raise ValueError(f's1={s1} and s2={s2} have unequal symbols {c1} and {c2} at position {i}.')
+        elif c1 == c2:
+            union_builder.append(c1)
+        else:
+            raise AssertionError('should be unreachable')
     return ''.join(union_builder)
 
 
@@ -1046,7 +1097,7 @@ class DNADesign(JSONSerializable):
         a JSON file."""
         return json_encode(self, suppress_indent)
 
-    #TODO: create version of add_deltion and add_insertion that simply changes the major tick distance
+    # TODO: create version of add_deltion and add_insertion that simply changes the major tick distance
     #  on the helix at that position, as well as updating the end offset of the substrand (and subsequent
     #  substrands on the same helix)
 
@@ -1103,8 +1154,8 @@ class DNADesign(JSONSerializable):
 
         If any :class:`scadnano.Strand` is bound to `strand`,
         it is assigned the reverse Watson-Crick complement of the relevant portion,
-        and any remaining portions
-        of the other strand are assigned to be the symbol :py:data:`DNA_base_wildcard`.
+        and any remaining portions of the other strand that have not already been assigned a DNA sequence
+        are assigned to be the symbol :py:data:`DNA_base_wildcard`.
 
         Before assigning, `sequence` is first forced to be the same length as `strand`
         as follows:
@@ -1114,30 +1165,74 @@ class DNADesign(JSONSerializable):
         All whitespace in `sequence` is removed, and lowercase bases
         'a', 'c', 'g', 't' are converted to uppercase.
         """
-        sequence = re.sub(r'\s*', '', sequence)
-        sequence = sequence.upper()
-        # TODO: check if wildcards already assigned and merge if necessary
-        # if self.dna_sequence is not None:
-        #     new_dna_sequence = _string_merge_wildcard(self.dna_sequence, new_dna_sequence, DNA_base_wildcard)
-        strand.dna_sequence = _pad_dna(sequence, strand.dna_length())
+        padded_sequence = _pad_and_remove_whitespace(sequence, strand)
+
+        if strand.dna_sequence is None:
+            merged_sequence = padded_sequence
+        else:
+            try:
+                merged_sequence = _string_merge_wildcard(strand.dna_sequence, padded_sequence,
+                                                         DNA_base_wildcard)
+            except ValueError as err:
+                first_ss = strand.first_substrand()
+                msg = f'strand starting at helix {first_ss.helix_idx}, offset {first_ss.offset_5p()} has ' \
+                      f'length ' \
+                      f'{strand.dna_length()} and already has a DNA sequence assignment of length ' \
+                      f'{len(strand.dna_sequence)}, which is \n' \
+                      f'{strand.dna_sequence}, ' \
+                      f'but you tried to assign a different sequence of length {len(padded_sequence)} to ' \
+                      f'it, which is\n{padded_sequence}.'
+                raise IllegalDNADesignError(msg)
+
+        strand.set_dna_sequence(merged_sequence)
 
         for other_strand in self.strands:
             if strand == other_strand:
                 continue
             if other_strand.overlaps(strand):
+                # we do this even if other_strand has a complete DNA sequence,
+                # because we get complementarity checks this way
                 other_strand.assign_dna_complement_from(strand)
 
-    def to_idt_bulk_input_format(self, delimiter: str = ',', warn_on_non_idt_strands: bool = False) -> str:
+    def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
+                                 warn_on_non_idt_strands: bool = False) -> str:
         """Return string that is written to the file in the method :any:`DNADesign.write_idt_file`.
 
         `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+
+        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
+        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDNADesignError` is
+        raised (regardless of the value of this parameter)
+        if two different :any:`Strand`'s have the same name but different sequences.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
         :any:`Strand.idt`. Such strands will not be part of the output.
         """
         strands_to_output = []
+        added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
             if strand.idt is not None:
+                name = strand.idt.name
+                if name in added_strands:
+                    existing_strand = added_strands[name]
+                    assert existing_strand.idt.name == name
+                    ss = strand.first_substrand()
+                    existing_ss = existing_strand.first_substrand()
+                    if strand.dna_sequence != existing_strand.dna_sequence:
+                        raise IllegalDNADesignError(
+                            f'two strands with same IDT name {name} but different sequences:\n'
+                            f'  strand 1: helix {ss.helix_idx}, 5\' end at offset {ss.offset_5p()}, '
+                            f'sequence: {strand.dna_sequence}\n'
+                            f'  strand 2: helix {existing_ss.helix_idx}, 5\' end at offset '
+                            f'{existing_ss.offset_5p()}, '
+                            f'sequence: {existing_strand.dna_sequence}\n')
+                    elif warn_duplicate_name:
+                        print(
+                            f'WARNING: two strands with same IDT name {name}:\n'
+                            f'  strand 1: helix {ss.helix_idx}, 5\' end at offset {ss.offset_5p()}\n'
+                            f'  strand 2: helix {existing_ss.helix_idx}, 5\' end at offset '
+                            f'{existing_ss.offset_5p()}\n')
+                added_strands[name] = strand
                 strands_to_output.append(strand)
             elif warn_on_non_idt_strands:
                 print(f"WARNING: strand with 5' end on helix {strand.first_substrand().helix_idx} "
@@ -1148,11 +1243,38 @@ class DNADesign(JSONSerializable):
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
+    def write_idt_file(self, directory: str = '.', filename=None, delimiter: str = ',',
+                       warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
+        """Write ``.idt`` file encoding the strands of this DNADesign with the field
+        :any:`Strand.idt`, suitable for pasting into the "Bulk input" field of IDT
+        (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
+        with the output file having the same name as the running script but with ``.py`` changed to ``.idt``,
+        unless `filename` is explicitly specified.
+        For instance, if the script is named ``my_origami.py``,
+        then the sequences will be written to ``my_origami.idt``.
+
+        `directory` specifies a directory in which to place the file, either absolute or relative to
+        the current working directory. Default is the current working directory.
+
+        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+
+        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
+        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDNADesignError` is
+        raised (regardless of the value of this parameter)
+        if two different :any:`Strand`'s have the same name but different sequences.
+
+        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
+        :any:`Strand.idt`. Such strands will not be output into the file.
+
+        The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
+        """
+        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands)
+        _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
+
     def write_scadnano_file(self, directory: str = '.', filename=None):
         """Write ``.dna`` file representing this DNADesign, suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
         unless `filename` is explicitly specified.
-
         For instance, if the script is named ``my_origami.py``,
         then the design will be written to ``my_origami.dna``.
 
@@ -1162,34 +1284,11 @@ class DNADesign(JSONSerializable):
         The string written is that returned by :meth:`DNADesign.to_json`.
         """
         contents = self.to_json()
-        _write_file(contents, 'dna', directory, filename)
-
-    def write_idt_file(self, directory: str = '.', filename=None, delimiter: str = ',',
-                       warn_on_non_idt_strands=False):
-        """Write ``.idt`` file encoding the strands of this DNADesign with the field
-        :any:`Strand.idt`, suitable for pasting into the "Bulk input" field of IDT
-        (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
-        with the output file having the same name as the running script but with ``.py`` changed to ``.idt``,
-        unless `filename` is explicitly specified.
-
-        For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.idt``.
-
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
-        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be output into the file.
-
-        The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
-        """
-        contents = self.to_idt_bulk_input_format(delimiter, warn_on_non_idt_strands)
-        _write_file(contents, 'idt', directory, filename)
+        _write_file_same_name_as_running_python_script(contents, 'dna', directory, filename)
 
 
-def _write_file(contents: str, extension: str, directory: str = '.', filename=None):
+def _write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
+                                                   filename=None):
     if filename is None:
         filename = os.path.basename(sys.argv[0])[:-3] + f'.{extension}'
     if not os.path.exists(directory):
@@ -1198,6 +1297,15 @@ def _write_file(contents: str, extension: str, directory: str = '.', filename=No
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
+def _remove_whitespace_and_uppercase(sequence):
+    sequence = re.sub(r'\s*', '', sequence)
+    sequence = sequence.upper()
+    return sequence
+
+def _pad_and_remove_whitespace(sequence, strand):
+    sequence = _remove_whitespace_and_uppercase(sequence)
+    padded_sequence = _pad_dna(sequence, strand.dna_length())
+    return padded_sequence
 
 def _pad_dna(sequence: str, length: int) -> str:
     """Return `sequence` modified to have length `length`.

@@ -9,7 +9,7 @@ from enum import Enum, auto
 
 
 class NickPattern(Enum):
-    """Represents two options for where to place nicks between staples."""
+    """Represents options for where to place nicks between staples."""
 
     staggered = auto()
     """A nick appears in a given helix and column 
@@ -29,6 +29,10 @@ class NickPattern(Enum):
 staggered = NickPattern.staggered
 """Convenience reference defined so one can type :const:`origami_rectangle.staggered` 
 instead of :const:`origami_rectangle.NickPattern.staggered`."""
+
+staggered_opposite = NickPattern.staggered_opposite
+"""Convenience reference defined so one can type :const:`origami_rectangle.staggered_opposite` 
+instead of :const:`origami_rectangle.NickPattern.staggered_opposite`."""
 
 even = NickPattern.even
 """Convenience reference defined so one can type :const:`origami_rectangle.even` 
@@ -150,6 +154,10 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     
     `custom_scaffold` is the scaffold sequence to use. 
     If set to ``None``, the standard 7249-base M13 is used.
+    
+    `edge_staples` indicates whether to include the edge staples. (Leaving them out prevents multiple
+    origami rectangles from polymerizing in solution due to base stacking interactions on the left and
+    right edges of the origami rectangle.)
     
     `scaffold_nick_offset` is the position of the "nick" on the scaffold (the M13 scaffold is circular,
     so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
