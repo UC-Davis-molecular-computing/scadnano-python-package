@@ -13,21 +13,28 @@ import unittest
 # {
 #   "color": {"r": 51, "g": 51, "b": 51},
 #   "substrands": [
-#     {"helix_idx": 2, "right": false, "start": 40, "end": 48},
-#     {"helix_idx": 2, "right": false, "start": 32, "end": 48, "deletions": [44]},
-#     {"helix_idx": 3, "right": true, "start": 32, "end": 40}
+#     {"helix_idx": 2, "forward": false, "start": 40, "end": 48},
+#     {"helix_idx": 2, "forward": false, "start": 32, "end": 48, "deletions": [44]},
+#     {"helix_idx": 3, "forward": true, "start": 32, "end": 40}
 #   ]
 # }
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
+    def test_consecutive_substrands_negative_helix_idx(self):
+        helices = [sc.Helix(idx=0, max_bases=10)]
+        ss1 = sc.Substrand(0, sc.forward, 0, 3)
+        ss2 = sc.Substrand(0, sc.forward, 3, 3)
+        ss3 = sc.Substrand(0, sc.forward, 0, 3)
+        strand = sc.Strand([ss1, ss2, ss3])
+
     def test_to_idt_bulk_input_format__duplicate_names_same_sequence(self):
         length = 8
         helices = [sc.Helix(idx=0, max_bases=length)]
-        ss1_r = sc.Substrand(0, sc.right, 0, 4)
-        ss2_r = sc.Substrand(0, sc.right, 4, 8)
-        ss_l = sc.Substrand(0, sc.left, 0, 4)
+        ss1_r = sc.Substrand(0, sc.forward, 0, 4)
+        ss2_r = sc.Substrand(0, sc.forward, 4, 8)
+        ss_l = sc.Substrand(0, sc.reverse, 0, 4)
 
         s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r'))
         s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r'))
@@ -46,9 +53,9 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
     def test_to_idt_bulk_input_format__duplicate_names_different_sequences(self):
         length = 8
         helices = [sc.Helix(idx=0, max_bases=length)]
-        ss1_r = sc.Substrand(0, sc.right, 0, 4)
-        ss2_r = sc.Substrand(0, sc.right, 4, 8)
-        ss_l = sc.Substrand(0, sc.left, 0, 4)
+        ss1_r = sc.Substrand(0, sc.forward, 0, 4)
+        ss2_r = sc.Substrand(0, sc.forward, 4, 8)
+        ss_l = sc.Substrand(0, sc.reverse, 0, 4)
 
         s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r'))
         s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r'))
@@ -68,8 +75,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_assign_dna__conflicting_sequences_directly_assigned(self):
         helices= [sc.Helix(0,5)]
-        ss_right = sc.Substrand(0,sc.right, 0,5)
-        ss_left = sc.Substrand(0,sc.left, 0,5)
+        ss_right = sc.Substrand(0, sc.forward, 0, 5)
+        ss_left = sc.Substrand(0, sc.reverse, 0, 5)
         strand_right = sc.Strand([ss_right])
         strand_left = sc.Strand([ss_left])
         design = sc.DNADesign(helices=helices, strands=[strand_left, strand_right])
@@ -79,8 +86,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_assign_dna__conflicting_sequences_indirectly_assigned(self):
         helices= [sc.Helix(0,5)]
-        ss_right = sc.Substrand(0,sc.right, 0,5)
-        ss_left = sc.Substrand(0,sc.left, 0,5)
+        ss_right = sc.Substrand(0, sc.forward, 0, 5)
+        ss_left = sc.Substrand(0, sc.reverse, 0, 5)
         strand_right = sc.Strand([ss_right])
         strand_left = sc.Strand([ss_left])
         design = sc.DNADesign(helices=helices, strands=[strand_left, strand_right])
@@ -92,13 +99,13 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         # found this counterexample as a simplified version of something caught in practice
         helices = [sc.Helix(0, 25), sc.Helix(1, 25)]
 
-        s1_left_ss0 = sc.Substrand(0, sc.left, 0, 5)
-        s1_ss1 = sc.Substrand(0, sc.right, 0, 15)
-        s1_right_ss0 = sc.Substrand(0, sc.left, 5, 15)
+        s1_left_ss0 = sc.Substrand(0, sc.reverse, 0, 5)
+        s1_ss1 = sc.Substrand(0, sc.forward, 0, 15)
+        s1_right_ss0 = sc.Substrand(0, sc.reverse, 5, 15)
         s1 = sc.Strand([s1_left_ss0, s1_ss1, s1_right_ss0])
 
-        s2_ss1 = sc.Substrand(0, sc.right, 10, 20)
-        s2_ss0 = sc.Substrand(0, sc.left, 10, 20)
+        s2_ss1 = sc.Substrand(0, sc.forward, 10, 20)
+        s2_ss0 = sc.Substrand(0, sc.reverse, 10, 20)
         s2 = sc.Strand([s2_ss1, s2_ss0])
 
         strands = [s1, s2]
@@ -115,8 +122,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_two_illegally_overlapping_strands(self):
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=9)
-        ss_top = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=9)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=9)
+        ss_top = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=9)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top = sc.Strand(substrands=[ss_top])
         strands = [strand_bot, strand_top]
@@ -125,9 +132,9 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_two_nonconsecutive_illegally_overlapping_strands(self):
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_top1 = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.right, start=2, end=9)
-        ss_top2 = sc.Substrand(helix_idx=0, right=sc.left, start=4, end=8)
+        ss_top1 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=5)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.forward, start=2, end=9)
+        ss_top2 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=4, end=8)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top1 = sc.Strand(substrands=[ss_top1])
         strand_top2 = sc.Strand(substrands=[ss_top2])
@@ -137,10 +144,10 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_four_legally_leapfrogging_strands(self):
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_top1 = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=20)
-        ss_bot1 = sc.Substrand(helix_idx=0, right=sc.right, start=10, end=30)
-        ss_top2 = sc.Substrand(helix_idx=0, right=sc.left, start=20, end=40)
-        ss_bot2 = sc.Substrand(helix_idx=0, right=sc.right, start=30, end=50)
+        ss_top1 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=20)
+        ss_bot1 = sc.Substrand(helix_idx=0, forward=sc.forward, start=10, end=30)
+        ss_top2 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=20, end=40)
+        ss_bot2 = sc.Substrand(helix_idx=0, forward=sc.forward, start=30, end=50)
         strand_bot1 = sc.Strand(substrands=[ss_bot1])
         strand_bot2 = sc.Strand(substrands=[ss_bot2])
         strand_top1 = sc.Strand(substrands=[ss_top1])
@@ -164,8 +171,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
     def test_strand_references_nonexistent_helix(self):
         h1 = sc.Helix(idx=0, max_bases=9)
         h2 = sc.Helix(idx=1, max_bases=9)
-        ss_bot = sc.Substrand(helix_idx=2, right=sc.left, start=0, end=9)
-        ss_top = sc.Substrand(helix_idx=3, right=sc.left, start=0, end=9)
+        ss_bot = sc.Substrand(helix_idx=2, forward=sc.reverse, start=0, end=9)
+        ss_top = sc.Substrand(helix_idx=3, forward=sc.reverse, start=0, end=9)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top = sc.Strand(substrands=[ss_top])
         strands = [strand_bot, strand_top]
@@ -182,8 +189,8 @@ class TestAssignDNA(unittest.TestCase):
         # GTTT
         # <--]
         helix = sc.Helix(idx=0, max_bases=8)
-        ss_r = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=8)
-        ss_l = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=4)
+        ss_r = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=8)
+        ss_l = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=4)
         strand_r = sc.Strand(substrands=[ss_r])
         strand_l = sc.Strand(substrands=[ss_l])
         design = sc.DNADesign(grid=sc.square, helices=[helix], strands=[strand_r, strand_l])
@@ -198,8 +205,8 @@ class TestAssignDNA(unittest.TestCase):
         #   TTCA
         #   <--]
         helix = sc.Helix(idx=0, max_bases=8)
-        ss_r = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=8)
-        ss_l = sc.Substrand(helix_idx=0, right=sc.left, start=2, end=6)
+        ss_r = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=8)
+        ss_l = sc.Substrand(helix_idx=0, forward=sc.reverse, start=2, end=6)
         strand_r = sc.Strand(substrands=[ss_r])
         strand_l = sc.Strand(substrands=[ss_l])
         design = sc.DNADesign(grid=sc.square, helices=[helix], strands=[strand_r, strand_l])
@@ -214,8 +221,8 @@ class TestAssignDNA(unittest.TestCase):
         #   TTCA
         #   <--]
         helix = sc.Helix(idx=0, max_bases=8)
-        ss_r = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=8)
-        ss_l = sc.Substrand(helix_idx=0, right=sc.left, start=2, end=6)
+        ss_r = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=8)
+        ss_l = sc.Substrand(helix_idx=0, forward=sc.reverse, start=2, end=6)
         strand_r = sc.Strand(substrands=[ss_r])
         strand_l = sc.Strand(substrands=[ss_l])
         design = sc.DNADesign(grid=sc.square, helices=[helix], strands=[strand_r, strand_l])
@@ -231,8 +238,8 @@ class TestAssignDNA(unittest.TestCase):
         # GTTTT
         # [--->
         helix = sc.Helix(idx=0, max_bases=5)
-        ss_r = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
-        ss_l = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        ss_r = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=5)
+        ss_l = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=5)
         strand_r = sc.Strand(substrands=[ss_r])
         strand_l = sc.Strand(substrands=[ss_l])
         design = sc.DNADesign(grid=sc.square, helices=[helix], strands=[strand_r, strand_l])
@@ -246,8 +253,8 @@ class TestAssignDNA(unittest.TestCase):
         # G??TT
         # [--->
         helix = sc.Helix(idx=0, max_bases=5)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
-        ss_top = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=5)
+        ss_top = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=5)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top = sc.Strand(substrands=[ss_top])
         strands = [strand_bot, strand_top]
@@ -260,9 +267,9 @@ class TestAssignDNA(unittest.TestCase):
         # <-AAAC-] <-GGGA-]
         # [-TTTG-----CCCT->
         helix = sc.Helix(idx=0, max_bases=8)
-        ss_top_left = sc.Substrand(0, sc.left, 0, 4)
-        ss_top_right = sc.Substrand(0, sc.left, 4, 8)
-        ss_bot = sc.Substrand(0, sc.right, 0, 8)
+        ss_top_left = sc.Substrand(0, sc.reverse, 0, 4)
+        ss_top_right = sc.Substrand(0, sc.reverse, 4, 8)
+        ss_bot = sc.Substrand(0, sc.forward, 0, 8)
         st_top_left = sc.Strand([ss_top_left])
         st_top_right = sc.Strand([ss_top_right])
         st_bot = sc.Strand([ss_bot])
@@ -287,12 +294,12 @@ class TestAssignDNA(unittest.TestCase):
         #         <-AAAC-----ACGG-------+
         h0 = sc.Helix(idx=0, max_bases=12)
         h1 = sc.Helix(idx=1, max_bases=12)
-        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
-        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
-        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
-        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
-        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
-        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf0_ss = sc.Substrand(0, sc.reverse, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.forward, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.forward, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.reverse, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.forward, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.reverse, 2, 10)
         scaf = sc.Strand([scaf1_ss, scaf0_ss])
         adap = sc.Strand([adap0_ss, adap1_ss])
         tile0 = sc.Strand([tile0_ss])
@@ -326,12 +333,12 @@ class TestAssignDNA(unittest.TestCase):
         #                      X           deletions
         h0 = sc.Helix(idx=0, max_bases=12)
         h1 = sc.Helix(idx=1, max_bases=12)
-        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
-        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
-        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
-        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
-        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
-        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf0_ss = sc.Substrand(0, sc.reverse, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.forward, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.forward, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.reverse, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.forward, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.reverse, 2, 10)
         scaf = sc.Strand([scaf1_ss, scaf0_ss])
         adap = sc.Strand([adap0_ss, adap1_ss])
         tile0 = sc.Strand([tile0_ss])
@@ -368,12 +375,12 @@ class TestAssignDNA(unittest.TestCase):
         #                       I          insertions
         h0 = sc.Helix(idx=0, max_bases=12)
         h1 = sc.Helix(idx=1, max_bases=12)
-        scaf0_ss = sc.Substrand(0, sc.left, 0, 6)
-        scaf1_ss = sc.Substrand(1, sc.right, 0, 6)
-        tile1_ss = sc.Substrand(1, sc.right, 6, 12)
-        tile0_ss = sc.Substrand(0, sc.left, 6, 12)
-        adap0_ss = sc.Substrand(0, sc.right, 2, 10)
-        adap1_ss = sc.Substrand(1, sc.left, 2, 10)
+        scaf0_ss = sc.Substrand(0, sc.reverse, 0, 6)
+        scaf1_ss = sc.Substrand(1, sc.forward, 0, 6)
+        tile1_ss = sc.Substrand(1, sc.forward, 6, 12)
+        tile0_ss = sc.Substrand(0, sc.reverse, 6, 12)
+        adap0_ss = sc.Substrand(0, sc.forward, 2, 10)
+        adap1_ss = sc.Substrand(1, sc.reverse, 2, 10)
         scaf = sc.Strand([scaf1_ss, scaf0_ss])
         adap = sc.Strand([adap0_ss, adap1_ss])
         tile0 = sc.Strand([tile0_ss])
@@ -398,8 +405,8 @@ class TestAssignDNA(unittest.TestCase):
         # GTTTT?????
         # [-------->
         helix = sc.Helix(idx=0, max_bases=10)
-        ss_long = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
-        ss_short = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        ss_long = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=10)
+        ss_short = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=5)
         strand_long = sc.Strand(substrands=[ss_long])
         strand_short = sc.Strand(substrands=[ss_short])
         strands = [strand_long, strand_short]
@@ -413,8 +420,8 @@ class TestAssignDNA(unittest.TestCase):
         # TTTTG?????
         # <--------]
         helix = sc.Helix(idx=0, max_bases=10)
-        ss_long = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=10)
-        ss_short = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=5)
+        ss_long = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=10)
+        ss_short = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=5)
         strand_long = sc.Strand(substrands=[ss_long])
         strand_short = sc.Strand(substrands=[ss_short])
         strands = [strand_long, strand_short]
@@ -432,9 +439,9 @@ class TestAssignDNA(unittest.TestCase):
         #        ???
         helix0 = sc.Helix(idx=0, max_bases=10)
         helix1 = sc.Helix(idx=1, max_bases=10)
-        ss_long = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
-        ss_long_h1 = sc.Substrand(helix_idx=0, right=sc.left, start=7, end=10)
-        ss_short = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=5)
+        ss_long = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=10)
+        ss_long_h1 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=7, end=10)
+        ss_short = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=5)
         strand_long = sc.Strand(substrands=[ss_long, ss_long_h1])
         strand_short = sc.Strand(substrands=[ss_short])
         strands = [strand_long, strand_short]
@@ -453,9 +460,9 @@ class TestAssignDNA(unittest.TestCase):
         #        ???
         helix0 = sc.Helix(idx=0, max_bases=10)
         helix1 = sc.Helix(idx=1, max_bases=10)
-        ss_long_h0 = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=10)
-        ss_long_h1 = sc.Substrand(helix_idx=1, right=sc.left, start=7, end=10)
-        ss_short_h0 = sc.Substrand(helix_idx=0, right=sc.left, start=5, end=10)
+        ss_long_h0 = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=10)
+        ss_long_h1 = sc.Substrand(helix_idx=1, forward=sc.reverse, start=7, end=10)
+        ss_short_h0 = sc.Substrand(helix_idx=0, forward=sc.reverse, start=5, end=10)
         strand_long = sc.Strand(substrands=[ss_long_h0, ss_long_h1])
         strand_short = sc.Strand(substrands=[ss_short_h0])
         strands = [strand_long, strand_short]
@@ -469,10 +476,10 @@ class TestAssignDNA(unittest.TestCase):
         # <AAA---CCC---GGG-
         #  876   543   210
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=9)
-        ss_top1 = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=3)
-        ss_top2 = sc.Substrand(helix_idx=0, right=sc.right, start=3, end=6)
-        ss_top3 = sc.Substrand(helix_idx=0, right=sc.right, start=6, end=9)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=9)
+        ss_top1 = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=3)
+        ss_top2 = sc.Substrand(helix_idx=0, forward=sc.forward, start=3, end=6)
+        ss_top3 = sc.Substrand(helix_idx=0, forward=sc.forward, start=6, end=9)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top1 = sc.Strand(substrands=[ss_top1])
         strand_top2 = sc.Strand(substrands=[ss_top2])
@@ -494,18 +501,18 @@ class TestAssignDNA(unittest.TestCase):
         h0 = sc.Helix(idx=0, max_bases=12)
         h1 = sc.Helix(idx=1, max_bases=12)
 
-        scaf0_ss = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=12)
-        scaf1_ss = sc.Substrand(helix_idx=1, right=sc.left, start=0, end=12)
+        scaf0_ss = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=12)
+        scaf1_ss = sc.Substrand(helix_idx=1, forward=sc.reverse, start=0, end=12)
         scaf = sc.Strand(substrands=[scaf0_ss, scaf1_ss])
 
-        first_stap0_left_ss = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=3)
-        first_stap1_ss = sc.Substrand(helix_idx=1, right=sc.right, start=0, end=6)
-        first_stap0_right_ss = sc.Substrand(helix_idx=0, right=sc.left, start=3, end=6)
+        first_stap0_left_ss = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=3)
+        first_stap1_ss = sc.Substrand(helix_idx=1, forward=sc.forward, start=0, end=6)
+        first_stap0_right_ss = sc.Substrand(helix_idx=0, forward=sc.reverse, start=3, end=6)
         first_stap = sc.Strand(substrands=[first_stap0_left_ss, first_stap1_ss, first_stap0_right_ss])
 
-        second_stap1_right_ss = sc.Substrand(helix_idx=1, right=sc.right, start=9, end=12)
-        second_stap0_ss = sc.Substrand(helix_idx=0, right=sc.left, start=6, end=12)
-        second_stap1_left_ss = sc.Substrand(helix_idx=1, right=sc.right, start=6, end=9)
+        second_stap1_right_ss = sc.Substrand(helix_idx=1, forward=sc.forward, start=9, end=12)
+        second_stap0_ss = sc.Substrand(helix_idx=0, forward=sc.reverse, start=6, end=12)
+        second_stap1_left_ss = sc.Substrand(helix_idx=1, forward=sc.forward, start=6, end=9)
         second_stap = sc.Strand(substrands=[second_stap1_right_ss, second_stap0_ss, second_stap1_left_ss])
 
         strands = [scaf, first_stap, second_stap]
@@ -522,10 +529,10 @@ class TestAssignDNA(unittest.TestCase):
         #        -CTAAAACACTCATCTT--+
         h0 = sc.Helix(idx=0, max_bases=16)
         h1 = sc.Helix(idx=1, max_bases=16)
-        scaf0_ss = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=16)
-        scaf1_ss = sc.Substrand(helix_idx=1, right=sc.left, start=0, end=16)
-        stap0_ss = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=16)
-        stap1_ss = sc.Substrand(helix_idx=1, right=sc.right, start=0, end=16)
+        scaf0_ss = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=16)
+        scaf1_ss = sc.Substrand(helix_idx=1, forward=sc.reverse, start=0, end=16)
+        stap0_ss = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=16)
+        stap1_ss = sc.Substrand(helix_idx=1, forward=sc.forward, start=0, end=16)
         scaf = sc.Strand(substrands=[scaf1_ss, scaf0_ss])
         stap = sc.Strand(substrands=[stap1_ss, stap0_ss])
         strands = [scaf, stap]
@@ -553,13 +560,13 @@ class TestAssignDNA(unittest.TestCase):
         width = 6
         width_h = width // 2
         helices = [sc.Helix(0, width), sc.Helix(1, width)]
-        stap_left_ss1 = sc.Substrand(1, sc.right, 0, width_h)
-        stap_left_ss0 = sc.Substrand(0, sc.left, 0, width_h)
-        stap_right_ss0 = sc.Substrand(0, sc.left, width_h, width)
-        stap_right_ss1 = sc.Substrand(1, sc.right, width_h, width)
-        scaf_ss1_left = sc.Substrand(1, sc.left, 0, width_h)
-        scaf_ss0 = sc.Substrand(0, sc.right, 0, width)
-        scaf_ss1_right = sc.Substrand(1, sc.left, width_h, width)
+        stap_left_ss1 = sc.Substrand(1, sc.forward, 0, width_h)
+        stap_left_ss0 = sc.Substrand(0, sc.reverse, 0, width_h)
+        stap_right_ss0 = sc.Substrand(0, sc.reverse, width_h, width)
+        stap_right_ss1 = sc.Substrand(1, sc.forward, width_h, width)
+        scaf_ss1_left = sc.Substrand(1, sc.reverse, 0, width_h)
+        scaf_ss0 = sc.Substrand(0, sc.forward, 0, width)
+        scaf_ss1_right = sc.Substrand(1, sc.reverse, width_h, width)
         stap_left = sc.Strand([stap_left_ss1, stap_left_ss0])
         stap_right = sc.Strand([stap_right_ss0, stap_right_ss1])
         scaf = sc.Strand([scaf_ss1_left, scaf_ss0, scaf_ss1_right], color=sc.default_scaffold_color)
@@ -580,10 +587,10 @@ class TestAssignDNA(unittest.TestCase):
         # <AAG---CCT---GGA-
         #  876   543   210
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=9)
-        ss_top1 = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=3)
-        ss_top2 = sc.Substrand(helix_idx=0, right=sc.right, start=3, end=6)
-        ss_top3 = sc.Substrand(helix_idx=0, right=sc.right, start=6, end=9)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=9)
+        ss_top1 = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=3)
+        ss_top2 = sc.Substrand(helix_idx=0, forward=sc.forward, start=3, end=6)
+        ss_top3 = sc.Substrand(helix_idx=0, forward=sc.forward, start=6, end=9)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top1 = sc.Strand(substrands=[ss_top1])
         strand_top2 = sc.Strand(substrands=[ss_top2])
@@ -610,13 +617,13 @@ class TestAssignDNA(unittest.TestCase):
         # <TGC---AAG---CCT---TTG---ACG---AAC---???-
         #  098   765   432   109   876   543   210
         helix = sc.Helix(idx=0, max_bases=9)
-        ss_bot = sc.Substrand(helix_idx=0, right=sc.left, start=0, end=21)
-        ss_top0 = sc.Substrand(helix_idx=0, right=sc.right, start=0, end=3)
-        ss_top3 = sc.Substrand(helix_idx=0, right=sc.right, start=3, end=6)
-        ss_top6 = sc.Substrand(helix_idx=0, right=sc.right, start=6, end=9)
-        ss_top9 = sc.Substrand(helix_idx=0, right=sc.right, start=9, end=12)
-        ss_top12 = sc.Substrand(helix_idx=0, right=sc.right, start=12, end=15)
-        ss_top15 = sc.Substrand(helix_idx=0, right=sc.right, start=15, end=18)
+        ss_bot = sc.Substrand(helix_idx=0, forward=sc.reverse, start=0, end=21)
+        ss_top0 = sc.Substrand(helix_idx=0, forward=sc.forward, start=0, end=3)
+        ss_top3 = sc.Substrand(helix_idx=0, forward=sc.forward, start=3, end=6)
+        ss_top6 = sc.Substrand(helix_idx=0, forward=sc.forward, start=6, end=9)
+        ss_top9 = sc.Substrand(helix_idx=0, forward=sc.forward, start=9, end=12)
+        ss_top12 = sc.Substrand(helix_idx=0, forward=sc.forward, start=12, end=15)
+        ss_top15 = sc.Substrand(helix_idx=0, forward=sc.forward, start=15, end=18)
         strand_bot = sc.Strand(substrands=[ss_bot])
         strand_top_small0 = sc.Strand(substrands=[ss_top0])
         strand_top_small12 = sc.Strand(substrands=[ss_top12])
@@ -644,8 +651,8 @@ TEST_OFFSETS_AT_DELETION_INSERTIONS = False
 class TestSubstrandDNASequenceIn(unittest.TestCase):
 
     def test_dna_sequence_in__right_then_left(self):
-        ss0 = sc.Substrand(0, sc.right, 0, 10)
-        ss1 = sc.Substrand(1, sc.left, 0, 10)
+        ss0 = sc.Substrand(0, sc.forward, 0, 10)
+        ss1 = sc.Substrand(1, sc.reverse, 0, 10)
         strand = sc.Strand([ss0, ss1])
         strand.dna_sequence = "AAAACCCCGGGGTTTTACGT"
         # offset: 0  1  2  3  4  5  6  7  8  9
@@ -680,8 +687,8 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         self.assertEqual("GGTTTTACGT", ss1.dna_sequence_in(0, 9))
 
     def test_dna_sequence_in__right_then_left_deletions(self):
-        ss0 = sc.Substrand(0, sc.right, 0, 10, deletions=[2, 5, 6])
-        ss1 = sc.Substrand(1, sc.left, 0, 10, deletions=[2, 6, 7])
+        ss0 = sc.Substrand(0, sc.forward, 0, 10, deletions=[2, 5, 6])
+        ss1 = sc.Substrand(1, sc.reverse, 0, 10, deletions=[2, 6, 7])
         strand = sc.Strand([ss0, ss1])
         strand.dna_sequence = "AAACCGGGGTTAGT"
         # offset: 0  1 D2  3  4 D5 D6  7  8  9
@@ -722,8 +729,8 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         #     self.assertEqual("GGTTTA", ss1.dna_sequence_in(2, 10))
 
     def test_dna_sequence_in__right_then_left_insertions(self):
-        ss0 = sc.Substrand(0, sc.right, 0, 10, insertions=[(2, 1), (6, 2)])
-        ss1 = sc.Substrand(1, sc.left, 0, 10, insertions=[(2, 1), (6, 2)])
+        ss0 = sc.Substrand(0, sc.forward, 0, 10, insertions=[(2, 1), (6, 2)])
+        ss1 = sc.Substrand(1, sc.reverse, 0, 10, insertions=[(2, 1), (6, 2)])
         strand = sc.Strand([ss0, ss1])
         strand.dna_sequence = "AAAACCCCGGGGTTTTACGTACGTAC"
         # offset: 0  1  2  I  3  4  5  6  I  I  7  8  9
@@ -764,8 +771,8 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         #     self.assertEqual("TTTACGTACGT", ss1.dna_sequence_in(2, 10))
 
     def test_dna_sequence_in__right_then_left_deletions_and_insertions(self):
-        ss0 = sc.Substrand(0, sc.right, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
-        ss1 = sc.Substrand(1, sc.left, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
+        ss0 = sc.Substrand(0, sc.forward, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
+        ss1 = sc.Substrand(1, sc.reverse, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
         strand = sc.Strand([ss0, ss1])
         strand.dna_sequence = "AAAACCCCGGGGTTTTACGTACGTAC"
         # offset: 0  1  2  I  3 D4  5  6  I  I  7  8  9

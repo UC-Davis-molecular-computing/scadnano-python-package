@@ -4,6 +4,7 @@ by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_.
 """
 
 import enum
+import itertools
 import re
 from dataclasses import dataclass, field
 from typing import Tuple, List, Dict
@@ -20,6 +21,14 @@ import m13
 #  should the complement be automatically assigned?
 
 # TODO: add support for writing 3D positions (in addition to 2D svg_positions)
+
+
+def _pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = itertools.tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
 
 ##############################################################################
 # Colors
@@ -124,8 +133,8 @@ class Grid(str, enum.Enum):
 
 
 # convenience names for users
-left = False
-right = True
+reverse = False
+forward = True
 square = Grid.square
 hexagonal = Grid.hex  # should not use identifier "hex" because that's a Python built-in function
 honeycomb = Grid.honeycomb
@@ -202,7 +211,7 @@ idt_key = 'idt'
 
 # Substrand keys
 helix_idx_key = 'helix_idx'
-right_key = 'right'
+forward_key = 'forward'
 start_key = 'start'
 end_key = 'end'
 deletions_key = 'deletions'
@@ -330,22 +339,22 @@ class Substrand(JSONSerializable):
     helix_idx: int
     """:any:`Helix.idx` of the :any:`Helix` where this Substrand resides."""
 
-    right: bool
-    """Whether the strand "points" right (i.e., its 3' end has a larger offset than its 5' end)."""
+    forward: bool
+    """Whether the strand "points" forward (i.e., its 3' end has a larger offset than its 5' end)."""
 
     start: int
     """
     The smallest offset position of any base on this Substrand
-    (3' end if :any:`Substrand.right` = ``False``,
-    5' end if :any:`Substrand.right` = ``True``).
+    (3' end if :any:`Substrand.forward` = ``False``,
+    5' end if :any:`Substrand.forward` = ``True``).
     """
 
     # TODO: give option to user in constructor to specify that end is inclusive (default exclusive)
     end: int
     """
     1 plus the largest offset position of any base on this Substrand
-    (5' end if :any:`Substrand.right` = ``False``,
-    3' end if :any:`Substrand.right` = ``True``).
+    (5' end if :any:`Substrand.forward` = ``False``,
+    3' end if :any:`Substrand.forward` = ``True``).
     Note that the set of base offsets occupied by this Substrand is {start, start+1, ..., end-1},
     the same convention used in Python for slices of lists and strings.
     (e.g., :samp:`"abcdef"[1:3] == "bc"`)
@@ -365,12 +374,13 @@ class Substrand(JSONSerializable):
 
     def __repr__(self):
         rep = f'Substrand(helix_idx={self.helix_idx}' \
-              f', dir={"right" if self.right else "left"}' \
+              f', dir={"right" if self.forward else "left"}' \
               f', start={self.start}' \
               f', end={self.end}' \
               '' if len(self.deletions) == 0 else f', deletions={self.deletions}' \
-              '' if len(self.insertions) == 0 else f', insertions={self.insertions}' \
-              ')'
+                                                  '' if len(
+            self.insertions) == 0 else f', insertions={self.insertions}' \
+                                       ')'
         return rep
 
     def __str__(self):
@@ -383,7 +393,7 @@ class Substrand(JSONSerializable):
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[helix_idx_key] = self.helix_idx
-        dct[right_key] = self.right
+        dct[forward_key] = self.forward
         dct[start_key] = self.start
         dct[end_key] = self.end
         if len(self.deletions) > 0:
@@ -401,14 +411,14 @@ class Substrand(JSONSerializable):
         self._check_start_end()
 
     def offset_5p(self) -> int:
-        if self.right:
+        if self.forward:
             return self.start
         else:
             return self.end - 1
-        # return self.start if self.right else self.end - 1
+        # return self.start if self.forward else self.end - 1
 
     def offset_3p(self) -> int:
-        return self.end - 1 if self.right else self.start
+        return self.end - 1 if self.forward else self.start
 
     def _num_insertions(self) -> int:
         # total number of insertions in this Substrand
@@ -473,9 +483,9 @@ class Substrand(JSONSerializable):
         if offset_right < 0:
             return ''
 
-        str_idx_left = self.offset_to_str_idx(offset_left, self.right)
-        str_idx_right = self.offset_to_str_idx(offset_right, not self.right)
-        if not self.right:  # these will be out of order if strand is left
+        str_idx_left = self.offset_to_str_idx(offset_left, self.forward)
+        str_idx_right = self.offset_to_str_idx(offset_right, not self.forward)
+        if not self.forward:  # these will be out of order if strand is left
             str_idx_left, str_idx_right = str_idx_right, str_idx_left
         subseq = strand_seq[str_idx_left:str_idx_right + 1]
         return subseq
@@ -505,7 +515,7 @@ class Substrand(JSONSerializable):
         len_adjust = self._net_ins_del_length_increase_from_5p_to(offset, offset_closer_to_5p)
 
         # get string index assuming this Substrand is first on Strand
-        if self.right:
+        if self.forward:
             offset += len_adjust  # account for insertions and deletions
             ss_str_idx = offset - self.start
         else:
@@ -538,12 +548,12 @@ class Substrand(JSONSerializable):
         return length_increase
 
     def _between_5p_and_offset(self, offset_to_test: int, offset_edge: int) -> bool:
-        return ((self.right and self.start <= offset_to_test < offset_edge) or
-                (not self.right and offset_edge < offset_to_test < self.end))
+        return ((self.forward and self.start <= offset_to_test < offset_edge) or
+                (not self.forward and offset_edge < offset_to_test < self.end))
 
     # def _between_3p_and_offset(self, offset_to_test: int, offset_edge: int) -> bool:
     #     return ((self.direction == Direction.left and self.start <= offset_to_test < offset_edge) or
-    #             (self.direction == Direction.right and offset_edge < offset_to_test < self.end))
+    #             (self.direction == Direction.forward and offset_edge < offset_to_test < self.end))
 
     # The type hint 'Substrand' must be in quotes since Substrand is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
@@ -558,7 +568,7 @@ class Substrand(JSONSerializable):
         and they appear on the same helix,
         and they point in opposite directions."""  # noqa (suppress PEP warning)
         return (self.helix_idx == other.helix_idx and
-                self.right == (not other.right) and
+                self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
     def overlaps_illegally(self, other: 'Substrand'):
@@ -572,7 +582,7 @@ class Substrand(JSONSerializable):
         and they appear on the same helix,
         and they point in the same direction."""  # noqa (suppress PEP warning)
         return (self.helix_idx == other.helix_idx and
-                self.right == other.right and
+                self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
     def compute_overlap(self, other: 'Substrand') -> Tuple[int, int]:
@@ -586,7 +596,7 @@ class Substrand(JSONSerializable):
             return -1, -1
         return overlap_start, overlap_end
 
-    def insertion_offsets(self) -> List[Tuple[int, int]]:
+    def insertion_offsets(self) -> List[int]:
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
@@ -819,7 +829,7 @@ class Strand(JSONSerializable):
 
             # If pointing left, each individual overlap sequence was reverse orientation in wc(),
             # but not the list of all of them put together until now.
-            if not substrand_self.right:
+            if not substrand_self.forward:
                 substrand_complement_builder.reverse()
 
             substrand_self_dna_sequence = ''.join(substrand_complement_builder)
@@ -1018,14 +1028,14 @@ class DNADesign(JSONSerializable):
                     if len(current_substrands) > 2:
                         ss0, ss1, ss2 = current_substrands[0:3]
                         for s_first, s_second in [(ss0, ss1), (ss1, ss2), (ss0, ss2)]:
-                            if s_first.right == s_second.right:
+                            if s_first.forward == s_second.forward:
                                 raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
                         raise AssertionError(
                             f"since current_substrands = {current_substrands} has at least three substrands, "
                             f"I expected to find a pair of illegally overlapping substrands")
                     elif len(current_substrands) == 2:
                         s_first, s_second = current_substrands
-                        if s_first.right == s_second.right:
+                        if s_first.forward == s_second.forward:
                             raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
 
     def _check_strands_reference_legal_helices(self):
@@ -1034,12 +1044,19 @@ class DNADesign(JSONSerializable):
         for strand in self.strands:
             self._check_strand_references_legal_helices(helix_idxs_set, strand)
 
-    def _check_strand_references_legal_helices(self, helix_idxs_set, strand):
+    def _check_strand_references_legal_helices(self, helix_idxs_set: set, strand: Strand):
         for substrand in strand.substrands:
             self._check_substrand_references_legal_helix(helix_idxs_set, substrand)
 
+        # ensure helix_idx's are never negative twice in a row
+        for ss1, ss2 in _pairwise(strand.substrands):
+            if ss1.helix_idx < 0 and ss2.helix_idx < 0:
+                err_msg = f"substrands {ss1} and {ss2} are consecutive on strand {strand} but both have " \
+                          f"a negative helix_idx. At least one of any consecutive pair must be nonnegative."
+                raise IllegalDNADesignError(err_msg)
+
     def _check_substrand_references_legal_helix(self, helix_idxs_set, substrand):
-        if substrand.helix_idx not in helix_idxs_set:
+        if substrand.helix_idx >= 0 and substrand.helix_idx not in helix_idxs_set:
             err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix_idx}"
             raise IllegalDNADesignError(err_msg)
 
@@ -1297,15 +1314,18 @@ def _write_file_same_name_as_running_python_script(contents: str, extension: str
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
+
 def _remove_whitespace_and_uppercase(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     sequence = sequence.upper()
     return sequence
 
+
 def _pad_and_remove_whitespace(sequence, strand):
     sequence = _remove_whitespace_and_uppercase(sequence)
     padded_sequence = _pad_dna(sequence, strand.dna_length())
     return padded_sequence
+
 
 def _pad_dna(sequence: str, length: int) -> str:
     """Return `sequence` modified to have length `length`.
