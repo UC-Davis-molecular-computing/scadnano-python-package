@@ -15,7 +15,7 @@ Most of the classes in this module are Python dataclasses
 whose fields show up in the documentation (their types are listed in parentheses after the name of the class;
 for example :any:`Color` has ``int`` fields :py:data:`Color.r`, :py:data:`Color.g`, :py:data:`Color.b`.
 In general it is safe to read these fields directly, but not to write to them directly.
-Setter methods (named ``set_<fieldname>``) are prvided for fields where it makes sense to set it to another
+Setter methods (named ``set_<fieldname>``) are provided for fields where it makes sense to set it to another
 value than it had originally.
 However, due to Python naming conventions for dataclass fields and property setters,
 it is not straightforward to enforce that the fields cannot be written, so the user must take care not to set
@@ -1500,7 +1500,8 @@ class DNADesign(JSONSerializable):
         `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
         :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDNADesignError` is
         raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences.
+        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+        purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
         :any:`Strand.idt`. Such strands will not be output into the file.
