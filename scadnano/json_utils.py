@@ -11,7 +11,8 @@ class JSONSerializable(ABC):
 
 def json_encode(obj: JSONSerializable, suppress_indent: bool = True) -> str:
     encoder = SuppressableIndentEncoder if suppress_indent else json.JSONEncoder
-    return json.dumps(obj.to_json_serializable(suppress_indent=suppress_indent), cls=encoder, indent=2)
+    serializable = obj.to_json_serializable(suppress_indent=suppress_indent)
+    return json.dumps(serializable, cls=encoder, indent=2)
 
 
 class NoIndent(object):
