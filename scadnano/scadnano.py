@@ -34,6 +34,7 @@ import os.path
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
+
 # TODO: rewrite Helix class to refer to only used helices, and make another object to refer to circles
 #  in the side view. (here and Dart code)
 
@@ -411,7 +412,8 @@ class Substrand(JSONSerializable):
 
     def _check_start_end(self):
         if self.start >= self.end:
-            raise IllegalDNADesignError(f'start = {self.start} must be less than end = {self.end}')
+            raise StrandError(self._parent_strand,
+                              f'start = {self.start} must be less than end = {self.end}')
 
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
@@ -849,11 +851,11 @@ class Strand(JSONSerializable):
 
         if len(self.substrands) == 1:
             if self.first_substrand().is_loopout():
-                raise IllegalDNADesignError('strand cannot have a single Loopout as its only substrand')
+                raise StrandError(self, 'strand cannot have a single Loopout as its only substrand')
 
         for ss1, ss2 in _pairwise(self.substrands):
             if ss1.is_loopout() and ss2.is_loopout():
-                raise IllegalDNADesignError('cannot have two consecutive Loopouts in a strand')
+                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
 
     def first_substrand(self) -> Union[Substrand, Loopout]:
         return self.substrands[0]
@@ -876,9 +878,9 @@ class Strand(JSONSerializable):
         trimmed_seq = _remove_whitespace_and_uppercase(sequence)
         if len(trimmed_seq) != self.dna_length():
             ss = self.first_substrand()
-            raise IllegalDNADesignError(f"strand starting at helix {ss.helix} offset {ss.offset_5p()} "
-                                        f"has length {self.dna_length()}, but you attempted to assign a "
-                                        f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
+            raise StrandError(self, f"strand starting at helix {ss.helix} offset {ss.offset_5p()} "
+                                    f"has length {self.dna_length()}, but you attempted to assign a "
+                                    f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
         self.dna_sequence = trimmed_seq
 
     def dna_length(self) -> int:
@@ -1028,6 +1030,18 @@ class Strand(JSONSerializable):
                 return True
         return False
 
+    def first_bound_substrand(self):
+        for substrand in self.substrands:
+            if substrand.is_substrand():
+                return substrand
+
+    def last_bound_substrand(self):
+        substrands_rev = list(self.substrands)
+        substrands_rev.reverse()
+        for substrand in substrands_rev:
+            if substrand.is_substrand():
+                return substrand
+
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
     """Takes a "union" of two equal-length strings `s1` and `s2`.
@@ -1055,6 +1069,31 @@ def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
 
 class IllegalDNADesignError(ValueError):
     """Indicates that some aspect of the DNADesign object is illegal."""
+
+    def __init__(self, the_cause: str):
+        self.cause = the_cause
+
+    # __str__ is to print() the value
+    def __str__(self):
+        return repr(self.cause)
+
+
+class StrandError(IllegalDNADesignError):
+
+    def __init__(self, strand: Strand, the_cause: str):
+        first_substrand = strand.first_bound_substrand()
+        last_substrand = strand.last_bound_substrand()
+
+        msg = (f'{the_cause}\n'
+               f'strand length        =  {strand.dna_length()}\n'
+               f'DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}\n'
+               f'DNA sequence         =  {strand.dna_sequence}'
+               f"strand 5' helix      =  {first_substrand.helix if first_substrand else 'N/A'}\n"
+               f"strand 5' end offset =  {first_substrand.offset_5p() if first_substrand else 'N/A'}\n"
+               f"strand 3' helix      =  {last_substrand.helix if last_substrand else 'N/A'}\n"
+               f"strand 3' end offset =  {last_substrand.offset_3p() if last_substrand else 'N/A'}\n")
+
+        super(IllegalDNADesignError, self).__init__(msg)
 
 
 # TODO: add mutation operations to DNADesign to mutate all of its parts:
@@ -1203,28 +1242,23 @@ class DNADesign(JSONSerializable):
             self._check_two_consecutive_loopouts(strand)
             self._check_loopouts_length(strand)
 
-#TODO: make StrandError like in Dart code to give info about strand in error message
+    # TODO: make StrandError like in Dart code to give info about strand in error message
 
     def _check_two_consecutive_loopouts(self, strand):
         for ss1, ss2 in _pairwise(strand.substrands):
             if ss1 is Loopout and ss2 is Loopout:
-                order = self.strands.index(strand)
-                raise IllegalDNADesignError('cannot have two consecutive Loopouts in a strand'
-                                            f"this is the {order}'th strand in the design")
+                raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     def _check_loopout_not_singleton(self, strand):
         if len(strand.substrands) == 1:
             if strand.first_substrand().is_loopout():
-                order = self.strands.index(strand)
-                raise IllegalDNADesignError('strand cannot have a single Loopout as its only substrand:'
-                                            f"this is the {order}'th strand in the design")
+                raise StrandError(strand, 'strand cannot have a single Loopout as its only substrand')
 
     def _check_loopouts_length(self, strand):
         for loopout in strand.substrands:
             if loopout.is_loopout() and loopout.loopout <= 0:
                 order = self.strands.index(strand)
-                raise IllegalDNADesignError(f'loopout length must be positive but is {loopout.loopout}:'
-                                            f"this is the {order}'th strand in the design")
+                raise StrandError(strand, f'loopout length must be positive but is {loopout.loopout}')
 
     def _check_strands_reference_legal_helices(self):
         # ensure each strand refers to an existing helix
@@ -1243,13 +1277,13 @@ class DNADesign(JSONSerializable):
             if ss1.is_loopout() and ss2.is_loopout():
                 err_msg = f"Loopouts {ss1} and {ss2} are consecutive on strand {strand}. " \
                           f"At least one of any consecutive pair must be a Substrand, not a Loopout."
-                raise IllegalDNADesignError(err_msg)
+                raise StrandError(strand, err_msg)
 
     @staticmethod
     def _check_substrand_references_legal_helix(helix_idxs_set: Set[int], substrand: Substrand):
         if substrand.is_substrand() and substrand.helix not in helix_idxs_set:
             err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}"
-            raise IllegalDNADesignError(err_msg)
+            raise StrandError(substrand._parent_strand, err_msg)
 
     def substrands_at(self, helix, offset) -> List[Substrand]:
         """Return list of :any:`Substrand`'s that overlap `offset` on helix with idx `helix`.
