@@ -1,8 +1,6 @@
 import scadnano as sc
 
 def main():
-    length = 16
-    helices = [sc.Helix(idx=0, max_bases=length)]
     ss1_r = sc.Substrand(0, sc.forward, 0, 4)
     ss2_r = sc.Substrand(0, sc.forward, 4, 8)
     ss3_r = sc.Substrand(0, sc.forward, 8, 12)
@@ -15,7 +13,7 @@ def main():
 
     strands = [s1_r, s2_r, s3_r, s_l]
 
-    design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+    design = sc.DNADesign(strands=strands, grid=sc.square)
 
     design.assign_dna(s_l, 'AGTT'*3)
 

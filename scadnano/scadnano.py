@@ -26,7 +26,7 @@ import enum
 import itertools
 import re
 from dataclasses import dataclass, field
-from typing import Tuple, List, Dict, Union, Set
+from typing import Tuple, List, Dict, Union
 from collections import defaultdict, OrderedDict
 import sys
 import os.path
@@ -38,6 +38,8 @@ import m13
 # TODO: rewrite Helix class to refer to only used helices, and make another object to refer to circles
 #  in the side view. (here and Dart code)
 
+# TODO: write from_json for DNADesign so .dna files can be read into the library
+
 # TODO: make explicit rules about when strands can be added and sequences assigned.
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
@@ -46,7 +48,7 @@ import m13
 
 
 def _pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
@@ -263,11 +265,23 @@ def in_browser() -> bool:
 
 
 @dataclass
-class Helix(JSONSerializable):
-    idx: int
-    """ idx: Index of helix (used helices must be given indices 0..num_helices-1, 
-    unused helices must be given a negative index). """
+class PotentialHelix(JSONSerializable):
+    grid_position: Tuple[int, int, int] = None
+    """`(h,v,b)` position of this :any:`PotentialHelix` in the side view grid.
+    
+    It has the same interpretation as :py:data:`Helix.grid_position`."""
 
+    def to_json_serializable(self, suppress_indent=True):
+        dct = self.__dict__
+
+        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
+            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+
+        return NoIndent(dct) if suppress_indent else dct
+
+
+@dataclass
+class Helix(JSONSerializable):
     max_bases: int = -1
     """Maximum length of :any:`Substrand` that can be drawn on this :any:`Helix`. If unspecified,
     it is calculated when the :any:`DNADesign` is instantiated as the largest :any:`Substrand.end`
@@ -294,7 +308,7 @@ class Helix(JSONSerializable):
     However, the default y svg_position for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
     
-    Default is `h` = 0, `v` = :any:`Helix.idx`, `b` = 0."""
+    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`, `b` = 0."""
 
     svg_position: Tuple[float, float] = None
     """`(x,y)` SVG coordinates of base offset 0 of this Helix in the main view. 
@@ -305,40 +319,37 @@ class Helix(JSONSerializable):
     If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
     `x` = b * BASE_WIDTH_SVG, `y` = :any:`Helix.idx` * :any:`scadnano.distance_between_helices_svg`."""
 
-    @property
-    def used(self):
-        """If ``False``, this helix has :any:`Helix.idx` = ``None`` and appears only in the side view,
-        not the main view. If ``True``, it appears in the main view and has a positive integer value
-        for :any:`Helix.idx`, though it may not actually have any :any:`Substrand`'s on it."""
-        return self.idx >= 0
+    _idx: int = -1
+
+    # for optimization; list of substrands on that Helix
+    _substrands: List['Substrand'] = field(default_factory=list)
 
     def to_json_serializable(self, suppress_indent=True):
-        dct = self.__dict__
+        dct = dict()
 
-        if self.major_tick_distance <= 0:
-            del dct[major_tick_distance_key]
+        if self.max_bases >= 0:
+            dct[max_bases_key] = self.max_bases
 
-        if self.major_ticks is None:
-            del dct[major_ticks_key]
+        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
+            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+        else:
+            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
 
         # print(f'self.svg_position()    = {self.svg_position}')
         # print(f'default_svg_position() = {self.default_svg_position()}')
         default_x, default_y = self.default_svg_position()
-        if _is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1], default_y):
-            del dct[svg_position_key]
+        if not (_is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1], default_y)):
+            dct[svg_position_key] = (self.svg_position[0], self.svg_position[1])
 
-        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
-            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+        if self.major_tick_distance > 0:
+            dct[major_tick_distance_key] = self.major_tick_distance
+
+        if self.major_ticks is not None:
+            dct[major_ticks_key] = self.major_ticks
 
         return NoIndent(dct) if suppress_indent else dct
 
     def __post_init__(self):
-        if self.grid_position is None:
-            # default to same x-coordinate 0, and y-coordinate = idx
-            self.grid_position = (0, self.idx, 0)
-        if self.svg_position is None:
-            # default to same x- and z-coordinates 0, and y-coordinate scales with idx
-            self.svg_position = self.default_svg_position()
         if self.major_ticks is not None:
             for major_tick in self.major_ticks:
                 if major_tick > self.max_bases:
@@ -347,7 +358,16 @@ class Helix(JSONSerializable):
                                                 f'{self.max_bases}')
 
     def default_svg_position(self):
-        return 0, self.idx * distance_between_helices_svg
+        return 0, self._idx * distance_between_helices_svg
+
+    def set_idx(self, idx):
+        self._idx = idx
+
+    def idx(self):
+        return self._idx
+
+    def default_grid_position(self):
+        return (0, self.idx(), 0)
 
 
 def _is_close(x1: float, x2: float):
@@ -399,7 +419,7 @@ class Substrand(JSONSerializable):
 
     def __repr__(self):
         rep = (f'Substrand(helix={self.helix}'
-               f', dir={"right" if self.forward else "left"}'
+               f', forward={self.forward}'
                f', start={self.start}'
                f', end={self.end}') + \
               (f', deletions={self.deletions}' if len(self.deletions) > 0 else '') + \
@@ -728,20 +748,20 @@ def wc(seq: str) -> str:
     return seq.translate(_wctable)[::-1]
 
 
-# TODO: print set of strands with unique names (but give error if two different strands with the same
-#  name have different sequences, and give warning even if the have the same sequence)
-
 @dataclass
 class IDTFields(JSONSerializable):
     name: str
     """Name of the strand (first field in IDT bulk input).
-    Non-optional field."""
+    
+    Non-optional field.
+    """
 
     scale: str = default_idt_scale
     """Synthesis scale at which to synthesize the strand (second field in IDT bulk input).
     Choices supplied by IDT at the time this was written: 
-    ``"25nm"``, ``"100nm"``, ``"250nm"``, ``"1um"``, ``"5um"``, ``"10um"``, ``"4nmU"``, ``"20nmU"``, 
-    ``"PU"``, ``"25nmS"``.
+    ``"25nm"``, ``"100nm"``, ``"250nm"``, ``"1um"``, ``"5um"``, 
+    ``"10um"``, ``"4nmU"``, ``"20nmU"``, ``"PU"``, ``"25nmS"``.
+    
     Optional field.
     """
 
@@ -749,6 +769,7 @@ class IDTFields(JSONSerializable):
     """Purification options. 
     Choices supplied by IDT at the time this was written: 
     ``"STD"``, ``"PAGE"``, ``"HPLC"``, ``"IEHPLC"``, ``"RNASE"``, ``"DUALHPLC"``, ``"PAGEHPLC"``.
+    
     Optional field.
     """
 
@@ -1118,34 +1139,38 @@ class StrandError(IllegalDNADesignError):
 class DNADesign(JSONSerializable):
     """Object representing the entire design of the DNA structure."""
 
-    helices: List[Helix]
-    """All of the helices in this DNADesign."""
-
     strands: List[Strand]
-    """All of the strands in this DNADesign."""
+    """All of the :any:`Strand`'s in this :any:`DNADesign`.
+    
+    Required field."""
+
+    helices: List[Helix] = None
+    """All of the :any:`Helix`'s in this :any:`DNADesign`. 
+    
+    Optional field. If not specified the number of helices will be just large enough to store the
+    largest :py:data:`Substrand.helix` stored in any :any:`Substrand` in :py:data:`DNADesign.strands`."""
+
+    potential_helices: List[PotentialHelix] = field(default_factory=list)
+    """Potential helices, which are gray circle positions listed in the side view where 
+    a :any:`Helix` can be added by Ctrl+click.
+    
+    Optional field."""
 
     grid: Grid = Grid.none
-    """Common choices for how to arrange helices relative to each other."""
+    """Common choices for how to arrange helices relative to each other.
+    
+    Optional field."""
 
     major_tick_distance: int = -1
     """Distance between major ticks (bold) delimiting boundaries between bases.
     
-    Default value is 8 unless overridden by the grid type.
+    Optional field.
+    If not specified, default value is 8 unless overridden by the grid type.
     If 0 then no major ticks are drawn.
     If negative then the default value is assumed, but `major_tick_distance` is not stored in the JSON file
     when serialized.
     If :any:`DNADesign.grid` = :any:`Grid.square` then the default value is 8.
     If :any:`DNADesign.grid` = :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
-
-    # for optimization; maps helix index to list of substrands on that Helix
-    _helix_substrand_map: Dict[int, List[Substrand]] = None
-
-    def __post_init__(self):
-        if self.major_tick_distance < 0:
-            self.major_tick_distance = default_major_tick_distance(self.grid)
-        self._build_helix_substrand_map()
-        self._check_legal_design()
-        self._set_helix_max_bases()
 
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
@@ -1157,7 +1182,51 @@ class DNADesign(JSONSerializable):
             dct[major_tick_distance_key] = self.major_tick_distance
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
+
+        for helix in self.helices:
+            max_offset = max((ss.end for ss in helix._substrands), default=-1)
+            helix_json = dct[helices_key][helix.idx()].value  # get past NoIndent surrounding helix
+            if max_offset == helix_json[max_bases_key]:
+                del helix_json[max_bases_key]
+
         return dct
+
+    def __post_init__(self):
+        if self.major_tick_distance < 0:
+            self.major_tick_distance = default_major_tick_distance(self.grid)
+
+        # doing this first matters because most of DNADesign assumes helices has been set
+        if self.helices is None:
+            max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
+            self.helices = list(Helix() for _ in range(max_helix_idx + 1))
+
+        # XXX: exact order of these calls is important
+        self._set_helices_idxs()
+        self._set_helices_grid_and_svg_positions()
+        self._build_substrands_on_helix_lists()
+        self._set_helices_max_bases(update=False)
+        self._check_legal_design()
+
+    def _set_helices_idxs(self):
+        for idx, helix in enumerate(self.helices):
+            helix.set_idx(idx)
+
+    def _set_helices_grid_and_svg_positions(self):
+        for idx, helix in enumerate(self.helices):
+            if helix.grid_position is None:
+                helix.grid_position = helix.default_grid_position()
+            if helix.svg_position is None:
+                helix.svg_position = helix.default_svg_position()
+
+    def _set_helices_max_bases(self, update: bool):
+        """update = whether to overwrite existing Helix.max_bases. Don't do this when DNADesign is first
+        created, but do it later when updating."""
+        for helix in self.helices:
+            if update or helix.max_bases < 0:
+                max_bases = -1
+                for substrand in helix._substrands:
+                    max_bases = max(max_bases, substrand.end)
+                helix.max_bases = max_bases
 
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of Strands that start (have their 5' end) on helix with index `helix`."""
@@ -1167,27 +1236,23 @@ class DNADesign(JSONSerializable):
         """Return list of Strands that end (have their 3' end) on helix with index `helix`."""
         return [strand for strand in self.strands if strand.substrands[-1].helix == helix]
 
-    def used_helices(self) -> List[Helix]:
-        """Return list of all helices that are used."""
-        return [helix for helix in self.helices if helix.used]
-
     def _check_legal_design(self):
-        self._check_helix_indices()
-        self._check_strands_reference_legal_helices()
+        # self._check_helix_indices()
+        self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
 
-    def _check_helix_indices(self):
-        # ensure if there are H helices, the list of sorted indices is 0,1,...,H-1
-        indices_helices = sorted([(helix.idx, helix) for helix in self.helices],
-                                 key=lambda x: x[0])
-        for (correct_idx, (helix_idx, helix)) in enumerate(indices_helices):
-            if correct_idx != helix_idx:
-                if correct_idx < helix_idx:
-                    err_msg = f"missing Helix with helix {correct_idx}"
-                else:
-                    err_msg = f"duplicate Helices with helix {helix_idx}"
-                raise IllegalDNADesignError(err_msg)
+    # def _check_helix_indices(self):
+    #     # ensure if there are H helices, the list of sorted indices is 0,1,...,H-1
+    #     indices_helices = sorted([(helix.idx, helix) for helix in self.helices],
+    #                              key=lambda x: x[0])
+    #     for (correct_idx, (helix_idx, helix)) in enumerate(indices_helices):
+    #         if correct_idx != helix_idx:
+    #             if correct_idx < helix_idx:
+    #                 err_msg = f"missing Helix with helix {correct_idx}"
+    #             else:
+    #                 err_msg = f"duplicate Helices with helix {helix_idx}"
+    #             raise IllegalDNADesignError(err_msg)
 
     def _check_strands_overlap_legally(self, substrand_to_check: Substrand = None):
         """If `substrand_to_check` is None, check all.
@@ -1199,10 +1264,11 @@ class DNADesign(JSONSerializable):
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
-        for helix, substrands in self._helix_substrand_map.items():
-            if substrand_to_check is not None and substrand_to_check.helix != helix:
+        for helix_idx, substrands in enumerate(helix._substrands for helix in self.helices):
+            if substrand_to_check is not None and substrand_to_check.helix != helix_idx:
                 # TODO: if necessary, we can be more efficient by only checking this one substrand
                 continue
+
             if len(substrands) == 0:
                 continue
 
@@ -1227,50 +1293,61 @@ class DNADesign(JSONSerializable):
                         ss0, ss1, ss2 = current_substrands[0:3]
                         for s_first, s_second in [(ss0, ss1), (ss1, ss2), (ss0, ss2)]:
                             if s_first.forward == s_second.forward:
-                                raise IllegalDNADesignError(err_msg(s_first, s_second, helix))
+                                raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
                         raise AssertionError(
                             f"since current_substrands = {current_substrands} has at least three substrands, "
                             f"I expected to find a pair of illegally overlapping substrands")
                     elif len(current_substrands) == 2:
                         s_first, s_second = current_substrands
                         if s_first.forward == s_second.forward:
-                            raise IllegalDNADesignError(err_msg(s_first, s_second, helix))
+                            raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
 
     def _check_loopouts_not_consecutive_or_singletons_or_zero_length(self):
         for strand in self.strands:
-            self._check_loopout_not_singleton(strand)
-            self._check_two_consecutive_loopouts(strand)
-            self._check_loopouts_length(strand)
+            DNADesign._check_loopout_not_singleton(strand)
+            DNADesign._check_two_consecutive_loopouts(strand)
+            DNADesign._check_loopouts_length(strand)
 
     # TODO: make StrandError like in Dart code to give info about strand in error message
 
-    def _check_two_consecutive_loopouts(self, strand):
+    @staticmethod
+    def _check_two_consecutive_loopouts(strand):
         for ss1, ss2 in _pairwise(strand.substrands):
             if ss1 is Loopout and ss2 is Loopout:
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
-    def _check_loopout_not_singleton(self, strand):
+    @staticmethod
+    def _check_loopout_not_singleton(strand):
         if len(strand.substrands) == 1:
             if strand.first_substrand().is_loopout():
                 raise StrandError(strand, 'strand cannot have a single Loopout as its only substrand')
 
-    def _check_loopouts_length(self, strand):
+    @staticmethod
+    def _check_loopouts_length(strand):
         for loopout in strand.substrands:
             if loopout.is_loopout() and loopout.loopout <= 0:
-                order = self.strands.index(strand)
                 raise StrandError(strand, f'loopout length must be positive but is {loopout.loopout}')
 
-    def _check_strands_reference_legal_helices(self):
+    def _check_strands_reference_helices_legally(self):
         # ensure each strand refers to an existing helix
-        helix_idxs_set = set(helix.idx for helix in self.helices if helix.idx >= 0)
         for strand in self.strands:
-            DNADesign._check_strand_references_legal_helices(helix_idxs_set, strand)
+            self._check_strand_references_legal_helices(strand)
+            self._check_strand_has_legal_offsets_in_helices(strand)
 
-    @staticmethod
-    def _check_strand_references_legal_helices(helix_idxs_set: set, strand: Strand):
+    def _check_strand_has_legal_offsets_in_helices(self, strand: Strand):
         for substrand in strand.substrands:
             if substrand.is_substrand():
-                DNADesign._check_substrand_references_legal_helix(helix_idxs_set, substrand)
+                helix = self.helices[substrand.helix]
+                if substrand.end > helix.max_bases:
+                    err_msg = f"substrand {substrand} has end offset {substrand.end}, beyond the end of " \
+                              f"Helix {substrand.helix} that has max_bases = {helix.max_bases}"
+                    raise StrandError(substrand._parent_strand, err_msg)
+
+    def _check_strand_references_legal_helices(self, strand: Strand):
+        for substrand in strand.substrands:
+            if substrand.is_substrand() and not (0 <= substrand.helix < len(self.helices)):
+                err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}"
+                raise StrandError(substrand._parent_strand, err_msg)
 
         # ensure helix_idx's are never negative twice in a row
         for ss1, ss2 in _pairwise(strand.substrands):
@@ -1279,17 +1356,11 @@ class DNADesign(JSONSerializable):
                           f"At least one of any consecutive pair must be a Substrand, not a Loopout."
                 raise StrandError(strand, err_msg)
 
-    @staticmethod
-    def _check_substrand_references_legal_helix(helix_idxs_set: Set[int], substrand: Substrand):
-        if substrand.is_substrand() and substrand.helix not in helix_idxs_set:
-            err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}"
-            raise StrandError(substrand._parent_strand, err_msg)
-
-    def substrands_at(self, helix, offset) -> List[Substrand]:
+    def substrands_at(self, helix: int, offset: int) -> List[Substrand]:
         """Return list of :any:`Substrand`'s that overlap `offset` on helix with idx `helix`.
 
         If constructed properly, this list should have 0, 1, or 2 elements."""
-        substrands_on_helix = self._helix_substrand_map[helix]
+        substrands_on_helix = self.helices[helix]._substrands
         # TODO: replace this with a faster algorithm using binary search
         substrands_on_helix = [substrand for substrand in substrands_on_helix if
                                substrand.contains_offset(offset)]
@@ -1301,55 +1372,50 @@ class DNADesign(JSONSerializable):
     # TODO: add_strand and insert_substrand should check for existing deletions/insertion parallel strands
     def add_strand(self, strand: Strand):
         """Add `strand` to this design."""
-        helix_idxs_set = set(helix.idx for helix in self.helices)
-        self._check_strand_references_legal_helices(helix_idxs_set, strand)
+        self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
         for substrand in strand.substrands:
-            self._helix_substrand_map[substrand.helix].append(substrand)
+            self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_strand(self, strand: Strand):
         """Add `strand` to this design."""
         self.strands.remove(strand)
         for substrand in strand.substrands:
-            self._helix_substrand_map[substrand.helix].remove(substrand)
+            self.helices[substrand.helix]._substrands.remove(substrand)
 
     def insert_substrand(self, strand: Strand, order: int, substrand: Union[Substrand, Loopout]):
         """Insert `substrand` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``strand.insert_substrand(ss, 0)`` inserts ``ss`` as the new first substrand."""
         assert strand in self.strands
         strand._insert_substrand(order, substrand)
-        helix_idxs_set = set(helix.idx for helix in self.helices)
-        self._check_strand_references_legal_helices(helix_idxs_set, strand)
+        self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
-        self._helix_substrand_map[substrand.helix].append(substrand)
+        self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_substrand(self, strand: Strand, substrand: Union[Substrand, Loopout]):
         """Remove `substrand` from `strand`."""
         assert strand in self.strands
         strand._remove_substrand(substrand)
-        self._helix_substrand_map[substrand.helix].remove(substrand)
+        self.helices[substrand.helix]._substrands.remove(substrand)
 
-    def _build_helix_substrand_map(self):
-        self._helix_substrand_map = defaultdict(list)
+    def _build_substrands_on_helix_lists(self):
+        for helix in self.helices:
+            helix._substrands = []
         for strand in self.strands:
             for substrand in strand.substrands:
                 if substrand.is_substrand():
-                    self._helix_substrand_map[substrand.helix].append(substrand)
-
-    def _set_helix_max_bases(self):
-        for helix in self.used_helices():
-            if helix.max_bases < 0:
-                max_bases = -1
-                for substrand in self._helix_substrand_map[helix.idx]:
-                    max_bases = max(max_bases, substrand.end)
-                helix.max_bases = max_bases
+                    if substrand.helix < len(self.helices):
+                        self.helices[substrand.helix]._substrands.append(substrand)
+                    else:
+                        msg = f"substrand's helix is {substrand.helix} but largest helix is {len(self.helices) - 1}"
+                        raise StrandError(strand=strand, the_cause=msg)
 
     def to_json(self, suppress_indent=True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file."""
         return json_encode(self, suppress_indent)
 
-    # TODO: create version of add_deltion and add_insertion that simply changes the major tick distance
+    # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
     #  on the helix at that position, as well as updating the end offset of the substrand (and subsequent
     #  substrands on the same helix)
 
@@ -1398,7 +1464,7 @@ class DNADesign(JSONSerializable):
         for strand in self.strands:
             for substrand in strand.substrands:
                 substrand.helix += delta
-        self._check_strands_reference_legal_helices()
+        self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str):
         """

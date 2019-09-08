@@ -238,7 +238,7 @@ BASES_PER_COLUMN = 16
 
 
 def _create_helices(num_helices: int, num_bases_per_helix: int):
-    return [sc.Helix(idx=idx, max_bases=num_bases_per_helix) for idx in range(num_helices)]
+    return [sc.Helix(max_bases=num_bases_per_helix) for _ in range(num_helices)]
 
 
 def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
