@@ -38,6 +38,8 @@ import m13
 # TODO: rewrite Helix class to refer to only used helices, and make another object to refer to circles
 #  in the side view. (here and Dart code)
 
+# TODO: add support for writing Excel files for uploading 96-well and 384-well plates to IDT
+
 # TODO: write from_json for DNADesign so .dna files can be read into the library
 
 # TODO: make explicit rules about when strands can be added and sequences assigned.
@@ -218,6 +220,7 @@ grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
 major_ticks_key = 'major_ticks'
 helices_key = 'helices'
+potential_helices_key = 'potential_helices'
 strands_key = 'strands'
 
 # Helix keys
@@ -1180,7 +1183,12 @@ class DNADesign(JSONSerializable):
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
+
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
+
+        if len(self.potential_helices) > 0:
+            dct[potential_helices_key] = [ph.to_json_serializable(suppress_indent) for ph in self.potential_helices]
+
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix in self.helices:
