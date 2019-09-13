@@ -1,5 +1,5 @@
 """
-Defines function :any:`origami_rectangle.create` for creating a DNA origami rectangle.
+Defines function :py:func:`origami_rectangle.create` for creating a DNA origami rectangle.
 """
 
 from dataclasses import dataclass, field
@@ -49,13 +49,13 @@ instead of :const:`origami_rectangle.NickPattern.odd`."""
 
 # TODO: figure out how to make create return a subclass that has a scaffold field
 
-def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
+def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
            nick_pattern: NickPattern = NickPattern.staggered,
            twist_correction_deletion_spacing: int = 0, twist_correction_start_col: int = 1,
            twist_correction_deletion_offset=-1,
            num_flanking_columns: int = 1, num_flanking_helices=0,
            custom_scaffold: str = None, edge_staples: bool = True,
-           scaffold_nick_offset: int = -1) -> sc.DNADesign:
+           scaffold_nick_offset: int = -1, idt: bool = False) -> sc.DNADesign:
     """
     Creates a DNA origami rectangle with a given number of helices and
     "columns" (16-base-wide region in each helix). The columns include
@@ -162,6 +162,9 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     `scaffold_nick_offset` is the position of the "nick" on the scaffold (the M13 scaffold is circular,
     so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
     form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
+    
+    `idt`, if ``True``, creates an :any:`IDTFields` in each staple strand suitable for 
+    calling :py:meth:`DNADesign.write_idt_file` or :py:meth:`DNADesign.write_idt_plate_excel_file` 
 
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
@@ -211,7 +214,7 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
     scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                                 scaffold_nick_offset)
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
-                              num_cols, nick_pattern, edge_staples)
+                              num_cols, nick_pattern, edge_staples, idt)
 
     design = sc.DNADesign(helices=helices, strands=[scaffold] + staples, grid=sc.square)
 
@@ -230,6 +233,10 @@ def create(num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_c
         design.assign_dna(scaffold, scaffold_seq)
 
     design.scaffold = scaffold
+
+    if idt:
+        design.set_default_idt(True)
+        scaffold.set_default_idt(False)
 
     return design
 
@@ -266,22 +273,22 @@ def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_he
     return sc.Strand(substrands=substrands, color=sc.default_scaffold_color)
 
 
-def _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices, num_cols,
-                    nick_pattern, edge_staples):
+def _create_staples(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
+                    num_flanking_helices: int, num_cols: int,
+                    nick_pattern: NickPattern, edge_staples, idt: bool):
     if edge_staples:
-        left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices)
-        right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices)
+        left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices, idt)
+        right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices, idt)
     else:
         left_edge_staples = []
         right_edge_staples = []
-    seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices)
+    seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices, idt)
     inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices,
-                                          num_flanking_helices, num_cols,
-                                          nick_pattern)
+                                          num_flanking_helices, num_cols, nick_pattern, idt)
     return left_edge_staples + right_edge_staples + seam_staples + inner_staples
 
 
-def _create_seam_staples(offset_mid, num_helices, num_flanking_helices):
+def _create_seam_staples(offset_mid: int, num_helices: int, num_flanking_helices: int, idt: bool):
     staples = []
     crossover_left = offset_mid - BASES_PER_COLUMN
     crossover_right = offset_mid + BASES_PER_COLUMN
@@ -314,7 +321,7 @@ def _create_seam_staples(offset_mid, num_helices, num_flanking_helices):
     return [first_staple] + staples + [last_staple]
 
 
-def _create_left_edge_staples(offset_start, num_helices, num_flanking_helices):
+def _create_left_edge_staples(offset_start: int, num_helices: int, num_flanking_helices: int, idt: bool):
     staples = []
     crossover_right = offset_start + BASES_PER_COLUMN
     for helix in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
@@ -328,7 +335,7 @@ def _create_left_edge_staples(offset_start, num_helices, num_flanking_helices):
     return staples
 
 
-def _create_right_edge_staples(offset_end, num_helices, num_flanking_helices):
+def _create_right_edge_staples(offset_end: int, num_helices: int, num_flanking_helices: int, idt: bool):
     staples = []
     crossover_left = offset_end - BASES_PER_COLUMN
     for helix in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
@@ -342,8 +349,9 @@ def _create_right_edge_staples(offset_end, num_helices, num_flanking_helices):
     return staples
 
 
-def _create_inner_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices, num_cols,
-                          nick_pattern):
+def _create_inner_staples(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
+                          num_flanking_helices: int, num_cols: int,
+                          nick_pattern: NickPattern, idt: bool):
     if nick_pattern is not NickPattern.staggered:
         raise NotImplementedError("Currently can only handle staggered nick pattern")
     # if ((num_cols - 4) // 2) % 2 != 0:

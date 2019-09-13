@@ -46,7 +46,7 @@ class TestJSON(unittest.TestCase):
         #      /
         # TTTGG    # helix 0 going reverse
         ss_f = sc.Substrand(helix=0, forward=True, start=0, end=5)
-        loop = sc.Loopout(loopout=5)
+        loop = sc.Loopout(length=5)
         ss_r = sc.Substrand(helix=0, forward=False, start=0, end=5)
         strand_forward = sc.Strand([ss_f, loop, ss_r])
         design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
@@ -273,7 +273,7 @@ class TestAssignDNA(unittest.TestCase):
         #      /
         # TTTGG    # helix 0 going reverse
         ss_f = sc.Substrand(helix=0, forward=True, start=0, end=5)
-        loop = sc.Loopout(loopout=5)
+        loop = sc.Loopout(length=5)
         ss_r = sc.Substrand(helix=0, forward=False, start=0, end=5)
         strand_forward = sc.Strand([ss_f, loop, ss_r])
         design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
