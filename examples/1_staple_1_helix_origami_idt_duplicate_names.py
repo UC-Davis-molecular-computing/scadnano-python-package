@@ -21,4 +21,4 @@ def main():
 
 if not sc.in_browser() and __name__ == '__main__':
     design = main()
-    design.write_idt_file(directory='idt')
+    design.write_idt_bulk_input_file(directory='idt')

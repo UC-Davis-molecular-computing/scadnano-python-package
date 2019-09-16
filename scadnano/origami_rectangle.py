@@ -1,5 +1,6 @@
 """
-Defines function :py:func:`origami_rectangle.create` for creating a DNA origami rectangle.
+The :mod:`origami_rectangle` module defines the function :py:func:`origami_rectangle.create` for creating a DNA origami rectangle
+using the :mod:`scadnano` module.
 """
 
 from dataclasses import dataclass, field
@@ -13,17 +14,25 @@ class NickPattern(Enum):
 
     staggered = auto()
     """A nick appears in a given helix and column 
-    if the parity of the helix and column match (both even or both odd)."""
+    if the parity of the helix and column match (both even or both odd).
+    
+    CURRENTLY UNSUPPORTED."""
 
     staggered_opposite = auto()
     """A nick appears in a given helix and column 
-    if the parity of the helix and column don't match (one is even and the other is odd)."""
+    if the parity of the helix and column don't match (one is even and the other is odd).
+    
+    CURRENTLY UNSUPPORTED."""
 
     even = auto()
-    """A nick appears in every column and only even-index helices."""
+    """A nick appears in every column and only even-index helices.
+    
+    CURRENTLY UNSUPPORTED."""
 
     odd = auto()
-    """A nick appears in every column and only odd-index helices."""
+    """A nick appears in every column and only odd-index helices.
+    
+    CURRENTLY UNSUPPORTED."""
 
 
 staggered = NickPattern.staggered
@@ -32,22 +41,23 @@ instead of :const:`origami_rectangle.NickPattern.staggered`."""
 
 staggered_opposite = NickPattern.staggered_opposite
 """Convenience reference defined so one can type :const:`origami_rectangle.staggered_opposite` 
-instead of :const:`origami_rectangle.NickPattern.staggered_opposite`."""
+instead of :const:`origami_rectangle.NickPattern.staggered_opposite`.
+    
+CURRENTLY UNSUPPORTED."""
 
 even = NickPattern.even
 """Convenience reference defined so one can type :const:`origami_rectangle.even` 
-instead of :const:`origami_rectangle.NickPattern.even`."""
+instead of :const:`origami_rectangle.NickPattern.even`.
+    
+CURRENTLY UNSUPPORTED."""
 
 odd = NickPattern.odd
 """Convenience reference defined so one can type :const:`origami_rectangle.odd` 
-instead of :const:`origami_rectangle.NickPattern.odd`."""
+instead of :const:`origami_rectangle.NickPattern.odd`.
+    
+CURRENTLY UNSUPPORTED."""
 
 
-# @dataclass
-# class OrigamiDNADesign(sc.DNADesign):
-#     scaffold: sc.Strand = None
-
-# TODO: figure out how to make create return a subclass that has a scaffold field
 
 def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
            nick_pattern: NickPattern = NickPattern.staggered,
@@ -55,11 +65,11 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
            twist_correction_deletion_offset=-1,
            num_flanking_columns: int = 1, num_flanking_helices=0,
            custom_scaffold: str = None, edge_staples: bool = True,
-           scaffold_nick_offset: int = -1, idt: bool = False) -> sc.DNADesign:
+           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.DNAOrigamiDesign:
     """
-    Creates a DNA origami rectangle with a given number of helices and
-    "columns" (16-base-wide region in each helix). The columns include
-    the 16-base regions on the end where potential "edge staples" go,
+    Creates a DNA origami rectangle with a given number of helices and "columns" 
+    (16-base-wide region in each helix). 
+    The columns include the 16-base regions on the end where potential "edge staples" go, 
     as well as the two-column-wide "seam" region in the middle.
 
     Below is an example diagram of the staples created by this function.
@@ -214,9 +224,10 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                                 scaffold_nick_offset)
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
-                              num_cols, nick_pattern, edge_staples, idt)
+                              num_cols, nick_pattern, edge_staples, use_idt_defaults)
 
-    design = sc.DNADesign(helices=helices, strands=[scaffold] + staples, grid=sc.square)
+    design = sc.DNAOrigamiDesign(helices=helices, strands=[scaffold] + staples, grid=sc.square,
+                                 scaffold=scaffold)
 
     if twist_correction_deletion_spacing > 0:
         add_twist_correction_deletions(design=design,
@@ -232,9 +243,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
         scaffold_seq = sc.m13_sequence if custom_scaffold is None else custom_scaffold
         design.assign_dna(scaffold, scaffold_seq)
 
-    design.scaffold = scaffold
-
-    if idt:
+    if use_idt_defaults:
         design.set_default_idt(True)
         scaffold.set_default_idt(False)
 

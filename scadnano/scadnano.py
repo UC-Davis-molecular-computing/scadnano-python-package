@@ -1,6 +1,8 @@
 """
-Scripting library for scadnano. Used to write python scripts outputting ``*.dna`` files readable
+The :mod:`scadnano` Python module is a library for describing DNA nanostructures. 
+It is used to write Python scripts outputting ``*.dna`` files readable
 by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_.
+It requires Python version 3.7 or higher.
 
 This library uses typing hints from the Python typing library.
 (https://docs.python.org/3/library/typing.html)
@@ -8,18 +10,20 @@ Each function and method indicate intended types of the parameters.
 However, due to Python's design, these types are not enforced at runtime.
 It is suggested to use a static analysis tool such as that provided by an IDE such as PyCharm
 (https://www.jetbrains.com/pycharm/)
-to see warnings when the typing rules are violated. Such warnings probably indicate an erroneous usage.
+to see warnings when the typing rules are violated. 
+Such warnings probably indicate an erroneous usage.
 
 Most of the classes in this module are Python dataclasses
 (https://docs.python.org/3/library/dataclasses.html)
-whose fields show up in the documentation (their types are listed in parentheses after the name of the class;
+whose fields show up in the documentation.
+Their types are listed in parentheses after the name of the class;
 for example :any:`Color` has ``int`` fields :py:data:`Color.r`, :py:data:`Color.g`, :py:data:`Color.b`.
 In general it is safe to read these fields directly, but not to write to them directly.
 Setter methods (named ``set_<fieldname>``) are provided for fields where it makes sense to set it to another
 value than it had originally.
 However, due to Python naming conventions for dataclass fields and property setters,
-it is not straightforward to enforce that the fields cannot be written, so the user must take care not to set
-them.
+it is not straightforward to enforce that the fields cannot be written, 
+so the user must take care not to set them.
 """
 
 import enum
@@ -35,8 +39,6 @@ import xlwt
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
-
-# TODO: add support for writing Excel files for uploading 96-well and 384-well plates to IDT
 
 # TODO: write from_json for DNADesign so .dna files can be read into the library
 
@@ -88,7 +90,8 @@ class ColorCycler:
 
     # These are copied from cadnano:
     # https://github.com/sdouglas/cadnano2/blob/master/views/styles.py#L97
-    _colors = [Color(204, 0, 0),
+    _colors = [Color(50, 184, 108),
+               Color(204, 0, 0),
                Color(247, 67, 8),
                Color(247, 147, 30),
                Color(170, 170, 0),
@@ -106,7 +109,7 @@ class ColorCycler:
     def __init__(self):
         self._current_color_idx = 0
         # random order
-        order = [3, 11, 0, 8, 1, 10, 6, 5, 9, 4, 7, 2]
+        order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
         colors_shuffled = [None] * len(self._colors)
         for i, color in zip(order, self._colors):
             colors_shuffled[i] = color
@@ -713,7 +716,7 @@ class Loopout(JSONSerializable):
     be :any:`Loopout`'s, and for a :any:`Strand` to have only one element of :any:`Strand.substrands`
     that is a :any:`Loopout`.
 
-    Loopout has only a single field :py:data:`length` that specifies the length of the loopout.
+    Loopout has only a single field :py:data:`Loopout.length` that specifies the length of the loopout.
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -727,9 +730,11 @@ class Loopout(JSONSerializable):
         ss_f = sc.Substrand(helix=0, forward=True, start=0, end=10)
         loop = sc.Loopout(length=5)
         ss_r = sc.Substrand(helix=0, forward=False, start=0, end=10)
-        strand_forward = sc.Strand([ss_f, loop, ss_r])
+        hairpin = sc.Strand([ss_f, loop, ss_r])
     """
+
     length: int
+    """Length (in DNA bases) of this Loopout."""
 
     # not serialized; for efficiency
     _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
@@ -848,6 +853,10 @@ class IDTFields(JSONSerializable):
 
     def to_json_serializable(self, suppress_indent=True):
         dct = self.__dict__
+        if self.plate is None:
+            del dct['plate']
+        if self.well is None:
+            del dct['well']
         return NoIndent(dct)
 
 
@@ -1253,23 +1262,45 @@ def _plates(idt_strands):
     return list(plates)
 
 
-_PLATE_ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
-_PLATE_COLS = list(range(1, 13))
+_96WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+_96WELL_PLATE_COLS: List[int] = list(range(1, 13))
+
+_384WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+                                  'P']
+_384WELL_PLATE_COLS: List[int] = list(range(1, 25))
+
+
+@enum.unique
+class PlateType(int, enum.Enum):
+    """Represents default patterns for laying out helices in the side view."""
+
+    wells96 = 96
+    """96-well plate."""
+
+    wells384 = 384
+    """384-well plate."""
+
+    def rows(self) -> List[str]:
+        return _96WELL_PLATE_ROWS if self is PlateType.wells96 else _384WELL_PLATE_ROWS
+
+    def cols(self) -> List[int]:
+        return _96WELL_PLATE_COLS if self is PlateType.wells96 else _384WELL_PLATE_COLS
 
 
 class _PlateCoordinate:
 
-    def __init__(self):
+    def __init__(self, plate_type: PlateType):
+        self._plate_type = plate_type
         self._plate: int = 1
         self._row_idx: int = 0
         self._col_idx: int = 0
 
     def increment(self):
         self._row_idx += 1
-        if self._row_idx == len(_PLATE_ROWS):
+        if self._row_idx == len(self._plate_type.rows()):
             self._row_idx = 0
             self._col_idx += 1
-            if self._col_idx == len(_PLATE_COLS):
+            if self._col_idx == len(self._plate_type.cols()):
                 self._col_idx = 0
                 self._plate += 1
 
@@ -1277,10 +1308,10 @@ class _PlateCoordinate:
         return self._plate
 
     def row(self) -> str:
-        return _PLATE_ROWS[self._row_idx]
+        return self._plate_type.rows()[self._row_idx]
 
     def col(self) -> int:
-        return _PLATE_COLS[self._col_idx]
+        return self._plate_type.cols()[self._col_idx]
 
     def well(self) -> str:
         return f'{self.row()}{self.col()}'
@@ -1477,8 +1508,6 @@ class DNADesign(JSONSerializable):
             DNADesign._check_loopout_not_singleton(strand)
             DNADesign._check_two_consecutive_loopouts(strand)
             DNADesign._check_loopouts_length(strand)
-
-    # TODO: make StrandError like in Dart code to give info about strand in error message
 
     @staticmethod
     def _check_two_consecutive_loopouts(strand):
@@ -1756,10 +1785,11 @@ class DNADesign(JSONSerializable):
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
-    def write_idt_file(self, directory: str = '.', filename=None, delimiter: str = ',',
-                       warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
-        """Write ``.idt`` file encoding the strands of this :any:`DNADesign` with the field
-        :any:`Strand.idt`, suitable for pasting into the "Bulk input" field of IDT
+    # TODO: change name of this method to write_idt_bulk_input_file
+    def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
+                                  warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
+        """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
+        :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
         with the output file having the same name as the running script but with ``.py`` changed to ``.idt``,
         unless `filename` is explicitly specified.
@@ -1785,9 +1815,11 @@ class DNADesign(JSONSerializable):
         contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands)
         _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
 
+    # TODO: implement option for 384-well plate
     def write_idt_plate_excel_file(self, directory: str = '.', filename=None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands=False,
-                                   use_default_plates=False, warn_using_default_plates=True):
+                                   use_default_plates=False, warn_using_default_plates=True,
+                                   plate_type: PlateType = PlateType.wells96):
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`DNADesign` with the field
         :any:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
@@ -1810,7 +1842,10 @@ class DNADesign(JSONSerializable):
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
         :any:`Strand.idt`. Such strands will not be output into the file.
 
-        The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
+        `plate_type` is a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
+        if the `use_default_plates` parameter is ``True``.
+        Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
+        by the user, who is free to use coordinates for either plate type.
         """
 
         idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands).values())
@@ -1821,11 +1856,18 @@ class DNADesign(JSONSerializable):
             if warn_using_default_plates:
                 print("WARNING: ignoring plate data in each strand and using default sequential assignment "
                       "of plates and wells")
-            self._write_plates_default(directory, filename, idt_strands)
+            self._write_plates_default(directory, filename, idt_strands, plate_type=plate_type)
 
-    def _write_plates_assuming_explicit_in_each_strand(self, directory, filename, idt_strands):
+    def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: str,
+                                                       idt_strands: List[Strand]):
         plates = list({strand.idt.plate for strand in idt_strands if strand.idt is not None if
                        strand.idt.plate is not None})
+        if len(plates) == 0:
+            raise ValueError('Cannot write a a plate file since no plate data exists in any Strands '
+                             'in the design.\n'
+                             'Set the option use_default_plates=True in '
+                             "DNADesign.write_idt_plate_excel_file\nif you don't want to enter plate "
+                             'and well positions for each Strand you wish to write to the Excel file.')
         plates.sort()
         filename_plate, workbook = self._setup_excel_file(directory, filename)
         for plate in plates:
@@ -1856,12 +1898,13 @@ class DNADesign(JSONSerializable):
             filename_plate = _get_filename_same_name_as_running_python_script(
                 directory, plate_extension, filename)
         else:
-            filename_plate = filename + plate_extension
+            filename_plate = _create_directory_and_set_filename(directory, filename)
         workbook = xlwt.Workbook()
         return filename_plate, workbook
 
-    def _write_plates_default(self, directory, filename, idt_strands):
-        plate_coord = _PlateCoordinate()
+    def _write_plates_default(self, directory: str, filename: str, idt_strands: List[Strand],
+                              plate_type: PlateType = PlateType.wells96):
+        plate_coord = _PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
         filename_plate, workbook = self._setup_excel_file(directory, filename)
@@ -1914,11 +1957,14 @@ def _write_file_same_name_as_running_python_script(contents: str, extension: str
 def _get_filename_same_name_as_running_python_script(directory, extension, filename):
     if filename is None:
         filename = _name_of_this_script() + f'.{extension}'
+    relative_filename = _create_directory_and_set_filename(directory, filename)
+    return relative_filename
+
+def _create_directory_and_set_filename(directory, filename):
     if not os.path.exists(directory):
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
     return relative_filename
-
 
 def _remove_whitespace_and_uppercase(sequence):
     sequence = re.sub(r'\s*', '', sequence)
@@ -1942,3 +1988,26 @@ def _pad_dna(sequence: str, length: int) -> str:
     elif len(sequence) < length:
         sequence += DNA_base_wildcard * (length - len(sequence))
     return sequence
+
+
+@dataclass
+class DNAOrigamiDesign(DNADesign):
+    """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
+    :py:data:`DNAOrigamiDesign.scaffold`.
+
+    The field :py:data:`DNAOrigamiDesign.scaffold` can be assigned in the constructor,
+    or it may be assigned after the :any:`DNAOrigamiDesign` is created.
+
+    The :py:data:`Color` of the scaffold will be automatically assigned.
+    To change from the default :any:`Color`,
+    change the field :py:data:`Strand.color` of
+    :py:data:`DNAOrigamiDesign.scaffold`
+    *after* the :any:`DNAOrigamiDesign` is created.
+    """
+
+    scaffold: Strand = None
+    """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.scaffold.color = default_scaffold_color
