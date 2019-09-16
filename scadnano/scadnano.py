@@ -43,13 +43,15 @@ from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
 
-# TODO: write from_json for DNADesign so .dna files can be read into the library
+#TODO: write from_json for DNADesign so .dna files can be read into the library
 
-# TODO: make explicit rules about when strands can be added and sequences assigned.
+#TODO: make explicit rules about when strands can be added and sequences assigned.
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
 
-# TODO: add support for writing 3D positions (in addition to 2D svg_positions)
+#TODO: add support for writing 3D positions (in addition to 2D svg_positions)
+
+#TODO: add support for writing files uploadable to other synthesis company websites besides IDT
 
 
 def _pairwise(iterable):
@@ -920,7 +922,7 @@ class Strand(JSONSerializable):
     idt: Optional[IDTFields] = None
     """Fields used when ordering strands from the synthesis company IDT 
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
-    then the method :py:meth:`DNADesign.write_idt_file` can be called to automatically
+    then the method :py:meth:`DNADesign.write_idt_bulk_input_file` can be called to automatically
     generate an IDT file for ordering strands: https://eu.idtdna.com/site/order/oligoentry"""
 
     use_default_idt: bool = False
@@ -1720,7 +1722,8 @@ class DNADesign(JSONSerializable):
 
     def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
                                  warn_on_non_idt_strands: bool = False) -> str:
-        """Return string that is written to the file in the method :any:`DNADesign.write_idt_file`.
+        """Return string that is written to the file in the method
+        :py:meth:`DNADesign.write_idt_bulk_input_file`.
 
         `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
 
