@@ -26,6 +26,9 @@ it is not straightforward to enforce that the fields cannot be written,
 so the user must take care not to set them.
 """
 
+# needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
+from __future__ import annotations
+
 import enum
 import itertools
 import re
@@ -454,7 +457,7 @@ class Substrand(JSONSerializable):
     The total number of bases at this offset is num_insertions+1."""
 
     # not serialized; for efficiency
-    _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
+    _parent_strand: Strand = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self):
         self._check_start_end()
@@ -660,7 +663,7 @@ class Substrand(JSONSerializable):
 
     # The type hint 'Substrand' must be in quotes since Substrand is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
-    def overlaps(self, other: 'Substrand') -> bool:
+    def overlaps(self, other: Substrand) -> bool:
         r"""Indicates if this substrand's set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -674,7 +677,7 @@ class Substrand(JSONSerializable):
                 self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    def overlaps_illegally(self, other: 'Substrand'):
+    def overlaps_illegally(self, other: Substrand):
         r"""Indicates if this substrand's set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -688,7 +691,7 @@ class Substrand(JSONSerializable):
                 self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    def compute_overlap(self, other: 'Substrand') -> Tuple[int, int]:
+    def compute_overlap(self, other: Substrand) -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Substrand and `other`.
 
         Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
@@ -737,7 +740,7 @@ class Loopout(JSONSerializable):
     """Length (in DNA bases) of this Loopout."""
 
     # not serialized; for efficiency
-    _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
+    _parent_strand: Strand = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent=True):
         dct = {loopout_key: self.length}
@@ -1029,7 +1032,7 @@ class Strand(JSONSerializable):
     def offset_3p(self) -> int:
         return self.last_substrand().offset_3p()
 
-    def overlaps(self, other: 'Strand') -> bool:
+    def overlaps(self, other: Strand) -> bool:
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
         by `self` has nonempty intersection with those occupied by `other_strand`."""
         for substrand_self in self.bound_substrands():
@@ -1038,7 +1041,7 @@ class Strand(JSONSerializable):
                     return True
         return False
 
-    def assign_dna_complement_from(self, other: 'Strand'):
+    def assign_dna_complement_from(self, other: Strand):
         """Assuming a DNA sequence has been assigned to `other`, assign its Watson-Crick
         complement to the portions of this Strand that are bound to `other`.
 
