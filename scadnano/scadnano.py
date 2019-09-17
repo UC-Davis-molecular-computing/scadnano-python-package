@@ -43,15 +43,15 @@ from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
 
-#TODO: write from_json for DNADesign so .dna files can be read into the library
+# TODO: write from_json for DNADesign so .dna files can be read into the library
 
-#TODO: make explicit rules about when strands can be added and sequences assigned.
+# TODO: make explicit rules about when strands can be added and sequences assigned.
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
 
-#TODO: add support for writing 3D positions (in addition to 2D svg_positions)
+# TODO: add support for writing 3D positions (in addition to 2D svg_positions)
 
-#TODO: add support for writing files uploadable to other synthesis company websites besides IDT
+# TODO: add support for writing files uploadable to other synthesis company websites besides IDT
 
 
 def _pairwise(iterable):
@@ -316,7 +316,7 @@ class Helix(JSONSerializable):
     it is calculated when the :any:`DNADesign` is instantiated as the largest :any:`Substrand.end`
     index of any :any:`Substrand` in the design.
     
-    Once part of a :any:`DNADesign`, a :any:`Helix` has an index (accessible  via ``the_helix.idx()``
+    Once part of a :any:`DNADesign`, a :any:`Helix` has an index (accessible  via :py:meth:`Helix.idx`
     once the :any:`DNADesign` is created) 
     representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Substrand` is
     associated to the :any:`Helix` via the integer index :any:`Substrand.helix`."""
@@ -885,8 +885,7 @@ class Strand(JSONSerializable):
     Two :any:`Loopout`'s cannot occur consecutively on a :any:`Strand`, nor can a :any:`Strand`
     contain only a :any:`Loopout` but no :any:`Substrand`.
 
-    Although scadnano can be used to design DNA origami, there is no special representation
-    of a scaffold strand. To give a strand the same color that
+    To give a strand the same color that
     `cadnano <https://cadnano.org/>`_
     uses for the scaffold,
     use :any:`scadnano.default_scaffold_color` in the :any:`Strand` constructor:
@@ -897,16 +896,22 @@ class Strand(JSONSerializable):
 
         scaffold_substrands = [ ... ]
         scaffold_strand = sc.Strand(substrands=scaffold_substrands, color=sc.default_scaffold_color)
+
+    Alternately, one can use :any:`DNAOrigamiDesign`, which is a subclass of
+    :any:`DNADesign` that has one extra field representing the scaffold strand.
+    This class will automatically assign the color of the scaffold strand to be
+    :py:data:`default_scaffold_color`.
     """
 
     substrands: List[Union[Substrand, Loopout]]
     """:any:`Substrand`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Substrand` is contiguous on a single :any:`Helix`, 
-    and each :any:`Loopout` is single-stranded and has no :any:`Helix`."""
+    whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
 
     dna_sequence: Optional[str] = None
     """Do not assign directly to this field. Always use :any:`DNADesign.assign_dna` 
-    (for complementarity checking) or :any:`Strand.set_dna_sequence` (to allow mismatches)."""
+    (for complementarity checking) or :any:`Strand.set_dna_sequence` 
+    (without complementarity checking, to allow mismatches)."""
 
     color: Optional[Color] = None
     """Color to show this strand in the main view. If not specified in the constructor,
@@ -923,7 +928,11 @@ class Strand(JSONSerializable):
     """Fields used when ordering strands from the synthesis company IDT 
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
     then the method :py:meth:`DNADesign.write_idt_bulk_input_file` can be called to automatically
-    generate an IDT file for ordering strands: https://eu.idtdna.com/site/order/oligoentry"""
+    generate an text file for ordering strands in test tubes: 
+    https://eu.idtdna.com/site/order/oligoentry,
+    as can the method :py:meth:`DNADesign.write_idt_plate_excel_file` for writing a Microsoft Excel 
+    file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
+    or 384-well plates."""
 
     use_default_idt: bool = False
     """If ``True``, assigns an :any:`IDTFields` to this :any:`Strand` with same naming convention as
@@ -1277,7 +1286,7 @@ _384WELL_PLATE_COLS: List[int] = list(range(1, 25))
 
 @enum.unique
 class PlateType(int, enum.Enum):
-    """Represents default patterns for laying out helices in the side view."""
+    """Represents two different types of plates in which DNA sequences can be ordered."""
 
     wells96 = 96
     """96-well plate."""
@@ -1343,7 +1352,9 @@ class DNADesign(JSONSerializable):
     """Potential helices, which are gray circle positions listed in the side view where 
     a :any:`Helix` can be added by Ctrl+click.
     
-    Optional field."""
+    Optional field. These are generally not useful when writing a script to generate a :any:`DNADesign`.
+    They are used by scadnano when doing design by hand, where the user clicks on potential helices
+    to make them into helices where DNA strands can be drawn."""
 
     grid: Grid = Grid.none
     """Common choices for how to arrange helices relative to each other.
@@ -1616,7 +1627,7 @@ class DNADesign(JSONSerializable):
 
     def to_json(self, suppress_indent=True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
-        a JSON file."""
+        a JSON file ending in extension .dna"""
         return json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
@@ -1791,7 +1802,6 @@ class DNADesign(JSONSerializable):
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
-    # TODO: change name of this method to write_idt_bulk_input_file
     def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
                                   warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
@@ -1821,7 +1831,6 @@ class DNADesign(JSONSerializable):
         contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands)
         _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
 
-    # TODO: implement option for 384-well plate
     def write_idt_plate_excel_file(self, directory: str = '.', filename=None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands=False,
                                    use_default_plates=False, warn_using_default_plates=True,
@@ -1966,11 +1975,13 @@ def _get_filename_same_name_as_running_python_script(directory, extension, filen
     relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
+
 def _create_directory_and_set_filename(directory, filename):
     if not os.path.exists(directory):
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
     return relative_filename
+
 
 def _remove_whitespace_and_uppercase(sequence):
     sequence = re.sub(r'\s*', '', sequence)
@@ -2012,8 +2023,12 @@ class DNAOrigamiDesign(DNADesign):
     """
 
     scaffold: Strand = None
-    """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`."""
+    """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
+    
+    Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
 
     def __post_init__(self):
         super().__post_init__()
         self.scaffold.color = default_scaffold_color
+        if self.scaffold not in self.strands:
+            raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')

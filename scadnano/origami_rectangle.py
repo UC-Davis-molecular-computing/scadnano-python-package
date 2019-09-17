@@ -15,24 +15,26 @@ class NickPattern(Enum):
     staggered = auto()
     """A nick appears in a given helix and column 
     if the parity of the helix and column match (both even or both odd).
-    
-    CURRENTLY UNSUPPORTED."""
+    """
 
     staggered_opposite = auto()
     """A nick appears in a given helix and column 
     if the parity of the helix and column don't match (one is even and the other is odd).
     
-    CURRENTLY UNSUPPORTED."""
+    CURRENTLY UNSUPPORTED.
+    """
 
     even = auto()
     """A nick appears in every column and only even-index helices.
     
-    CURRENTLY UNSUPPORTED."""
+    CURRENTLY UNSUPPORTED.
+    """
 
     odd = auto()
     """A nick appears in every column and only odd-index helices.
     
-    CURRENTLY UNSUPPORTED."""
+    CURRENTLY UNSUPPORTED.
+    """
 
 
 staggered = NickPattern.staggered
@@ -75,7 +77,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     Below is an example diagram of the staples created by this function.
 
     Consider for example the function call
-    ``origami_rectangle.create(num_helices=8, num_cols=10, nick_pattern=origami_rectangle.staggered)``.
+    ``create(num_helices=8, num_cols=10, nick_pattern=origami_rectangle.staggered)``.
     The scaffold strand resulting from this call is shown below:
 
     .. code-block:: none
@@ -140,7 +142,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     Prints warning if number of bases exceeds 7249 (length of standard M13 scaffold strand),
     but does not otherwise cause an error.
 
-    `num_cols` must be 6 plus a nonnegative multiple of 4: 6, 10, 14, 18, 22, 26, ...
+    `num_cols` must be even and at least 4.
     
     `seam_left_column` specifies the location of the seam. (i.e., scaffold crossovers in the middle of the
     origami.) 
@@ -173,8 +175,8 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
     form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
     
-    `idt`, if ``True``, creates an :any:`IDTFields` in each staple strand suitable for 
-    calling :py:meth:`DNADesign.write_idt_file` or :py:meth:`DNADesign.write_idt_plate_excel_file` 
+    `use_idt_defaults`, if ``True``, creates an :any:`IDTFields` in each staple strand suitable for 
+    calling :py:meth:`DNADesign.write_idt_file` or :py:meth:`DNADesign.write_idt_plate_excel_file` .
 
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
@@ -189,7 +191,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
         design = rect.create(num_helices=16, num_cols=24, nick_pattern=rect.staggered)
         design.write_scadnano_file()
 
-    However, we caution that :any:`origami_rectangle.create` is not intended to be very
+    However, we caution that :py:func:`create` is not intended to be very
     extensible for creating many different types of DNA origami. It is more intended as an
     example whose source code can be an efficient reference to learn the :mod:`scadnano` API.
     """  # noqa (This line is here to suppress a PEP warning about long lines in the source code)
@@ -426,10 +428,10 @@ def _create_inner_staples(offset_start: int, offset_end: int, offset_mid: int, n
 
 
 def add_deletion_in_range(design: sc.DNADesign, helix: int, start: int, end: int, deletion_offset: int):
-    """Inserts deletion somewhere in given range.
+    #Inserts deletion somewhere in given range.
 
-    `offset` is the relative offset within a column at which to put the deletions.
-    If negative, chooses first available offset."""
+    #`offset` is the relative offset within a column at which to put the deletions.
+    #If negative, chooses first available offset.
     candidate_offsets = []
     for candidate_deletion_offset in range(start, end):
         if valid_deletion_offset(design, helix, candidate_deletion_offset):
