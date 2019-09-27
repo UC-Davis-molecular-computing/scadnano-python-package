@@ -53,6 +53,8 @@ import m13
 
 # TODO: add support for writing files uploadable to other synthesis company websites besides IDT
 
+# TODO: see if :param the_paramter: and :return: can be used with Sphinx
+
 
 def _pairwise(iterable):
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
@@ -1033,7 +1035,7 @@ class Strand(JSONSerializable):
         return acc
         # return sum(len(substrand) for substrand in self.substrands)
 
-    def bound_substrands(self) -> List[Union[Substrand, Loopout]]:
+    def bound_substrands(self) -> List[Substrand]:
         """:any:`Substrand`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
         return [ss for ss in self.substrands if ss.is_substrand()]
 
@@ -1219,7 +1221,7 @@ def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
 
 
 class IllegalDNADesignError(ValueError):
-    """Indicates that some aspect of the DNADesign object is illegal."""
+    """Indicates that some aspect of the :any:`DNADesign` object is illegal."""
 
     def __init__(self, the_cause: str):
         self.cause = the_cause
@@ -2030,5 +2032,7 @@ class DNAOrigamiDesign(DNADesign):
     def __post_init__(self):
         super().__post_init__()
         self.scaffold.color = default_scaffold_color
+        if self.scaffold is None:
+            raise IllegalDNADesignError('scaffold strand is None; must be set to a Strand in DNAOrigamiDesign.strands')
         if self.scaffold not in self.strands:
             raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
