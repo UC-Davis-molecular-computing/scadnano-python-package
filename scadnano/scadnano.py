@@ -311,6 +311,9 @@ class PotentialHelix(JSONSerializable):
 
 # TODO: rename max_bases to max_offset, add min_offset, and allow offsets to be negative
 
+# TODO: add rotation field to Helix
+#   doc: https://docs.google.com/document/d/1OysNEI1RIwzJ6IqbfTgLR3fYsmEUqIiuHJKxO7CeuaQ/edit#
+
 @dataclass
 class Helix(JSONSerializable):
     max_bases: int = -1
