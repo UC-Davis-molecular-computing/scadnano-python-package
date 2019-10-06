@@ -42,10 +42,6 @@ import xlwt
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
-# TODO: change Helix.max_bases to Helix.max_offset and add Helix.min_offset as a field
-
-# TODO: remove PotentialHelix
-
 # TODO: write from_json for DNADesign so .dna files can be read into the library
 
 # TODO: make explicit rules about when strands can be added and sequences assigned.
@@ -249,12 +245,12 @@ grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
 major_ticks_key = 'major_ticks'
 helices_key = 'helices'
-potential_helices_key = 'potential_helices'
 strands_key = 'strands'
 
 # Helix keys
 idx_key = 'idx'
-max_bases_key = 'max_bases'
+max_offset_key = 'max_offset'
+min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
 svg_position_key = 'svg_position'
 # position_key = 'position'; # support in the future
@@ -296,38 +292,39 @@ def in_browser() -> bool:
         return False
 
 
-@dataclass
-class PotentialHelix(JSONSerializable):
-    grid_position: Tuple[int, int, int] = None
-    """`(h,v,b)` position of this :any:`PotentialHelix` in the side view grid.
-    
-    It has the same interpretation as :py:data:`Helix.grid_position`."""
-
-    def to_json_serializable(self, suppress_indent=True):
-        dct = self.__dict__
-
-        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
-            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
-
-        return NoIndent(dct) if suppress_indent else dct
-
-
-# TODO: rename max_bases to max_offset, add min_offset, and allow offsets to be negative
-
 # TODO: add rotation field to Helix
 #   doc: https://docs.google.com/document/d/1OysNEI1RIwzJ6IqbfTgLR3fYsmEUqIiuHJKxO7CeuaQ/edit#
 
 @dataclass
 class Helix(JSONSerializable):
-    max_bases: int = -1
-    """Maximum length of :any:`Substrand` that can be drawn on this :any:`Helix`. If unspecified,
-    it is calculated when the :any:`DNADesign` is instantiated as the largest :any:`Substrand.end`
-    index of any :any:`Substrand` in the design.
-    
+    """
+    Represents a "helix" where :any:`Substrand`'s could go. Technically a :any:`Helix` can contain no
+    :any:`Substrand`'s. More commonly, some partial regions of it may have only 1 or 0 :any:`Substrand`'s.
+    So it is best though of as a "potential" double-helix.
+
+    It has a 1-dimensional integer coordinate system given by "offsets", integers between
+    :py:data:`Helix.min_offset` (inclusive) and :py:data:`Helix.max_offset` (exclusive).
+    At any valid offset for this :any:`Helix`, at most two :any:`Substrand`'s may share that offset
+    on this :any:`Helix`, and if there are exactly two, then one must have
+    :py:data:`Substrand.forward` = ``true`` and the other must have
+    :py:data:`Substrand.forward` = ``false``.
+
     Once part of a :any:`DNADesign`, a :any:`Helix` has an index (accessible  via :py:meth:`Helix.idx`
-    once the :any:`DNADesign` is created) 
+    once the :any:`DNADesign` is created)
     representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Substrand` is
-    associated to the :any:`Helix` via the integer index :any:`Substrand.helix`."""
+    associated to the :any:`Helix` via the integer index :any:`Substrand.helix`.
+    """
+
+    max_offset: int = None
+    """Maximum offset (exclusive) of :any:`Substrand` that can be drawn on this :any:`Helix`. 
+    If unspecified, it is calculated when the :any:`DNADesign` is instantiated as 
+    1 plus the largest :any:`Substrand.end` offset of any :any:`Substrand` in the design.
+    """
+
+    min_offset: int = 0
+    """Minimum offset (inclusive) of :any:`Substrand` that can be drawn on this :any:`Helix`. 
+    If unspecified, it is set to 0.
+    """
 
     major_tick_distance: int = -1
     """If positive, overrides :any:`DNADesign.major_tick_distance`."""
@@ -369,8 +366,10 @@ class Helix(JSONSerializable):
     def to_json_serializable(self, suppress_indent=True):
         dct = dict()
 
-        if self.max_bases >= 0:
-            dct[max_bases_key] = self.max_bases
+        if self.min_offset != 0:
+            dct[min_offset_key] = self.min_offset
+
+        dct[max_offset_key] = self.max_offset
 
         if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
             dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
@@ -394,10 +393,10 @@ class Helix(JSONSerializable):
     def __post_init__(self):
         if self.major_ticks is not None:
             for major_tick in self.major_ticks:
-                if major_tick > self.max_bases:
+                if major_tick > self.max_offset - self.min_offset:
                     raise IllegalDNADesignError(f'major tick {major_tick} in list {self.major_ticks} is '
-                                                f'outside the range of available offsets since max_bases = '
-                                                f'{self.max_bases}')
+                                                f'outside the range of available offsets since max_offset = '
+                                                f'{self.max_offset}')
 
     def default_svg_position(self):
         return 0, self._idx * distance_between_helices_svg
@@ -1255,7 +1254,9 @@ class StrandError(IllegalDNADesignError):
                f"strand 3' helix      =  {last_substrand.helix if last_substrand else 'N/A'}\n"
                f"strand 3' end offset =  {last_substrand.offset_3p() if last_substrand else 'N/A'}\n")
 
-        super(IllegalDNADesignError, self).__init__(msg)
+        super().__init__(msg)
+        # super(IllegalDNADesignError, self).__init__(msg)
+
 
 
 # TODO: add mutation operations to DNADesign to mutate all of its parts:
@@ -1356,14 +1357,6 @@ class DNADesign(JSONSerializable):
     stored in any :any:`Substrand` 
     in :py:data:`DNADesign.strands`."""
 
-    potential_helices: List[PotentialHelix] = field(default_factory=list)
-    """Potential helices, which are gray circle positions listed in the side view where 
-    a :any:`Helix` can be added by Ctrl+click.
-    
-    Optional field. These are generally not useful when writing a script to generate a :any:`DNADesign`.
-    They are used by scadnano when doing design by hand, where the user clicks on potential helices
-    to make them into helices where DNA strands can be drawn."""
-
     grid: Grid = Grid.none
     """Common choices for how to arrange helices relative to each other.
     
@@ -1391,17 +1384,17 @@ class DNADesign(JSONSerializable):
 
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
 
-        if len(self.potential_helices) > 0:
-            dct[potential_helices_key] = [ph.to_json_serializable(suppress_indent) for ph in
-                                          self.potential_helices]
-
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix in self.helices:
-            max_offset = max((ss.end for ss in helix._substrands), default=-1)
             helix_json = dct[helices_key][helix.idx()].value  # get past NoIndent surrounding helix
-            if max_offset == helix_json[max_bases_key]:
-                del helix_json[max_bases_key]
+            #XXX: no need to check here because key was already deleted by Helix.to_json_serializable
+            # max_offset still needs to be checked here since it requires global knowledge of Strands
+            # if 0 == helix_json[min_offset_key]:
+            #     del helix_json[min_offset_key]
+            max_offset = max((ss.end for ss in helix._substrands), default=-1)
+            if max_offset == helix_json[max_offset_key]:
+                del helix_json[max_offset_key]
 
         return dct
 
@@ -1436,11 +1429,11 @@ class DNADesign(JSONSerializable):
         """update = whether to overwrite existing Helix.max_bases. Don't do this when DNADesign is first
         created, but do it later when updating."""
         for helix in self.helices:
-            if update or helix.max_bases < 0:
-                max_bases = -1
+            if update or helix.max_offset is None:
+                max_offset = -1
                 for substrand in helix._substrands:
-                    max_bases = max(max_bases, substrand.end)
-                helix.max_bases = max_bases
+                    max_offset = max(max_offset, substrand.end)
+                helix.max_offset = max_offset
 
     def set_default_idt(self, use_default_idt):
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
@@ -1463,9 +1456,18 @@ class DNADesign(JSONSerializable):
 
     def _check_legal_design(self):
         # self._check_helix_indices()
+        self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
+
+    def _check_helix_offsets(self):
+        for helix in self.helices:
+            if helix.min_offset >= helix.max_offset:
+                err_msg = f'for helix {helix.idx()}, ' \
+                          f'helix.min_offset = {helix.min_offset} must be strictly less than ' \
+                          f'helix.max_offset = {helix.max_offset}'
+                raise IllegalDNADesignError(err_msg)
 
     # def _check_helix_indices(self):
     #     # ensure if there are H helices, the list of sorted indices is 0,1,...,H-1
@@ -1561,10 +1563,18 @@ class DNADesign(JSONSerializable):
         for substrand in strand.substrands:
             if substrand.is_substrand():
                 helix = self.helices[substrand.helix]
-                if substrand.end > helix.max_bases:
-                    err_msg = f"substrand {substrand} has end offset {substrand.end}, beyond the end of " \
-                              f"Helix {substrand.helix} that has max_bases = {helix.max_bases}"
+                if substrand.start < helix.min_offset:
+                    err_msg = f"substrand {substrand} has start offset {substrand.start}, " \
+                              f"beyond the end of " \
+                              f"Helix {substrand.helix} that has min_offset = {helix.min_offset}"
                     raise StrandError(substrand._parent_strand, err_msg)
+                if substrand.end > helix.max_offset:
+                    err_msg = f"substrand {substrand} has end offset {substrand.end}, " \
+                              f"beyond the end of " \
+                              f"Helix {substrand.helix} that has max_offset = {helix.max_offset}"
+                    err = StrandError(substrand._parent_strand, err_msg)
+                    print(f'ERROR:\n{err}')
+                    raise err
 
     def _check_strand_references_legal_helices(self, strand: Strand):
         for substrand in strand.substrands:

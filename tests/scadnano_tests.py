@@ -22,16 +22,49 @@ import unittest
 
 class TestAutocalculatedData(unittest.TestCase):
 
-    def test_helix_max_bases(self):
-        helices = [sc.Helix(), sc.Helix(max_bases=8), sc.Helix()]
+    def test_helix_min_max_offsets_illegal_explicitly_specified(self):
+        helices = [sc.Helix(min_offset=5,max_offset=5)]
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+
+    def test_helix_min_max_offsets_illegal_autocalculated(self):
+        helices = [sc.Helix(min_offset=5)]
+        ss = sc.Substrand(0, True, 0, 4)
+        strand = sc.Strand([ss])
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+
+
+    def test_helix_min_max_offsets(self):
+        helices = [sc.Helix(), sc.Helix(min_offset=-5), sc.Helix(max_offset=5),
+                   sc.Helix(min_offset=5, max_offset=10)]
+        ss_0 = sc.Substrand(helix=0, forward=True, start=20, end=25)
+        ss_1 = sc.Substrand(helix=1, forward=False, start=-5, end=30)
+        ss_2 = sc.Substrand(helix=2, forward=True, start=0, end=5)
+        ss_3 = sc.Substrand(helix=3, forward=False, start=5, end=10)
+        strand = sc.Strand([ss_0, ss_1, ss_2, ss_3])
+        design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        self.assertEqual(0, helices[0].min_offset)
+        self.assertEqual(25, helices[0].max_offset)
+        self.assertEqual(-5, helices[1].min_offset)
+        self.assertEqual(30, helices[1].max_offset)
+        self.assertEqual(0, helices[2].min_offset)
+        self.assertEqual(5, helices[2].max_offset)
+        self.assertEqual(5, helices[3].min_offset)
+        self.assertEqual(10, helices[3].max_offset)
+
+
+    def test_helix_max_offset(self):
+        helices = [sc.Helix(), sc.Helix(max_offset=8), sc.Helix()]
         ss_0 = sc.Substrand(helix=0, forward=True, start=5, end=10)
         ss_1 = sc.Substrand(helix=1, forward=False, start=2, end=6)
         ss_2 = sc.Substrand(helix=2, forward=True, start=0, end=5)
-        strand= sc.Strand([ss_0, ss_1, ss_2])
+        strand = sc.Strand([ss_0, ss_1, ss_2])
         design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
-        self.assertEqual(10, helices[0].max_bases)
-        self.assertEqual(8, helices[1].max_bases)
-        self.assertEqual(5, helices[2].max_bases)
+        self.assertEqual(10, helices[0].max_offset)
+        self.assertEqual(8, helices[1].max_offset)
+        self.assertEqual(5, helices[2].max_offset)
+
 
 class TestJSON(unittest.TestCase):
     def test_to_json__hairpin(self):
@@ -58,7 +91,7 @@ class TestJSON(unittest.TestCase):
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_consecutive_substrands_loopout(self):
-        helices = [sc.Helix(max_bases=10)]
+        helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Substrand(0, sc.forward, 0, 3)
         ss2 = sc.Loopout(4)
         ss3 = sc.Loopout(4)
@@ -71,7 +104,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
             design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
 
     def test_singleton_loopout(self):
-        helices = [sc.Helix(max_bases=10)]
+        helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Loopout(4)
         with self.assertRaises(sc.IllegalDNADesignError):
             strand = sc.Strand([ss1])
@@ -82,16 +115,15 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
             design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
 
     def test_strand_offset_beyond_maxbases(self):
-        helices = [sc.Helix(max_bases=10)]
+        helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Substrand(0, sc.forward, 0, 20)
         strands = [sc.Strand([ss1])]
         with self.assertRaises(sc.StrandError):
             design = sc.DNADesign(helices=helices, strands=strands)
 
-
     def test_to_idt_bulk_input_format__duplicate_names_same_sequence(self):
         length = 8
-        helices = [sc.Helix(max_bases=length)]
+        helices = [sc.Helix(max_offset=length)]
         ss1_r = sc.Substrand(0, sc.forward, 0, 4)
         ss2_r = sc.Substrand(0, sc.forward, 4, 8)
         ss_l = sc.Substrand(0, sc.reverse, 0, 4)
@@ -129,7 +161,6 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             idt_str = design.to_idt_bulk_input_format()
 
-
     def test_to_idt_bulk_input_format__duplicate_names_different_scales(self):
         ss1_r = sc.Substrand(0, sc.forward, 0, 4)
         ss2_r = sc.Substrand(0, sc.forward, 4, 8)
@@ -148,7 +179,6 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         with self.assertRaises(sc.IllegalDNADesignError):
             idt_str = design.to_idt_bulk_input_format()
-
 
     def test_to_idt_bulk_input_format__duplicate_names_different_purifications(self):
         length = 8
@@ -169,8 +199,6 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         with self.assertRaises(sc.IllegalDNADesignError):
             idt_str = design.to_idt_bulk_input_format()
-
-
 
     def test_assign_dna__conflicting_sequences_directly_assigned(self):
         ss_right = sc.Substrand(0, sc.forward, 0, 5)
@@ -210,10 +238,10 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_major_tick_outside_range(self):
         with self.assertRaises(sc.IllegalDNADesignError):
-            helix = sc.Helix(max_bases=9, major_ticks=[2, 5, 10])
+            helix = sc.Helix(max_offset=9, major_ticks=[2, 5, 10])
 
     def test_major_tick_just_inside_range(self):
-        helix = sc.Helix(max_bases=9, major_ticks=[0, 5, 9])
+        helix = sc.Helix(max_offset=9, major_ticks=[0, 5, 9])
 
     def test_two_illegally_overlapping_strands(self):
         ss_bot = sc.Substrand(helix=0, forward=sc.reverse, start=0, end=9)
@@ -248,8 +276,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         sc.DNADesign(grid=sc.square, strands=strands)
 
     def test_strand_references_nonexistent_helix(self):
-        h1 = sc.Helix(max_bases=9)
-        h2 = sc.Helix(max_bases=9)
+        h1 = sc.Helix(max_offset=9)
+        h2 = sc.Helix(max_offset=9)
         ss_bot = sc.Substrand(helix=2, forward=sc.reverse, start=0, end=9)
         ss_top = sc.Substrand(helix=3, forward=sc.reverse, start=0, end=9)
         strand_bot = sc.Strand(substrands=[ss_bot])
@@ -278,7 +306,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_forward = sc.Strand([ss_f, loop, ss_r])
         design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
         design.assign_dna(strand_forward, 'AAACC TGCAC')
-        self.assertEqual('AAACC TGCAC GGTTT'.replace(' ',''), strand_forward.dna_sequence)
+        self.assertEqual('AAACC TGCAC GGTTT'.replace(' ', ''), strand_forward.dna_sequence)
 
     def test_assign_dna__other_strand_fully_defined_already(self):
         # 01234567
@@ -324,7 +352,6 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_l, 'ACTT')
         design.assign_dna(strand_r, 'CAAAGTCG')
         # should not have an error by this point
-
 
     def test_assign_dna__two_equal_length_strands_on_one_helix(self):
         # 01234
@@ -633,7 +660,7 @@ class TestAssignDNA(unittest.TestCase):
         # scaf index: 1     0  7     6
         width = 6
         width_h = width // 2
-        helices = [sc.Helix(max_bases=width), sc.Helix(max_bases=width)]
+        helices = [sc.Helix(max_offset=width), sc.Helix(max_offset=width)]
         stap_left_ss1 = sc.Substrand(1, sc.forward, 0, width_h)
         stap_left_ss0 = sc.Substrand(0, sc.reverse, 0, width_h)
         stap_right_ss0 = sc.Substrand(0, sc.reverse, width_h, width)
