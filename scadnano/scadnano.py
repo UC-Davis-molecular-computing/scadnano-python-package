@@ -42,6 +42,9 @@ import xlwt
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
+# TODO: change Helix.max_bases to Helix.max_offset and add Helix.min_offset as a field
+
+# TODO: remove PotentialHelix
 
 # TODO: write from_json for DNADesign so .dna files can be read into the library
 
