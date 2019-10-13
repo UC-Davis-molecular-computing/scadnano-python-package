@@ -368,7 +368,7 @@ class Helix(JSONSerializable):
     be pointing *up* in both the side view and main view.
     
     A positive rotation angle rotates *clockwise* in the side view.
-    This violates standard Cartesian coordiante conventions:
+    This violates standard Cartesian coordinate conventions:
     https://en.wikipedia.org/wiki/Rotation_matrix, 
     but it is consistent with SVG rotation conventions:
     https://www.w3.org/TR/SVG11/coords.html#ExampleRotateScale.
