@@ -244,6 +244,8 @@ version_key = 'version'
 grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
 major_ticks_key = 'major_ticks'
+rotation_key = 'rotation'
+rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
 
@@ -358,6 +360,36 @@ class Helix(JSONSerializable):
     If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
     `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
+    rotation: float = 0
+    """Rotation angle (in radians) of backbone of the :any:`Substrand` on this :any:`Helix` with 
+    :py:data:`Substrand.forward` = ``True``. 
+    
+    The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 radians is defined to
+    be pointing *up* in both the side view and main view.
+    
+    A positive rotation angle rotates *clockwise* in the side view.
+    This violates standard Cartesian coordiante conventions:
+    https://en.wikipedia.org/wiki/Rotation_matrix, 
+    but it is consistent with SVG rotation conventions:
+    https://www.w3.org/TR/SVG11/coords.html#ExampleRotateScale.
+    
+    For example, a rotation of :math:`\pi/2` radians (90 degrees) points right in the side view 
+    and out of the screen in the main view.
+    
+    Default is 0 radians."""
+
+    rotation_anchor: int = 0
+    """Offset on this :any:`Helix` that is the reference point for 0 radians.
+    The rotation at offset ``o`` is :math:`2\pi`  radians times the remainder of ``o - rotation_anchor`` when divided
+    by 10.5.
+    
+    For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
+    at offset 42 (and 21, 0, -21, -42, 63, 84, 105, ...) the rotation angle is also 0 at those offsets since
+    they are integer multiples of 21 (hence also multiples of 10.5) from 42.
+    
+    
+    Default is 0."""
+
     _idx: int = -1
 
     # for optimization; list of substrands on that Helix
@@ -387,6 +419,12 @@ class Helix(JSONSerializable):
 
         if self.major_ticks is not None:
             dct[major_ticks_key] = self.major_ticks
+
+        if self.rotation != 0:
+            dct[rotation_key] = self.rotation
+
+        if self.rotation_anchor != 0:
+            dct[rotation_anchor_key] = self.rotation_anchor
 
         return NoIndent(dct) if suppress_indent else dct
 

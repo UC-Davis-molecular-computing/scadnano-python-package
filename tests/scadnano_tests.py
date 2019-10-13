@@ -1,6 +1,7 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import math
 
 import scadnano as sc
 
@@ -84,6 +85,16 @@ class TestJSON(unittest.TestCase):
         strand_forward = sc.Strand([ss_f, loop, ss_r])
         design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
         design.assign_dna(strand_forward, 'AAACC TGCAC')
+        json = design.to_json()
+        # should be no error getting here
+
+    def test_to_json__rotation(self):
+        helix = sc.Helix(rotation=math.pi/2, rotation_anchor=31)
+        ss_f = sc.Substrand(helix=0, forward=True, start=0, end=5)
+        ss_r = sc.Substrand(helix=0, forward=False, start=0, end=5)
+        strand_f = sc.Strand([ss_f])
+        strand_r = sc.Strand([ss_r])
+        design = sc.DNADesign(helices=[helix], strands=[strand_f, strand_r], grid=sc.square)
         json = design.to_json()
         # should be no error getting here
 
