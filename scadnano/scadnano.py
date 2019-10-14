@@ -1,8 +1,14 @@
 """
-The :mod:`scadnano` Python module is a library for describing DNA nanostructures. 
-It is used to write Python scripts outputting ``*.dna`` files readable
-by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_.
+The :mod:`scadnano` Python module is a library for describing synthetic DNA nanostructures
+(e.g., DNA origami).
 It requires Python version 3.7 or higher.
+
+This module is used to write Python scripts outputting ``*.dna`` files readable
+by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_, a web application useful for displaying
+and manually editing these structures.
+The purpose of this module is to help automate some of the task of creating DNA designs,
+as well as making large-scale changes to them that are easier to describe programmatically than
+to do by hand in scadnano.
 
 This library uses typing hints from the Python typing library.
 (https://docs.python.org/3/library/typing.html)
@@ -32,7 +38,7 @@ from __future__ import annotations
 import enum
 import itertools
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from typing import Tuple, List, Dict, Union, Optional
 from collections import defaultdict, OrderedDict
 import sys
@@ -71,18 +77,41 @@ def _pairwise(iterable):
 
 @dataclass
 class Color(JSONSerializable):
-    r: int = 0
-    """Red component: 0-255"""
+    r: int = None
+    """Red component: 0-255.
+    
+    Optional if :py:data:`Color.hex` is given."""
 
-    g: int = 0
-    """Green component: 0-255"""
+    g: int = None
+    """Green component: 0-255.
+    
+    Optional if :py:data:`Color.hex` is given."""
 
-    b: int = 0
-    """Blue component: 0-255"""
+    b: int = None
+    """Blue component: 0-255.
+    
+    Optional if :py:data:`Color.hex` is given."""
+
+    hex: InitVar[str] = None
+    """Hex color preceded by # sign, e.g., "#ff0000" is red.
+    
+    Optional if :py:data:`Color.r`, :py:data:`Color.g`, :py:data:`Color.b` are all given."""
+
+    def __post_init__(self, hex):
+        if hex is None:
+            assert(self.r is not None and self.g is not None and self.b is not None)
+        else:
+            assert(self.r is None and self.g is None and self.b is None)
+            hex = hex.lstrip('#')
+            self.r = int(hex[0:2], 16)
+            self.g = int(hex[2:4], 16)
+            self.b = int(hex[4:6], 16)
 
     def to_json_serializable(self, suppress_indent=True):
         # Return object representing this Color that is JSON serializable.
-        return NoIndent(self.__dict__) if suppress_indent else self.__dict__
+        # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
+        return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
+
 
 
 class ColorCycler:
@@ -198,8 +227,8 @@ distance_between_helices_svg: float = (base_width_svg * 2.5 / 0.34)
 
 This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
 to attempt to make the DNA appear to scale in 2D drawings:
-The width of one base pair of double-stranded DNA bp is 0.34 nm.
-In a DNA origami, AFM images estimate that the average distance between adjacent double helices is 2.5 nm.
+The width of one base pair of double-stranded DNA bp is 0.34 nm. In a DNA origami, 
+AFM images let us estimate that the average distance between adjacent double helices is 2.5 nm.
 (A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
 in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
 lattices---is larger than 2 nm.)
@@ -302,7 +331,7 @@ class Helix(JSONSerializable):
     """
     Represents a "helix" where :any:`Substrand`'s could go. Technically a :any:`Helix` can contain no
     :any:`Substrand`'s. More commonly, some partial regions of it may have only 1 or 0 :any:`Substrand`'s.
-    So it is best though of as a "potential" double-helix.
+    So it is best thought of as a "potential" double-helix.
 
     It has a 1-dimensional integer coordinate system given by "offsets", integers between
     :py:data:`Helix.min_offset` (inclusive) and :py:data:`Helix.max_offset` (exclusive).
@@ -384,7 +413,9 @@ class Helix(JSONSerializable):
     by 10.5.
     
     For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
-    at offset 42 (and 21, 0, -21, -42, 63, 84, 105, ...) the rotation angle is also 0 at those offsets since
+    at offsets of the form :math:`42 + 21k` for integer :math:`k` 
+    (i.e., 42 itself, as well as 21, 0, -21, -42, ..., 63, 84, 105, ...),
+    the rotation angle is also 0 at those offsets since
     they are integer multiples of 21 (hence also multiples of 10.5) from 42.
     
     
@@ -457,7 +488,7 @@ def _is_close(x1: float, x2: float):
 class Substrand(JSONSerializable):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
-    A :any:`Strand` contains a list of :any:`Substrand`'s (and also :any:`Loopout`'s).
+    A :any:`Strand` contains a list of :any:`Substrand`'s (and also potentially :any:`Loopout`'s).
     """
 
     helix: int
