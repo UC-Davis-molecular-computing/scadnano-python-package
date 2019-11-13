@@ -2349,12 +2349,33 @@ class Crossover:
     """
 
     helix1: int
+    """index of one helix of half crossover"""
+
     helix2: int
+    """index of other helix of half crossover"""
+
     offset1: int
+    """offset on `helix1` at which to add half crossover"""
+
     forward1: bool
+    """direction of :any:`Strand` on `helix1` to which to add half crossover"""
+
     offset2: int = None
+    """
+    offset on `helix2` at which to add half crossover. If not specified, defaults to `offset1`
+    """
+
     forward2: bool = None
+    """
+    direction of :any:`Strand` on `helix2` to which to add half crossover. 
+    If not specified, defaults to the negation of `forward1`
+    """
+
     half: bool = False
+    """
+    Indicates whether this is a half or full crossover.
+    If not specified, defaults to ``False``.
+    """
 
     def __post_init__(self):
         if self.offset2 is None:
@@ -2368,8 +2389,9 @@ class DNAOrigamiDesign(DNADesign):
     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
     :py:data:`DNAOrigamiDesign.scaffold`.
 
-    The field :py:data:`DNAOrigamiDesign.scaffold` can be assigned in the constructor,
-    or it may be assigned after the :any:`DNAOrigamiDesign` is created.
+    The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
+    or it may be set after the :any:`DNAOrigamiDesign` is created.
+    It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
 
     The :py:data:`Color` of the scaffold will be automatically assigned.
     To change from the default :any:`Color`,
@@ -2394,5 +2416,10 @@ class DNAOrigamiDesign(DNADesign):
                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
 
     def set_scaffold(self, scaffold: Strand):
+        """
+        Set the scaffold of this :any:`DNAOrigamiDesign`.
+
+        :param scaffold: The scaffold :any:`Strand`.
+        """
         self.scaffold = scaffold
         self.scaffold.color = default_scaffold_color
