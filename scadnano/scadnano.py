@@ -48,6 +48,9 @@ import xlwt
 from json_utils import JSONSerializable, json_encode, NoIndent
 import m13
 
+
+# TODO: add Boolean field Strand.circular
+
 # TODO: write from_json for DNADesign so .dna files can be read into the library
 
 # TODO: make explicit rules about when strands can be added and sequences assigned.
@@ -99,9 +102,9 @@ class Color(JSONSerializable):
 
     def __post_init__(self, hex):
         if hex is None:
-            assert(self.r is not None and self.g is not None and self.b is not None)
+            assert (self.r is not None and self.g is not None and self.b is not None)
         else:
-            assert(self.r is None and self.g is None and self.b is None)
+            assert (self.r is None and self.g is None and self.b is None)
             hex = hex.lstrip('#')
             self.r = int(hex[0:2], 16)
             self.g = int(hex[2:4], 16)
@@ -111,7 +114,6 @@ class Color(JSONSerializable):
         # Return object representing this Color that is JSON serializable.
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
-
 
 
 class ColorCycler:
@@ -226,7 +228,7 @@ distance_between_helices_svg: float = (base_width_svg * 2.5 / 0.34)
 """Distance between tops of two consecutive helices (using default positioning rules).
 
 This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
-to attempt to make the DNA appear to scale in 2D drawings:
+to attempt to make the DNA structure appear to scale in 2D drawings:
 The width of one base pair of double-stranded DNA bp is 0.34 nm. In a DNA origami, 
 AFM images let us estimate that the average distance between adjacent double helices is 2.5 nm.
 (A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
@@ -349,7 +351,7 @@ class Helix(JSONSerializable):
     max_offset: int = None
     """Maximum offset (exclusive) of :any:`Substrand` that can be drawn on this :any:`Helix`. 
     If unspecified, it is calculated when the :any:`DNADesign` is instantiated as 
-    1 plus the largest :any:`Substrand.end` offset of any :any:`Substrand` in the design.
+    the largest :any:`Substrand.end` offset of any :any:`Substrand` in the design.
     """
 
     min_offset: int = 0
@@ -361,7 +363,7 @@ class Helix(JSONSerializable):
     """If positive, overrides :any:`DNADesign.major_tick_distance`."""
 
     major_ticks: List[int] = None
-    """If not None, overrides :any:`DNADesign.major_tick_distance` and :any:`Helix.major_tick_distance`
+    """If not ``None``, overrides :any:`DNADesign.major_tick_distance` and :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
     grid_position: Tuple[int, int, int] = None
@@ -369,8 +371,9 @@ class Helix(JSONSerializable):
     if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`DNADesign` containing this helix.
     `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
-    and incrementing `v` moves down one helix in the grid. (down and to the left in the case of
-    the hexagonal or honeycomb lattice)
+    and incrementing `v` moves down one helix in the grid. (down and to the right in the case of
+    the hexagonal or honeycomb lattice, as in the "odd-r horizontal layout" coordinate system here: 
+    https://www.redblobgames.com/grids/hexagons/)
     `b` goes in and out of the screen in the side view, and it is in units of "bases".
     Incrementing `b` moves the whole helix one base into the screen.
     In the main view, a helix with `b` = 1 would have its base offset 0 line up with base offset 1
@@ -409,15 +412,14 @@ class Helix(JSONSerializable):
 
     rotation_anchor: int = 0
     """Offset on this :any:`Helix` that is the reference point for 0 radians.
-    The rotation at offset ``o`` is :math:`2\pi`  radians times the remainder of ``o - rotation_anchor`` when divided
-    by 10.5.
+    The rotation at offset ``o`` is :math:`2\pi`  radians times the remainder of ``o - rotation_anchor`` 
+    when divided by 10.5.
     
     For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
     at offsets of the form :math:`42 + 21k` for integer :math:`k` 
     (i.e., 42 itself, as well as 21, 0, -21, -42, ..., 63, 84, 105, ...),
     the rotation angle is also 0 at those offsets since
     they are integer multiples of 21 (hence also multiples of 10.5) from 42.
-    
     
     Default is 0."""
 
@@ -516,13 +518,13 @@ class Substrand(JSONSerializable):
     (5' end if :any:`Substrand.forward` = ``False``,
     3' end if :any:`Substrand.forward` = ``True``).
     Note that the set of base offsets occupied by this Substrand is {start, start+1, ..., end-1},
-    i.e., inclusive for start but exclusive for end,
+    i.e., inclusive for :py:data:`Strand.start` but exclusive for :py:data:`Strand.end`,
     the same convention used in Python for slices of lists and strings.
     (e.g., :samp:`"abcdef"[1:3] == "bc"`)
     
     Some methods (such as :py:meth:`Substrand.dna_sequence_in`) use the convention of being inclusive on 
     both ends and are marked with the word "INCLUSIVE".
-    (This is easier to reason about when there are insertions and deletions.)
+    (Such a convention is easier to reason about when there are insertions and deletions.)
     """
 
     deletions: List[int] = field(default_factory=list)
@@ -552,6 +554,9 @@ class Substrand(JSONSerializable):
 
     def __str__(self):
         return repr(self)
+
+    def strand(self) -> Strand:
+        return self._parent_strand
 
     def _check_start_end(self):
         if self.start >= self.end:
@@ -619,7 +624,7 @@ class Substrand(JSONSerializable):
         return self.end - self.start - len(self.deletions) + self._num_insertions()
 
     def dna_length_in(self, left, right) -> int:
-        """Number of bases in this Substrand between left and right (INCLUSIVE)."""
+        """Number of bases in this Substrand between `left` and `right` (INCLUSIVE)."""
         if not left <= right + 1:
             raise ValueError(f'left = {left} and right = {right} but we should have left <= right + 1')
         if not self.start <= left:
@@ -1060,6 +1065,14 @@ class Strand(JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt(True)
 
+    def __eq__(self, other: Strand) -> bool:
+        if not isinstance(other, Strand):
+            return False
+        return self.substrands == other.substrands
+
+    def __hash__(self):
+        return hash(self.substrands)
+
     def set_default_idt(self, use_default_idt):
         """Sets idt field to be the default given the Substrand data of this :any:`Strand`."""
         self.use_default_idt = use_default_idt
@@ -1327,7 +1340,6 @@ class StrandError(IllegalDNADesignError):
         # super(IllegalDNADesignError, self).__init__(msg)
 
 
-
 # TODO: add mutation operations to DNADesign to mutate all of its parts:
 #  - Helix
 #    - idx
@@ -1457,7 +1469,7 @@ class DNADesign(JSONSerializable):
 
         for helix in self.helices:
             helix_json = dct[helices_key][helix.idx()].value  # get past NoIndent surrounding helix
-            #XXX: no need to check here because key was already deleted by Helix.to_json_serializable
+            # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
             #     del helix_json[min_offset_key]
@@ -1657,6 +1669,21 @@ class DNADesign(JSONSerializable):
                 err_msg = f"Loopouts {ss1} and {ss2} are consecutive on strand {strand}. " \
                           f"At least one of any consecutive pair must be a Substrand, not a Loopout."
                 raise StrandError(strand, err_msg)
+
+    def substrand_at(self, helix: int, offset: int, forward: bool):
+        """
+        Return :any:`Substrand` that overlaps `offset` on helix with idx `helix` and has
+        :py:data:`Substrand.forward` = ``True``, or ``None`` if there is no such :any:`Substrand`.
+
+        :param helix: TODO
+        :param offset: TODO
+        :param forward: TODO
+        :return: TODO
+        """
+        for substrand in self.substrands_at(helix, offset):
+            if substrand.forward == forward:
+                return substrand
+        return None
 
     def substrands_at(self, helix: int, offset: int) -> List[Substrand]:
         """Return list of :any:`Substrand`'s that overlap `offset` on helix with idx `helix`.
@@ -2043,6 +2070,189 @@ class DNADesign(JSONSerializable):
         contents = self.to_json()
         _write_file_same_name_as_running_python_script(contents, 'dna', directory, filename)
 
+    def add_nick(self, helix: int, offset: int, forward: bool):
+        """Add nick to :any:`Substrand` on :any:`Helix` with index `helix`,
+        in direction given by `forward`, at offset `offset`. The two :any:`Substrand`'s created by this nick
+        will have 5'/3' ends at offsets `offset` and `offset-1`.
+
+        For example, if there is a :any:`Substrand` with
+        :py:data:`Substrand.helix` = ``0``,
+        :py:data:`Substrand.forward` = ``True``,
+        :py:data:`Substrand.start` = ``0``,
+        :py:data:`Substrand.end` = ``10``,
+        then calling :py:meth:`DNADesign.add_nick(0, True, 5)` will split it into two :any:`Substrand`'s,
+        with
+        :py:data:`Substrand.helix` = ``0``,
+        :py:data:`Substrand.forward` = ``True``,
+        :py:data:`Substrand.start` = ``0``,
+        :py:data:`Substrand.end` = ``5``,
+        and
+        :py:data:`Substrand.helix` = ``0``,
+        :py:data:`Substrand.forward` = ``True``,
+        :py:data:`Substrand.start` = ``5``,
+        :py:data:`Substrand.end` = ``10``.
+        """
+        for substrand_to_remove in self.substrands_at(helix, offset):
+            if substrand_to_remove.forward == forward:
+                break
+        else:
+            raise IllegalDNADesignError(f'no substrand at helix {helix} in direction '
+                                        f'{"forward" if forward else "reverse"} at offset {offset}')
+        strand = substrand_to_remove.strand()
+        substrands = strand.substrands
+        order = substrands.index(substrand_to_remove)
+        substrands_before = substrands[:order]
+        substrands_after = substrands[order + 1:]
+        substrand_left = Substrand(helix, forward, substrand_to_remove.start, offset)
+        substrand_right = Substrand(helix, forward, offset, substrand_to_remove.end)
+
+        if substrand_to_remove.forward:
+            substrand_to_add_before = substrand_left
+            substrand_to_add_after = substrand_right
+        else:
+            substrand_to_add_before = substrand_right
+            substrand_to_add_after = substrand_left
+
+        if strand.dna_sequence:
+            dna_sequence_before = ''.join(ss.dna_sequence() for ss in substrands_before)
+            dna_sequence_after = ''.join(ss.dna_sequence() for ss in substrands_after)
+            dna_sequence_on_substrand_left = substrand_to_remove.dna_sequence_in(substrand_to_remove.start,
+                                                                                 offset - 1)
+            dna_sequence_on_substrand_right = substrand_to_remove.dna_sequence_in(offset,
+                                                                                  substrand_to_remove.end - 1)
+            if substrand_to_remove.forward:
+                dna_sequence_on_substrand_before = dna_sequence_on_substrand_left
+                dna_sequence_on_substrand_after = dna_sequence_on_substrand_right
+            else:
+                dna_sequence_on_substrand_before = dna_sequence_on_substrand_right
+                dna_sequence_on_substrand_after = dna_sequence_on_substrand_left
+            dna_sequence_before_whole = dna_sequence_before + dna_sequence_on_substrand_before
+            dna_sequence_after_whole = dna_sequence_on_substrand_after + dna_sequence_after
+        else:
+            dna_sequence_before_whole = None
+            dna_sequence_after_whole = None
+
+        self.strands.remove(strand)
+
+        idt_present = strand.idt is not None
+        strand_before = Strand(substrands=substrands_before + [substrand_to_add_before],
+                               dna_sequence=dna_sequence_before_whole,
+                               color=strand.color, idt=strand.idt if idt_present else None)
+
+        strand_after = Strand(substrands=[substrand_to_add_after] + substrands_after,
+                              dna_sequence=dna_sequence_after_whole,
+                              automatically_assign_color=True, use_default_idt=idt_present)
+
+        self.helices[helix]._substrands.remove(substrand_to_remove)
+        self.helices[helix]._substrands.extend([substrand_to_add_before, substrand_to_add_after])
+
+        self.strands.extend([strand_before, strand_after])
+
+    def add_half_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+                           offset2: int = None, forward2: bool = None):
+        """
+        TODO: document this
+
+        Must have nick at that position
+
+        :param helix1:
+        :param helix2:
+        :param offset1:
+        :param forward1:
+        :param offset2:
+        :param forward2:
+        :return:
+        """
+        if offset2 is None:
+            offset2 = offset1
+        if forward2 is None:
+            forward2 = not forward1
+        # TODO: check for appropriate nicks
+
+        ss1 = self.substrand_at(helix1, offset1, forward1)
+        ss2 = self.substrand_at(helix2, offset2, forward2)
+        if ss1 is None:
+            raise IllegalDNADesignError(f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
+                                        f"There is no Substrand there.")
+        if ss2 is None:
+            raise IllegalDNADesignError(f"Cannot add half crossover at (helix={helix2}, offset={offset2}). "
+                                        f"There is no Substrand there.")
+        strand1 = ss1.strand()
+        strand2 = ss2.strand()
+
+        if strand1 == strand2:
+            raise IllegalDNADesignError(f"Cannot add crossover from "
+                                        f"(helix={helix1}, offset={offset1}) to "
+                                        f"(helix={helix2}, offset={offset2}) "
+                                        f"because that would join two Substrands "
+                                        f"already on the same Strand! "
+                                        f"Currently circular Strands are not supported. "
+                                        f"Instead, try adding nicks first, or rearrange the order of "
+                                        f"crossover addition, to ensure that all strands are "
+                                        f"non-circular, even in intermediate stages.")
+
+        if ss1.offset_3p() == offset1 and ss2.offset_5p() == offset2:
+            strand_first = strand1
+            strand_last = strand2
+        elif ss1.offset_5p() == offset1 and ss2.offset_3p() == offset2:
+            strand_first = strand2
+            strand_last = strand1
+        else:
+            raise IllegalDNADesignError("Cannot add half crossover. Must have one substrand have its "
+                                        "5' end at the given offset and the other with its 3' end at the "
+                                        "given offset, but this is not the case.")
+
+        new_substrands = strand_first.substrands + strand_last.substrands
+        if strand_first.dna_sequence is None and strand_last.dna_sequence is None:
+            new_dna = None
+        elif strand_first.dna_sequence is not None and strand_last.dna_sequence is not None:
+            new_dna = strand_first.dna_sequence + strand_last.dna_sequence
+        else:
+            raise IllegalDNADesignError('cannot add crossover between two strands if one has a DNA sequence '
+                                        'and the other does not')
+        new_strand = Strand(substrands=new_substrands, color=strand_first.color, dna_sequence=new_dna,
+                            idt=strand_first.idt)
+
+        self.strands.remove(strand_first)
+        self.strands.remove(strand_last)
+        self.strands.append(new_strand)
+
+    def add_full_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+                           offset2: int = None, forward2: bool = None):
+        """
+        Adds two half-crossovers, one at ``offset`` and another at ``offset-1``.
+        Other arguments have the same meaning as in :py:meth:`DNADesign.add_half_crossover`.
+        """
+        if offset2 is None:
+            offset2 = offset1
+        if forward2 is None:
+            forward2 = not forward1
+        for helix, forward, offset in [(helix1, forward1, offset1), (helix2, forward2, offset2)]:
+            self._prepare_nicks_for_full_crossover(helix, forward, offset)
+        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1 - 1, offset2=offset2 - 1,
+                                forward1=forward1, forward2=forward2)
+        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1, offset2=offset2,
+                                forward1=forward1, forward2=forward2)
+
+    def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
+        substrand_right = self.substrand_at(helix, offset, forward)
+        if substrand_right is None:
+            raise IllegalDNADesignError(f'You tried to create a full crossover at '
+                                        f'(helix={helix}, offset={offset}) '
+                                        f'but there is no Strand there.')
+        substrand_left = self.substrand_at(helix, offset - 1, forward)
+        if substrand_left is None:
+            raise IllegalDNADesignError(f'You tried to create a full crossover at '
+                                        f'(helix={helix}, offset={offset}) '
+                                        f'but there is no Strand at offset {offset - 1}.')
+        if substrand_left == substrand_right:
+            self.add_nick(helix, offset, forward)
+        else:
+            assert substrand_left.end == substrand_right.start
+
+
+
+
 
 def _name_of_this_script() -> str:
     """Return name of the currently running script, WITHOUT the .py extension."""
@@ -2117,7 +2327,10 @@ class DNAOrigamiDesign(DNADesign):
     def __post_init__(self):
         super().__post_init__()
         self.scaffold.color = default_scaffold_color
-        if self.scaffold is None:
-            raise IllegalDNADesignError('scaffold strand is None; must be set to a Strand in DNAOrigamiDesign.strands')
-        if self.scaffold not in self.strands:
+        #XXX: it's not a great idea to allow scaffold to ne None, but this helps when someone wants
+        # to create an origami by starting with several simple Strands and add nicks and crossovers.
+        # if self.scaffold is None:
+        #     raise IllegalDNADesignError(
+        #         'scaffold strand is None; must be set to a Strand in DNAOrigamiDesign.strands')
+        if self.scaffold is not None and self.scaffold not in self.strands:
             raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')

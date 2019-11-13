@@ -165,7 +165,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     See :class:`origami_rectangle.NickPattern` for details.
     
     `custom_scaffold` is the scaffold sequence to use. 
-    If set to ``None``, the standard 7249-base M13 is used.
+    If set to ``None``, the standard 7249-base M13 is used: :py:data:`scadnano.m13_sequence`.
     
     `edge_staples` indicates whether to include the edge staples. (Leaving them out prevents multiple
     origami rectangles from polymerizing in solution due to base stacking interactions on the left and
