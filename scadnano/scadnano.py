@@ -1438,7 +1438,7 @@ class DNADesign(JSONSerializable):
     stored in any :any:`Substrand` 
     in :py:data:`DNADesign.strands`."""
 
-    grid: Grid = Grid.none
+    grid: Grid = Grid.square
     """Common choices for how to arrange helices relative to each other.
     
     Optional field."""
@@ -2151,24 +2151,27 @@ class DNADesign(JSONSerializable):
     def add_half_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        TODO: document this
+        Add a half crossover from helix `helix1` at offset `offset1` to `helix2`, on the strand at that
+        with :py:data:`Strand.forward` = `forward`.
 
-        Must have nick at that position
+        Unlike :py:meth:`DNADesign.add_full_crossover`, which automatically adds a nick between the two
+        half-crossovers, to call this method, there must *already* be nicks adjacent to the given
+        offsets on the given helices. (either on the left or right side)
 
-        :param helix1:
-        :param helix2:
-        :param offset1:
-        :param forward1:
-        :param offset2:
-        :param forward2:
-        :return:
+        :param helix1: index of one helix of half crossover
+        :param helix2: index of other helix of half crossover
+        :param offset1: offset on `helix1` at which to add half crossover
+        :param forward1: direction of :any:`Strand` on `helix1` to which to add half crossover
+        :param offset2: offset on `helix2` at which to add half crossover.
+            If not specified, defaults to `offset1`
+        :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
+            If not specified, defaults to the negation of `forward1`
+
         """
         if offset2 is None:
             offset2 = offset1
         if forward2 is None:
             forward2 = not forward1
-        # TODO: check for appropriate nicks
-
         ss1 = self.substrand_at(helix1, offset1, forward1)
         ss2 = self.substrand_at(helix2, offset2, forward2)
         if ss1 is None:
@@ -2234,6 +2237,36 @@ class DNADesign(JSONSerializable):
         self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1, offset2=offset2,
                                 forward1=forward1, forward2=forward2)
 
+    def add_crossovers(self, crossovers: List[Crossover]):
+        """
+        Adds a list of :any:`Crossover`'s in batch.
+
+        This helps to avoid problems where adding them one at a time
+        creates an intermediate design with circular strands.
+
+        :param crossovers: list of :any:`Crossover`'s to add. Its fields have the same meaning as in
+            :py:meth:`DNADesign.add_half_crossover`
+            and
+            :py:meth:`DNADesign.add_full_crossover`,
+            with the extra field `Crossover.half` indicating whether it represents a half or full crossover.
+
+        """
+        for crossover in crossovers:
+            if not crossover.half:
+                for helix, forward, offset in [(crossover.helix1, crossover.forward1, crossover.offset1),
+                                               (crossover.helix2, crossover.forward2, crossover.offset2)]:
+                    self._prepare_nicks_for_full_crossover(helix, forward, offset)
+
+        for crossover in crossovers:
+            if crossover.half:
+                self.add_half_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
+                                        forward1=crossover.forward1, forward2=crossover.forward2,
+                                        offset1=crossover.offset1, offset2=crossover.offset2)
+            else:
+                self.add_full_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
+                                        forward1=crossover.forward1, forward2=crossover.forward2,
+                                        offset1=crossover.offset1, offset2=crossover.offset2)
+
     def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
         substrand_right = self.substrand_at(helix, offset, forward)
         if substrand_right is None:
@@ -2249,9 +2282,6 @@ class DNADesign(JSONSerializable):
             self.add_nick(helix, offset, forward)
         else:
             assert substrand_left.end == substrand_right.start
-
-
-
 
 
 def _name_of_this_script() -> str:
@@ -2305,6 +2335,35 @@ def _pad_dna(sequence: str, length: int) -> str:
 
 
 @dataclass
+class Crossover:
+    """
+    A :any:`Crossover` object represents the parameters to the methods
+    :py:meth:`DNADesign.add_half_crossover`
+    and
+    :py:meth:`DNADesign.add_full_crossover`,
+    with one more field :py:data:`Crossover.half` to identify whether it is a half or full crossover.
+
+    It is used in conjection with :py:meth:`DNADesign.add_crossovers` to add many crossovers in batch.
+    This helps avoid the issue that adding crossovers one at a time can lead to an intermediate
+    :any:`DNADesign` with circular strands, which are currently unsupported.
+    """
+
+    helix1: int
+    helix2: int
+    offset1: int
+    forward1: bool
+    offset2: int = None
+    forward2: bool = None
+    half: bool = False
+
+    def __post_init__(self):
+        if self.offset2 is None:
+            self.offset2 = self.offset1
+        if self.forward2 is None:
+            self.forward2 = not self.forward1
+
+
+@dataclass
 class DNAOrigamiDesign(DNADesign):
     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
     :py:data:`DNAOrigamiDesign.scaffold`.
@@ -2326,11 +2385,14 @@ class DNAOrigamiDesign(DNADesign):
 
     def __post_init__(self):
         super().__post_init__()
-        self.scaffold.color = default_scaffold_color
-        #XXX: it's not a great idea to allow scaffold to ne None, but this helps when someone wants
+
+        # XXX: it's not a great idea to allow scaffold to ne None, but this helps when someone wants
         # to create an origami by starting with several simple Strands and add nicks and crossovers.
-        # if self.scaffold is None:
-        #     raise IllegalDNADesignError(
-        #         'scaffold strand is None; must be set to a Strand in DNAOrigamiDesign.strands')
-        if self.scaffold is not None and self.scaffold not in self.strands:
-            raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
+        if self.scaffold is not None:
+            self.scaffold.color = default_scaffold_color
+            if self.scaffold not in self.strands:
+                raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
+
+    def set_scaffold(self, scaffold: Strand):
+        self.scaffold = scaffold
+        self.scaffold.color = default_scaffold_color

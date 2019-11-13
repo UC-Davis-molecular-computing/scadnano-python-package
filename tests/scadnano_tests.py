@@ -39,7 +39,7 @@ def remove_whitespace(sequence):
 
 class TestNickAndCrossover(unittest.TestCase):
     """
-    Tests add_nick() and add_crossover() methods on DNADesign as an easier way of specifying an origami.
+    Tests add_nick() and add_*_crossover() methods on DNADesign as an easier way of specifying an origami.
     """
 
     r"""
