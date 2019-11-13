@@ -8,6 +8,7 @@ def main():
     scaffold = next(s for s in design.strands if
                     s.first_substrand().helix == 5 and not s.first_substrand().forward)
     design.set_scaffold(scaffold)
+    design.assign_m13_to_scaffold()
     return design
 
 

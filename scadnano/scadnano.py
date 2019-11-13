@@ -1813,6 +1813,10 @@ class DNADesign(JSONSerializable):
         'a', 'c', 'g', 't' are converted to uppercase.
         """
         padded_sequence = _pad_and_remove_whitespace(sequence, strand)
+        if strand is None:
+            raise IllegalDNADesignError('strand cannot be None to assign DNA to it')
+        if strand not in self.strands:
+            raise StrandError(strand, 'strand is not in the given DNADesign')
 
         if strand.dna_sequence is None:
             merged_sequence = padded_sequence
@@ -2423,3 +2427,9 @@ class DNAOrigamiDesign(DNADesign):
         """
         self.scaffold = scaffold
         self.scaffold.color = default_scaffold_color
+
+    def assign_m13_to_scaffold(self):
+        """
+        Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence`.
+        """
+        self.assign_dna(self.scaffold, m13_sequence)
