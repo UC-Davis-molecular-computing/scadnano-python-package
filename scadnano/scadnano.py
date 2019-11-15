@@ -371,8 +371,11 @@ class Helix(JSONSerializable):
     if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`DNADesign` containing this helix.
     `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
-    and incrementing `v` moves down one helix in the grid. (down and to the right in the case of
-    the hexagonal or honeycomb lattice, as in the "odd-r horizontal layout" coordinate system here: 
+    and incrementing `v` moves down one helix in the grid. 
+    In the case of the hexagonal or honeycomb lattice, 
+    The convention is that incrementing `v` moves down and to the right if h is even, 
+    and moves down and to the left if `h` is odd.
+    This is the "odd-r horizontal layout" coordinate system here: 
     https://www.redblobgames.com/grids/hexagons/)
     `b` goes in and out of the screen in the side view, and it is in units of "bases".
     Incrementing `b` moves the whole helix one base into the screen.
@@ -2084,13 +2087,15 @@ class DNADesign(JSONSerializable):
         :py:data:`Substrand.forward` = ``True``,
         :py:data:`Substrand.start` = ``0``,
         :py:data:`Substrand.end` = ``10``,
-        then calling :py:meth:`DNADesign.add_nick(0, True, 5)` will split it into two :any:`Substrand`'s,
-        with
+        then calling ``add_nick(helix=0, offset=5, forward=True)`` will split it into two :any:`Substrand`'s,
+        with one substrands having the fields
         :py:data:`Substrand.helix` = ``0``,
         :py:data:`Substrand.forward` = ``True``,
         :py:data:`Substrand.start` = ``0``,
         :py:data:`Substrand.end` = ``5``,
-        and
+        (recall that :py:data:`Substrand.end` is exclusive, meaning that the largest offset on this
+        substrand is 4 = ``offset-1``)
+        and the other substrand having the fields
         :py:data:`Substrand.helix` = ``0``,
         :py:data:`Substrand.forward` = ``True``,
         :py:data:`Substrand.start` = ``5``,
@@ -2227,8 +2232,11 @@ class DNADesign(JSONSerializable):
     def add_full_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Adds two half-crossovers, one at ``offset`` and another at ``offset-1``.
+        Adds two half-crossovers, one at `offset1` and another at `offset1`-1.
         Other arguments have the same meaning as in :py:meth:`DNADesign.add_half_crossover`.
+        A nick is automatically added on helix `helix1` between
+        `offset1` and `offset1`-1 if one is not already present,
+        and similarly for `offset2` on helix `helix2`.
         """
         if offset2 is None:
             offset2 = offset1

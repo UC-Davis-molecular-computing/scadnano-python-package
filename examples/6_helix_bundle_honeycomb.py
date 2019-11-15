@@ -39,8 +39,7 @@ def initial_design():
         sc.Strand([sc.Substrand(helix=5, forward=True, start=42, end=1246)]),
     ]
     strands = scafs + staps
-    # return sc.DNADesign(helices=helices, strands=strands, grid=sc.honeycomb)
-    return sc.DNAOrigamiDesign(helices=helices, strands=strands, grid=sc.square)
+    return sc.DNAOrigamiDesign(helices=helices, strands=strands, grid=sc.honeycomb)
 
 
 def add_nicks(design: sc.DNADesign):
