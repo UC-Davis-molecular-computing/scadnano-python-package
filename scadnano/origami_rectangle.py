@@ -5,7 +5,7 @@ using the :mod:`scadnano` module.
 
 from dataclasses import dataclass, field
 
-import scadnano.scadnano as sc
+import scadnano as sc
 from enum import Enum, auto
 
 
