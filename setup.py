@@ -7,5 +7,6 @@ setup(name='scadnano',
       description="",
       author="",
       author_email="",
-      url=""
+      url="",
+      packages=['scadnano']
     )
