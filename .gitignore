@@ -3,3 +3,4 @@
 /doc/
 /other/
 /__pycache__/
+*.egg-info
