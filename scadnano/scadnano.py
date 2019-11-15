@@ -45,8 +45,8 @@ import sys
 import os.path
 import xlwt
 
-from json_utils import JSONSerializable, json_encode, NoIndent
-import m13
+from scadnano.json_utils import JSONSerializable, json_encode, NoIndent
+import scadnano.m13 as m13
 
 
 # TODO: add Boolean field Strand.circular
