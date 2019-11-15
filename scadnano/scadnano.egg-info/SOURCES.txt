@@ -1,6 +1,0 @@
-scadnano.py
-setup.py
-scadnano.egg-info/PKG-INFO
-scadnano.egg-info/SOURCES.txt
-scadnano.egg-info/dependency_links.txt
-scadnano.egg-info/top_level.txt
