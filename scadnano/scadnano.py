@@ -396,10 +396,10 @@ class Helix(JSONSerializable):
     `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
     rotation: float = 0
-    """Rotation angle (in radians) of backbone of the :any:`Substrand` on this :any:`Helix` with 
+    """Rotation angle (in degrees) of backbone of the :any:`Substrand` on this :any:`Helix` with 
     :py:data:`Substrand.forward` = ``True``. 
     
-    The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 radians is defined to
+    The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 degrees is defined to
     be pointing *up* in both the side view and main view.
     
     A positive rotation angle rotates *clockwise* in the side view.
@@ -408,14 +408,14 @@ class Helix(JSONSerializable):
     but it is consistent with SVG rotation conventions:
     https://www.w3.org/TR/SVG11/coords.html#ExampleRotateScale.
     
-    For example, a rotation of :math:`\pi/2` radians (90 degrees) points right in the side view 
+    For example, a rotation of 90 degrees points right in the side view 
     and out of the screen in the main view.
     
-    Default is 0 radians."""
+    Default is 0 degrees."""
 
     rotation_anchor: int = 0
-    """Offset on this :any:`Helix` that is the reference point for 0 radians.
-    The rotation at offset ``o`` is :math:`2\pi`  radians times the remainder of ``o - rotation_anchor`` 
+    """Offset on this :any:`Helix` that is the reference point for 0 degrees.
+    The rotation at offset ``o`` is 360 degrees times the remainder of ``o - rotation_anchor`` 
     when divided by 10.5.
     
     For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
