@@ -279,6 +279,7 @@ rotation_key = 'rotation'
 rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
+helices_view_order_key = "helices_view_order"
 
 # Helix keys
 idx_key = 'idx'
@@ -1457,6 +1458,13 @@ class DNADesign(JSONSerializable):
     If :any:`DNADesign.grid` = :any:`Grid.square` then the default value is 8.
     If :any:`DNADesign.grid` = :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
 
+    helices_view_order: List[int] = None
+    """A list of the order in which the helix should be displayed in the planar view of scadnano.
+       This list must be a bijection from [0, ..., len(helices)-1] to [0, ..., len(helices)-1].
+
+       Optional field. If not specified, it will be set to [0, ..., len(helices)-1].
+    """
+
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[version_key] = current_version
@@ -1480,6 +1488,8 @@ class DNADesign(JSONSerializable):
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
 
+        dct[helices_view_order_key] = self.helices_view_order
+
         return dct
 
     def __post_init__(self):
@@ -1497,6 +1507,17 @@ class DNADesign(JSONSerializable):
         self._build_substrands_on_helix_lists()
         self._set_helices_max_bases(update=False)
         self._check_legal_design()
+
+        self._set_and_check_helices_view_order()
+
+    def _set_and_check_helices_view_order(self):
+        identify = list(range(0, len(self.helices)))
+        if self.helices_view_order is None:
+            self.helices_view_order = identify
+
+        if not (sorted(self.helices_view_order) == identify):
+            raise IllegalDNADesignError("The specified helices view order: {}\n is not a bijection from [0,{}] to [0,{}]." \
+                                        .format(helices_view_order, len(self.helices)-1))
 
     def _set_helices_idxs(self):
         for idx, helix in enumerate(self.helices):

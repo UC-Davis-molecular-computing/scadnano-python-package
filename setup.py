@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='scadnano',
-      version='1.0',
+      version='0.0.1',
       description="",
       author="",
       author_email="",
