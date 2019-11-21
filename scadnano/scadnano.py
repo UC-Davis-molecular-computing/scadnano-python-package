@@ -1476,6 +1476,10 @@ class DNADesign(JSONSerializable):
 
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
 
+        default_helices_view_order = list(range(0, len(self.helices)))
+        if self.helices_view_order != default_helices_view_order:
+            dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix in self.helices:
@@ -1487,8 +1491,6 @@ class DNADesign(JSONSerializable):
             max_offset = max((ss.end for ss in helix._substrands), default=-1)
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
-
-        dct[helices_view_order_key] = self.helices_view_order
 
         return dct
 
@@ -1511,13 +1513,22 @@ class DNADesign(JSONSerializable):
         self._set_and_check_helices_view_order()
 
     def _set_and_check_helices_view_order(self):
-        identify = list(range(0, len(self.helices)))
+        identity = list(range(0, len(self.helices)))
         if self.helices_view_order is None:
-            self.helices_view_order = identify
+            self.helices_view_order = identity
+        self._check_helices_view_order_is_bijection()
 
-        if not (sorted(self.helices_view_order) == identify):
-            raise IllegalDNADesignError("The specified helices view order: {}\n is not a bijection from [0,{}] to [0,{}]." \
-                                        .format(helices_view_order, len(self.helices)-1))
+
+    def set_helices_view_order(self, helices_view_order: List[int]):
+        self.helices_view_order = helices_view_order
+        self._check_helices_view_order_is_bijection()
+
+    def _check_helices_view_order_is_bijection(self):
+        identity = list(range(0, len(self.helices)))
+        if not (sorted(self.helices_view_order) == identity):
+            raise IllegalDNADesignError(
+                f"The specified helices view order: {self.helices_view_order}\n "
+                f"is not a bijection from [0,{len(self.helices) - 1}] to [0,{len(self.helices) - 1}].")
 
     def _set_helices_idxs(self):
         for idx, helix in enumerate(self.helices):
