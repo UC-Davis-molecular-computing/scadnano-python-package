@@ -14,7 +14,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../scadnano'))
+sys.path.insert(0, os.path.abspath('../'))
 # print(sys.path)
 
 # Type "make html" at the command line to generate the documentation.
