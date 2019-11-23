@@ -156,6 +156,9 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     
     `twist_correction_start_col` is ignored if `twist_correction_deletion_spacing` <= 0, otherwise
     it indicates the column at which to put the first deletions. Default = 1.
+    
+    `twist_correction_deletion_offset` is the *relative* offset of the deletion, relative to the left side
+    of the column.
 
     `num_flanking_columns` is the number of empty columns on the helix on each side of the origami.
 

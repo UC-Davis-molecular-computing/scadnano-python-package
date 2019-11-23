@@ -216,7 +216,7 @@ def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 
-default_grid: Grid = Grid.none
+default_grid: Grid = Grid.square
 
 base_width_svg: float = 10.0
 """Width of a single base in the SVG main view of scadnano."""
@@ -287,7 +287,7 @@ max_offset_key = 'max_offset'
 min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
 svg_position_key = 'svg_position'
-# position_key = 'position'; # support in the future
+position3d_key = 'position'
 
 # Strand keys
 color_key = 'color'
@@ -312,6 +312,24 @@ loopout_key = 'loopout'
 
 # end constants
 ##########################################################################
+
+@dataclass
+class Position3D(JSONSerializable):
+    """
+    Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
+    """
+
+    x: float
+    y: float
+    z: float
+    pitch: float
+    roll: float
+    yaw: float
+
+    def to_json_serializable(self, suppress_indent=True):
+        dct = self.__dict__
+        # return NoIndent(dct) if suppress_indent else dct
+        return dct
 
 
 def in_browser() -> bool:
@@ -427,6 +445,12 @@ class Helix(JSONSerializable):
     
     Default is 0."""
 
+    position3d: Position3D = None
+    """Position (x,y,z) and orientation (pitch,roll,yaw) of this :any:`Helix` in 3D space.
+    
+    Optional if :py:data:`Helix.grid_position` is specified. 
+    Default is pitch, roll, yaw are 0, and x,y,z are determined by grid position h, v, b."""
+
     _idx: int = -1
 
     # for optimization; list of substrands on that Helix
@@ -462,6 +486,9 @@ class Helix(JSONSerializable):
 
         if self.rotation_anchor != 0:
             dct[rotation_anchor_key] = self.rotation_anchor
+
+        if self.position3d is not None:
+            dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
         return NoIndent(dct) if suppress_indent else dct
 
@@ -1077,6 +1104,10 @@ class Strand(JSONSerializable):
     def __hash__(self):
         return hash(self.substrands)
 
+    def set_color(self, color: Color):
+        """Sets color of this :any:`Strand`."""
+        self.color = color;
+
     def set_default_idt(self, use_default_idt):
         """Sets idt field to be the default given the Substrand data of this :any:`Strand`."""
         self.use_default_idt = use_default_idt
@@ -1090,9 +1121,11 @@ class Strand(JSONSerializable):
             self.idt = None
 
     def first_substrand(self) -> Union[Substrand, Loopout]:
+        """First substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
         return self.substrands[0]
 
     def last_substrand(self) -> Union[Substrand, Loopout]:
+        """Last substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
         return self.substrands[-1]
 
     def set_dna_sequence(self, sequence: str):
@@ -1119,12 +1152,11 @@ class Strand(JSONSerializable):
         self.dna_sequence = trimmed_seq
 
     def dna_length(self) -> int:
-        """Return sum of DNA length of Substrands of this Strand."""
+        """Return sum of DNA length of :any:`Substrand`'s and :any:`Loopout`'s of this :any:`Strand`."""
         acc = 0
         for substrand in self.substrands:
             acc += substrand.dna_length()
         return acc
-        # return sum(len(substrand) for substrand in self.substrands)
 
     def bound_substrands(self) -> List[Substrand]:
         """:any:`Substrand`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
@@ -1275,11 +1307,21 @@ class Strand(JSONSerializable):
         return False
 
     def first_bound_substrand(self):
+        """First :any:`Substrand` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
+
+        Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
+        substrand as :py:meth:`Strand.first_substrand`, but in case an initial or final :any:`Loopout` is
+        supported in the future, this method is provided."""
         for substrand in self.substrands:
             if substrand.is_substrand():
                 return substrand
 
     def last_bound_substrand(self):
+        """Last :any:`Substrand` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
+
+        Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
+        substrand as :py:meth:`Strand.first_substrand`, but in case an initial or final :any:`Loopout` is
+        supported in the future, this method is provided."""
         substrands_rev = list(self.substrands)
         substrands_rev.reverse()
         for substrand in substrands_rev:
@@ -1459,10 +1501,11 @@ class DNADesign(JSONSerializable):
     If :any:`DNADesign.grid` = :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
 
     helices_view_order: List[int] = None
-    """A list of the order in which the helix should be displayed in the planar view of scadnano.
-       This list must be a bijection from [0, ..., len(helices)-1] to [0, ..., len(helices)-1].
+    """A list of the order in which the helix should be displayed in the main view of scadnano.
+       
+    This list must be a permutation containing each integer 0, 1, 2, ..., len(helices)-1 exactly once.
 
-       Optional field. If not specified, it will be set to [0, ..., len(helices)-1].
+    Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
 
     def to_json_serializable(self, suppress_indent=True):
@@ -1517,7 +1560,6 @@ class DNADesign(JSONSerializable):
         if self.helices_view_order is None:
             self.helices_view_order = identity
         self._check_helices_view_order_is_bijection()
-
 
     def set_helices_view_order(self, helices_view_order: List[int]):
         self.helices_view_order = helices_view_order
@@ -1576,6 +1618,24 @@ class DNADesign(JSONSerializable):
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
+        self._check_grid_positions_legal()
+
+    def _check_grid_positions_legal(self):
+        # ensures grid positions are legal if honeycomb lattice is used
+        if self.grid == Grid.honeycomb:
+            for helix in self.helices:
+                x = helix.grid_position[0]
+                y = helix.grid_position[1]
+                if x % 2 == 0 and y % 3 == 0:
+                    raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
+                                                'coordinates (x,y) with x even and y a multiple of 3, '
+                                                f'but helix {helix.idx()} has grid position '
+                                                f'{helix.grid_position}')
+                if x % 2 == 1 and y % 3 == 1:
+                    raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
+                                                'coordinates (x,y) with x odd and y = 1 + a multiple of 3, '
+                                                f'but helix {helix.idx()} has grid position '
+                                                f'{helix.grid_position}')
 
     def _check_helix_offsets(self):
         for helix in self.helices:
