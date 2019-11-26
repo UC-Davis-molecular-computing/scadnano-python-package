@@ -1807,7 +1807,8 @@ class DNADesign(JSONSerializable):
         """Remove `strand` from this design."""
         self.strands.remove(strand)
         for substrand in strand.substrands:
-            self.helices[substrand.helix]._substrands.remove(substrand)
+            if subscript is Substrand:
+                self.helices[substrand.helix]._substrands.remove(substrand)
 
     def insert_substrand(self, strand: Strand, order: int, substrand: Union[Substrand, Loopout]):
         """Insert `substrand` into `strand` at index given by `order`. Uses same indexing as Python lists,
@@ -1816,13 +1817,15 @@ class DNADesign(JSONSerializable):
         strand._insert_substrand(order, substrand)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
-        self.helices[substrand.helix]._substrands.append(substrand)
+        if subscript is Substrand:
+            self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_substrand(self, strand: Strand, substrand: Union[Substrand, Loopout]):
         """Remove `substrand` from `strand`."""
         assert strand in self.strands
         strand._remove_substrand(substrand)
-        self.helices[substrand.helix]._substrands.remove(substrand)
+        if subscript is Substrand:
+            self.helices[substrand.helix]._substrands.remove(substrand)
 
     def _build_substrands_on_helix_lists(self):
         for helix in self.helices:
