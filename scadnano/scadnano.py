@@ -44,6 +44,7 @@ from collections import defaultdict, OrderedDict
 import sys
 import os.path
 import xlwt
+from docutils.nodes import subscript
 
 from scadnano.json_utils import JSONSerializable, json_encode, NoIndent
 import scadnano.m13 as m13
@@ -1799,7 +1800,8 @@ class DNADesign(JSONSerializable):
         self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
         for substrand in strand.substrands:
-            self.helices[substrand.helix]._substrands.append(substrand)
+            if subscript is Substrand:
+                self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""

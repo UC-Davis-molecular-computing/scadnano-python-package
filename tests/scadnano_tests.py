@@ -1077,6 +1077,19 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
 
+class TestAddStrand(unittest.TestCase):
+
+    def test_add_strand__with_loopout(self):
+        helices =[sc.Helix(max_offset=10), sc.Helix(max_offset=10)]
+        design = sc.DNADesign(helices=helices, strands=[])
+
+        strand = sc.Strand([sc.Substrand(0, True, 0, 10), sc.Loopout(4), sc.Substrand(1, False, 0, 10)])
+
+        design.add_strand(strand)
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(strand, design.strands[0])
+
 
 class TestAssignDNA(unittest.TestCase):
 
