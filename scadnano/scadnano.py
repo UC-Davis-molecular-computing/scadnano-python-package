@@ -1618,9 +1618,9 @@ class DNADesign(JSONSerializable):
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
-        self._check_grid_positions_legal()
+        self._check_grid_honeycomb_positions_legal()
 
-    def _check_grid_positions_legal(self):
+    def _check_grid_honeycomb_positions_legal(self):
         # ensures grid positions are legal if honeycomb lattice is used
         if self.grid == Grid.honeycomb:
             for helix in self.helices:
