@@ -619,7 +619,6 @@ class TestNickAndCrossover(unittest.TestCase):
         design.add_half_crossover(helix1=2, helix2=3, offset1=95, forward1=True)
         design.add_half_crossover(helix1=4, helix2=5, offset1=95, forward1=True)
 
-
     def test_add_nick_then_add_crossovers__6_helix_rectangle(self):
         self.add_nicks(self.design)
         self.add_crossovers_after_nicks(self.design)
@@ -1077,18 +1076,24 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
 
+
 class TestAddStrand(unittest.TestCase):
 
     def test_add_strand__with_loopout(self):
-        helices =[sc.Helix(max_offset=10), sc.Helix(max_offset=10)]
+        helices = [sc.Helix(max_offset=10), sc.Helix(max_offset=10)]
         design = sc.DNADesign(helices=helices, strands=[])
 
-        strand = sc.Strand([sc.Substrand(0, True, 0, 10), sc.Loopout(4), sc.Substrand(1, False, 0, 10)])
+        ss1 = sc.Substrand(0, True, 0, 10)
+        loop = sc.Loopout(4)
+        ss2 = sc.Substrand(1, False, 0, 10)
+        strand = sc.Strand([ss1, loop, ss2])
 
         design.add_strand(strand)
 
         self.assertEqual(1, len(design.strands))
         self.assertEqual(strand, design.strands[0])
+        self.assertEqual(ss1, design.substrand_at(0, 0, True))
+        self.assertEqual(ss2, design.substrand_at(1, 0, False))
 
 
 class TestAssignDNA(unittest.TestCase):

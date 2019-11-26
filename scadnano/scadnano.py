@@ -608,11 +608,15 @@ class Substrand(JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def is_loopout():
+    def is_loopout() -> bool:
+        """Indicates if this is a :any:`Loopout` (always false)
+        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
         return False
 
     @staticmethod
-    def is_substrand():
+    def is_substrand() -> bool:
+        """Indicates if this is a :any:`Substrand` (always true)
+        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
         return True
 
     def set_start(self, new_start: int):
@@ -869,10 +873,14 @@ class Loopout(JSONSerializable):
 
     @staticmethod
     def is_loopout() -> bool:
+        """Indicates if this is a :any:`Loopout` (always true).
+        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
         return True
 
     @staticmethod
     def is_substrand() -> bool:
+        """Indicates if this is a :any:`Substrand` (always false)
+        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
         return False
 
     def __len__(self):
@@ -1715,7 +1723,7 @@ class DNADesign(JSONSerializable):
     @staticmethod
     def _check_two_consecutive_loopouts(strand):
         for ss1, ss2 in _pairwise(strand.substrands):
-            if ss1 is Loopout and ss2 is Loopout:
+            if ss1.is_loopout() and ss2.is_loopout():
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     @staticmethod
@@ -1800,14 +1808,14 @@ class DNADesign(JSONSerializable):
         self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
         for substrand in strand.substrands:
-            if substrand is Substrand:
+            if substrand.is_substrand():
                 self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""
         self.strands.remove(strand)
         for substrand in strand.substrands:
-            if substrand is Substrand:
+            if substrand.is_substrand():
                 self.helices[substrand.helix]._substrands.remove(substrand)
 
     def insert_substrand(self, strand: Strand, order: int, substrand: Union[Substrand, Loopout]):
@@ -1817,14 +1825,14 @@ class DNADesign(JSONSerializable):
         strand._insert_substrand(order, substrand)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
-        if substrand is Substrand:
+        if substrand.is_substrand():
             self.helices[substrand.helix]._substrands.append(substrand)
 
     def remove_substrand(self, strand: Strand, substrand: Union[Substrand, Loopout]):
         """Remove `substrand` from `strand`."""
         assert strand in self.strands
         strand._remove_substrand(substrand)
-        if substrand is Substrand:
+        if substrand.is_substrand():
             self.helices[substrand.helix]._substrands.remove(substrand)
 
     def _build_substrands_on_helix_lists(self):
