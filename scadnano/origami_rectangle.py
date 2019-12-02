@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 import scadnano as sc
 from enum import Enum, auto
 
+#TODO: write version of origami_rectangle.create that uses add_nick and add_crossover.
 
 class NickPattern(Enum):
     """Represents options for where to place nicks between staples."""

@@ -2287,7 +2287,7 @@ class DNADesign(JSONSerializable):
     def add_half_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Add a half crossover from helix `helix1` at offset `offset1` to `helix2`, on the strand at that
+        Add a half crossover from helix `helix1` at offset `offset1` to `helix2`, on the strand
         with :py:data:`Strand.forward` = `forward`.
 
         Unlike :py:meth:`DNADesign.add_full_crossover`, which automatically adds a nick between the two
