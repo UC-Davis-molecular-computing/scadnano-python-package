@@ -182,16 +182,37 @@ color_cycler = ColorCycler()
 
 @enum.unique
 class Grid(str, enum.Enum):
-    """Represents default patterns for laying out helices in the side view."""
+    """
+    Represents default patterns for laying out helices in the side view.
+    Each :any:`Grid` except :py:data:`Grid.none` has an interpretation of a "grid position",
+    which is a 2D integer coordinate (`h`, `v`).
+    (scadnano also allows a 3rd coordinate (`h`, `v`, `b`) specifying a "base offset" at which to position
+    the start of the :any:`Helix`, which is not relevant for the side view but will eventually be
+    supported to adjust the main view.)
+    """
 
     square = "square"
-    """Square lattice."""
+    """
+    Square lattice. 
+    Increasing `h` moves right and increasing `v` moves down. 
+    (i.e., "computer screen coordinates" rather than Cartesian coordinates where positive `y` is up.)
+    """
 
     hex = "hex"
-    """Hexagonal lattice."""
+    """
+    Hexagonal lattice. Uses the *"odd-r horizontal layout"* coordinate system described here: 
+    https://www.redblobgames.com/grids/hexagons/. 
+    Incrementing `v` moves down and to the right if `h` is even, 
+    and moves down and to the left if `h` is odd.
+    """
 
     honeycomb = "honeycomb"
-    """Honeycomb lattice."""
+    """
+    Honeycomb lattice. This consists of all the hex lattice positions except where 
+    honeycomb lattice disallows grid positions (`h`, `v`) with 
+    `h` even and `v` a multiple of 3 or
+    `h` odd and `v` = 1 + a multiple of 3.
+    """
 
     none = "none"
     """No fixed grid."""
@@ -1026,7 +1047,8 @@ class Strand(JSONSerializable):
 
     substrands: List[Union[Substrand, Loopout]]
     """:any:`Substrand`'s (or :any:`Loopout`'s) composing this Strand. 
-    Each :any:`Substrand` is contiguous on a single :any:`Helix`, 
+    Each :any:`Substrand` is contiguous on a single :any:`Helix` 
+    and could be either single-stranded or double-stranded, 
     whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
 
     dna_sequence: Optional[str] = None
