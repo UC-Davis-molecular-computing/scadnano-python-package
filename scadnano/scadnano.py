@@ -210,8 +210,8 @@ class Grid(str, enum.Enum):
     """
     Honeycomb lattice. This consists of all the hex lattice positions except where 
     honeycomb lattice disallows grid positions (`h`, `v`) with 
-    `h` even and `v` a multiple of 3 or
-    `h` odd and `v` = 1 + a multiple of 3.
+    `v` even and `h` a multiple of 3 or
+    `v` odd and `h` = 1 + a multiple of 3.
     """
 
     none = "none"
@@ -301,7 +301,9 @@ rotation_key = 'rotation'
 rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
+scaffold_key = 'scaffold'
 helices_view_order_key = "helices_view_order"
+is_origami_key = 'is_origami'
 
 # Helix keys
 idx_key = 'idx'
@@ -316,6 +318,7 @@ color_key = 'color'
 dna_sequence_key = 'dna_sequence'
 substrands_key = 'substrands'
 idt_key = 'idt'
+is_scaffold_key = 'is_scaffold'
 
 # Substrand keys
 helix_idx_key = 'helix'
@@ -1098,6 +1101,8 @@ class Strand(JSONSerializable):
             dct[idt_key] = self.idt.to_json_serializable(suppress_indent)
         dct[substrands_key] = [substrand.to_json_serializable(suppress_indent) for substrand in
                                self.substrands]
+        if hasattr(self, is_scaffold_key):
+            dct[is_scaffold_key] = self.is_scaffold
         return dct
 
     def __post_init__(self):
@@ -1657,14 +1662,14 @@ class DNADesign(JSONSerializable):
             for helix in self.helices:
                 x = helix.grid_position[0]
                 y = helix.grid_position[1]
-                if x % 2 == 0 and y % 3 == 0:
+                if x % 3 == 0 and y % 2 == 0:
                     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                                                'coordinates (x,y) with x even and y a multiple of 3, '
+                                                'coordinates (x,y) with y even and x a multiple of 3, '
                                                 f'but helix {helix.idx()} has grid position '
                                                 f'{helix.grid_position}')
-                if x % 2 == 1 and y % 3 == 1:
+                if x % 3 == 1 and y % 2 == 1:
                     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                                                'coordinates (x,y) with x odd and y = 1 + a multiple of 3, '
+                                                'coordinates (x,y) with y odd and x = 1 + a multiple of 3, '
                                                 f'but helix {helix.idx()} has grid position '
                                                 f'{helix.grid_position}')
 
@@ -2551,6 +2556,7 @@ class DNAOrigamiDesign(DNADesign):
         # to create an origami by starting with several simple Strands and add nicks and crossovers.
         if self.scaffold is not None:
             self.scaffold.color = default_scaffold_color
+            self.scaffold.is_scaffold = True
             if self.scaffold not in self.strands:
                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
 
@@ -2561,6 +2567,7 @@ class DNAOrigamiDesign(DNADesign):
         :param scaffold: The scaffold :any:`Strand`.
         """
         self.scaffold = scaffold
+        scaffold.is_scaffold = True
         self.scaffold.color = default_scaffold_color
 
     def assign_m13_to_scaffold(self):
@@ -2568,3 +2575,8 @@ class DNAOrigamiDesign(DNADesign):
         Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence`.
         """
         self.assign_dna(self.scaffold, m13_sequence)
+
+    # def to_json_serializable(self, suppress_indent=True):
+    #     json_map = super().to_json_serializable(suppress_indent)
+    #     json_map[is_origami_key] = True
+    #     return json_map
