@@ -1673,6 +1673,7 @@ class DNADesign(JSONSerializable):
                                                 f'but helix {helix.idx()} has grid position '
                                                 f'{helix.grid_position}')
 
+    #TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self):
         for helix in self.helices:
             if helix.min_offset >= helix.max_offset:
