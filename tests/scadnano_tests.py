@@ -1119,6 +1119,125 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_forward, 'AAACC TGCAC')
         self.assertEqual('AAACC TGCAC GGTTT'.replace(' ', ''), strand_forward.dna_sequence)
 
+    def test_assign_dna__from_strand_with_loopout(self):
+        """
+          01234
+        <-TTTGG-]
+        [-AAACC-    # helix 0
+                \
+                 T  # loopout
+                 G  # loopout
+                 C  # loopout
+                 A  # loopout
+                 C  # loopout
+                /
+        <-GCTTA-    # helix 1
+        [-CGAAT->
+        """
+        ss_f = sc.Substrand(helix=0, forward=True, start=0, end=5)
+        loop = sc.Loopout(length=5)
+        ss_r = sc.Substrand(helix=1, forward=False, start=0, end=5)
+        strand_multi = sc.Strand([ss_f, loop, ss_r])
+
+        ss_single0 = sc.Substrand(helix=0, forward=False, start=0, end=5)
+        strand_single0 = sc.Strand([ss_single0])
+
+        ss_single1 = sc.Substrand(helix=1, forward=True, start=0, end=5)
+        strand_single1 = sc.Strand([ss_single1])
+
+        design = sc.DNADesign(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
+
+        design.assign_dna(strand_multi, 'AAACC TGCAC ATTCG')
+
+        self.assertEqual('AAACC TGCAC ATTCG'.replace(' ', ''), strand_multi.dna_sequence)
+        self.assertEqual('GGTTT'.replace(' ', ''), strand_single0.dna_sequence)
+        self.assertEqual('CGAAT'.replace(' ', ''), strand_single1.dna_sequence)
+
+    def test_assign_dna__to_strand_with_loopout(self):
+        """
+          01234
+        <-TTTGG-]
+        [-AAACC-    # helix 0
+                \
+                 ?  # loopout
+                 ?  # loopout
+                 ?  # loopout
+                 ?  # loopout
+                 ?  # loopout
+                /
+        <-GCTTA-    # helix 1
+        [-CGAAT->
+        """
+        ss_f = sc.Substrand(helix=0, forward=True, start=0, end=5)
+        loop = sc.Loopout(length=5)
+        ss_r = sc.Substrand(helix=1, forward=False, start=0, end=5)
+        strand_multi = sc.Strand([ss_f, loop, ss_r])
+
+        ss_single0 = sc.Substrand(helix=0, forward=False, start=0, end=5)
+        strand_single0 = sc.Strand([ss_single0])
+
+        ss_single1 = sc.Substrand(helix=1, forward=True, start=0, end=5)
+        strand_single1 = sc.Strand([ss_single1])
+
+        design = sc.DNADesign(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
+
+        design.assign_dna(strand_single0, 'GGTTT')
+
+        self.assertEqual('AAACC ????? ?????'.replace(' ', ''), strand_multi.dna_sequence)
+        self.assertEqual('GGTTT'.replace(' ', ''), strand_single0.dna_sequence)
+        
+        design.assign_dna(strand_single1, 'CGAAT')
+
+        self.assertEqual('AAACC ????? ATTCG'.replace(' ', ''), strand_multi.dna_sequence)
+        self.assertEqual('GGTTT'.replace(' ', ''), strand_single0.dna_sequence)
+        self.assertEqual('CGAAT'.replace(' ', ''), strand_single1.dna_sequence)
+
+    def test_assign_dna__assign_from_strand_multi_other_single(self):
+        """
+          01234567
+        <-TTTG----GACA-]
+        +-AAAC->[-CTGT-+   # helix 0
+        |              |
+        +-GCTT----AGTA-+   # helix 1
+        """
+        ss_f_left = sc.Substrand(helix=0, forward=True, start=0, end=4)
+        ss_f_right = sc.Substrand(helix=0, forward=True, start=4, end=8)
+        ss_h1 = sc.Substrand(helix=1, forward=False, start=0, end=8)
+        strand_multi = sc.Strand([ss_f_right, ss_h1, ss_f_left])
+
+        ss_single = sc.Substrand(helix=0, forward=False, start=0, end=8)
+        strand_single = sc.Strand([ss_single])
+
+        design = sc.DNADesign(strands=[strand_multi, strand_single], grid=sc.square)
+
+        design.assign_dna(strand_multi, 'CTGT ATGA TTCG AAAC')
+
+        self.assertEqual('CTGT ATGA TTCG AAAC'.replace(' ', ''), strand_multi.dna_sequence)
+        self.assertEqual('ACAG GTTT'.replace(' ', ''), strand_single.dna_sequence)
+
+    def test_assign_dna__assign_to_strand_multi_other_single(self):
+        """
+          01234567
+        <-TTTG----GACA-]
+        +-AAAC->[-CTGT-+   # helix 0
+        |              |
+        +-????----????-+   # helix 1
+        """
+        ss_f_left = sc.Substrand(helix=0, forward=True, start=0, end=4)
+        ss_f_right = sc.Substrand(helix=0, forward=True, start=4, end=8)
+        ss_h1 = sc.Substrand(helix=1, forward=False, start=0, end=8)
+        strand_multi = sc.Strand([ss_f_right, ss_h1, ss_f_left])
+
+        ss_single = sc.Substrand(helix=0, forward=False, start=0, end=8)
+        strand_single = sc.Strand([ss_single])
+
+        design = sc.DNADesign(strands=[strand_multi, strand_single], grid=sc.square)
+
+        design.assign_dna(strand_single, 'ACAG GTTT')
+
+        self.assertEqual('CTGT ???? ???? AAAC'.replace(' ', ''), strand_multi.dna_sequence)
+        self.assertEqual('ACAG GTTT'.replace(' ', ''), strand_single.dna_sequence)
+
     def test_assign_dna__other_strand_fully_defined_already(self):
         """
         01234567
