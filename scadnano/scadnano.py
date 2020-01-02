@@ -1,7 +1,8 @@
 """
 The :mod:`scadnano` Python module is a library for describing synthetic DNA nanostructures
 (e.g., DNA origami).
-It requires Python version 3.7 or higher.
+Installation instructions are at the
+`GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_.
 
 This module is used to write Python scripts outputting ``*.dna`` files readable
 by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_, a web application useful for displaying

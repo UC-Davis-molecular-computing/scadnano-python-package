@@ -1,4 +1,4 @@
-source ../../scadnano-dart/define_root_dir.sh
+source ../../scadnano/define_root_dir.sh
 
 ROOT_DIR_ORIG="doty@set.cs.ucdavis.edu:public_html/scadnano"
 DOC_SUBDIR="docs/"
@@ -11,11 +11,11 @@ echo "uploading index.html to $DOC_DIR"
 # upload this first since it is the main document and is fast
 scp _build/html/index.html $DOC_DIR
 
-echo "uploading index.html to $DOC_DIR_ORIG"
-scp _build/html/index.html $DOC_DIR_ORIG
+#echo "uploading index.html to $DOC_DIR_ORIG"
+#scp _build/html/index.html $DOC_DIR_ORIG
 
 echo "now uploading the rest to $DOC_DIR"
 
 # now upload everything else
 scp -r _build/html/* $DOC_DIR
-scp -r _build/html/* $DOC_DIR_ORIG
+#scp -r _build/html/* $DOC_DIR_ORIG

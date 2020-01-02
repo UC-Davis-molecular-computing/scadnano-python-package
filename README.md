@@ -25,7 +25,7 @@ The scadnano Python package requires [Python version 3.7](https://www.python.org
     ```
 
 ### copy files
-As a simple alternative, you can download and place the following files (from the scadnano/ subdirectory of the [repository](https://github.com/UC-Davis-molecular-computing/scadnano-python-package)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
+As a simple alternative, you can download and place the following files (located in the [scadnano/ subfolder](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
 * [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py)
 * [m13.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/m13.py)
