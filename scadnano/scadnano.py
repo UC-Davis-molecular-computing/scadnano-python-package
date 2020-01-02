@@ -2090,7 +2090,7 @@ class DNADesign(JSONSerializable):
                                    use_default_plates=False, warn_using_default_plates=True,
                                    plate_type: PlateType = PlateType.wells96):
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`DNADesign` with the field
-        :any:`Strand.idt`, suitable for uploading to IDT
+        :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
         to describe a 96-well or 384-well plate
         (https://www.idtdna.com/site/order/plate/index/dna/),
