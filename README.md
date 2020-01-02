@@ -1,5 +1,9 @@
 # scadnano-python-package
 
+The scadnano Python module is a library for describing synthetic DNA nanostructures (e.g., DNA origami).
+
+This module is used to write Python scripts outputting *.dna files readable by [scadnano](https://web.cs.ucdavis.edu/~doty/scadnano/), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
+
 ## Installation
 
 The scadnano Python package requires [Python version 3.7](https://www.python.org/downloads/) or later. 
