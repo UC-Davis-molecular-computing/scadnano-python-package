@@ -13,7 +13,7 @@ The scadnano Python package requires [Python version 3.7](https://www.python.org
 
 1. If your Python installation does not already have pip installed, you may have to install it: see https://docs.python.org/3/installing/index.html or https://www.liquidweb.com/kb/install-pip-windows/
 
-2. Clone this repository by downloading [git](https://git-scm.com/) and executing the following at the command line: 
+2. Clone this repository by downloading [Git](https://git-scm.com/) and executing the following at the command line: 
     ```console
     git clone https://github.com/UC-Davis-molecular-computing/scadnano-python-package.git
     ```
@@ -34,7 +34,7 @@ As a simple alternative, you can download and place the following files (from th
 
 ## Examples
 
-Several example scripts are located in the examples/ subfolder. Their output is contained in the examples/output_designs/ subfolder.
+Several example scripts are located in the [examples/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples) subfolder. Their output is contained in the [examples/output_designs/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples/output_designs) subfolder.
 
 ## Documentation
 
