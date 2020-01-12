@@ -29,7 +29,7 @@ https://www.liquidweb.com/kb/install-pip-windows/.
     pip install -e scadnano-python-package/
     ```
 
-### copy files
+### download files
 As a simple alternative, you can download and place the following files (located in the [scadnano/ subfolder](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
 * [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py)
