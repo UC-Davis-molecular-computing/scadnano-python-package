@@ -11,7 +11,12 @@ The scadnano Python package requires [Python version 3.7](https://www.python.org
 
 ### pip 
 
-1. If your Python installation does not already have pip installed, you may have to install it: see https://docs.python.org/3/installing/index.html or https://www.liquidweb.com/kb/install-pip-windows/
+1. If your Python installation does not already have pip installed, you may have to install it. 
+Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
+see also 
+https://docs.python.org/3/installing/index.html 
+or 
+https://www.liquidweb.com/kb/install-pip-windows/.
 
 2. Clone this repository by downloading [Git](https://git-scm.com/) and executing the following at the command line: 
     ```console
