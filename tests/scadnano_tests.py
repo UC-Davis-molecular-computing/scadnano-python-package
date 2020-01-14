@@ -37,6 +37,276 @@ def remove_whitespace(sequence):
     return sequence
 
 
+class TestInlineInsDel(unittest.TestCase):
+    """
+    Tests inlining of insertions/deletions.
+    """
+
+    def test_inline_deletions_insertions__one_deletion(self):
+        """
+        before
+        0   4   8       16      24
+        |       |       |       |
+    0   [---X-->
+
+        after
+        0   4  7       15      23
+        |      |       |       |
+    0   [----->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[4])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=23, major_ticks=[7, 15, 23]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 7)]), design.strands)
+
+    def test_inline_deletions_insertions__two_deletions(self):
+        """
+        before
+        0 2 4   8       16      24
+        |       |       |       |
+    0   [-X-X-->
+
+        after
+        0     6       14      22
+        |     |       |       |
+    0   [---->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[2, 4])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=22, major_ticks=[7, 14, 22]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 6)]), design.strands)
+
+    def test_inline_deletions_insertions__one_insertion(self):
+        """
+        before
+        0   4   8       16      24
+        |       |       |       |
+    0   [---1-->
+
+        after
+        0        9       17      25
+        |        |       |       |
+    0   [------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, insertions=[(4, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=25, major_ticks=[9, 17, 25]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 9)]), design.strands)
+
+    def test_inline_deletions_insertions__two_insertions(self):
+        """
+        before
+        0 2 4   8       16      24
+        |       |       |       |
+    0   [-3-1-->
+
+        after
+        0           12      20      28
+        |           |       |       |
+    0   [---------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, insertions=[(2, 3), (4, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=28, major_ticks=[12, 20, 28]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 12)]), design.strands)
+
+    def test_inline_deletions_insertions__one_deletion_one_insertion(self):
+        """
+        before
+        0 2 4   8       16      24
+        |       |       |       |
+    0   [-3-X-->
+
+        after
+        0         10      18      26
+        |         |       |       |
+    0   [-------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[4], insertions=[(2, 3)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=26, major_ticks=[10, 18, 26]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 10)]), design.strands)
+
+    def test_inline_deletions_insertions__one_deletion_right_of_major_tick(self):
+        """
+        before
+        0       89      16      24
+        |       |       |       |
+    0   [--------X->
+
+        after
+        0       8      15      23
+        |       |      |       |
+    0   [--------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[9])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=23, major_ticks=[8, 15, 23]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+
+    def test_inline_deletions_insertions__one_deletion_on_major_tick(self):
+        """
+        before
+        0       8       16      24
+        |       |       |       |
+    0   [-------X-->
+
+        after
+        0       8      15      23
+        |       |      |       |
+    0   [--------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[8])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=23, major_ticks=[8, 15, 23]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+
+    def test_inline_deletions_insertions__one_deletion_left_of_major_tick(self):
+        """
+        before
+        0      78       16      24
+        |       |       |       |
+    0   [------X--->
+
+        after
+        0       8      15      23
+        |       |      |       |
+    0   [--------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[7])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=23, major_ticks=[7, 15, 23]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+
+    def test_inline_deletions_insertions__one_insertion_right_of_major_tick(self):
+        """
+        before
+        0       89      16      24
+        |       |       |       |
+    0   [--------1->
+
+        after
+        0       8        17      25
+        |       |        |       |
+    0   [----------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(9, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=25, major_ticks=[8, 17, 25]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+
+    def test_inline_deletions_insertions__one_insertion_on_major_tick(self):
+        """
+        before
+        0       8       16      24
+        |       |       |       |
+    0   [-------1-->
+
+        after
+        0       8        17      25
+        |       |        |       |
+    0   [----------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(8, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=25, major_ticks=[8, 17, 25]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+
+    def test_inline_deletions_insertions__one_insertion_left_of_major_tick(self):
+        """
+        before
+        0      78       16      24
+        |       |       |       |
+    0   [------1--->
+
+        after
+        0        9       17      25
+        |        |       |       |
+    0   [----------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(7, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=25, major_ticks=[9, 17, 25]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+
+    def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains(self):
+        """
+        before
+        0    5  8  11   16 19   24
+        |       |       |       |
+    0   [----2-----1-------X---->
+
+        after
+        0         10      19      26
+        |         |       |       |
+    0   [------------------------->
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 24, deletions=[19], insertions=[(5, 2), (11, 1)])])],
+            grid=sc.square)
+        design.inline_deletions_insertions()
+        self.assertEqual(1, len(design.helices))
+        self.assertIn(sc.Helix(max_offset=25, major_ticks=[10, 19, 26]), design.helices)
+        self.assertEqual(1, len(design.strands))
+        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 26)]), design.strands)
+
+
 class TestNickAndCrossover(unittest.TestCase):
     """
     Tests add_nick() and add_*_crossover() methods on DNADesign as an easier way of specifying an origami.
@@ -116,10 +386,6 @@ class TestNickAndCrossover(unittest.TestCase):
         design.add_nick(helix=0, offset=8, forward=True)
         design.add_nick(helix=0, offset=16, forward=True)
         self.assertEqual(3, len(design.strands))
-        if sc.Strand([sc.Substrand(0, True, 0, 8)]) in design.strands:
-            print('found!')
-        else:
-            print('not found!')
         self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 8)]), design.strands)
         self.assertIn(sc.Strand([sc.Substrand(0, True, 8, 16)]), design.strands)
         self.assertIn(sc.Strand([sc.Substrand(0, True, 16, 24)]), design.strands)
@@ -1185,7 +1451,7 @@ class TestAssignDNA(unittest.TestCase):
 
         self.assertEqual('AAACC ????? ?????'.replace(' ', ''), strand_multi.dna_sequence)
         self.assertEqual('GGTTT'.replace(' ', ''), strand_single0.dna_sequence)
-        
+
         design.assign_dna(strand_single1, 'CGAAT')
 
         self.assertEqual('AAACC ????? ATTCG'.replace(' ', ''), strand_multi.dna_sequence)
