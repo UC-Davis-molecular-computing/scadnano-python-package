@@ -36,6 +36,8 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
+from abc import abstractmethod, ABC
+import json
 import enum
 import itertools
 import re
@@ -47,8 +49,7 @@ import os.path
 import xlwt
 from docutils.nodes import subscript
 
-from scadnano.json_utils import JSONSerializable, json_encode, NoIndent
-import scadnano.m13 as m13
+# from scadnano.json_utils import JSONSerializable, json_encode, NoIndent
 
 
 # TODO: add Boolean field Strand.circular
@@ -74,14 +75,70 @@ def _pairwise(iterable):
 
 
 ##############################################################################
+# JSON serialization
+# There are external libraries to handle JSON
+# in Python, but I want this to be a simple, single-file library, so we just
+# implement what we need below.
+
+
+class _JSONSerializable(ABC):
+
+    @abstractmethod
+    def to_json_serializable(self, suppress_indent=True):
+        raise NotImplementedError()
+
+
+def _json_encode(obj: _JSONSerializable, suppress_indent: bool = True) -> str:
+    encoder = _SuppressableIndentEncoder if suppress_indent else json.JSONEncoder
+    serializable = obj.to_json_serializable(suppress_indent=suppress_indent)
+    return json.dumps(serializable, cls=encoder, indent=2)
+
+
+class _NoIndent:
+    """ Value wrapper. """
+
+    def __init__(self, value):
+        self.value = value
+
+
+class _SuppressableIndentEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        self.unique_id = 0
+        super(_SuppressableIndentEncoder, self).__init__(*args, **kwargs)
+        self.kwargs = dict(kwargs)
+        del self.kwargs['indent']
+        self._replacement_map = {}
+
+    def default(self, obj):
+        if isinstance(obj, _NoIndent):
+            # key = uuid.uuid1().hex # this caused problems with Brython.
+            key = self.unique_id
+            self.unique_id += 1
+            self._replacement_map[key] = json.dumps(obj.value, **self.kwargs)
+            return "@@%s@@" % (key,)
+        else:
+            return super().default(obj)
+
+    def encode(self, obj):
+        result = super().encode(obj)
+        for k, v in self._replacement_map.items():
+            result = result.replace('"@@%s@@"' % (k,), v)
+        return result
+
+#
+# END JSON serialization
+##############################################################################
+
+
+
+##############################################################################
 # Colors
 # As with JSON serialization, there are external libraries to handle colors
 # in Python, but I want this to be a simple, single-file library, so we just
 # implement what we need below.
 
-
 @dataclass
-class Color(JSONSerializable):
+class Color(_JSONSerializable):
     r: int = None
     """Red component: 0-255.
     
@@ -181,6 +238,9 @@ color_cycler = ColorCycler()
 ##############################################################################
 
 
+
+
+
 @enum.unique
 class Grid(str, enum.Enum):
     """
@@ -266,7 +326,9 @@ some regions of the strand are not bound to the strand that was just assigned. A
 DNA sequence assigned to a strand is too short; the sequence is padded with :any:`DNA_base_wildcard` to 
 make its length the same as the length of the strand."""
 
-m13_sequence = m13.sequence
+m13_sequence = \
+    "TTCCCTTCCTTTCTCGCCACGTTCGCCGGCTTTCCCCGTCAAGCTCTAAATCGGGGGCTCCCTTTAGGGTTCCGATTTAGTGCTTTACGGCACCTCGACCCCAAAAAACTTGATTTGGGTGATGGTTCACGTAGTGGGCCATCGCCCTGATAGACGGTTTTTCGCCCTTTGACGTTGGAGTCCACGTTCTTTAATAGTGGACTCTTGTTCCAAACTGGAACAACACTCAACCCTATCTCGGGCTATTCTTTTGATTTATAAGGGATTTTGCCGATTTCGGAACCACCATCAAACAGGATTTTCGCCTGCTGGGGCAAACCAGCGTGGACCGCTTGCTGCAACTCTCTCAGGGCCAGGCGGTGAAGGGCAATCAGCTGTTGCCCGTCTCACTGGTGAAAAGAAAAACCACCCTGGCGCCCAATACGCAAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGACAGGTTTCCCGACTGGAAAGCGGGCAGTGAGCGCAACGCAATTAATGTGAGTTAGCTCACTCATTAGGCACCCCAGGCTTTACACTTTATGCTTCCGGCTCGTATGTTGTGTGGAATTGTGAGCGGATAACAATTTCACACAGGAAACAGCTATGACCATGATTACGAATTCGAGCTCGGTACCCGGGGATCCTCTAGAGTCGACCTGCAGGCATGCAAGCTTGGCACTGGCCGTCGTTTTACAACGTCGTGACTGGGAAAACCCTGGCGTTACCCAACTTAATCGCCTTGCAGCACATCCCCCTTTCGCCAGCTGGCGTAATAGCGAAGAGGCCCGCACCGATCGCCCTTCCCAACAGTTGCGCAGCCTGAATGGCGAATGGCGCTTTGCCTGGTTTCCGGCACCAGAAGCGGTGCCGGAAAGCTGGCTGGAGTGCGATCTTCCTGAGGCCGATACTGTCGTCGTCCCCTCAAACTGGCAGATGCACGGTTACGATGCGCCCATCTACACCAACGTGACCTATCCCATTACGGTCAATCCGCCGTTTGTTCCCACGGAGAATCCGACGGGTTGTTACTCGCTCACATTTAATGTTGATGAAAGCTGGCTACAGGAAGGCCAGACGCGAATTATTTTTGATGGCGTTCCTATTGGTTAAAAAATGAGCTGATTTAACAAAAATTTAATGCGAATTTTAACAAAATATTAACGTTTACAATTTAAATATTTGCTTATACAATCTTCCTGTTTTTGGGGCTTTTCTGATTATCAACCGGGGTACATATGATTGACATGCTAGTTTTACGATTACCGTTCATCGATTCTCTTGTTTGCTCCAGACTCTCAGGCAATGACCTGATAGCCTTTGTAGATCTCTCAAAAATAGCTACCCTCTCCGGCATTAATTTATCAGCTAGAACGGTTGAATATCATATTGATGGTGATTTGACTGTCTCCGGCCTTTCTCACCCTTTTGAATCTTTACCTACACATTACTCAGGCATTGCATTTAAAATATATGAGGGTTCTAAAAATTTTTATCCTTGCGTTGAAATAAAGGCTTCTCCCGCAAAAGTATTACAGGGTCATAATGTTTTTGGTACAACCGATTTAGCTTTATGCTCTGAGGCTTTATTGCTTAATTTTGCTAATTCTTTGCCTTGCCTGTATGATTTATTGGATGTTAATGCTACTACTATTAGTAGAATTGATGCCACCTTTTCAGCTCGCGCCCCAAATGAAAATATAGCTAAACAGGTTATTGACCATTTGCGAAATGTATCTAATGGTCAAACTAAATCTACTCGTTCGCAGAATTGGGAATCAACTGTTATATGGAATGAAACTTCCAGACACCGTACTTTAGTTGCATATTTAAAACATGTTGAGCTACAGCATTATATTCAGCAATTAAGCTCTAAGCCATCCGCAAAAATGACCTCTTATCAAAAGGAGCAATTAAAGGTACTCTCTAATCCTGACCTGTTGGAGTTTGCTTCCGGTCTGGTTCGCTTTGAAGCTCGAATTAAAACGCGATATTTGAAGTCTTTCGGGCTTCCTCTTAATCTTTTTGATGCAATCCGCTTTGCTTCTGACTATAATAGTCAGGGTAAAGACCTGATTTTTGATTTATGGTCATTCTCGTTTTCTGAACTGTTTAAAGCATTTGAGGGGGATTCAATGAATATTTATGACGATTCCGCAGTATTGGACGCTATCCAGTCTAAACATTTTACTATTACCCCCTCTGGCAAAACTTCTTTTGCAAAAGCCTCTCGCTATTTTGGTTTTTATCGTCGTCTGGTAAACGAGGGTTATGATAGTGTTGCTCTTACTATGCCTCGTAATTCCTTTTGGCGTTATGTATCTGCATTAGTTGAATGTGGTATTCCTAAATCTCAACTGATGAATCTTTCTACCTGTAATAATGTTGTTCCGTTAGTTCGTTTTATTAACGTAGATTTTTCTTCCCAACGTCCTGACTGGTATAATGAGCCAGTTCTTAAAATCGCATAAGGTAATTCACAATGATTAAAGTTGAAATTAAACCATCTCAAGCCCAATTTACTACTCGTTCTGGTGTTTCTCGTCAGGGCAAGCCTTATTCACTGAATGAGCAGCTTTGTTACGTTGATTTGGGTAATGAATATCCGGTTCTTGTCAAGATTACTCTTGATGAAGGTCAGCCAGCCTATGCGCCTGGTCTGTACACCGTTCATCTGTCCTCTTTCAAAGTTGGTCAGTTCGGTTCCCTTATGATTGACCGTCTGCGCCTCGTTCCGGCTAAGTAACATGGAGCAGGTCGCGGATTTCGACACAATTTATCAGGCGATGATACAAATCTCCGTTGTACTTTGTTTCGCGCTTGGTATAATCGCTGGGGGTCAAAGATGAGTGTTTTAGTGTATTCTTTTGCCTCTTTCGTTTTAGGTTGGTGCCTTCGTAGTGGCATTACGTATTTTACCCGTTTAATGGAAACTTCCTCATGAAAAAGTCTTTAGTCCTCAAAGCCTCTGTAGCCGTTGCTACCCTCGTTCCGATGCTGTCTTTCGCTGCTGAGGGTGACGATCCCGCAAAAGCGGCCTTTAACTCCCTGCAAGCCTCAGCGACCGAATATATCGGTTATGCGTGGGCGATGGTTGTTGTCATTGTCGGCGCAACTATCGGTATCAAGCTGTTTAAGAAATTCACCTCGAAAGCAAGCTGATAAACCGATACAATTAAAGGCTCCTTTTGGAGCCTTTTTTTTGGAGATTTTCAACGTGAAAAAATTATTATTCGCAATTCCTTTAGTTGTTCCTTTCTATTCTCACTCCGCTGAAACTGTTGAAAGTTGTTTAGCAAAATCCCATACAGAAAATTCATTTACTAACGTCTGGAAAGACGACAAAACTTTAGATCGTTACGCTAACTATGAGGGCTGTCTGTGGAATGCTACAGGCGTTGTAGTTTGTACTGGTGACGAAACTCAGTGTTACGGTACATGGGTTCCTATTGGGCTTGCTATCCCTGAAAATGAGGGTGGTGGCTCTGAGGGTGGCGGTTCTGAGGGTGGCGGTTCTGAGGGTGGCGGTACTAAACCTCCTGAGTACGGTGATACACCTATTCCGGGCTATACTTATATCAACCCTCTCGACGGCACTTATCCGCCTGGTACTGAGCAAAACCCCGCTAATCCTAATCCTTCTCTTGAGGAGTCTCAGCCTCTTAATACTTTCATGTTTCAGAATAATAGGTTCCGAAATAGGCAGGGGGCATTAACTGTTTATACGGGCACTGTTACTCAAGGCACTGACCCCGTTAAAACTTATTACCAGTACACTCCTGTATCATCAAAAGCCATGTATGACGCTTACTGGAACGGTAAATTCAGAGACTGCGCTTTCCATTCTGGCTTTAATGAGGATTTATTTGTTTGTGAATATCAAGGCCAATCGTCTGACCTGCCTCAACCTCCTGTCAATGCTGGCGGCGGCTCTGGTGGTGGTTCTGGTGGCGGCTCTGAGGGTGGTGGCTCTGAGGGTGGCGGTTCTGAGGGTGGCGGCTCTGAGGGAGGCGGTTCCGGTGGTGGCTCTGGTTCCGGTGATTTTGATTATGAAAAGATGGCAAACGCTAATAAGGGGGCTATGACCGAAAATGCCGATGAAAACGCGCTACAGTCTGACGCTAAAGGCAAACTTGATTCTGTCGCTACTGATTACGGTGCTGCTATCGATGGTTTCATTGGTGACGTTTCCGGCCTTGCTAATGGTAATGGTGCTACTGGTGATTTTGCTGGCTCTAATTCCCAAATGGCTCAAGTCGGTGACGGTGATAATTCACCTTTAATGAATAATTTCCGTCAATATTTACCTTCCCTCCCTCAATCGGTTGAATGTCGCCCTTTTGTCTTTGGCGCTGGTAAACCATATGAATTTTCTATTGATTGTGACAAAATAAACTTATTCCGTGGTGTCTTTGCGTTTCTTTTATATGTTGCCACCTTTATGTATGTATTTTCTACGTTTGCTAACATACTGCGTAATAAGGAGTCTTAATCATGCCAGTTCTTTTGGGTATTCCGTTATTATTGCGTTTCCTCGGTTTCCTTCTGGTAACTTTGTTCGGCTATCTGCTTACTTTTCTTAAAAAGGGCTTCGGTAAGATAGCTATTGCTATTTCATTGTTTCTTGCTCTTATTATTGGGCTTAACTCAATTCTTGTGGGTTATCTCTCTGATATTAGCGCTCAATTACCCTCTGACTTTGTTCAGGGTGTTCAGTTAATTCTCCCGTCTAATGCGCTTCCCTGTTTTTATGTTATTCTCTCTGTAAAGGCTGCTATTTTCATTTTTGACGTTAAACAAAAAATCGTTTCTTATTTGGATTGGGATAAATAATATGGCTGTTTATTTTGTAACTGGCAAATTAGGCTCTGGAAAGACGCTCGTTAGCGTTGGTAAGATTCAGGATAAAATTGTAGCTGGGTGCAAAATAGCAACTAATCTTGATTTAAGGCTTCAAAACCTCCCGCAAGTCGGGAGGTTCGCTAAAACGCCTCGCGTTCTTAGAATACCGGATAAGCCTTCTATATCTGATTTGCTTGCTATTGGGCGCGGTAATGATTCCTACGATGAAAATAAAAACGGCTTGCTTGTTCTCGATGAGTGCGGTACTTGGTTTAATACCCGTTCTTGGAATGATAAGGAAAGACAGCCGATTATTGATTGGTTTCTACATGCTCGTAAATTAGGATGGGATATTATTTTTCTTGTTCAGGACTTATCTATTGTTGATAAACAGGCGCGTTCTGCATTAGCTGAACATGTTGTTTATTGTCGTCGTCTGGACAGAATTACTTTACCTTTTGTCGGTACTTTATATTCTCTTATTACTGGCTCGAAAATGCCTCTGCCTAAATTACATGTTGGCGTTGTTAAATATGGCGATTCTCAATTAAGCCCTACTGTTGAGCGTTGGCTTTATACTGGTAAGAATTTGTATAACGCATATGATACTAAACAGGCTTTTTCTAGTAATTATGATTCCGGTGTTTATTCTTATTTAACGCCTTATTTATCACACGGTCGGTATTTCAAACCATTAAATTTAGGTCAGAAGATGAAATTAACTAAAATATATTTGAAAAAGTTTTCTCGCGTTCTTTGTCTTGCGATTGGATTTGCATCAGCATTTACATATAGTTATATAACCCAACCTAAGCCGGAGGTTAAAAAGGTAGTCTCTCAGACCTATGATTTTGATAAATTCACTATTGACTCTTCTCAGCGTCTTAATCTAAGCTATCGCTATGTTTTCAAGGATTCTAAGGGAAAATTAATTAATAGCGACGATTTACAGAAGCAAGGTTATTCACTCACATATATTGATTTATGTACTGTTTCCATTAAAAAAGGTAATTCAAATGAAATTGTTAAATGTAATTAATTTTGTTTTCTTGATGTTTGTTTCATCATCTTCTTTTGCTCAGGTAATTGAAATGAATAATTCGCCTCTGCGCGATTTTGTAACTTGGTATTCAAAGCAATCAGGCGAATCCGTTATTGTTTCTCCCGATGTAAAAGGTACTGTTACTGTATATTCATCTGACGTTAAACCTGAAAATCTACGCAATTTCTTTATTTCTGTTTTACGTGCAAATAATTTTGATATGGTAGGTTCTAACCCTTCCATTATTCAGAAGTATAATCCAAACAATCAGGATTATATTGATGAATTGCCATCATCTGATAATCAGGAATATGATGATAATTCCGCTCCTTCTGGTGGTTTCTTTGTTCCGCAAAATGATAATGTTACTCAAACTTTTAAAATTAATAACGTTCGGGCAAAGGATTTAATACGAGTTGTCGAATTGTTTGTAAAGTCTAATACTTCTAAATCCTCAAATGTATTATCTATTGACGGCTCTAATCTATTAGTTGTTAGTGCTCCTAAAGATATTTTAGATAACCTTCCTCAATTCCTTTCAACTGTTGATTTGCCAACTGACCAGATATTGATTGAGGGTTTGATATTTGAGGTTCAGCAAGGTGATGCTTTAGATTTTTCATTTGCTGCTGGCTCTCAGCGTGGCACTGTTGCAGGCGGTGTTAATACTGACCGCCTCACCTCTGTTTTATCTTCTGCTGGTGGTTCGTTCGGTATTTTTAATGGCGATGTTTTAGGGCTATCAGTTCGCGCATTAAAGACTAATAGCCATTCAAAAATATTGTCTGTGCCACGTATTCTTACGCTTTCAGGTCAGAAGGGTTCTATCTCTGTTGGCCAGAATGTCCCTTTTATTACTGGTCGTGTGACTGGTGAATCTGCCAATGTAAATAATCCATTTCAGACGATTGAGCGTCAAAATGTAGGTATTTCCATGAGCGTTTTTCCTGTTGCAATGGCTGGCGGTAATATTGTTCTGGATATTACCAGCAAGGCCGATAGTTTGAGTTCTTCTACTCAGGCAAGTGATGTTATTACTAATCAAAGAAGTATTGCTACAACGGTTAATTTGCGTGATGGACAGACTCTTTTACTCGGTGGCCTCACTGATTATAAAAACACTTCTCAGGATTCTGGCGTACCGTTCCTGTCTAAAATCCCTTTAATCGGCCTCCTGTTTAGCTCCCGCTCTGATTCTAACGAGGAAAGCACGTTATACGTGCTCGTCAAAGCAACCATAGTACGCGCCCTGTAGCGGCGCATTAAGCGCGGCGGGTGTGGTGGTTACGCGCAGCGTGACCGCTACACTTGCCAGCGCCCTAGCGCCCGCTCCTTTCGCTTTC"
+
 """
 The M13mp18 DNA sequence (commonly called simply M13), starting from cyclic rotation 5588, as defined in
 `GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
@@ -340,7 +402,7 @@ loopout_key = 'loopout'
 ##########################################################################
 
 @dataclass
-class Position3D(JSONSerializable):
+class Position3D(_JSONSerializable):
     """
     Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
     """
@@ -374,7 +436,7 @@ def in_browser() -> bool:
 #   doc: https://docs.google.com/document/d/1OysNEI1RIwzJ6IqbfTgLR3fYsmEUqIiuHJKxO7CeuaQ/edit#
 
 @dataclass
-class Helix(JSONSerializable):
+class Helix(_JSONSerializable):
     """
     Represents a "helix" where :any:`Substrand`'s could go. Technically a :any:`Helix` can contain no
     :any:`Substrand`'s. More commonly, some partial regions of it may have only 1 or 0 :any:`Substrand`'s.
@@ -516,7 +578,7 @@ class Helix(JSONSerializable):
         if self.position3d is not None:
             dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
-        return NoIndent(dct) if suppress_indent else dct
+        return _NoIndent(dct) if suppress_indent else dct
 
     def __post_init__(self):
         if self.major_ticks is not None:
@@ -544,7 +606,7 @@ def _is_close(x1: float, x2: float):
 
 
 @dataclass
-class Substrand(JSONSerializable):
+class Substrand(_JSONSerializable):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Substrand`'s (and also potentially :any:`Loopout`'s).
@@ -630,7 +692,7 @@ class Substrand(JSONSerializable):
             dct[deletions_key] = self.deletions
         if len(self.insertions) > 0:
             dct[insertions_key] = self.insertions
-        return NoIndent(dct) if suppress_indent else dct
+        return _NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
     def is_loopout() -> bool:
@@ -852,7 +914,7 @@ class Substrand(JSONSerializable):
 
 
 @dataclass
-class Loopout(JSONSerializable):
+class Loopout(_JSONSerializable):
     """Represents a single-stranded loopout on a :any:`Strand`.
 
     One could think of a :any:`Loopout` as a type of :any:`Substrand`, but none of the fields of
@@ -888,7 +950,7 @@ class Loopout(JSONSerializable):
 
     def to_json_serializable(self, suppress_indent=True):
         dct = {loopout_key: self.length}
-        return NoIndent(dct)
+        return _NoIndent(dct)
 
     def __repr__(self):
         return f'Loopout({self.length})'
@@ -949,7 +1011,7 @@ def wc(seq: str) -> str:
 
 
 @dataclass
-class IDTFields(JSONSerializable):
+class IDTFields(_JSONSerializable):
     """Data required when ordering DNA strands from the synthesis company
     `IDT DNA Technologies <https://www.idtdna.com/>`_.
     This data is used when automatically generating files used to order DNA from IDT."""
@@ -1008,7 +1070,7 @@ class IDTFields(JSONSerializable):
             del dct['plate']
         if self.well is None:
             del dct['well']
-        return NoIndent(dct)
+        return _NoIndent(dct)
 
 
 def _check_idt_string_not_none_or_empty(value: str, field_name: str):
@@ -1019,7 +1081,7 @@ def _check_idt_string_not_none_or_empty(value: str, field_name: str):
 
 
 @dataclass
-class Strand(JSONSerializable):
+class Strand(_JSONSerializable):
     """
     Represents a single strand of DNA.
 
@@ -1505,7 +1567,7 @@ class _PlateCoordinate:
 
 
 @dataclass
-class DNADesign(JSONSerializable):
+class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
 
     strands: List[Strand]
@@ -1558,7 +1620,7 @@ class DNADesign(JSONSerializable):
 
         default_helices_view_order = list(range(0, len(self.helices)))
         if self.helices_view_order != default_helices_view_order:
-            dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+            dct[helices_view_order_key] = _NoIndent(self.helices_view_order)
 
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
@@ -1879,7 +1941,7 @@ class DNADesign(JSONSerializable):
     def to_json(self, suppress_indent=True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file ending in extension .dna"""
-        return json_encode(self, suppress_indent)
+        return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
     #  on the helix at that position, as well as updating the end offset of the substrand (and subsequent
@@ -2428,6 +2490,18 @@ class DNADesign(JSONSerializable):
             self.add_nick(helix, offset, forward)
         else:
             assert substrand_left.end == substrand_right.start
+
+
+    def inline_deletions_insertions(self):
+        """
+        Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
+        and their substrands have their lengths altered. Also, major tick marks on the helices will be
+        shifted to preserve their adjacency to bases already present. For example, if there are major
+        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then the substrand is shorted by 1,
+        and the tick marks become 0, 7, 15, 23, and the helix's maximum offset is shrunk by 1.
+        """
+        for helix in self.helices:
+            pass
 
 
 def _name_of_this_script() -> str:

@@ -8,6 +8,8 @@ This module is used to write Python scripts outputting *.dna files readable by [
 
 The scadnano Python package requires [Python version 3.7](https://www.python.org/downloads/) or later. 
 
+There are two ways you can install it:
+
 
 ### pip 
 
@@ -29,13 +31,11 @@ https://www.liquidweb.com/kb/install-pip-windows/.
     pip install -e scadnano-python-package/
     ```
 
-### download files
-As a simple alternative, you can download and place the following files (located in the [scadnano/ subfolder](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
+### download
+As a simple alternative, you can download and place the following file(s) (located in the [scadnano/ subfolder](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
-* [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py)
-* [m13.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/m13.py)
-* [json_utils.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/json_utils.py)
-* [origami_rectangle.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/origami_rectangle.py)
+* *required*: [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py) 
+* *optional*: [origami_rectangle.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
 
 ## Examples
 
