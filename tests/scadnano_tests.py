@@ -59,10 +59,17 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[4])])],
             grid=sc.square)
         design.inline_deletions_insertions()
+        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=7)
+
+    def helix0_strand0_inlined_test(self, design, max_offset, major_ticks, start, end):
         self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=23, major_ticks=[7, 15, 23]), design.helices)
         self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 7)]), design.strands)
+        helix = design.helices[0]
+        strand = design.strands[0]
+        self.assertEqual(max_offset, helix.max_offset)
+        self.assertEqual(major_ticks, helix.major_ticks)
+        self.assertEqual(start, strand.substrands[0].start)
+        self.assertEqual(end, strand.substrands[0].end)
 
     def test_inline_deletions_insertions__two_deletions(self):
         """
@@ -81,10 +88,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[2, 4])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=22, major_ticks=[7, 14, 22]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 6)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=22, major_ticks=[0, 6, 14, 22], start=0, end=6)
 
     def test_inline_deletions_insertions__one_insertion(self):
         """
@@ -103,10 +107,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 8, insertions=[(4, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=25, major_ticks=[9, 17, 25]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 9)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=9)
 
     def test_inline_deletions_insertions__two_insertions(self):
         """
@@ -125,10 +126,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 8, insertions=[(2, 3), (4, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=28, major_ticks=[12, 20, 28]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 12)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
 
     def test_inline_deletions_insertions__one_deletion_one_insertion(self):
         """
@@ -147,10 +145,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[4], insertions=[(2, 3)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=26, major_ticks=[10, 18, 26]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 10)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
 
     def test_inline_deletions_insertions__one_deletion_right_of_major_tick(self):
         """
@@ -169,32 +164,27 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[9])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=23, major_ticks=[8, 15, 23]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_deletion_on_major_tick(self):
         """
+        | is major tick, and . is minor tick
         before
-        0       8       16      24
-        |       |       |       |
-    0   [-------X-->
+         0               8               16              24
+        | . . . . . . . | . . . . . . . | . . . . . . . |
+         [ - - - - - - - X - - >
 
         after
-        0       8      15      23
-        |       |      |       |
-    0   [--------->
+         0               8             15              23
+        | . . . . . . . | . . . . . . | . . . . . . . |
+         [ - - - - - - - - - >
         """
         design = sc.DNADesign(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[8])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=23, major_ticks=[8, 15, 23]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_deletion_left_of_major_tick(self):
         """
@@ -213,10 +203,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, deletions=[7])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=23, major_ticks=[7, 15, 23]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 11)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_insertion_right_of_major_tick(self):
         """
@@ -235,10 +222,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(9, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=25, major_ticks=[8, 17, 25]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__one_insertion_on_major_tick(self):
         """
@@ -257,10 +241,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(8, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=25, major_ticks=[8, 17, 25]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__one_insertion_left_of_major_tick(self):
         """
@@ -279,10 +260,7 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 12, insertions=[(7, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
-        self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=25, major_ticks=[9, 17, 25]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 13)]), design.strands)
+        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains(self):
         """
@@ -301,10 +279,40 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[sc.Strand([sc.Substrand(0, True, 0, 24, deletions=[19], insertions=[(5, 2), (11, 1)])])],
             grid=sc.square)
         design.inline_deletions_insertions()
+        self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
+
+    def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains_two_strands(self):
+        """
+        | is major tick, . is minor tick
+        before
+         0   2     5     8   10          16    19        24
+        | . . . . . . . | . . . . . . . | . . . . . . . |
+         [ - X - - 2 - - - - 1 - - > [ - - - - X - - - >
+
+        after
+         0   2     5       9             16  18            25
+        | . . . . . . . . | . . . . . . . . | . . . . . . |
+         [ - - - - - - - - - - - - - - > [ - - - - - - - >
+        """
+        design = sc.DNADesign(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[
+                sc.Strand([sc.Substrand(0, True, 0, 14, deletions=[2], insertions=[(5, 2), (10, 1)])]),
+                sc.Strand([sc.Substrand(0, True, 14, 24, deletions=[19])]),
+            ],
+            grid=sc.square)
+        design.inline_deletions_insertions()
         self.assertEqual(1, len(design.helices))
-        self.assertIn(sc.Helix(max_offset=25, major_ticks=[10, 19, 26]), design.helices)
-        self.assertEqual(1, len(design.strands))
-        self.assertIn(sc.Strand([sc.Substrand(0, True, 0, 26)]), design.strands)
+        self.assertEqual(2, len(design.strands))
+        helix = design.helices[0]
+        strand0 = design.strands[0]
+        strand1 = design.strands[1]
+        self.assertEqual(25, helix.max_offset)
+        self.assertEqual([0, 9, 18, 25], helix.major_ticks)
+        self.assertEqual(0, strand0.substrands[0].start)
+        self.assertEqual(16, strand0.substrands[0].end)
+        self.assertEqual(16, strand1.substrands[0].start)
+        self.assertEqual(25, strand1.substrands[0].end)
 
 
 class TestNickAndCrossover(unittest.TestCase):
