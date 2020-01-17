@@ -70,6 +70,8 @@ class TestInlineInsDel(unittest.TestCase):
         self.assertEqual(major_ticks, helix.major_ticks)
         self.assertEqual(start, strand.substrands[0].start)
         self.assertEqual(end, strand.substrands[0].end)
+        self.assertListEqual([], strand.substrands[0].deletions)
+        self.assertListEqual([], strand.substrands[0].insertions)
 
     def test_inline_deletions_insertions__two_deletions(self):
         """
@@ -313,6 +315,10 @@ class TestInlineInsDel(unittest.TestCase):
         self.assertEqual(16, strand0.substrands[0].end)
         self.assertEqual(16, strand1.substrands[0].start)
         self.assertEqual(25, strand1.substrands[0].end)
+        self.assertListEqual([], strand0.substrands[0].deletions)
+        self.assertListEqual([], strand0.substrands[0].insertions)
+        self.assertListEqual([], strand1.substrands[0].deletions)
+        self.assertListEqual([], strand1.substrands[0].insertions)
 
 
 class TestNickAndCrossover(unittest.TestCase):

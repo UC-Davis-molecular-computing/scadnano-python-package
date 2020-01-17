@@ -1863,7 +1863,8 @@
         {"helix": 3, "forward": false, "start": 1244, "end": 1272},
         {"helix": 4, "forward": true, "start": 1244, "end": 1279},
         {"helix": 5, "forward": false, "start": 399, "end": 1279}
-      ]
+      ],
+      "is_scaffold": true
     }
   ]
 }

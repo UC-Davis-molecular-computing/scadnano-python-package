@@ -621,10 +621,13 @@ class Helix(_JSONSerializable):
 
         dct[max_offset_key] = self.max_offset
 
-        if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
-            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+        if self.position3d is None:
+            if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
+                dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+            else:
+                dct[grid_position_key] = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
         else:
-            dct[grid_position_key] = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
+            dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
         # print(f'self.svg_position()    = {self.svg_position}')
         # print(f'default_svg_position() = {self.default_svg_position()}')
@@ -643,9 +646,6 @@ class Helix(_JSONSerializable):
 
         if self.rotation_anchor != 0:
             dct[rotation_anchor_key] = self.rotation_anchor
-
-        if self.position3d is not None:
-            dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
         return _NoIndent(dct) if suppress_indent else dct
 
@@ -2638,6 +2638,8 @@ class DNADesign(_JSONSerializable):
             substrand.start += delta_acc
             delta_acc += substrand.dna_length() - substrand.visual_length()
             substrand.end += delta_acc
+            substrand.deletions = []
+            substrand.insertions = []
 
 
 def _name_of_this_script() -> str:
