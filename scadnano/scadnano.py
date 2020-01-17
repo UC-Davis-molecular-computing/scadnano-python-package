@@ -2577,11 +2577,14 @@ class DNADesign(_JSONSerializable):
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
         and their substrands have their lengths altered. Also, major tick marks on the helices will be
         shifted to preserve their adjacency to bases already present. For example, if there are major
-        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then the substrand is shorted by 1,
-        and the tick marks become 0, 7, 15, 23, and the helix's maximum offset is shrunk by 1.
+        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then
+        the substrand is shortened by 1,
+        the tick marks become 0, 7, 15, 23,
+        and the helix's maximum offset is shrunk by 1.
 
-        We assume that a major tick mark appears just to the LEFT of the offset it encodes, e.g.,
-        with minimum offset set, a major tick mark at offset 0 is the leftmost tick mark that could appear.
+        We assume that a major tick mark appears just to the LEFT of the offset it encodes,
+        so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
+        and 1 plus its maximum offset, the latter being just to the right of the last offset on the helix.
         """
         for helix in self.helices:
             self._inline_deletions_insertions_on_helix(helix)
