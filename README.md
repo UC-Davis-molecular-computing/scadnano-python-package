@@ -13,7 +13,7 @@ There are two ways you can install the scadnano Python package:
 
 1. pip 
 
-    Use pip to install the package by executing the following at the command line:
+    Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
     ```console
     pip install scadnano
     ```
@@ -27,7 +27,8 @@ There are two ways you can install the scadnano Python package:
 
 2. download
 
-    As a simple alternative, you can download and place the following file(s) (located in the [scadnano/ subfolder](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano)) in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
+    As a simple alternative, you can download and place the following file(s) (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
+    in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
     * *required*: [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py) 
     * *optional*: [origami_rectangle.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
