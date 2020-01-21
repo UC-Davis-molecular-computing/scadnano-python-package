@@ -1,0 +1,148 @@
+Fields:
+    -"name": 
+        Type
+        ===========
+            string 
+
+        Description
+        ===========
+            Name of the design.
+        
+        Example
+        =========== 
+            "name": "Fri Jan 16 2009 12:58:19 GMT-0500"
+
+    -"vstrands": 
+        Type
+        ===========
+            Array of objects all sharing the same structure
+            that we will call `Helix`
+
+        Description
+        ===========
+            Each element of the array corresponds to an helix.
+
+            The lattice type is computed in two different ways:
+                - cadnano 2: model/io/legacydecoder.py:46-59
+                - cadnano 2.5: cadnano/fileio/v2decode.py:37-44
+
+            We will stick to how it is done in cadnano 2.5 as it is simpler.
+
+            The rule is:
+
+                if num_bases % 32 == 0:
+                    lattice_type = LatticeEnum.SQUARE
+                    grid_type = GridEnum.SQUARE
+                elif num_bases % 21 == 0:
+                    lattice_type = LatticeEnum.HONEYCOMB
+                    grid_type = GridEnum.HONEYCOMB
+
+            Where the number of bases `num_bases` is determined by looking at
+            the first helix:
+
+                num_bases = len(obj['vstrands'][0]['scaf'])
+
+    -object of type `Helix` in the array vstrands:
+        Type
+        ===========
+            Contains 10 fields:
+                -"scafLoop": array?.
+                -"stapLoop": array?.
+                -"scaf": array of length `num_bases` (same length for all helices).
+                         Each element of the array "scaf" is an array of 4 integers.
+                -"stap": array of length `num_bases` (same  length for all helices).
+                         Each element of the array "scaf" is an array of 4 integers.
+                -"loop": array of integers of length `num_bases` (same length for all helices).
+                -"stap_colors": array of ( arrays of length 2 ).?
+                -"num": integer.
+                -"col": interger.
+                -"skip": array of integers of length `num_bases` (same length for all helices).
+                -"row": integer.
+        
+        Description
+        ===========
+            -"row", "col": 
+                They increase in these directions:  |---->
+                                                    |
+                                                    +
+                When honey comb lattice, a "row" is in fact a zigzag pattern:
+                      .   .
+                    .   .   .  or .   .   .
+                                    .   .   .
+
+                However, a "column" is a set of vertically aligned helices,
+                there are 3 columns in the following pattern:
+                                          .
+                                        .   .
+                                        .   .
+                                          .
+
+                The numbering of the columns/rows is relative to the original grid
+                on which the design was drawn, starting counting at 0. 
+
+                In cadnano 2.5, that original numbering will be ignored when you load the file
+                and your design will simply be centered around (0,0) (middle of the screen).
+
+                In cadnano 2, your design will be placed using those absolute coordinates.
+
+            -"num": the number of the helix.
+                Even helices have the scaffold on top and staples on bottom.
+                Odd helices have the scaffold on bottom and staples on top.
+
+            -"scaf": the array is `num_bases` long, each element of the array is
+                an array of four integers, named 
+                [five_vh, five_idx, three_vh, three_idx] in the code.
+
+                In my current understanding, it reads as follows.
+
+                If the base is empty (no strand) then: [-1,-1,-1,-1].
+
+                A strand is abstracted as a collection of length 3 segments which overlap.
+                Segment are orientated 5' -> 3'.
+                Each segment reads "Go from helix `five_vh` at base `five_idx` to 
+                helix `three_vh` at base `three_idx`".
+
+                The base numbering starts at 0. 
+
+                Scaffold Example:
+
+                Helix0: ..#====||=========>
+                        .......||..........
+                Helix1: .......||..........
+                        <======||=========#
+
+                Legend:
+                        . : empty base
+                        # : 5' end
+                        = : body of the strand
+                        < : 3' end
+
+                We have 19 bases per helix.
+                The scaffold on `Helix 0` will be represented by:
+
+                [-1,-1,-1,-1]
+                [-1,-1,-1,-1]
+                [-1,-1,0,3] <------- 5' end
+                [0,2,0,4]
+                [0,3,0,5]
+                [0,4,0,6]
+                [0,5,0,7]
+                [0,6,1,7] <------- cross over
+                [1,8,0,9] <------- cross over
+                [0,8,0,10]
+                ...
+                [0,16,0,18]
+                [0,17,-1,-1] <------- 3' end
+
+                And on `Helix 1`:
+                [1,1,-1,-1] <------- 3' end
+                [1,2,1,0]
+                [1,3,1,1]
+                ...
+                [1,7,1,5]
+                [0,7,1,6] <------- cross over
+                [1,9,0,8] <------- cross over
+                [1,10,1,8]
+                ....
+                [1,18,1,16]
+                [-1,-1,1,17] <------- 5' end
