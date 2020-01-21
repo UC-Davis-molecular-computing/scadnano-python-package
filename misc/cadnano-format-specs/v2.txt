@@ -46,8 +46,6 @@ Fields:
         Type
         ===========
             Contains 10 fields:
-                -"scafLoop": array?.
-                -"stapLoop": array?.
                 -"scaf": array of length `num_bases` (same length for all helices).
                          Each element of the array "scaf" is an array of 4 integers.
                 -"stap": array of length `num_bases` (same  length for all helices).
@@ -56,8 +54,16 @@ Fields:
                 -"stap_colors": array of ( arrays of length 2 ).?
                 -"num": integer.
                 -"col": interger.
-                -"skip": array of integers of length `num_bases` (same length for all helices).
+                -"skip": array of integers in {0,-1} 
+                         of length `num_bases` (same length for all helices).
                 -"row": integer.
+
+                The two following fields seems not to be used by cadnano:
+                    -"scafLoop": array, empty?.
+                    -"stapLoop": array, empty?.
+
+                    Note: Scaffold loops and staple loops are already taken into account 
+                    in the fields "scaf" and "stap".
         
         Description
         ===========
@@ -93,7 +99,7 @@ Fields:
                 an array of four integers, named 
                 [five_vh, five_idx, three_vh, three_idx] in the code.
 
-                In my current understanding, it reads as follows.
+                In my understanding, it reads as follows.
 
                 If the base is empty (no strand) then: [-1,-1,-1,-1].
 
@@ -146,3 +152,24 @@ Fields:
                 ....
                 [1,18,1,16]
                 [-1,-1,1,17] <------- 5' end
+
+        -"stap": same format as "scaf".
+            Beware that a staple can crossover on the same helix (like a barrel).
+            There are such staples in the test file `v2.json`.
+
+        -"loop": integer array of size `num_bases`.
+            Each integer is the size of the loop added at that base.
+            By default: 0
+
+        -"skip": integer array of size `num_bases`,
+            By default 0, meaning no skip. If there is a deletion then the 
+            value for that base is set at -1.
+
+        -"stap_colors": array of arrays of size two.
+            There as many entries as staples of which 5' end is on the helix.
+            Then it reads [base_id, color] where:
+                - `base_id` is the number of the base where the 5' is
+                - `color` an int representation of an hex color:
+                    int to color hex: '#%0.6x' % (color_number)
+                    color hex to int: int(hex, 16)
+
