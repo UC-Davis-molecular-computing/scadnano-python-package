@@ -1726,7 +1726,9 @@ class DNADesign(_JSONSerializable):
         pass
 
     def to_cadnano_v2(self):
-        # Please see the spec: misc/cadnano-format-specs/v2.txt
+        """Converts the design to the cadnano v2 format.
+        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+        """
         dct = OrderedDict()
         dct['vstrands'] = []
 
