@@ -1,0 +1,35 @@
+{
+  "name": "tests_outputs/to_cadnano_v2_6_helix_origami_rectangle.json",
+  "vstrands": [
+    {
+      "num": 0,
+      "row": 0,
+      "col": 0
+    },
+    {
+      "num": 1,
+      "row": 1,
+      "col": 0
+    },
+    {
+      "num": 2,
+      "row": 2,
+      "col": 0
+    },
+    {
+      "num": 3,
+      "row": 3,
+      "col": 0
+    },
+    {
+      "num": 4,
+      "row": 4,
+      "col": 0
+    },
+    {
+      "num": 5,
+      "row": 5,
+      "col": 0
+    }
+  ]
+}

@@ -1718,6 +1718,50 @@ class DNADesign(_JSONSerializable):
 
         return dct
 
+    def _get_multiple_of_x_sup_closest_to_y(self, x: int,y: int):
+        return y if y%x == 0 else y + (x-y%x)
+
+    def _convert_honeycomb_coords_to_cadnano_v2(self, grid_position: Tuple[int, int, int]):
+        """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
+        pass
+
+    def to_cadnano_v2(self):
+        # Please see the spec: misc/cadnano-format-specs/v2.txt
+        dct = OrderedDict()
+        dct['vstrands'] = []
+
+        # In cadnano v2, all helices have the same max offset 
+        # calld `num_bases` and the type of grid is determined as follows:
+        #   if num_bases % 32 == 0: then we are on grid square
+        #   if num_bases % 21 == 0: then we are on grid honey
+
+        num_bases = 0
+        for helix in self.helices:
+            num_bases = max(num_bases,helix.max_offset)
+
+        if self.grid == Grid.square:
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(32,num_bases)
+        elif self.grid == Grid.honeycomb:
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(21,num_bases)
+        else:
+            raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
+
+        for helix in self.helices:
+            helix_dct = OrderedDict()
+            helix_dct['num'] = helix.idx()
+
+            if self.grid == Grid.square:
+                helix_dct['row'] = helix.grid_position[1]
+                helix_dct['col'] = helix.grid_position[0]
+
+            if self.grid== Grid.honeycomb:
+                helix_dct['row'], helix_dct['col'] = _convert_honeycomb_coords_to_cadnano_v2(helix.grid_position)
+            
+            dct['vstrands'].append(helix_dct)
+
+        return dct
+
+
     def __post_init__(self):
         if self.major_tick_distance < 0:
             self.major_tick_distance = default_major_tick_distance(self.grid)
@@ -2353,6 +2397,28 @@ class DNADesign(_JSONSerializable):
         """
         contents = self.to_json()
         _write_file_same_name_as_running_python_script(contents, 'dna', directory, filename)
+
+    def export_cadnano_v2(self, directory: str = '.', filename=None):
+        """Write ``.json`` file representing this :any:`DNADesign`, suitable for reading by cadnano v2,
+        with the output file having the same name as the running script but with ``.py`` changed to ``.json``,
+        unless `filename` is explicitly specified.
+        For instance, if the script is named ``my_origami.py``,
+        then the design will be written to ``my_origami.json``.
+
+        `directory` specifies a directory in which to place the file, either absolute or relative to
+        the current working directory. Default is the current working directory.
+
+        The string written is that returned by :meth:`DNADesign.to_cadnano_v2`.
+        """
+        content_serializable = OrderedDict({})
+        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
+        content_serializable_final = self.to_cadnano_v2()
+        content_serializable.update(content_serializable_final)
+
+        encoder = _SuppressableIndentEncoder
+        contents = json.dumps(content_serializable, cls=encoder, indent=2)
+
+        _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool):
         """Add nick to :any:`Substrand` on :any:`Helix` with index `helix`,

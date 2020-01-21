@@ -45,7 +45,7 @@ Fields:
     -object of type `Helix` in the array vstrands:
         Type
         ===========
-            Contains 10 fields:
+            Contains 10 mandatory fields:
                 -"scaf": array of length `num_bases` (same length for all helices).
                          Each element of the array "scaf" is an array of 4 integers.
                 -"stap": array of length `num_bases` (same  length for all helices).
@@ -58,12 +58,27 @@ Fields:
                          of length `num_bases` (same length for all helices).
                 -"row": integer.
 
-                The two following fields seems not to be used by cadnano:
+                -"scafLoop": array, empty?.
+                -"stapLoop": array, empty?.
+
+                Note 1: 
+                    The two following fields seems not to be used by cadnano:
+                    
                     -"scafLoop": array, empty?.
                     -"stapLoop": array, empty?.
 
-                    Note: Scaffold loops and staple loops are already taken into account 
+                    Scaffold loops and staple loops are already taken into account 
                     in the fields "scaf" and "stap".
+
+                Note 2: 
+                    DNA sequences are not stored in the cadnano v2 files.
+
+            Contains 2 optional fields which we ignore:
+                -"oligos": seems to be designed to contain DNA sequence but
+                    field is not touched by cadnano even when you specify a custom sequence on the GUI.
+                    Bug?
+
+                -"modifications": I assume it can be used to put fluophores and stuff.
         
         Description
         ===========

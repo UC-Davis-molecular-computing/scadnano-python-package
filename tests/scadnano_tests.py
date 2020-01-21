@@ -7,6 +7,7 @@ import re
 from typing import Iterable
 
 import scadnano as sc
+import scadnano.origami_rectangle as rect
 
 
 # TODO: add tests for mutation methods on DNADesign
@@ -35,6 +36,15 @@ def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, sta
 def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
+
+class TestExportCadnanoV2(unittest.TestCase):
+    """
+    Tests the export feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
+    """
+
+    def test_6_helix_origami_rectangle_export(self):
+        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered, twist_correction_deletion_spacing=3)
+        design.export_cadnano_v2(directory='tests_outputs', filename='to_cadnano_v2_6_helix_origami_rectangle.json')
 
 
 class TestInlineInsDel(unittest.TestCase):
