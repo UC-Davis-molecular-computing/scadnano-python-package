@@ -61,24 +61,38 @@ Fields:
                 -"scafLoop": array, empty?.
                 -"stapLoop": array, empty?.
 
-                Note 1: 
-                    The two following fields seems not to be used by cadnano:
-                    
-                    -"scafLoop": array, empty?.
-                    -"stapLoop": array, empty?.
-
-                    Scaffold loops and staple loops are already taken into account 
-                    in the fields "scaf" and "stap".
-
-                Note 2: 
-                    DNA sequences are not stored in the cadnano v2 files.
-
             Contains 2 optional fields which we ignore:
                 -"oligos": seems to be designed to contain DNA sequence but
                     field is not touched by cadnano even when you specify a custom sequence on the GUI.
                     Bug?
 
                 -"modifications": I assume it can be used to put fluophores and stuff.
+
+            Note 1: 
+                The two following fields seems not to be used by cadnano:
+                
+                -"scafLoop": array, empty?.
+                -"stapLoop": array, empty?.
+
+                Scaffold loops and staple loops are already taken into account 
+                in the fields "scaf" and "stap".
+
+            Note 2: 
+                DNA sequences are not stored in the cadnano v2 files.
+
+            Note 3: SQ100 files.
+                If, for a disgn on the square grid, you have only 
+                one column numbered 0, cadnano2 will ask you if your file is SQ100 or not.
+                This only seems to impact the number of rows and cols which are displayed by the GUI.
+                This is ignored if you open the file with cadnano 2.5.
+
+                See model/io/legacydecoder.py:75-92
+
+            Note 4: forward/backward issue.
+                In cadnano 2, the convention is that helices with even number have the scaffold going forward and
+                staples going backwards while helices with odd number do the opposite.
+
+                It means that we cannot convert an arbitrary scadnano file to cadnano v2.
         
         Description
         ===========
@@ -107,8 +121,8 @@ Fields:
                 In cadnano 2, your design will be placed using those absolute coordinates.
 
             -"num": the number of the helix.
-                Even helices have the scaffold on top and staples on bottom.
-                Odd helices have the scaffold on bottom and staples on top.
+                Even helices have the scaffold go forward and staples go backward.
+                Odd helices have the scaffold go forward and staples go backward.
 
             -"scaf": the array is `num_bases` long, each element of the array is
                 an array of four integers, named 

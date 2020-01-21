@@ -1757,6 +1757,21 @@ class DNADesign(_JSONSerializable):
             if self.grid== Grid.honeycomb:
                 helix_dct['row'], helix_dct['col'] = _convert_honeycomb_coords_to_cadnano_v2(helix.grid_position)
             
+            helix_dct['scaf'] = []
+            helix_dct['stap'] = []
+            helix_dct['loop'] = []
+            helix_dct['skip'] = []
+            
+            for base_id in range(num_bases):
+                helix_dct['scaf'].append([-1,-1,-1,-1])
+                helix_dct['stap'].append([-1,-1,-1,-1])
+                helix_dct['loop'].append(0)
+                helix_dct['skip'].append(0)
+
+            helix_dct['stap_colors'] = []
+            helix_dct['scafLoop'] = []
+            helix_dct['stapLoop'] = []
+
             dct['vstrands'].append(helix_dct)
 
         return dct
