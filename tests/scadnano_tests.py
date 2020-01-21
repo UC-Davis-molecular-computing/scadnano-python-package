@@ -81,6 +81,150 @@ class TestExportCadnanoV2(unittest.TestCase):
         design.export_cadnano_v2(directory='tests_outputs', filename='to_cadnano_v2_6_helix_origami_rectangle.json')
 
 
+class TestStrandReversePolarity(unittest.TestCase):
+    """
+    Tests reversing polarity of all strands in the system.
+    """
+
+    def test_reverse_all__one_strand(self):
+        """
+        before
+        0       8
+        |       |
+    0   [---X-->
+
+        after
+    0   <---X--]
+        """
+        design = sc.DNADesign(
+            strands=[sc.Strand([sc.Substrand(0, True, 0, 8, deletions=[4])])],
+            grid=sc.square)
+        design.reverse_all()
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual(1, len(strand.substrands))
+        self.assertEqual(7, strand.offset_5p())
+        self.assertEqual(0, strand.offset_3p())
+        ss = strand.substrands[0]
+        self.assertEqual(0, ss.helix)
+        self.assertEqual(False, ss.forward)
+        self.assertEqual(0, ss.start)
+        self.assertEqual(8, ss.end)
+
+
+    def test_reverse_all__three_strands(self):
+        """
+        before
+        0       8       16
+        |       |       |
+
+    0   +--X-----------+
+       /<--X---++------]\
+       |       ||       |
+       \[---2--++------>/
+    1   +---2--]<------+
+
+        after
+    0   +--X-----------+
+       /[--X---++------>\
+       |       ||       |
+       \<---2--++------]/
+    1   +---2-->[------+
+        """
+        design = sc.DNADesign(
+            strands=[
+                sc.Strand([
+                    sc.Substrand(1, True, 0, 8, insertions=[(4,2)]),
+                    sc.Substrand(0, False, 0, 8, deletions=[3]),
+                ]),
+                sc.Strand([
+                    sc.Substrand(0, False, 8, 16),
+                    sc.Substrand(1, True, 8, 16),
+                ]),
+                sc.Strand([
+                    sc.Substrand(1, False, 0, 8, insertions=[(4,2)]),
+                    sc.Substrand(0, True, 0, 16, deletions=[3]),
+                    sc.Substrand(1, False, 8, 16, deletions=[]),
+                ]),
+            ],
+            grid=sc.square)
+        design.reverse_all()
+
+        self.assertEqual(3, len(design.strands))
+        stapL = design.strands[0]
+        stapR = design.strands[1]
+        scaf = design.strands[2]
+
+        self.assertEqual(0, stapL.offset_5p())
+        self.assertEqual(0, stapL.offset_3p())
+        self.assertEqual(15, stapR.offset_5p())
+        self.assertEqual(15, stapR.offset_3p())
+        self.assertEqual(8, scaf.offset_5p())
+        self.assertEqual(7, scaf.offset_3p())
+
+        self.assertEqual(2, len(stapL.substrands))
+        stapL_ss0 = stapL.substrands[0]
+        stapL_ss1 = stapL.substrands[1]
+
+        self.assertEqual(0, stapL_ss0.helix)
+        self.assertEqual(True, stapL_ss0.forward)
+        self.assertEqual(0, stapL_ss0.start)
+        self.assertEqual(8, stapL_ss0.end)
+        self.assertEqual([3], stapL_ss0.deletions)
+        self.assertEqual([], stapL_ss0.insertions)
+
+        self.assertEqual(1, stapL_ss1.helix)
+        self.assertEqual(False, stapL_ss1.forward)
+        self.assertEqual(0, stapL_ss1.start)
+        self.assertEqual(8, stapL_ss1.end)
+        self.assertEqual([], stapL_ss1.deletions)
+        self.assertEqual([(4,2)], stapL_ss1.insertions)
+
+        self.assertEqual(2, len(stapR.substrands))
+        stapR_ss0 = stapR.substrands[0]
+        stapR_ss1 = stapR.substrands[1]
+
+        self.assertEqual(1, stapR_ss0.helix)
+        self.assertEqual(False, stapR_ss0.forward)
+        self.assertEqual(8, stapR_ss0.start)
+        self.assertEqual(16, stapR_ss0.end)
+        self.assertEqual([], stapR_ss0.deletions)
+        self.assertEqual([], stapR_ss0.insertions)
+
+        self.assertEqual(0, stapR_ss1.helix)
+        self.assertEqual(True, stapR_ss1.forward)
+        self.assertEqual(8, stapR_ss1.start)
+        self.assertEqual(16, stapR_ss1.end)
+        self.assertEqual([], stapR_ss1.deletions)
+        self.assertEqual([], stapR_ss1.insertions)
+
+        self.assertEqual(3, len(scaf.substrands))
+        scaf_ss0 = scaf.substrands[0]
+        scaf_ss1 = scaf.substrands[1]
+        scaf_ss2 = scaf.substrands[2]
+
+        self.assertEqual(1, scaf_ss0.helix)
+        self.assertEqual(True, scaf_ss0.forward)
+        self.assertEqual(8, scaf_ss0.start)
+        self.assertEqual(16, scaf_ss0.end)
+        self.assertEqual([], scaf_ss0.deletions)
+        self.assertEqual([], scaf_ss0.insertions)
+
+        self.assertEqual(0, scaf_ss1.helix)
+        self.assertEqual(False, scaf_ss1.forward)
+        self.assertEqual(0, scaf_ss1.start)
+        self.assertEqual(16, scaf_ss1.end)
+        self.assertEqual([3], scaf_ss1.deletions)
+        self.assertEqual([], scaf_ss1.insertions)
+
+        self.assertEqual(1, scaf_ss2.helix)
+        self.assertEqual(True, scaf_ss2.forward)
+        self.assertEqual(0, scaf_ss2.start)
+        self.assertEqual(8, scaf_ss2.end)
+        self.assertEqual([], scaf_ss2.deletions)
+        self.assertEqual([(4,2)], scaf_ss2.insertions)
+
 class TestInlineInsDel(unittest.TestCase):
     """
     Tests inlining of insertions/deletions.

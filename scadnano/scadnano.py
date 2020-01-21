@@ -55,8 +55,6 @@ from docutils.nodes import subscript
 
 # TODO: add Boolean field Strand.circular
 
-# TODO: write from_json for DNADesign so .dna files can be read into the library
-
 # TODO: make explicit rules about when strands can be added and sequences assigned.
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
@@ -797,6 +795,7 @@ class Substrand(_JSONSerializable):
         self._check_start_end()
 
     def offset_5p(self) -> int:
+        """5' offset of this :any:`Substrand`, INCLUSIVE."""
         if self.forward:
             return self.start
         else:
@@ -804,6 +803,7 @@ class Substrand(_JSONSerializable):
         # return self.start if self.forward else self.end - 1
 
     def offset_3p(self) -> int:
+        """3' offset of this :any:`Substrand`, INCLUSIVE."""
         return self.end - 1 if self.forward else self.start
 
     def _num_insertions(self) -> int:
@@ -1344,9 +1344,11 @@ class Strand(_JSONSerializable):
         return [ss for ss in self.substrands if ss.is_substrand()]
 
     def offset_5p(self) -> int:
+        """5' offset of this entire :any:`Strand`, INCLUSIVE."""
         return self.first_substrand().offset_5p()
 
     def offset_3p(self) -> int:
+        """3' offset of this entire :any:`Strand`, INCLUSIVE."""
         return self.last_substrand().offset_3p()
 
     def overlaps(self, other: Strand) -> bool:
@@ -1508,6 +1510,18 @@ class Strand(_JSONSerializable):
         for substrand in substrands_rev:
             if substrand.is_substrand():
                 return substrand
+
+    def reverse(self):
+        """
+        Reverses "polarity" of this :any:`Strand`.
+
+        Does NOT check whether this keeps the :any:`DNADesign` legal, so be cautious in calling this method
+        directly. To reverse every :any:`Strand`, called :py:meth:`DNADesign.reverse_all`.
+        If the design was legal before, it will be legal after calling that method.
+        """
+        self.substrands.reverse()
+        for substrand in self.bound_substrands():
+            substrand.forward = not substrand.forward
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -2800,6 +2814,17 @@ class DNADesign(_JSONSerializable):
             substrand.end += delta_acc
             substrand.deletions = []
             substrand.insertions = []
+
+    def reverse_all(self):
+        """
+        Reverses "polarity" of every :any:`Strand` in this :any:`DNADesign`.
+
+        No attempt is made to make any assigned DNA sequences match by reversing or rearranging them.
+        Every :any:`Strand` keeps the same DNA sequence it had before (unreversed), if one was assigned.
+        It is recommended to assign/reassign DNA sequences *after* doing this operation.
+        """
+        for strand in self.strands:
+            strand.reverse()
 
 
 def _name_of_this_script() -> str:
