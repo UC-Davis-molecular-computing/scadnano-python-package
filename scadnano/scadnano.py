@@ -1728,6 +1728,31 @@ class DNADesign(_JSONSerializable):
     def _cadnano_v2_place_scaffold_segment(self, helix_dct, substrand: Substrand):
         """Converts a scaffold region with no crossover to cadnano v2.
         """
+        
+        # Insertions and deletions
+        for deletion in substrand.deletions:
+            helix_dct['skip'][deletion] = -1
+        for loop_where, loop_nb in substrand.insertions:
+            helix_dct['loop'][loop_where] = loop_nb
+
+        start, end, forward = substrand.start, substrand.end, substrand.forward
+        strand_helix = helix_dct['num']
+
+        start_end_tab = [start, end]
+        coeff = 1 if forward else -1
+        elem = 1 if not forward else 0
+
+        from_helix, from_base = -1, -1
+        to_helix, to_base = strand_helix, start_end_tab[elem]+coeff
+        for i in range(start_end_tab[elem],start_end_tab[1-elem], coeff):
+            helix_dct['scaf'][i] = [from_helix, from_base, to_helix, to_base]
+            to_base += coeff
+            if from_helix == -1:
+                    from_helix = strand_helix
+                    from_base = start_end_tab[elem]
+            else:
+                from_base += coeff
+
         return
 
     def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct, 
