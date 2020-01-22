@@ -232,6 +232,9 @@ class ColorCycler:
 default_scaffold_color = Color(0, 102, 204)
 """Default color for scaffold strand(s)."""
 
+default_strand_color = Color(0, 0, 0)
+"""Default color for non-scaffold strand(s)."""
+
 color_cycler = ColorCycler()
 
 
@@ -289,6 +292,7 @@ honeycomb = Grid.honeycomb
 # constants
 
 current_version: str = "0.0.1"
+initial_version: str = "0.0.1"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -299,6 +303,9 @@ def default_major_tick_distance(grid: Grid) -> int:
 
 
 default_grid: Grid = Grid.square
+
+default_helix_rotation: float = -90.0
+default_helix_rotation_anchor: int = 0
 
 base_width_svg: float = 10.0
 """Width of a single base in the SVG main view of scadnano."""
@@ -683,6 +690,46 @@ class Helix(_JSONSerializable):
         distance = default_major_tick_distance if self.major_tick_distance <= 0 else self.major_tick_distance
         return list(range(self.min_offset, self.max_offset + 1, distance))
 
+    @staticmethod
+    def from_json(json_map: dict) -> Helix:
+        grid_position = None
+        if grid_position_key in json_map:
+            gp_list = json_map[grid_position_key]
+            if len(gp_list) not in [2, 3]:
+                raise IllegalDNADesignError("list of grid_position coordinates must be length 2 or 3, "
+                                            f"but this is the list: {gp_list}")
+            if len(gp_list) == 2:
+                gp_list.append(0)
+            grid_position = tuple(gp_list)
+
+        svg_position = None
+        if svg_position_key in json_map:
+            sp_list = json_map[grid_position_key]
+            if len(sp_list) != 2:
+                raise IllegalDNADesignError("svg_position must have exactly two integers, "
+                                            f"but instead it has {len(sp_list)}: {sp_list}")
+            svg_position = tuple(sp_list)
+
+        major_tick_distance = json_map.get(major_tick_distance_key)
+        major_ticks = json_map.get(major_ticks_key)
+        min_offset = json_map.get(min_offset_key)
+        max_offset = json_map.get(max_offset_key)
+        rotation = json_map.get(rotation_key, default_helix_rotation)
+        rotation_anchor = json_map.get(rotation_anchor_key, default_helix_rotation_anchor)
+        position3d = json_map.get(position3d_key)
+
+        return Helix(
+            major_tick_distance=major_tick_distance,
+            major_ticks=major_ticks,
+            grid_position=grid_position,
+            svg_position=svg_position,
+            min_offset=min_offset,
+            max_offset=max_offset,
+            rotation=rotation,
+            rotation_anchor=rotation_anchor,
+            position3d=position3d,
+        )
+
 
 def _is_close(x1: float, x2: float):
     return abs(x1 - x2) < 0.00000001
@@ -997,6 +1044,38 @@ class Substrand(_JSONSerializable):
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
+    @staticmethod
+    def from_json(json_map):
+        helix = json_map[helix_idx_key]
+        forward = json_map[forward_key]
+        start = json_map[start_key]
+        end = json_map[end_key]
+        deletions = json_map.get(deletions_key, [])
+        insertions = list(map(tuple, json_map.get(insertions_key, [])))
+        return Substrand(
+            helix=helix,
+            forward=forward,
+            start=start,
+            end=end,
+            deletions=deletions,
+            insertions=insertions,
+        )
+
+
+'''
+    var forward = util.get_value(json_map, constants.forward_key, name);
+    var helix = util.get_value(json_map, constants.helix_idx_key, name);
+    var start = util.get_value(json_map, constants.start_key, name);
+    var end = util.get_value(json_map, constants.end_key, name);
+//    List<int> deletions =
+//        json_map.containsKey(constants.deletions_key) ? List<int>.from(json_map[constants.deletions_key]) : [];
+//    List<Tuple2<int, int>> insertions =
+//        json_map.containsKey(constants.insertions_key) ? parse_json_insertions(json_map[constants.insertions_key]) : [];
+    var deletions = List<int>.from(util.get_value_with_default(json_map, constants.deletions_key, []));
+    var insertions =
+        parse_json_insertions(util.get_value_with_default(json_map, constants.insertions_key, []));
+'''
+
 
 @dataclass
 class Loopout(_JSONSerializable):
@@ -1085,6 +1164,13 @@ class Loopout(_JSONSerializable):
         self_seq_idx_start = sum(prev_substrand.dna_length()
                                  for prev_substrand in substrands[:self_substrand_idx])
         return self_seq_idx_start
+
+    @staticmethod
+    def from_json(json_map):
+        if loopout_key not in json_map:
+            raise IllegalDNADesignError(f'no key "{loopout_key}" in JSON map')
+        length = int(json_map[loopout_key])
+        return Loopout(length=length)
 
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
@@ -1526,6 +1612,38 @@ class Strand(_JSONSerializable):
         for substrand in self.bound_substrands():
             substrand.forward = not substrand.forward
 
+    @staticmethod
+    def from_json(json_map: dict) -> Strand:
+        if substrands_key not in json_map:
+            raise IllegalDNADesignError(f'key "{substrands_key}" is missing from the description of a Strand:'
+                                        f'\n  {json_map}')
+        substrand_jsons = json_map[substrands_key]
+        if len(substrand_jsons) == 0:
+            raise IllegalDNADesignError(f'substrands list cannot be empty')
+
+        substrands = []
+        for substrand_json in substrand_jsons:
+            if loopout_key in substrand_json:
+                substrands.append(Loopout.from_json(substrand_json))
+            else:
+                substrands.append(Substrand.from_json(substrand_json))
+        if isinstance(substrands[0], Loopout):
+            raise IllegalDNADesignError('Loopout at beginning of Strand not supported')
+        if isinstance(substrands[-1], Loopout):
+            raise IllegalDNADesignError('Loopout at end of Strand not supported')
+
+        is_scaffold = json_map.get(is_scaffold_key, False)
+        dna_sequence = json_map.get(dna_sequence_key)
+        color = json_map.get(color_key, default_scaffold_color if is_scaffold else default_strand_color)
+        idt = json_map.get(idt_key)
+
+        return Strand(
+            substrands=substrands,
+            dna_sequence=dna_sequence,
+            color=color,
+            idt=idt,
+        )
+
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
     """Takes a "union" of two equal-length strings `s1` and `s2`.
@@ -1706,6 +1824,65 @@ class DNADesign(_JSONSerializable):
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
 
+    @staticmethod
+    def from_json(json_map: dict) -> DNADesign:
+        version = json_map.get(version_key, initial_version)  # not sure what to do with this
+        grid = json_map.get(grid_key, Grid.square)
+        grid_is_none = grid == Grid.none
+
+        if (major_tick_distance_key in json_map):
+            major_tick_distance = json_map[major_tick_distance_key]
+        elif not grid_is_none:
+            if grid in [Grid.hex, Grid.honeycomb]:
+                major_tick_distance = 7
+            else:
+                major_tick_distance = 8
+        else:
+            major_tick_distance = -1
+
+        helices = []
+        deserialized_helices_list = json_map[helices_key]
+        num_helices = len(deserialized_helices_list)
+
+        # create Helices
+        idx = 0
+        for helix_json in deserialized_helices_list:
+            helix_builder = Helix.from_json(helix_json)
+            helix_builder.idx = idx
+            if (grid_is_none and grid_position_key in helix_json):
+                raise IllegalDNADesignError(
+                    f'grid is none, but Helix {idx} has grid_position = {helix_json[grid_position_key]}')
+            elif not grid_is_none and position3d_key in helix_json:
+                raise IllegalDNADesignError(
+                    'grid is not none, but Helix $idx has position = ${helix_json[constants.position3d_key]}')
+            helices.append(helix_builder)
+            idx += 1
+
+        # view order of helices
+        helices_view_order = json_map.get(helices_view_order_key)
+        if helices_view_order is not None:
+            identity_permutation = list(range(num_helices))
+            if len(helices_view_order) != num_helices:
+                raise IllegalDNADesignError(f'length of helices ({num_helices}) does not match '
+                                            f'length of helices_view_order ({len(helices_view_order)})')
+            if sorted(helices_view_order) != identity_permutation:
+                raise IllegalDNADesignError(f'helices_view_order = {helices_view_order} is not a permutation')
+
+        # strands
+        strands = []
+        deserialized_strand_list = json_map[strands_key]
+        for strand_json in deserialized_strand_list:
+            strand = Strand.from_json(strand_json)
+            strands.append(strand)
+
+        return DNADesign(
+            helices=helices,
+            strands=strands,
+            grid=grid,
+            major_tick_distance=major_tick_distance,
+            helices_view_order=helices_view_order,
+        )
+
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[version_key] = current_version
@@ -1735,8 +1912,8 @@ class DNADesign(_JSONSerializable):
 
         return dct
 
-    def _get_multiple_of_x_sup_closest_to_y(self, x: int,y: int):
-        return y if y%x == 0 else y + (x-y%x)
+    def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int):
+        return y if y % x == 0 else y + (x - y % x)
 
     def _cadnano_v2_convert_honeycomb_coords(self, grid_position: Tuple[int, int, int]):
         """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
@@ -1753,11 +1930,23 @@ class DNADesign(_JSONSerializable):
 
         start, end, forward = substrand.start, substrand.end, substrand.forward
         strand_helix = helix_dct['num']
-        
         for i_base in range(start, end):
             if forward:
                 from_helix, from_base = strand_helix, i_base-1
                 to_helix, to_base = strand_helix, i_base+1
+
+        start_end_tab = [start, end]
+        coeff = 1 if forward else -1
+        elem = 1 if not forward else 0
+
+        from_helix, from_base = -1, -1
+        to_helix, to_base = strand_helix, start_end_tab[elem] + coeff
+        for i in range(start_end_tab[elem], start_end_tab[1 - elem], coeff):
+            helix_dct['scaf'][i] = [from_helix, from_base, to_helix, to_base]
+            to_base += coeff
+            if from_helix == -1:
+                from_helix = strand_helix
+                from_base = start_end_tab[elem]
             else:
                 from_helix, from_base = strand_helix, i_base+1
                 to_helix, to_base = strand_helix, i_base-1
@@ -1776,8 +1965,8 @@ class DNADesign(_JSONSerializable):
                     helix_dct[strand_type][i_base][2:] = [to_helix,to_base]
         return
 
-    def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct, 
-                                          substrand_from: Substrand, substrand_to: Substrand):
+    def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct,
+                                    substrand_from: Substrand, substrand_to: Substrand):
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
         as given by helix.idx().
@@ -1854,7 +2043,8 @@ class DNADesign(_JSONSerializable):
         dct['vstrands'] = []
 
         if self.__class__ != DNAOrigamiDesign:
-            raise ValueError('Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
+            raise ValueError(
+                'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -1864,12 +2054,12 @@ class DNADesign(_JSONSerializable):
         '''
         num_bases = 0
         for helix in self.helices:
-            num_bases = max(num_bases,helix.max_offset)
+            num_bases = max(num_bases, helix.max_offset)
 
         if self.grid == Grid.square:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(32,num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
         elif self.grid == Grid.honeycomb:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(21,num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
 
@@ -1879,27 +2069,64 @@ class DNADesign(_JSONSerializable):
 
         TODO: test for that case
         '''
-        for strand in self.strands:
+        # for strand in self.strands:
+        # i_scaffold = 0
+        for i, strand in enumerate(self.strands):
             if hasattr(strand, is_scaffold_key):
                 for substrand in strand.substrands:
-                    if substrand.helix%2 != int(not substrand.forward):
+                    if substrand.helix % 2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
                                                   going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')
 
         '''Filling the helices with blank.
         '''
-        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
+        # helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
+        helices_ids_reverse = {}
+        for i, helix in enumerate(self.helices):
+            helix_dct = OrderedDict()
+            helix_dct['num'] = helix.idx()
+
+            if self.grid == Grid.square:
+                helix_dct['row'] = helix.grid_position[1]
+                helix_dct['col'] = helix.grid_position[0]
+
+            if self.grid == Grid.honeycomb:
+                helix_dct['row'], helix_dct['col'] = _cadnano_v2_convert_honeycomb_coords(helix.grid_position)
+
+            helix_dct['scaf'] = []
+            helix_dct['stap'] = []
+            helix_dct['loop'] = []
+            helix_dct['skip'] = []
+
+            for _ in range(num_bases):
+                helix_dct['scaf'].append([-1, -1, -1, -1])
+                helix_dct['stap'].append([-1, -1, -1, -1])
+                helix_dct['loop'].append(0)
+                helix_dct['skip'].append(0)
+
+            helix_dct['stap_colors'] = []
+            helix_dct['scafLoop'] = []
+            helix_dct['stapLoop'] = []
+
+            helices_ids_reverse[helix_dct['num']] = i
+            dct['vstrands'].append(helix_dct)
+
         '''Putting the scaffold in place.
         '''
 
-        for strand in self.strands:
-            self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
+        # for strand in self.strands:
+        #     self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
+        #     if i != len(scaffold_strand.substrands) - 1:
+        #         next_substrand = scaffold_strand.substrands[i + 1]
+        #         next_helix_id = helices_ids_reverse[next_substrand.helix]
+        #         next_helix = dct['vstrands'][next_helix_id]
+        #         self._cadnano_v2_place_crossover(which_helix, next_helix, substrand,
+        #                                          next_substrand)
 
         return dct
 
-
     def __post_init__(self):
-        if self.major_tick_distance < 0:
+        if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
         # doing this first matters because most of DNADesign assumes helices has been set
@@ -1911,7 +2138,7 @@ class DNADesign(_JSONSerializable):
         self._set_helices_idxs()
         self._set_helices_grid_and_svg_positions()
         self._build_substrands_on_helix_lists()
-        self._set_helices_max_bases(update=False)
+        self._set_helices_min_max_offsets(update=False)
         self._check_legal_design()
 
         self._set_and_check_helices_view_order()
@@ -1944,15 +2171,23 @@ class DNADesign(_JSONSerializable):
             if helix.svg_position is None:
                 helix.svg_position = helix.default_svg_position()
 
-    def _set_helices_max_bases(self, update: bool):
-        """update = whether to overwrite existing Helix.max_bases. Don't do this when DNADesign is first
-        created, but do it later when updating."""
+    def _set_helices_min_max_offsets(self, update: bool):
+        """update = whether to overwrite existing Helix.max_offset and Helix.min_offset.
+        Don't do this when DNADesign is first created, but do it later when updating."""
         for helix in self.helices:
+
             if update or helix.max_offset is None:
-                max_offset = -1
+                max_offset = None if len(helix._substrands) == 0 else helix._substrands[0].end
                 for substrand in helix._substrands:
                     max_offset = max(max_offset, substrand.end)
                 helix.max_offset = max_offset
+
+            if update or helix.min_offset is None:
+                min_offset = None if len(helix._substrands) == 0 else helix._substrands[0].start
+                for substrand in helix._substrands:
+                    min_offset = min(min_offset, substrand.start)
+                if min_offset > 0: min_offset = 0
+                helix.min_offset = min_offset
 
     def set_default_idt(self, use_default_idt):
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
@@ -2547,7 +2782,8 @@ class DNADesign(_JSONSerializable):
         The string written is that returned by :meth:`DNADesign.to_cadnano_v2`.
         """
         content_serializable = OrderedDict({})
-        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
+        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
+                                                                                        filename)
         content_serializable_final = self.to_cadnano_v2()
         content_serializable.update(content_serializable_final)
 
