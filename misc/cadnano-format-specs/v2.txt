@@ -51,7 +51,7 @@ Fields:
                 -"stap": array of length `num_bases` (same  length for all helices).
                          Each element of the array "scaf" is an array of 4 integers.
                 -"loop": array of integers of length `num_bases` (same length for all helices).
-                -"stap_colors": array of ( arrays of length 2 ).?
+                -"stap_colors": array containing as many entry as staples, each entry is a 2-integer array.
                 -"num": integer.
                 -"col": interger.
                 -"skip": array of integers in {0,-1} 

@@ -41,44 +41,66 @@ class TestExportCadnanoV2(unittest.TestCase):
     """
     Tests the export feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
     """
+    def test_2_stape_2_helix_origami_extremely_simple(self):
+        helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
+        scaf_part = sc.Substrand(helix=0, forward=True, start=0, end=32)
+        scaf = sc.Strand(substrands=[scaf_part])
+        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
+        design.write_scadnano_file(directory='tests_outputs', filename='test_2_stape_2_helix_origami_extremely_simple.dna')
+        design.export_cadnano_v2(directory='tests_outputs', filename='test_2_stape_2_helix_origami_extremely_simple.json')
+
+    def test_2_stape_2_helix_origami_extremely_simple_2(self):
+        helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
+        scaf_part1 = sc.Substrand(helix=0, forward=True, start=0, end=32)
+        scaf_part2 = sc.Substrand(helix=1, forward=False, start=0, end=32)
+        scaf = sc.Strand(substrands=[scaf_part1,scaf_part2])
+        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
+        design.write_scadnano_file(directory='tests_outputs', filename='test_2_stape_2_helix_origami_extremely_simple_2.dna')
+        design.export_cadnano_v2(directory='tests_outputs', filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
+
 
     def test_2_stape_2_helix_origami_deletions_insertions(self):
-        # helices
-        helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
-
         # left staple
-        stap_left_ss1 = sc.Substrand(helix=1, forward=True, start=8, end=24)
-        stap_left_ss0 = sc.Substrand(helix=0, forward=False, start=8, end=24)
+        stap_left_ss1 = sc.Substrand(helix=1, forward=True, start=0, end=16)
+        stap_left_ss0 = sc.Substrand(helix=0, forward=False, start=0, end=16)
         stap_left = sc.Strand(substrands=[stap_left_ss1, stap_left_ss0])
 
         # right staple
-        stap_right_ss0 = sc.Substrand(helix=0, forward=False, start=24, end=40)
-        stap_right_ss1 = sc.Substrand(helix=1, forward=True, start=24, end=40)
+        stap_right_ss0 = sc.Substrand(helix=0, forward=False, start=16, end=32)
+        stap_right_ss1 = sc.Substrand(helix=1, forward=True, start=16, end=32)
         stap_right = sc.Strand(substrands=[stap_right_ss0, stap_right_ss1])
 
         # scaffold
-        scaf_ss1_left = sc.Substrand(helix=1, forward=False, start=8, end=24)
-        scaf_ss0 = sc.Substrand(helix=0, forward=True, start=8, end=40)
-        #loopout = sc.Loopout(length=3)
-        scaf_ss1_right = sc.Substrand(helix=1, forward=False, start=24, end=40)
+        scaf_ss1_left = sc.Substrand(helix=1, forward=False, start=0, end=16)
+        scaf_ss0 = sc.Substrand(helix=0, forward=True, start=0, end=32)
+        #loopout = sc.Loopout(length=3) No loopout in cadnano
+        scaf_ss1_right = sc.Substrand(helix=1, forward=False, start=16, end=32)
         scaf = sc.Strand(substrands=[scaf_ss1_left, scaf_ss0, scaf_ss1_right])
 
         # whole design
-        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
-                                    scaffold=scaf)
+        design = sc.DNAOrigamiDesign(strands=[scaf, stap_left, stap_right], grid=sc.square, scaffold=scaf)
 
-        # deletions and insertions added to design are added to both strands on a helix
-        design.add_deletion(helix=1, offset=20)
-        #design.add_insertion(helix=0, offset=14, length=1)
-        #design.add_insertion(helix=0, offset=26, length=2)
+        # deletions and insertions added to design so they can be added to both strands on a helix
+        design.add_deletion(helix=0, offset=11)
+        design.add_deletion(helix=0, offset=12)
+        design.add_deletion(helix=0, offset=24)
+        design.add_deletion(helix=1, offset=12)
+        design.add_deletion(helix=1, offset=24)
+
+        design.add_insertion(helix=0, offset=6, length=1)
+        design.add_insertion(helix=0, offset=18, length=2)
+        design.add_insertion(helix=1, offset=6, length=3)
+        design.add_insertion(helix=1, offset=18, length=4)
 
         # also assigns complement to strands other than scaf bound to it
         design.assign_dna(scaf, 'AACGT' * 18)
+        design.write_scadnano_file(directory='tests_outputs', filename='test_2_stape_2_helix_origami_deletions_insertions.dna')
         design.export_cadnano_v2(directory='tests_outputs', filename='test_2_stape_2_helix_origami_deletions_insertions.json')
 
     def test_6_helix_origami_rectangle_export(self):
         design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered, twist_correction_deletion_spacing=3)
-        design.export_cadnano_v2(directory='tests_outputs', filename='to_cadnano_v2_6_helix_origami_rectangle.json')
+        design.write_scadnano_file(directory='tests_outputs', filename='test_6_helix_origami_rectangle_export.dna')
+        design.export_cadnano_v2(directory='tests_outputs', filename='test_6_helix_origami_rectangle_export.json')
 
 
 class TestStrandReversePolarity(unittest.TestCase):

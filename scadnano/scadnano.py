@@ -173,6 +173,9 @@ class Color(_JSONSerializable):
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
 
+    def to_cadnano_v2_int_hex(self):
+        return int(f'{self.r:02x}{self.g:02x}{self.b:02x}',16)
+
 
 class ColorCycler:
     """
@@ -1739,10 +1742,9 @@ class DNADesign(_JSONSerializable):
         """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
         pass
 
-    def _cadnano_v2_place_scaffold_segment(self, helix_dct, substrand: Substrand):
-        """Converts a scaffold region with no crossover to cadnano v2.
+    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand, strand_type: str ='scaf'):
+        """Converts a strand region with no crossover to cadnano v2.
         """
-        
         # Insertions and deletions
         for deletion in substrand.deletions:
             helix_dct['skip'][deletion] = -1
@@ -1751,29 +1753,98 @@ class DNADesign(_JSONSerializable):
 
         start, end, forward = substrand.start, substrand.end, substrand.forward
         strand_helix = helix_dct['num']
-
-        start_end_tab = [start, end]
-        coeff = 1 if forward else -1
-        elem = 1 if not forward else 0
-
-        from_helix, from_base = -1, -1
-        to_helix, to_base = strand_helix, start_end_tab[elem]+coeff
-        for i in range(start_end_tab[elem],start_end_tab[1-elem], coeff):
-            helix_dct['scaf'][i] = [from_helix, from_base, to_helix, to_base]
-            to_base += coeff
-            if from_helix == -1:
-                    from_helix = strand_helix
-                    from_base = start_end_tab[elem]
+        
+        for i_base in range(start, end):
+            if forward:
+                from_helix, from_base = strand_helix, i_base-1
+                to_helix, to_base = strand_helix, i_base+1
             else:
-                from_base += coeff
+                from_helix, from_base = strand_helix, i_base+1
+                to_helix, to_base = strand_helix, i_base-1
 
+            if i_base == start:
+                if forward:
+                    helix_dct[strand_type][i_base][2:] = [to_helix,to_base]
+                else:
+                    helix_dct[strand_type][i_base][:2] = [from_helix,from_base]
+            elif i_base < end-1:
+                helix_dct[strand_type][i_base] = [from_helix, from_base, to_helix, to_base]
+            else:
+                if forward:
+                    helix_dct[strand_type][i_base][:2] = [from_helix,from_base]
+                else:
+                    helix_dct[strand_type][i_base][2:] = [to_helix,to_base]
         return
 
     def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct, 
                                           substrand_from: Substrand, substrand_to: Substrand):
         """Converts a crossover to cadnano v2 format.
+        Returns a conversion table from ids in the structure self.helices to helices ids
+        as given by helix.idx().
         """
         return
+
+    def _cadnano_v2_color_of_stap(self, color, substrand):
+        base_id = substrand.start if substrand.forward else substrand.end
+        cadnano_color = color.to_cadnano_v2_int_hex()
+        return [base_id, cadnano_color]
+
+    def _cadnano_v2_place_strand(self, strand, dct, helices_ids_reverse):
+        """Place a scadnano strand in cadnano v2.
+        """
+        strand_type = 'stap'
+        if hasattr(strand, is_scaffold_key):
+            strand_type = 'scaf'
+
+        for i, substrand in enumerate(strand.substrands):
+            which_helix_id = helices_ids_reverse[substrand.helix]
+            which_helix = dct['vstrands'][which_helix_id]
+
+            if strand_type == 'stap':
+                which_helix['stap_colors'].append(self._cadnano_v2_color_of_stap(strand.color, substrand))
+
+            self._cadnano_v2_place_strand_segment(which_helix, substrand, strand_type)
+
+            if i != len(strand.substrands)-1:
+                next_substrand = strand.substrands[i+1]
+                next_helix_id = helices_ids_reverse[next_substrand.helix]
+                next_helix = dct['vstrands'][next_helix_id]
+                self._cadnano_v2_place_crossover(which_helix, next_helix, substrand, 
+                                                        next_substrand)
+
+    def _cadnano_v2_fill_blank(self, dct, num_bases):
+        """Creates blank cadnanov2 helices in and initialized all their fields.
+        """
+        helices_ids_reverse = {}
+        for i,helix in enumerate(self.helices):
+            helix_dct = OrderedDict()
+            helix_dct['num'] = helix.idx()
+
+            if self.grid == Grid.square:
+                helix_dct['row'] = helix.grid_position[1]
+                helix_dct['col'] = helix.grid_position[0]
+
+            if self.grid== Grid.honeycomb:
+                helix_dct['row'], helix_dct['col'] = self._cadnano_v2_convert_honeycomb_coords(helix.grid_position)
+            
+            helix_dct['scaf'] = []
+            helix_dct['stap'] = []
+            helix_dct['loop'] = []
+            helix_dct['skip'] = []
+            
+            for _ in range(num_bases):
+                helix_dct['scaf'].append([-1,-1,-1,-1])
+                helix_dct['stap'].append([-1,-1,-1,-1])
+                helix_dct['loop'].append(0)
+                helix_dct['skip'].append(0)
+
+            helix_dct['stap_colors'] = []
+            helix_dct['scafLoop'] = []
+            helix_dct['stapLoop'] = []
+
+            helices_ids_reverse[helix_dct['num']] = i
+            dct['vstrands'].append(helix_dct)
+        return helices_ids_reverse
 
     def to_cadnano_v2(self):
         """Converts the design to the cadnano v2 format.
@@ -1808,10 +1879,8 @@ class DNADesign(_JSONSerializable):
 
         TODO: test for that case
         '''
-        i_scaffold = 0
-        for i,strand in enumerate(self.strands):
+        for strand in self.strands:
             if hasattr(strand, is_scaffold_key):
-                i_scaffold = i
                 for substrand in strand.substrands:
                     if substrand.helix%2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
@@ -1819,50 +1888,12 @@ class DNADesign(_JSONSerializable):
 
         '''Filling the helices with blank.
         '''
-        helices_ids_reverse = {}
-        for i,helix in enumerate(self.helices):
-            helix_dct = OrderedDict()
-            helix_dct['num'] = helix.idx()
-
-            if self.grid == Grid.square:
-                helix_dct['row'] = helix.grid_position[1]
-                helix_dct['col'] = helix.grid_position[0]
-
-            if self.grid== Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = _cadnano_v2_convert_honeycomb_coords(helix.grid_position)
-            
-            helix_dct['scaf'] = []
-            helix_dct['stap'] = []
-            helix_dct['loop'] = []
-            helix_dct['skip'] = []
-            
-            for _ in range(num_bases):
-                helix_dct['scaf'].append([-1,-1,-1,-1])
-                helix_dct['stap'].append([-1,-1,-1,-1])
-                helix_dct['loop'].append(0)
-                helix_dct['skip'].append(0)
-
-            helix_dct['stap_colors'] = []
-            helix_dct['scafLoop'] = []
-            helix_dct['stapLoop'] = []
-
-            helices_ids_reverse[helix_dct['num']] = i
-            dct['vstrands'].append(helix_dct)
-
+        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
         '''Putting the scaffold in place.
         '''
-        scaffold_strand = self.strands[i_scaffold]
-        for i, substrand in enumerate(scaffold_strand.substrands):
-            which_helix_id = helices_ids_reverse[substrand.helix]
-            which_helix = dct['vstrands'][which_helix_id]
-            self._cadnano_v2_place_scaffold_segment(which_helix, substrand)
 
-            if i != len(scaffold_strand.substrands)-1:
-                next_substrand = scaffold_strand.substrands[i+1]
-                next_helix_id = helices_ids_reverse[next_substrand.helix]
-                next_helix = dct['vstrands'][next_helix_id]
-                self._cadnano_v2_place_crossover(which_helix, next_helix, substrand, 
-                                                          next_substrand)
+        for strand in self.strands:
+            self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
 
         return dct
 
@@ -2825,7 +2856,6 @@ class DNADesign(_JSONSerializable):
         """
         for strand in self.strands:
             strand.reverse()
-
 
 def _name_of_this_script() -> str:
     """Return name of the currently running script, WITHOUT the .py extension."""
