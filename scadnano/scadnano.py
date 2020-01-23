@@ -1883,6 +1883,16 @@ class DNADesign(_JSONSerializable):
             helices_view_order=helices_view_order,
         )
 
+    @staticmethod
+    def from_cadnano_v2(directory, filename) -> DNAOrigamiDesign:
+        """ Creates a DNAOrigamiDesign from a cadnano v2 file.
+        """
+        file_path = os.path.join(directory, filename)
+        f = open(file_path)
+        cadnano_v2_design = json.load(f)
+        print(cadnano_v2_design)
+
+
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
         dct[version_key] = current_version
@@ -1912,7 +1922,7 @@ class DNADesign(_JSONSerializable):
 
         return dct
 
-    def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int):
+    def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int) -> int:
         return y if y % x == 0 else y + (x - y % x)
 
     def _cadnano_v2_convert_honeycomb_coords(self, grid_position: Tuple[int, int, int]):
@@ -1920,7 +1930,7 @@ class DNADesign(_JSONSerializable):
         raise NotImplementedError('The honeycomb lattice is not exportable yet')
         pass
 
-    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand, strand_type: str ='scaf'):
+    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand, strand_type: str ='scaf') -> None:
         """Converts a strand region with no crossover to cadnano v2.
         """
         # Insertions and deletions
@@ -1956,7 +1966,7 @@ class DNADesign(_JSONSerializable):
 
     def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct,
                                     substrand_from: Substrand, substrand_to: Substrand, 
-                                    strand_type: str = 'scaf'):
+                                    strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
         as given by helix.idx().
@@ -1976,12 +1986,12 @@ class DNADesign(_JSONSerializable):
             helix_to_dct[strand_type][start_to][:2] = [helix_from,start_from]
 
 
-    def _cadnano_v2_color_of_stap(self, color, substrand):
+    def _cadnano_v2_color_of_stap(self, color, substrand) -> List[int]:
         base_id = substrand.start if substrand.forward else substrand.end-1
         cadnano_color = color.to_cadnano_v2_int_hex()
         return [base_id, cadnano_color]
 
-    def _cadnano_v2_place_strand(self, strand, dct, helices_ids_reverse):
+    def _cadnano_v2_place_strand(self, strand, dct, helices_ids_reverse) -> None:
         """Place a scadnano strand in cadnano v2.
         """
         strand_type = 'stap'
@@ -2004,7 +2014,7 @@ class DNADesign(_JSONSerializable):
                 self._cadnano_v2_place_crossover(which_helix, next_helix, 
                                                  substrand, next_substrand, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct, num_bases):
+    def _cadnano_v2_fill_blank(self, dct, num_bases) -> None:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}

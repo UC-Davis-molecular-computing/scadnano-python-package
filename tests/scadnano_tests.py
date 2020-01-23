@@ -38,6 +38,15 @@ def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
 
+class TestImportCadnanoV2(unittest.TestCase):
+    """
+    Tests the import feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
+    """
+    io_folder = "cadnano_v2_import"
+    def test_32_helix_rectangle(self):
+        sc.from_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+                           filename='test_32_helix_rectangle.json')
+
 
 class TestExportCadnanoV2(unittest.TestCase):
     """
