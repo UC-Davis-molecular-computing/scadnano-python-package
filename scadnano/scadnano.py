@@ -1917,7 +1917,7 @@ class DNADesign(_JSONSerializable):
 
     def _cadnano_v2_convert_honeycomb_coords(self, grid_position: Tuple[int, int, int]):
         """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
-
+        raise NotImplementedError('The honeycomb lattice is not exportable yet')
         pass
 
     def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand, strand_type: str ='scaf'):
@@ -2061,7 +2061,6 @@ class DNADesign(_JSONSerializable):
         if self.grid == Grid.square:
             num_bases = self._get_multiple_of_x_sup_closest_to_y(32,num_bases)
         elif self.grid == Grid.honeycomb:
-            raise NotImplementedError('The honeycomb lattice is not exportable yet')
             num_bases = self._get_multiple_of_x_sup_closest_to_y(21,num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
