@@ -44,8 +44,10 @@ class TestImportCadnanoV2(unittest.TestCase):
     """
     io_folder = "cadnano_v2_import"
     def test_32_helix_rectangle(self):
-        sc.from_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs',self.io_folder), 
                            filename='test_32_helix_rectangle.json')
+        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.io_folder), 
+                                   filename='test_32_helix_rectangle.dna')
 
 
 class TestExportCadnanoV2(unittest.TestCase):

@@ -1888,9 +1888,33 @@ class DNADesign(_JSONSerializable):
         """ Creates a DNAOrigamiDesign from a cadnano v2 file.
         """
         file_path = os.path.join(directory, filename)
-        f = open(file_path)
+        f = open(file_path, 'r')
         cadnano_v2_design = json.load(f)
-        print(cadnano_v2_design)
+        f.close()
+
+        num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
+        grid_type = Grid.square
+        if num_bases%21 == 0:
+            grid_type = Grid.honeycomb
+            raise NotImplementedError("Can't import honeycomb yet")
+
+        min_row, min_col = None, None
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            col,row = cadnano_helix['col'], cadnano_helix['row']
+            min_row = row if min_row is None else min_row
+            min_col = col if min_col is None else min_col
+            min_row = row if row < min_row else min_row
+            min_col = col if col < min_col else min_col
+        
+        helices = []
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            col,row = cadnano_helix['col'], cadnano_helix['row']
+            helix = Helix(max_offset=num_bases, grid_position=[col-min_col,row-min_row,0])
+            helix.set_idx(cadnano_helix['num'])
+            helices.append(helix)
+
+        return DNAOrigamiDesign(grid=grid_type, helices=helices, strands=[])
+        
 
 
     def to_json_serializable(self, suppress_indent=True):
