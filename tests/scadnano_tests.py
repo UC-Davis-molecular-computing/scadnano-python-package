@@ -124,17 +124,51 @@ class TestExportCadnanoV2(unittest.TestCase):
         """ We do not handle Loopouts and design where the parity of the helix
         does not correspond to the direction.
         """
+        
+        # Bad case one: parity issue in design (see cadnano v2 format spec, v2.txt)
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Substrand(helix=1, forward=True, start=0, end=32)
         scaf = sc.Strand(substrands=[scaf_part])
         design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
-                                   filename='test_2_stape_2_helix_origami_extremely_simple.dna')
         
         with self.assertRaises(ValueError) as context:
             design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
-                                 filename='test_2_stape_2_helix_origami_extremely_simple.json')
+                                 filename='test_parity_issue.json')
         self.assertTrue('forward' in context.exception.args[0])
+
+        # Bad case two: Loopouts
+        helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
+
+        # left staple
+        stap_left_ss1 = sc.Substrand(helix=1, forward=True, start=8, end=24)
+        stap_left_ss0 = sc.Substrand(helix=0, forward=False, start=8, end=24)
+        stap_left = sc.Strand(substrands=[stap_left_ss1, stap_left_ss0])
+
+        # right staple
+        stap_right_ss0 = sc.Substrand(helix=0, forward=False, start=24, end=40)
+        stap_right_ss1 = sc.Substrand(helix=1, forward=True, start=24, end=40)
+        stap_right = sc.Strand(substrands=[stap_right_ss0, stap_right_ss1])
+
+        # scaffold
+        scaf_ss1_left = sc.Substrand(helix=1, forward=False, start=8, end=24)
+        scaf_ss0 = sc.Substrand(helix=0, forward=True, start=8, end=40)
+        loopout = sc.Loopout(length=3)
+        scaf_ss1_right = sc.Substrand(helix=1, forward=False, start=24, end=40)
+        scaf = sc.Strand(substrands=[scaf_ss1_left, scaf_ss0, loopout, scaf_ss1_right])
+
+        # whole design
+        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
+                                    scaffold=scaf)
+
+        # deletions and insertions added to design are added to both strands on a helix
+        design.add_deletion(helix=1, offset=20)
+        design.add_insertion(helix=0, offset=14, length=1)
+        design.add_insertion(helix=0, offset=26, length=2)
+
+        with self.assertRaises(ValueError) as context:
+            design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+                                 filename='test_loopout_issue.json')
+        self.assertTrue('Loopouts' in context.exception.args[0])
 
 
 
