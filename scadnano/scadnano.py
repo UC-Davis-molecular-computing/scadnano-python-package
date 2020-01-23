@@ -2072,6 +2072,8 @@ class DNADesign(_JSONSerializable):
         for strand in self.strands:
             if hasattr(strand, is_scaffold_key):
                 for substrand in strand.substrands:
+                    if type(substrand) == Loopout:
+                        raise ValueError('We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
                     if substrand.helix%2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
                                                   going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')

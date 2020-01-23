@@ -108,38 +108,34 @@ class TestExportCadnanoV2(unittest.TestCase):
     
     def test_6_helix_origami_rectangle(self):
         design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered, twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory='tests_outputs', filename='test_6_helix_origami_rectangle_export.dna')
-        design.export_cadnano_v2(directory='tests_outputs', filename='test_6_helix_origami_rectangle_export.json')
-    
-        scaf_ss1_left = sc.Substrand(helix=1, forward=False, start=8, end=24)
-        scaf_ss0 = sc.Substrand(helix=0, forward=True, start=8, end=40)
-        # loopout = sc.Loopout(length=3)
-        scaf_ss1_right = sc.Substrand(helix=1, forward=False, start=24, end=40)
-        scaf = sc.Strand(substrands=[scaf_ss1_left, scaf_ss0, scaf_ss1_right])
-    
-        # whole design
-        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
-                                      scaffold=scaf)
-    
-        # deletions and insertions added to design are added to both strands on a helix
-        design.add_deletion(helix=1, offset=20)
-        # design.add_insertion(helix=0, offset=14, length=1)
-        # design.add_insertion(helix=0, offset=26, length=2)
-    
-        # also assigns complement to strands other than scaf bound to it
-        design.assign_dna(scaf, 'AACGT' * 18)
         design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
                                    filename='test_6_helix_origami_rectangle.dna')
         design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
                                  filename='test_6_helix_origami_rectangle.json')
 
-    def test_6_helix_origami_rectangle(self):
-        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
-                             twist_correction_deletion_spacing=3)
+    def test_16_helix_origami_rectangle_no_twist(self):
+        design = rect.create(num_helices=16, num_cols=26, assign_seq=True, twist_correction_deletion_spacing=3)
         design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
-                                   filename='test_6_helix_origami_rectangle.dna')
+                                   filename='test_16_helix_origami_rectangle_no_twist.dna')
         design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
-                                 filename='test_6_helix_origami_rectangle.json')
+                                 filename='test_16_helix_origami_rectangle_no_twist.json')
+
+    def test_bad_cases(self):
+        """ We do not handle Loopouts and design where the parity of the helix
+        does not correspond to the direction.
+        """
+        helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
+        scaf_part = sc.Substrand(helix=1, forward=True, start=0, end=32)
+        scaf = sc.Strand(substrands=[scaf_part])
+        design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
+        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+                                   filename='test_2_stape_2_helix_origami_extremely_simple.dna')
+        
+        with self.assertRaises(ValueError) as context:
+            design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+                                 filename='test_2_stape_2_helix_origami_extremely_simple.json')
+        self.assertTrue('forward' in context.exception.args[0])
+
 
 
 class TestDesignFromJson(unittest.TestCase):
