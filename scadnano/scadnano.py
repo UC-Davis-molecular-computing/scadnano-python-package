@@ -1930,23 +1930,11 @@ class DNADesign(_JSONSerializable):
 
         start, end, forward = substrand.start, substrand.end, substrand.forward
         strand_helix = helix_dct['num']
+        
         for i_base in range(start, end):
             if forward:
                 from_helix, from_base = strand_helix, i_base-1
                 to_helix, to_base = strand_helix, i_base+1
-
-        start_end_tab = [start, end]
-        coeff = 1 if forward else -1
-        elem = 1 if not forward else 0
-
-        from_helix, from_base = -1, -1
-        to_helix, to_base = strand_helix, start_end_tab[elem] + coeff
-        for i in range(start_end_tab[elem], start_end_tab[1 - elem], coeff):
-            helix_dct['scaf'][i] = [from_helix, from_base, to_helix, to_base]
-            to_base += coeff
-            if from_helix == -1:
-                from_helix = strand_helix
-                from_base = start_end_tab[elem]
             else:
                 from_helix, from_base = strand_helix, i_base+1
                 to_helix, to_base = strand_helix, i_base-1
@@ -1974,7 +1962,7 @@ class DNADesign(_JSONSerializable):
         return
 
     def _cadnano_v2_color_of_stap(self, color, substrand):
-        base_id = substrand.start if substrand.forward else substrand.end
+        base_id = substrand.start if substrand.forward else substrand.end-1
         cadnano_color = color.to_cadnano_v2_int_hex()
         return [base_id, cadnano_color]
 
@@ -2043,8 +2031,7 @@ class DNADesign(_JSONSerializable):
         dct['vstrands'] = []
 
         if self.__class__ != DNAOrigamiDesign:
-            raise ValueError(
-                'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
+            raise ValueError('Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -2054,74 +2041,35 @@ class DNADesign(_JSONSerializable):
         '''
         num_bases = 0
         for helix in self.helices:
-            num_bases = max(num_bases, helix.max_offset)
+            num_bases = max(num_bases,helix.max_offset)
 
         if self.grid == Grid.square:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(32,num_bases)
         elif self.grid == Grid.honeycomb:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(21,num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
 
         '''Figuring out if helices numbers have good parity.
         In cadnano v2, only even helices have the scaffold go forward, only odd helices
         have the scaffold go backward.
-
         TODO: test for that case
         '''
-        # for strand in self.strands:
-        # i_scaffold = 0
-        for i, strand in enumerate(self.strands):
+        for strand in self.strands:
             if hasattr(strand, is_scaffold_key):
                 for substrand in strand.substrands:
-                    if substrand.helix % 2 != int(not substrand.forward):
+                    if substrand.helix%2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
                                                   going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')
 
         '''Filling the helices with blank.
         '''
-        # helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
-        helices_ids_reverse = {}
-        for i, helix in enumerate(self.helices):
-            helix_dct = OrderedDict()
-            helix_dct['num'] = helix.idx()
-
-            if self.grid == Grid.square:
-                helix_dct['row'] = helix.grid_position[1]
-                helix_dct['col'] = helix.grid_position[0]
-
-            if self.grid == Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = _cadnano_v2_convert_honeycomb_coords(helix.grid_position)
-
-            helix_dct['scaf'] = []
-            helix_dct['stap'] = []
-            helix_dct['loop'] = []
-            helix_dct['skip'] = []
-
-            for _ in range(num_bases):
-                helix_dct['scaf'].append([-1, -1, -1, -1])
-                helix_dct['stap'].append([-1, -1, -1, -1])
-                helix_dct['loop'].append(0)
-                helix_dct['skip'].append(0)
-
-            helix_dct['stap_colors'] = []
-            helix_dct['scafLoop'] = []
-            helix_dct['stapLoop'] = []
-
-            helices_ids_reverse[helix_dct['num']] = i
-            dct['vstrands'].append(helix_dct)
-
+        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
         '''Putting the scaffold in place.
         '''
 
-        # for strand in self.strands:
-        #     self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
-        #     if i != len(scaffold_strand.substrands) - 1:
-        #         next_substrand = scaffold_strand.substrands[i + 1]
-        #         next_helix_id = helices_ids_reverse[next_substrand.helix]
-        #         next_helix = dct['vstrands'][next_helix_id]
-        #         self._cadnano_v2_place_crossover(which_helix, next_helix, substrand,
-        #                                          next_substrand)
+        for strand in self.strands:
+            self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
 
         return dct
 

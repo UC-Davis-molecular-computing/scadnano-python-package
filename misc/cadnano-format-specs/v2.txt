@@ -1,3 +1,6 @@
+Find at the end of this document a translation table between cadnano v2 
+vocabulary and scadnano.
+
 Fields:
     -"name": 
         Type
@@ -202,3 +205,12 @@ Fields:
                     int to color hex: '#%0.6x' % (color_number)
                     color hex to int: int(hex, 16)
 
+
+TRANSLATION TABLE
+=================
+
+cadnano v2    |   scadnano
+==============|===========
+loop          | insertion
+skip          | deletion
+N/A           | Loopout

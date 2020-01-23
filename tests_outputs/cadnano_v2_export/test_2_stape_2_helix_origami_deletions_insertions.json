@@ -1,5 +1,5 @@
 {
-  "name": "tests_outputs/test_2_stape_2_helix_origami_deletions_insertions.json",
+  "name": "tests_outputs/cadnano_v2_export/test_2_stape_2_helix_origami_deletions_insertions.json",
   "vstrands": [
     {
       "num": 0,
@@ -463,11 +463,11 @@
       ],
       "stap_colors": [
         [
-          16,
+          15,
           16204552
         ],
         [
-          32,
+          31,
           5749504
         ]
       ],
