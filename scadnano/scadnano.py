@@ -1954,12 +1954,26 @@ class DNADesign(_JSONSerializable):
         return
 
     def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct,
-                                    substrand_from: Substrand, substrand_to: Substrand):
+                                    substrand_from: Substrand, substrand_to: Substrand, 
+                                    strand_type: str = 'scaf'):
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
         as given by helix.idx().
         """
-        return
+
+        helix_from = helix_from_dct['num']
+        start_from, end_from, forward_from = substrand_from.start, substrand_from.end, substrand_from.forward
+        
+        helix_to   = helix_to_dct['num']
+        start_to, end_to = substrand_to.start, substrand_to.end
+
+        if forward_from:
+            helix_from_dct[strand_type][end_from-1][2:] = [helix_to,end_to-1]
+            helix_to_dct[strand_type][end_to-1][:2] = [helix_from,end_from-1]
+        else:
+            helix_from_dct[strand_type][start_from][2:] = [helix_to,start_to]
+            helix_to_dct[strand_type][start_to][:2] = [helix_from,start_from]
+
 
     def _cadnano_v2_color_of_stap(self, color, substrand):
         base_id = substrand.start if substrand.forward else substrand.end-1
@@ -1986,8 +2000,8 @@ class DNADesign(_JSONSerializable):
                 next_substrand = strand.substrands[i+1]
                 next_helix_id = helices_ids_reverse[next_substrand.helix]
                 next_helix = dct['vstrands'][next_helix_id]
-                self._cadnano_v2_place_crossover(which_helix, next_helix, substrand, 
-                                                        next_substrand)
+                self._cadnano_v2_place_crossover(which_helix, next_helix, 
+                                                 substrand, next_substrand, strand_type)
 
     def _cadnano_v2_fill_blank(self, dct, num_bases):
         """Creates blank cadnanov2 helices in and initialized all their fields.
