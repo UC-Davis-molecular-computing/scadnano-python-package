@@ -2230,6 +2230,7 @@ class DNADesign(_JSONSerializable):
                 x = helix.grid_position[0]
                 y = helix.grid_position[1]
 
+                # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
                 if x % 2 == 1 and y % 2 == 1:
                     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
                                                 'coordinates (x,y) if both x and y are odd, '
@@ -2247,7 +2248,6 @@ class DNADesign(_JSONSerializable):
                 #                                 'coordinates (x,y) with y odd and x = 1 + a multiple of 3, '
                 #                                 f'but helix {helix.idx()} has grid position '
                 #                                 f'{helix.grid_position}')
-                # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self):
