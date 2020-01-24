@@ -1,6 +1,6 @@
 # scadnano Python scripting tutorial
 
-First, follow the [installation instructions](https://github.com/UC-Davis-molecular-computing/scadnano-python-package) 
+First, follow the [installation instructions](README.md) 
 to install the scadnano Python package.
 
 ## Documentation
