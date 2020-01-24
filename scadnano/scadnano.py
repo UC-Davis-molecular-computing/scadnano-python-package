@@ -174,7 +174,7 @@ class Color(_JSONSerializable):
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
 
     def to_cadnano_v2_int_hex(self):
-        return int(f'{self.r:02x}{self.g:02x}{self.b:02x}',16)
+        return int(f'{self.r:02x}{self.g:02x}{self.b:02x}', 16)
 
 
 class ColorCycler:
@@ -291,8 +291,8 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.0.1"
-initial_version: str = "0.0.1"
+current_version: str = "0.1.0"
+initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -1894,22 +1894,22 @@ class DNADesign(_JSONSerializable):
 
         num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
         grid_type = Grid.square
-        if num_bases%21 == 0:
+        if num_bases % 21 == 0:
             grid_type = Grid.honeycomb
             raise NotImplementedError("Can't import honeycomb yet")
 
         min_row, min_col = None, None
         for cadnano_helix in cadnano_v2_design['vstrands']:
-            col,row = cadnano_helix['col'], cadnano_helix['row']
+            col, row = cadnano_helix['col'], cadnano_helix['row']
             min_row = row if min_row is None else min_row
             min_col = col if min_col is None else min_col
             min_row = row if row < min_row else min_row
             min_col = col if col < min_col else min_col
-        
+
         helices = []
         for cadnano_helix in cadnano_v2_design['vstrands']:
-            col,row = cadnano_helix['col'], cadnano_helix['row']
-            helix = Helix(max_offset=num_bases, grid_position=[col-min_col,row-min_row,0])
+            col, row = cadnano_helix['col'], cadnano_helix['row']
+            helix = Helix(max_offset=num_bases, grid_position=[col - min_col, row - min_row, 0])
             helix.set_idx(cadnano_helix['num'])
             helices.append(helix)
         
@@ -1918,8 +1918,6 @@ class DNADesign(_JSONSerializable):
         design.set_helices_view_order([h.idx() for h in helices])
 
         return design
-        
-
 
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
@@ -1958,7 +1956,8 @@ class DNADesign(_JSONSerializable):
         raise NotImplementedError('The honeycomb lattice is not exportable yet')
         pass
 
-    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand, strand_type: str ='scaf') -> None:
+    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand,
+                                         strand_type: str = 'scaf') -> None:
         """Converts a strand region with no crossover to cadnano v2.
         """
         # Insertions and deletions
@@ -1969,31 +1968,31 @@ class DNADesign(_JSONSerializable):
 
         start, end, forward = substrand.start, substrand.end, substrand.forward
         strand_helix = helix_dct['num']
-        
+
         for i_base in range(start, end):
             if forward:
-                from_helix, from_base = strand_helix, i_base-1
-                to_helix, to_base = strand_helix, i_base+1
+                from_helix, from_base = strand_helix, i_base - 1
+                to_helix, to_base = strand_helix, i_base + 1
             else:
-                from_helix, from_base = strand_helix, i_base+1
-                to_helix, to_base = strand_helix, i_base-1
+                from_helix, from_base = strand_helix, i_base + 1
+                to_helix, to_base = strand_helix, i_base - 1
 
             if i_base == start:
                 if forward:
-                    helix_dct[strand_type][i_base][2:] = [to_helix,to_base]
+                    helix_dct[strand_type][i_base][2:] = [to_helix, to_base]
                 else:
-                    helix_dct[strand_type][i_base][:2] = [from_helix,from_base]
-            elif i_base < end-1:
+                    helix_dct[strand_type][i_base][:2] = [from_helix, from_base]
+            elif i_base < end - 1:
                 helix_dct[strand_type][i_base] = [from_helix, from_base, to_helix, to_base]
             else:
                 if forward:
-                    helix_dct[strand_type][i_base][:2] = [from_helix,from_base]
+                    helix_dct[strand_type][i_base][:2] = [from_helix, from_base]
                 else:
-                    helix_dct[strand_type][i_base][2:] = [to_helix,to_base]
+                    helix_dct[strand_type][i_base][2:] = [to_helix, to_base]
         return
 
     def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct,
-                                    substrand_from: Substrand, substrand_to: Substrand, 
+                                    substrand_from: Substrand, substrand_to: Substrand,
                                     strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
@@ -2002,20 +2001,19 @@ class DNADesign(_JSONSerializable):
 
         helix_from = helix_from_dct['num']
         start_from, end_from, forward_from = substrand_from.start, substrand_from.end, substrand_from.forward
-        
-        helix_to   = helix_to_dct['num']
+
+        helix_to = helix_to_dct['num']
         start_to, end_to = substrand_to.start, substrand_to.end
 
         if forward_from:
-            helix_from_dct[strand_type][end_from-1][2:] = [helix_to,end_to-1]
-            helix_to_dct[strand_type][end_to-1][:2] = [helix_from,end_from-1]
+            helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, end_to - 1]
+            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, end_from - 1]
         else:
-            helix_from_dct[strand_type][start_from][2:] = [helix_to,start_to]
-            helix_to_dct[strand_type][start_to][:2] = [helix_from,start_from]
-
+            helix_from_dct[strand_type][start_from][2:] = [helix_to, start_to]
+            helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
 
     def _cadnano_v2_color_of_stap(self, color, substrand) -> List[int]:
-        base_id = substrand.start if substrand.forward else substrand.end-1
+        base_id = substrand.start if substrand.forward else substrand.end - 1
         cadnano_color = color.to_cadnano_v2_int_hex()
         return [base_id, cadnano_color]
 
@@ -2035,18 +2033,18 @@ class DNADesign(_JSONSerializable):
 
             self._cadnano_v2_place_strand_segment(which_helix, substrand, strand_type)
 
-            if i != len(strand.substrands)-1:
-                next_substrand = strand.substrands[i+1]
+            if i != len(strand.substrands) - 1:
+                next_substrand = strand.substrands[i + 1]
                 next_helix_id = helices_ids_reverse[next_substrand.helix]
                 next_helix = dct['vstrands'][next_helix_id]
-                self._cadnano_v2_place_crossover(which_helix, next_helix, 
+                self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  substrand, next_substrand, strand_type)
 
     def _cadnano_v2_fill_blank(self, dct, num_bases) -> None:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
-        for i,helix in enumerate(self.helices):
+        for i, helix in enumerate(self.helices):
             helix_dct = OrderedDict()
             helix_dct['num'] = helix.idx()
 
@@ -2054,17 +2052,18 @@ class DNADesign(_JSONSerializable):
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
 
-            if self.grid== Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = self._cadnano_v2_convert_honeycomb_coords(helix.grid_position)
-            
+            if self.grid == Grid.honeycomb:
+                helix_dct['row'], helix_dct['col'] = self._cadnano_v2_convert_honeycomb_coords(
+                    helix.grid_position)
+
             helix_dct['scaf'] = []
             helix_dct['stap'] = []
             helix_dct['loop'] = []
             helix_dct['skip'] = []
-            
+
             for _ in range(num_bases):
-                helix_dct['scaf'].append([-1,-1,-1,-1])
-                helix_dct['stap'].append([-1,-1,-1,-1])
+                helix_dct['scaf'].append([-1, -1, -1, -1])
+                helix_dct['stap'].append([-1, -1, -1, -1])
                 helix_dct['loop'].append(0)
                 helix_dct['skip'].append(0)
 
@@ -2084,7 +2083,8 @@ class DNADesign(_JSONSerializable):
         dct['vstrands'] = []
 
         if self.__class__ != DNAOrigamiDesign:
-            raise ValueError('Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
+            raise ValueError(
+                'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -2094,12 +2094,12 @@ class DNADesign(_JSONSerializable):
         '''
         num_bases = 0
         for helix in self.helices:
-            num_bases = max(num_bases,helix.max_offset)
+            num_bases = max(num_bases, helix.max_offset)
 
         if self.grid == Grid.square:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(32,num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
         elif self.grid == Grid.honeycomb:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(21,num_bases)
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
 
@@ -2112,8 +2112,9 @@ class DNADesign(_JSONSerializable):
             if hasattr(strand, is_scaffold_key):
                 for substrand in strand.substrands:
                     if type(substrand) == Loopout:
-                        raise ValueError('We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                    if substrand.helix%2 != int(not substrand.forward):
+                        raise ValueError(
+                            'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
+                    if substrand.helix % 2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
                                                   going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')
 
@@ -2134,8 +2135,11 @@ class DNADesign(_JSONSerializable):
 
         # doing this first matters because most of DNADesign assumes helices has been set
         if self.helices is None:
-            max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
-            self.helices = list(Helix() for _ in range(max_helix_idx + 1))
+            if len(self.strands) > 0:
+                max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
+                self.helices = list(Helix() for _ in range(max_helix_idx + 1))
+            else:
+                self.helices = []
 
         # XXX: exact order of these calls is important
         self._set_helices_idxs()
@@ -3104,6 +3108,7 @@ class DNADesign(_JSONSerializable):
         """
         for strand in self.strands:
             strand.reverse()
+
 
 def _name_of_this_script() -> str:
     """Return name of the currently running script, WITHOUT the .py extension."""
