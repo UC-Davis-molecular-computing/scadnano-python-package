@@ -38,6 +38,10 @@ There are two ways you can install the scadnano Python package:
 Online documentation of the package API is located here:
 https://web.cs.ucdavis.edu/~doty/scadnano/docs/
 
+## Tutorial
+
+A [tutorial](tutorial.md) is available.
+
 ## Examples
 
 Several example scripts are located in the 
