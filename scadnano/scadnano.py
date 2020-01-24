@@ -1912,8 +1912,12 @@ class DNADesign(_JSONSerializable):
             helix = Helix(max_offset=num_bases, grid_position=[col-min_col,row-min_row,0])
             helix.set_idx(cadnano_helix['num'])
             helices.append(helix)
+        
+        sorted_helices = sorted(helices, key=lambda h: h.idx()) # Needed to show helices in the same order than cadnano in the grid view
+        design = DNAOrigamiDesign(grid=grid_type, helices=sorted_helices, strands=[])
+        design.set_helices_view_order([h.idx() for h in helices])
 
-        return DNAOrigamiDesign(grid=grid_type, helices=helices, strands=[])
+        return design
         
 
 

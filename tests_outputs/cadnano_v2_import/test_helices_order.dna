@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "helices": [
+    {"max_offset": 64, "grid_position": [0, 1]},
+    {"max_offset": 64, "grid_position": [0, 0]},
+    {"max_offset": 64, "grid_position": [1, 2]},
+    {"max_offset": 64, "grid_position": [0, 2]},
+    {"max_offset": 64, "grid_position": [1, 4]},
+    {"max_offset": 64, "grid_position": [1, 3]},
+    {"max_offset": 64, "grid_position": [0, 5]},
+    {"max_offset": 64, "grid_position": [1, 5]},
+    {"max_offset": 64, "grid_position": [0, 7]},
+    {"max_offset": 64, "grid_position": [0, 6]},
+    {"max_offset": 64, "grid_position": [0, 8]}
+  ],
+  "helices_view_order": [1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 10],
+  "strands": []
+}
