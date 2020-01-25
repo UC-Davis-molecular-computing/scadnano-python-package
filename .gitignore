@@ -5,3 +5,4 @@ __pyache__/*
 /__pycache__/
 *.egg-info
 /scadnano.zip
+.pypirc
