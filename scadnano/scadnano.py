@@ -643,7 +643,7 @@ class Helix(_JSONSerializable):
         if not (_is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1], default_y)):
             dct[svg_position_key] = (self.svg_position[0], self.svg_position[1])
 
-        if self.major_tick_distance > 0:
+        if self.major_tick_distance is not None and self.major_tick_distance > 0:
             dct[major_tick_distance_key] = self.major_tick_distance
 
         if self.major_ticks is not None:
@@ -668,8 +668,8 @@ class Helix(_JSONSerializable):
     def default_svg_position(self):
         return 0, self._idx * distance_between_helices_svg
 
-    def set_idx(self, idx):
-        self._idx = idx
+    def set_idx(self, new_idx):
+        self._idx = new_idx
 
     def idx(self):
         return self._idx
@@ -1634,8 +1634,9 @@ class Strand(_JSONSerializable):
 
         is_scaffold = json_map.get(is_scaffold_key, False)
         dna_sequence = json_map.get(dna_sequence_key)
-        color = json_map.get(color_key, default_scaffold_color if is_scaffold else default_strand_color)
         idt = json_map.get(idt_key)
+        color_str = json_map.get(color_key, default_scaffold_color if is_scaffold else default_strand_color)
+        color = Color(hex=color_str)
 
         return Strand(
             substrands=substrands,
@@ -1825,6 +1826,19 @@ class DNADesign(_JSONSerializable):
     """
 
     @staticmethod
+    def from_file(filename: str) -> DNADesign:
+        """
+        Loads a :any:`DNADesign` from the file with the given name.
+
+        :param filename: name of the file with the design. Should be a JSON file ending in .dna
+        :return: DNADesign described in the file
+        """
+        with open(filename) as f:
+            json_str = f.read()
+        json_map = json.loads(json_str)
+        return DNADesign.from_json(json_map)
+
+    @staticmethod
     def from_json(json_map: dict) -> DNADesign:
         version = json_map.get(version_key, initial_version)  # not sure what to do with this
         grid = json_map.get(grid_key, Grid.square)
@@ -1847,15 +1861,15 @@ class DNADesign(_JSONSerializable):
         # create Helices
         idx = 0
         for helix_json in deserialized_helices_list:
-            helix_builder = Helix.from_json(helix_json)
-            helix_builder.idx = idx
+            helix = Helix.from_json(helix_json)
+            helix.set_idx(idx)
             if (grid_is_none and grid_position_key in helix_json):
                 raise IllegalDNADesignError(
                     f'grid is none, but Helix {idx} has grid_position = {helix_json[grid_position_key]}')
             elif not grid_is_none and position3d_key in helix_json:
                 raise IllegalDNADesignError(
                     'grid is not none, but Helix $idx has position = ${helix_json[constants.position3d_key]}')
-            helices.append(helix_builder)
+            helices.append(helix)
             idx += 1
 
         # view order of helices
@@ -1912,8 +1926,9 @@ class DNADesign(_JSONSerializable):
             helix = Helix(max_offset=num_bases, grid_position=[col - min_col, row - min_row, 0])
             helix.set_idx(cadnano_helix['num'])
             helices.append(helix)
-        
-        sorted_helices = sorted(helices, key=lambda h: h.idx()) # Needed to show helices in the same order than cadnano in the grid view
+
+        sorted_helices = sorted(helices, key=lambda
+            h: h.idx())  # Needed to show helices in the same order than cadnano in the grid view
         design = DNAOrigamiDesign(grid=grid_type, helices=sorted_helices, strands=[])
         design.set_helices_view_order([h.idx() for h in helices])
 
@@ -2230,17 +2245,24 @@ class DNADesign(_JSONSerializable):
                 x = helix.grid_position[0]
                 y = helix.grid_position[1]
 
-                # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
-                if x % 2 == 1 and y % 2 == 1:
+                # following is for odd-q system: https://www.redblobgames.com/grids/hexagons/
+                if x % 2 == 1 and y % 2 == 0:
                     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                                                'coordinates (x,y) if both x and y are odd, '
+                                                'coordinates (x,y,_) if x is odd and y is even, '
                                                 f'but helix {helix.idx()} has grid position '
                                                 f'{helix.grid_position}')
+
+                # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
+                # if x % 2 == 1 and y % 2 == 1:
+                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
+                #                                 'coordinates (x,y,_) if both x and y are odd, '
+                #                                 f'but helix {helix.idx()} has grid position '
+                #                                 f'{helix.grid_position}')
 
                 # following is for odd-r system: https://www.redblobgames.com/grids/hexagons/
                 # if x % 3 == 0 and y % 2 == 0:
                 #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                #                                 'coordinates (x,y) with y even and x a multiple of 3, '
+                #                                 'coordinates (x,y,_) with y even and x a multiple of 3, '
                 #                                 f'but helix {helix.idx()} has grid position '
                 #                                 f'{helix.grid_position}')
                 # if x % 3 == 1 and y % 2 == 1:

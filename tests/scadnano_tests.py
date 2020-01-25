@@ -194,16 +194,16 @@ class TestDesignFromJson(unittest.TestCase):
     Tests reading a design from a dict derived from JSON.
     """
 
-    def test_from_json__three_strands(self):
+    def setUp(self):
         """
-        0       8       16
-        |       |       |
-    0   +--X-----------+
-       /<--X---++------]\
-       |       ||       loopout(3)
-       \[---2--++------>/
-    1   +---2--]<------+
-        """
+                0       8       16
+                |       |       |
+            0   +--X-----------+
+               /<--X---++------]\
+               |       ||       loopout(3)
+               \[---2--++------>/
+            1   +---2--]<------+
+                """
         st_l = sc.Strand([
             sc.Substrand(1, True, 0, 8, insertions=[(4, 2)]),
             sc.Substrand(0, False, 0, 8, deletions=[3]),
@@ -218,10 +218,17 @@ class TestDesignFromJson(unittest.TestCase):
             sc.Loopout(3),
             sc.Substrand(1, False, 8, 16, deletions=[]),
         ])
-        design_pre_json = sc.DNADesign(strands=[st_l, st_r, scaf], grid=sc.square)
-        design_pre_json.assign_dna(scaf, 'A' * 36)
+        self.design_pre_json = sc.DNADesign(strands=[st_l, st_r, scaf], grid=sc.square)
+        self.design_pre_json.assign_dna(scaf, 'A' * 36)
 
-        json_str = design_pre_json.to_json()
+    def test_from_json__from_and_to_file_contents(self):
+        json_str = self.design_pre_json.to_json()
+        json_map = json.loads(json_str)
+        design = sc.DNADesign.from_json(json_map)
+        design.to_json_serializable()
+
+    def test_from_json__three_strands(self):
+        json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
         design = sc.DNADesign.from_json(json_map)
 
@@ -230,11 +237,11 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertEquals(2, len(design.helices))
         helix0 = design.helices[0]
         helix1 = design.helices[1]
-        self.assertEquals(0, helix0.idx)
+        self.assertEquals(0, helix0.idx())
         self.assertEquals(0, helix0.min_offset)
         self.assertEquals(16, helix0.max_offset)
         self.assertEquals((0, 0, 0), helix0.grid_position)
-        self.assertEquals(1, helix1.idx)
+        self.assertEquals(1, helix1.idx())
         self.assertEquals(0, helix1.min_offset)
         self.assertEquals(16, helix1.max_offset)
         self.assertEquals((0, 1, 0), helix1.grid_position)
