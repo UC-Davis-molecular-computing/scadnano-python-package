@@ -28,83 +28,6 @@
   ],
   "strands": [
     {
-      "color": "#0066cc",
-      "is_scaffold": true,
-      "substrands": [
-        {"helix": 16, "forward": true, "start": 8, "end": 152},
-        {"helix": 15, "forward": false, "start": 8, "end": 152},
-        {"helix": 14, "forward": true, "start": 8, "end": 152},
-        {"helix": 13, "forward": false, "start": 8, "end": 152},
-        {"helix": 12, "forward": true, "start": 8, "end": 152},
-        {"helix": 11, "forward": false, "start": 8, "end": 152},
-        {"helix": 10, "forward": true, "start": 8, "end": 152},
-        {"helix": 9, "forward": false, "start": 8, "end": 152},
-        {"helix": 8, "forward": true, "start": 8, "end": 152}
-      ]
-    },
-    {
-      "color": "#0066cc",
-      "is_scaffold": true,
-      "substrands": [
-        {"helix": 8, "forward": true, "start": 152, "end": 296},
-        {"helix": 9, "forward": false, "start": 152, "end": 296},
-        {"helix": 10, "forward": true, "start": 152, "end": 296},
-        {"helix": 11, "forward": false, "start": 152, "end": 296},
-        {"helix": 12, "forward": true, "start": 152, "end": 296},
-        {"helix": 13, "forward": false, "start": 152, "end": 296},
-        {"helix": 14, "forward": true, "start": 152, "end": 296},
-        {"helix": 15, "forward": false, "start": 152, "end": 296},
-        {"helix": 16, "forward": true, "start": 152, "end": 296}
-      ]
-    },
-    {
-      "color": "#0066cc",
-      "is_scaffold": true,
-      "substrands": [
-        {"helix": 23, "forward": false, "start": 8, "end": 152},
-        {"helix": 22, "forward": true, "start": 8, "end": 152},
-        {"helix": 21, "forward": false, "start": 8, "end": 152},
-        {"helix": 20, "forward": true, "start": 8, "end": 152},
-        {"helix": 19, "forward": false, "start": 8, "end": 152},
-        {"helix": 18, "forward": true, "start": 8, "end": 152},
-        {"helix": 17, "forward": false, "start": 8, "end": 152}
-      ]
-    },
-    {
-      "color": "#0066cc",
-      "is_scaffold": true,
-      "substrands": [
-        {"helix": 17, "forward": false, "start": 152, "end": 296},
-        {"helix": 18, "forward": true, "start": 152, "end": 296},
-        {"helix": 19, "forward": false, "start": 152, "end": 296},
-        {"helix": 20, "forward": true, "start": 152, "end": 296},
-        {"helix": 21, "forward": false, "start": 152, "end": 296},
-        {"helix": 22, "forward": true, "start": 152, "end": 296},
-        {"helix": 23, "forward": false, "start": 152, "end": 296}
-      ]
-    },
-    {
-      "color": "#0066cc",
-      "is_scaffold": true,
-      "substrands": [
-        {"helix": 7, "forward": false, "start": 8, "end": 152},
-        {"helix": 6, "forward": true, "start": 8, "end": 152},
-        {"helix": 5, "forward": false, "start": 8, "end": 152},
-        {"helix": 4, "forward": true, "start": 8, "end": 152},
-        {"helix": 3, "forward": false, "start": 8, "end": 152},
-        {"helix": 2, "forward": true, "start": 8, "end": 152},
-        {"helix": 1, "forward": false, "start": 8, "end": 152},
-        {"helix": 0, "forward": true, "start": 8, "end": 296},
-        {"helix": 1, "forward": false, "start": 152, "end": 296},
-        {"helix": 2, "forward": true, "start": 152, "end": 296},
-        {"helix": 3, "forward": false, "start": 152, "end": 296},
-        {"helix": 4, "forward": true, "start": 152, "end": 296},
-        {"helix": 5, "forward": false, "start": 152, "end": 296},
-        {"helix": 6, "forward": true, "start": 152, "end": 296},
-        {"helix": 7, "forward": false, "start": 152, "end": 296}
-      ]
-    },
-    {
       "color": "#cc0000",
       "substrands": [
         {"helix": 1, "forward": true, "start": 8, "end": 24},
@@ -1766,6 +1689,59 @@
       "substrands": [
         {"helix": 1, "forward": true, "start": 176, "end": 184},
         {"helix": 0, "forward": false, "start": 160, "end": 184}
+      ]
+    },
+    {
+      "color": "#0066cc",
+      "is_scaffold": true,
+      "substrands": [
+        {"helix": 23, "forward": false, "start": 8, "end": 152},
+        {"helix": 22, "forward": true, "start": 8, "end": 152},
+        {"helix": 21, "forward": false, "start": 8, "end": 152},
+        {"helix": 20, "forward": true, "start": 8, "end": 152},
+        {"helix": 19, "forward": false, "start": 8, "end": 152},
+        {"helix": 18, "forward": true, "start": 8, "end": 152},
+        {"helix": 17, "forward": false, "start": 8, "end": 152},
+        {"helix": 16, "forward": true, "start": 8, "end": 152},
+        {"helix": 15, "forward": false, "start": 8, "end": 152},
+        {"helix": 14, "forward": true, "start": 8, "end": 152},
+        {"helix": 13, "forward": false, "start": 8, "end": 152},
+        {"helix": 12, "forward": true, "start": 8, "end": 152},
+        {"helix": 11, "forward": false, "start": 8, "end": 152},
+        {"helix": 10, "forward": true, "start": 8, "end": 152},
+        {"helix": 9, "forward": false, "start": 8, "end": 152},
+        {"helix": 8, "forward": true, "start": 8, "end": 152},
+        {"helix": 7, "forward": false, "start": 8, "end": 152},
+        {"helix": 6, "forward": true, "start": 8, "end": 152},
+        {"helix": 5, "forward": false, "start": 8, "end": 152},
+        {"helix": 4, "forward": true, "start": 8, "end": 152},
+        {"helix": 3, "forward": false, "start": 8, "end": 152},
+        {"helix": 2, "forward": true, "start": 8, "end": 152},
+        {"helix": 1, "forward": false, "start": 8, "end": 152},
+        {"helix": 0, "forward": true, "start": 8, "end": 296},
+        {"helix": 1, "forward": false, "start": 152, "end": 296},
+        {"helix": 2, "forward": true, "start": 152, "end": 296},
+        {"helix": 3, "forward": false, "start": 152, "end": 296},
+        {"helix": 4, "forward": true, "start": 152, "end": 296},
+        {"helix": 5, "forward": false, "start": 152, "end": 296},
+        {"helix": 6, "forward": true, "start": 152, "end": 296},
+        {"helix": 7, "forward": false, "start": 152, "end": 296},
+        {"helix": 8, "forward": true, "start": 152, "end": 296},
+        {"helix": 9, "forward": false, "start": 152, "end": 296},
+        {"helix": 10, "forward": true, "start": 152, "end": 296},
+        {"helix": 11, "forward": false, "start": 152, "end": 296},
+        {"helix": 12, "forward": true, "start": 152, "end": 296},
+        {"helix": 13, "forward": false, "start": 152, "end": 296},
+        {"helix": 14, "forward": true, "start": 152, "end": 296},
+        {"helix": 15, "forward": false, "start": 152, "end": 296},
+        {"helix": 16, "forward": true, "start": 152, "end": 296},
+        {"helix": 17, "forward": false, "start": 152, "end": 296},
+        {"helix": 18, "forward": true, "start": 152, "end": 296},
+        {"helix": 19, "forward": false, "start": 152, "end": 296},
+        {"helix": 20, "forward": true, "start": 152, "end": 296},
+        {"helix": 21, "forward": false, "start": 152, "end": 296},
+        {"helix": 22, "forward": true, "start": 152, "end": 296},
+        {"helix": 23, "forward": false, "start": 152, "end": 296}
       ]
     }
   ]
