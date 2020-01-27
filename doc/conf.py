@@ -11,6 +11,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 
+import sphinx.util.inspect as inspect
+import sphinx.ext.autodoc as auto
 import os
 import sys
 
@@ -67,8 +69,6 @@ autodoc_member_order = 'bysource'
 # taken from
 # https://stackoverflow.com/questions/25145817/ellipsis-truncation-on-module-attribute-value-in-sphinx-generated-documentatio/25163963#25163963
 
-import sphinx.ext.autodoc as auto
-import sphinx.util.inspect as inspect
 
 # from sphinx.ext.autodoc import DataDocumenter, ModuleLevelDocumenter, SUPPRESS
 # from sphinx.util.inspect import safe_repr
@@ -99,3 +99,7 @@ def add_directive_header(self, sig):
 
 
 auto.DataDocumenter.add_directive_header = add_directive_header
+
+
+# https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
+master_doc = 'index'
