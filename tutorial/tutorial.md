@@ -13,7 +13,7 @@ See the [web interface tutorial](https://github.com/UC-Davis-molecular-computing
 
 ## Installation
 
-First, follow the [installation instructions](README.md) to install the scadnano Python package.
+First, follow the [installation instructions](../README.md) to install the scadnano Python package.
 
 
 
