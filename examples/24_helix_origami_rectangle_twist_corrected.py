@@ -1,7 +1,6 @@
 import scadnano as sc
 
 
-
 def main():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
@@ -22,6 +21,7 @@ def export_idt_plate_file(design: sc.DNAOrigamiDesign):
         if strand != design.scaffold:
             strand.set_default_idt(use_default_idt=True)
     design.write_idt_plate_excel_file(use_default_plates=True)
+
 
 def add_deletions(design: sc.DNAOrigamiDesign):
     for helix in range(24):
