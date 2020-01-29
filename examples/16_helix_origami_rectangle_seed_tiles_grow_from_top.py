@@ -16,7 +16,7 @@ def main():
     # add_twist_correct_deletions(design)
     # add_tiles_and_assign_dna(design)
 
-    design.assign_dna(design.scaffold, sc.m13_sequence)
+    design.assign_dna(design.scaffold, sc.m13_sequence_5588)
 
     return design
 
