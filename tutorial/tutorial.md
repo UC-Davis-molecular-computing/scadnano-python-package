@@ -1,6 +1,6 @@
 # scadnano Python scripting tutorial
 
-The goal of this tutorial will be to create a design for a 24-helix DNA origami rectangle, with "twist correction". (See [this paper](https://www.nature.com/articles/nchem.1070) for an explanation of twist correction in 2D DNA origami) 
+The goal of this tutorial is to create a design for a 24-helix DNA origami rectangle, with "twist correction". (See [this paper](https://www.nature.com/articles/nchem.1070) for an explanation of twist correction in 2D DNA origami) 
 
 See the [web interface tutorial](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/tutorial/tutorial.md) to see how to create this design manually in the scadnano web interface.
 
@@ -442,7 +442,7 @@ The design now looks like it did at the top:
 
 Finally, we complete the design by assigning a DNA sequence to the scaffold, which will assign the complementary sequence to the appropriate staples. This is, in a sense, the primary function of cadnano and scadnano: to translate a desired abstract strand design, together with knowledge of a concrete DNA sequence for the scaffold, into the appropriate sequences for the staples to enable them to bind to the scaffold where we want. 
 
-If you have a particular strand and sequence you would like to assign, tou can call `design.assign_dna(strand, sequence)`. However, in the common case that your design has one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it
+If you have a particular strand and sequence you would like to assign, you can call `design.assign_dna(strand, sequence)`. However, in the common case that your design has one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method:
 
 ```python
 def main():
@@ -468,7 +468,7 @@ If we load this design and check "show DNA" in the menu, we can see the full DNA
 
 
 
-## exporting sequences
+## export DNA sequences
 
 Finally, you will want to export the DNA sequences of the staples. One way to do this is simply to loop over the strands and print their sequences:
 
@@ -480,7 +480,7 @@ for strand in design.strands:
 
 Or you could use Python's I/O library to write them to a file in a format of your choosing.
 
-scadnano provides a utility method for exporting to file formats recognized by the DNA synthesis company IDTDNA:
+scadnano provides a utility method for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)):
 
 ```python
 def main():
@@ -496,7 +496,7 @@ def main():
     design.assign_m13_to_scaffold()
 
     export_idt_plate_file(design) ###
-    
+
     return design
 
 
@@ -509,7 +509,7 @@ def export_idt_plate_file(design: sc.DNAOrigamiDesign):
 
 This will write an Excel file named `24_helix_origami_rectangle_twist_corrected.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
 
-There are many options to customize how the strands are exported; see the API documentation.
+There are many options to customize how the strands are exported; see the [API documentation](https://web.cs.ucdavis.edu/~doty/scadnano/docs/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file).
 
 
 
