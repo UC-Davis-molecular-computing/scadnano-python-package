@@ -76,3 +76,4 @@ wadllib==1.3.2
 wrapt==1.11.2
 xkit==0.0.0
 zope.interface==4.3.2
+xlwt==1.3.0
