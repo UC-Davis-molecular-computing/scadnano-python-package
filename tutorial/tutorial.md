@@ -223,9 +223,15 @@ Execute the script. The file `24_helix_origami_rectangle_twist_corrected.dna` is
 ...
 ```
 
-The design should look like this in the web interface:
+The design should look like this:
 
 ![](images/scaffold_precursor_strands.png)
+
+
+
+
+
+
 
 
 
@@ -233,9 +239,8 @@ The design should look like this in the web interface:
 
 It is worth noting that the `start` and `end` offsets follow the standard programming convention of being inclusive for `start` and exclusive for `end`. In other words, for each of these strands, which all have `start`=8 and `end`=296, the set of offsets that each occupies is {8, 9, 10, ..., 294, 295}. This can be confusing, but it often makes code easier to think about. For example, setting the `end` of one strand to be equal to the `start` of another means that they are adjacent (i.e., appear to be one strand with a "nick" at the shared offset).
 
-Now the design should look like this:
 
-![](images/scaffold_precursor_with_nicks.png)
+
 
 
 
@@ -261,6 +266,10 @@ def add_scaffold_nicks(design: sc.DNAOrigamiDesign):
         design.add_nick(helix=helix, offset=152, forward=helix % 2 == 0)
 ```
 
+
+Now the design should look like this:
+
+![](images/scaffold_precursor_with_nicks.png)
 
 
 
