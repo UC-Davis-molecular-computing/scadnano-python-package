@@ -29,15 +29,13 @@ The design will look like this when we are done:
 
 ![](images/complete_design_no_DNA.png)
 
-The completed design is available as a [`.dna` file](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/web/examples/24_helix_rectangle_twist_corrected.dna) readable by scadnano.
+The completed design is available as a [`.dna` file](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/web/examples/24_helix_rectangle_twist_corrected.dna) readable by scadnano. Download it and save it somewhere on your local file system.
 
 To view it, first open scadnano in your browser : 
 https://web.cs.ucdavis.edu/~doty/scadnano/.
 Currently only [Chrome](https://www.google.com/chrome/) 
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
-
-Download the [completed design](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/web/examples/24_helix_rectangle_twist_corrected.dna) and save it somewhere on your local file system.
 
 Press the button next to the word "Load" at the top (in Chrome the button says "Choose file", whereas in other browsers it might say "Browse" or something different):
 
@@ -54,7 +52,7 @@ Choose the file you downloaded. The design should look similar to the first scre
 ## Create empty design
 
 Now we will see how to create the design using the Python scripting package. 
-We first note that the optional file [origami_rectangle.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/origami_rectangle.py) can be used to create DNA origami rectangles, but for the purpose of this tutorial, we will see how to do it just using the scadnano Python package in [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py).
+We first note that the optional package [origami_rectangle](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/origami_rectangle.py) can be used to create DNA origami rectangles, but for the purpose of this tutorial, we will see how to do it just using the scadnano Python package in [scadnano.py](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/scadnano/scadnano.py).
 
 Create an empty text file named `24_helix_rectangle_twist_corrected.py`, and paste the following text into it:
 
@@ -229,6 +227,11 @@ The design should look like this in the web interface:
 
 ![](images/scaffold_precursor_strands.png)
 
+
+
+## Aside: offsets are inclusive on the left and exclusive on the right
+
+It is worth noting that the `start` and `end` offsets follow the standard programming convention of being inclusive for `start` and exclusive for `end`. In other words, for each of these strands, which all have `start`=8 and `end`=296, the set of offsets that each occupies is {8, 9, 10, ..., 294, 295}. This can be confusing, but it often makes code easier to think about. For example, setting the `end` of one strand to be equal to the `start` of another means that they are adjacent (i.e., appear to be one strand with a "nick" at the shared offset).
 
 
 ## Add nicks to scaffold
