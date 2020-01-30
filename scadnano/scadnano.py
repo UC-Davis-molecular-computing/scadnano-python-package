@@ -334,7 +334,7 @@ make its length the same as the length of the strand."""
 
 def _rotate_string(string: str, rotation: int):
     rotation = rotation % len(string)
-    return string[rotation:] + string[rotation]
+    return string[rotation:] + string[:rotation]
 
 def m13(rotation: int = 5588):
     return _rotate_string(m13_sequence_5588, rotation - 5588)
