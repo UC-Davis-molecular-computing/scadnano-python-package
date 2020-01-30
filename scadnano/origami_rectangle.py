@@ -246,7 +246,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
                                        num_flanking_helices=num_flanking_helices)
 
     if assign_seq:
-        scaffold_seq = sc.m13_sequence if custom_scaffold is None else custom_scaffold
+        scaffold_seq = sc.m13_sequence_5588 if custom_scaffold is None else custom_scaffold
         design.assign_dna(scaffold, scaffold_seq)
 
     if use_idt_defaults:

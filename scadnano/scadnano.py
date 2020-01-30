@@ -332,7 +332,14 @@ some regions of the strand are not bound to the strand that was just assigned. A
 DNA sequence assigned to a strand is too short; the sequence is padded with :any:`DNA_base_wildcard` to 
 make its length the same as the length of the strand."""
 
-m13_sequence = \
+def _rotate_string(string: str, rotation: int):
+    rotation = rotation % len(string)
+    return string[rotation:] + string[rotation]
+
+def m13(rotation: int = 5588):
+    return _rotate_string(m13_sequence_5588, rotation - 5588)
+
+m13_sequence_5588 = \
     "TTCCCTTCCTTTCTCGCCACGTTCGCCGGCTTTCCCCGTCAAGCTCTAAATCGGGGGCTCCCTTTAGGGTTCCGATTTAGTGCTTTACGGCACCTCGACC" \
     "CCAAAAAACTTGATTTGGGTGATGGTTCACGTAGTGGGCCATCGCCCTGATAGACGGTTTTTCGCCCTTTGACGTTGGAGTCCACGTTCTTTAATAGTGG" \
     "ACTCTTGTTCCAAACTGGAACAACACTCAACCCTATCTCGGGCTATTCTTTTGATTTATAAGGGATTTTGCCGATTTCGGAACCACCATCAAACAGGATT" \
@@ -3274,11 +3281,11 @@ class DNAOrigamiDesign(DNADesign):
         scaffold.is_scaffold = True
         self.scaffold.color = default_scaffold_color
 
-    def assign_m13_to_scaffold(self):
+    def assign_m13_to_scaffold(self, rotation: int = 5588):
         """
-        Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence`.
+        Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
         """
-        self.assign_dna(self.scaffold, m13_sequence)
+        self.assign_dna(self.scaffold, m13(rotation))
 
     # def to_json_serializable(self, suppress_indent=True):
     #     json_map = super().to_json_serializable(suppress_indent)

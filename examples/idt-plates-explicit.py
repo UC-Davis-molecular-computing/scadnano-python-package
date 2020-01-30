@@ -35,7 +35,7 @@ def main():
                           sc.Substrand(helix=1, forward=True, start=0, end=start)])
     strands.append(scaffold)
     design = sc.DNADesign(strands=strands, grid=sc.square)
-    design.assign_dna(scaffold, sc.m13_sequence)
+    design.assign_dna(scaffold, sc.m13_sequence_5588)
 
     return design
 
