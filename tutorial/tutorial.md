@@ -173,6 +173,9 @@ At this point and periodically throughout the tutorial, reload the file `24_heli
 
 
 
+
+
+
 ## Add scaffold "precursor strands"
 
 One can specify a design by explcitly listing every `Strand`, each of which is specified by listing every `Substrand` (and if included, every `Loopout`). The point of a scripting library, however, is to automate tedious tasks by enabling a few loops to iterate over many of the `Strand`'s.
@@ -181,7 +184,10 @@ However, it can be difficult to see how to write a single loop, or even a small 
 
 We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `DNAOrigamiDesign` object.
 
-The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested.
+The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Substrand`'s, and each `Substrand` is specified primarily by 4 fields: 
+integer `helix` (actually, *index* of a helix),
+boolean `forward` (direction of the `Substrand`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
+integer `start` and `end` offsets.
 
 
 ```python
@@ -191,7 +197,7 @@ def main():
 
 def precursor_scaffolds() -> sc.DNAOrigamiDesign:
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
-    scaffolds = [sc.Strand([sc.Substrand(helix=helix, forward=helix % 2 == 0, start=8, end=296)])
+    scaffolds = [sc.Strand([sc.Substrand(helix=helix, forward=(helix % 2 == 0), start=8, end=296)])
                  for helix in range(24)]
     return sc.DNAOrigamiDesign(helices=helices, strands=scaffolds, grid=sc.square)
 ```
