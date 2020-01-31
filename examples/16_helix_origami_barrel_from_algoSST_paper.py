@@ -21,7 +21,7 @@ def main():
     add_tiles_and_assign_dna(design)
     assign_dna_to_unzipper_toeholds(design)
 
-    design.assign_dna(design.scaffold, sc.m13_sequence_5588)
+    design.assign_m13_to_scaffold()
 
     return design
 

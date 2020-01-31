@@ -330,10 +330,10 @@ def _rotate_string(string: str, rotation: int):
 
 
 def m13(rotation: int = 5588):
-    return _rotate_string(m13_sequence_5588, rotation - 5588)
+    return _rotate_string(_m13_sequence_5588, rotation - 5588)
 
 
-m13_sequence_5588 = \
+_m13_sequence_5588 = \
     "TTCCCTTCCTTTCTCGCCACGTTCGCCGGCTTTCCCCGTCAAGCTCTAAATCGGGGGCTCCCTTTAGGGTTCCGATTTAGTGCTTTACGGCACCTCGACC" \
     "CCAAAAAACTTGATTTGGGTGATGGTTCACGTAGTGGGCCATCGCCCTGATAGACGGTTTTTCGCCCTTTGACGTTGGAGTCCACGTTCTTTAATAGTGG" \
     "ACTCTTGTTCCAAACTGGAACAACACTCAACCCTATCTCGGGCTATTCTTTTGATTTATAAGGGATTTTGCCGATTTCGGAACCACCATCAAACAGGATT" \
@@ -3384,6 +3384,7 @@ class DNAOrigamiDesign(DNADesign):
         self.scaffold = scaffold
         if scaffold is not None:
             scaffold.is_scaffold = True
+            scaffold.color = default_scaffold_color
 
     def __post_init__(self):
         super().__post_init__()
