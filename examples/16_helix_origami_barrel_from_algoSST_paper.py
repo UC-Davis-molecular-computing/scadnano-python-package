@@ -32,7 +32,7 @@ def set_helix_major_tickets(design):
         major_ticks.append(tick)
     major_ticks.extend([490, 501])
 
-    for helix in design.helices:
+    for helix in design.helices.values():
         helix.major_ticks = list(major_ticks)
 
 

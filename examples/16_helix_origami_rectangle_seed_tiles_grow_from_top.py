@@ -27,10 +27,10 @@ def set_helix_major_ticks(design):
         major_ticks.append(tick)
     major_ticks.extend([490, 501])
 
-    for helix in design.helices:
+    for helix in design.helices.values():
         helix.major_ticks = list(major_ticks)
 
-    for _,helix in zip([0,1,2], design.helices):
+    for _,helix in zip([0,1,2], design.helices.values()):
         ticks = [11, 22, 32, 40, 48]
         tick = 58
         offset = 11

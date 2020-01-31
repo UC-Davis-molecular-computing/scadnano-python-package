@@ -38,21 +38,23 @@ def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
 
+
 class TestImportCadnanoV2(unittest.TestCase):
     """
     Tests the import feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
     """
     io_folder = "cadnano_v2_import"
+
     def test_32_helix_rectangle(self):
-        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs',self.io_folder), 
-                           filename='test_32_helix_rectangle.json')
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.io_folder), 
+        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs', self.io_folder),
+                                              filename='test_32_helix_rectangle.json')
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.io_folder),
                                    filename='test_32_helix_rectangle.dna')
 
     def test_helices_order(self):
-        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs',self.io_folder), 
-                           filename='test_helices_order.json')
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.io_folder), 
+        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs', self.io_folder),
+                                              filename='test_helices_order.json')
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.io_folder),
                                    filename='test_helices_order.dna')
 
 
@@ -61,96 +63,98 @@ class TestExportCadnanoV2(unittest.TestCase):
     Tests the export feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
     """
     output_folder = "cadnano_v2_export"
+
     def test_2_stape_2_helix_origami_extremely_simple(self):
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Substrand(helix=0, forward=True, start=0, end=32)
         scaf = sc.Strand(substrands=[scaf_part])
         design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.output_folder),
                                    filename='test_2_stape_2_helix_origami_extremely_simple.dna')
-        design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
                                  filename='test_2_stape_2_helix_origami_extremely_simple.json')
 
     def test_2_stape_2_helix_origami_extremely_simple_2(self):
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part1 = sc.Substrand(helix=0, forward=True, start=0, end=32)
         scaf_part2 = sc.Substrand(helix=1, forward=False, start=0, end=32)
-        scaf = sc.Strand(substrands=[scaf_part1,scaf_part2])
+        scaf = sc.Strand(substrands=[scaf_part1, scaf_part2])
         design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.output_folder),
                                    filename='test_2_stape_2_helix_origami_extremely_simple_2.dna')
-        design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
                                  filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
-
 
     def test_2_stape_2_helix_origami_deletions_insertions(self):
         # left staple
         stap_left_ss1 = sc.Substrand(helix=1, forward=True, start=0, end=16)
         stap_left_ss0 = sc.Substrand(helix=0, forward=False, start=0, end=16)
         stap_left = sc.Strand(substrands=[stap_left_ss1, stap_left_ss0])
-    
+
         # right staple
         stap_right_ss0 = sc.Substrand(helix=0, forward=False, start=16, end=32)
         stap_right_ss1 = sc.Substrand(helix=1, forward=True, start=16, end=32)
         stap_right = sc.Strand(substrands=[stap_right_ss0, stap_right_ss1])
-    
+
         # scaffold
         scaf_ss1_left = sc.Substrand(helix=1, forward=False, start=0, end=16)
         scaf_ss0 = sc.Substrand(helix=0, forward=True, start=0, end=32)
-        #loopout = sc.Loopout(length=3) No loopout in cadnano
+        # loopout = sc.Loopout(length=3) No loopout in cadnano
         scaf_ss1_right = sc.Substrand(helix=1, forward=False, start=16, end=32)
         scaf = sc.Strand(substrands=[scaf_ss1_left, scaf_ss0, scaf_ss1_right])
-    
+
         # whole design
         design = sc.DNAOrigamiDesign(strands=[scaf, stap_left, stap_right], grid=sc.square, scaffold=scaf)
-    
+
         # deletions and insertions added to design so they can be added to both strands on a helix
         design.add_deletion(helix=0, offset=11)
         design.add_deletion(helix=0, offset=12)
         design.add_deletion(helix=0, offset=24)
         design.add_deletion(helix=1, offset=12)
         design.add_deletion(helix=1, offset=24)
-    
+
         design.add_insertion(helix=0, offset=6, length=1)
         design.add_insertion(helix=0, offset=18, length=2)
         design.add_insertion(helix=1, offset=6, length=3)
         design.add_insertion(helix=1, offset=18, length=4)
-    
+
         # also assigns complement to strands other than scaf bound to it
         design.assign_dna(scaf, 'AACGT' * 18)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.output_folder),
                                    filename='test_2_stape_2_helix_origami_deletions_insertions.dna')
-        design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
                                  filename='test_2_stape_2_helix_origami_deletions_insertions.json')
-    
+
     def test_6_helix_origami_rectangle(self):
-        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered, twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
+                             twist_correction_deletion_spacing=3)
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.output_folder),
                                    filename='test_6_helix_origami_rectangle.dna')
-        design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
                                  filename='test_6_helix_origami_rectangle.json')
 
     def test_16_helix_origami_rectangle_no_twist(self):
-        design = rect.create(num_helices=16, num_cols=26, assign_seq=True, twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=os.path.join('tests_outputs',self.output_folder), 
+        design = rect.create(num_helices=16, num_cols=26, assign_seq=True,
+                             twist_correction_deletion_spacing=3)
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.output_folder),
                                    filename='test_16_helix_origami_rectangle_no_twist.dna')
-        design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
+        design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
                                  filename='test_16_helix_origami_rectangle_no_twist.json')
 
     def test_bad_cases(self):
         """ We do not handle Loopouts and design where the parity of the helix
         does not correspond to the direction.
         """
-        
+
         # Bad case one: parity issue in design (see cadnano v2 format spec, v2.txt)
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Substrand(helix=1, forward=True, start=0, end=32)
         scaf = sc.Strand(substrands=[scaf_part])
         design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf], grid=sc.square, scaffold=scaf)
-        
+
         with self.assertRaises(ValueError) as context:
-            design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
-                                 filename='test_parity_issue.json')
+            design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
+                                     filename='test_parity_issue.json')
         self.assertTrue('forward' in context.exception.args[0])
 
         # Bad case two: Loopouts
@@ -175,7 +179,7 @@ class TestExportCadnanoV2(unittest.TestCase):
 
         # whole design
         design = sc.DNAOrigamiDesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
-                                    scaffold=scaf)
+                                     scaffold=scaf)
 
         # deletions and insertions added to design are added to both strands on a helix
         design.add_deletion(helix=1, offset=20)
@@ -183,10 +187,9 @@ class TestExportCadnanoV2(unittest.TestCase):
         design.add_insertion(helix=0, offset=26, length=2)
 
         with self.assertRaises(ValueError) as context:
-            design.export_cadnano_v2(directory=os.path.join('tests_outputs',self.output_folder), 
-                                 filename='test_loopout_issue.json')
+            design.export_cadnano_v2(directory=os.path.join('tests_outputs', self.output_folder),
+                                     filename='test_loopout_issue.json')
         self.assertTrue('Loopouts' in context.exception.args[0])
-
 
 
 class TestDesignFromJson(unittest.TestCase):
@@ -218,7 +221,7 @@ class TestDesignFromJson(unittest.TestCase):
             sc.Loopout(3),
             sc.Substrand(1, False, 8, 16, deletions=[]),
         ])
-        self.design_pre_json = sc.DNADesign(strands=[st_l, st_r, scaf], grid=sc.square)
+        self.design_pre_json = sc.DNAOrigamiDesign(strands=[st_l, st_r, scaf], grid=sc.square, scaffold=scaf)
         self.design_pre_json.assign_dna(scaf, 'A' * 36)
 
     def test_from_json__from_and_to_file_contents(self):
@@ -230,18 +233,20 @@ class TestDesignFromJson(unittest.TestCase):
     def test_from_json__three_strands(self):
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_json(json_map)
+        design: sc.DNAOrigamiDesign = sc.DNADesign.from_json(json_map)
+
+        self.assertTrue(isinstance(design, sc.DNAOrigamiDesign))
 
         self.assertEquals(sc.Grid.square, design.grid)
 
         self.assertEquals(2, len(design.helices))
         helix0 = design.helices[0]
         helix1 = design.helices[1]
-        self.assertEquals(0, helix0.idx())
+        self.assertEquals(0, helix0.idx)
         self.assertEquals(0, helix0.min_offset)
         self.assertEquals(16, helix0.max_offset)
         self.assertEquals((0, 0, 0), helix0.grid_position)
-        self.assertEquals(1, helix1.idx())
+        self.assertEquals(1, helix1.idx)
         self.assertEquals(0, helix1.min_offset)
         self.assertEquals(16, helix1.max_offset)
         self.assertEquals((0, 1, 0), helix1.grid_position)
@@ -250,6 +255,8 @@ class TestDesignFromJson(unittest.TestCase):
         st_l = design.strands[0]
         st_r = design.strands[1]
         scaf = design.strands[2]
+
+        self.assertEquals(scaf, design.scaffold)
 
         self.assertEquals(2, len(st_l.substrands))
         self.assertEquals(2, len(st_r.substrands))
@@ -315,6 +322,72 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertListEqual([3], scaf_ss1.deletions)
         self.assertListEqual([], scaf_ss2.insertions)
         self.assertListEqual([], scaf_ss2.deletions)
+
+    def test_from_json__helices_non_default_indices(self):
+        h2 = sc.Helix(idx=2)
+        h3 = sc.Helix(idx=3)
+        h5 = sc.Helix(idx=5)
+        helices = [h2, h3, h5]
+        s1 = sc.Strand([
+            sc.Substrand(2, True, 0, 4),
+            sc.Substrand(3, False, 0, 4),
+        ])
+        s2 = sc.Strand([
+            sc.Substrand(3, True, 4, 8),
+            sc.Substrand(5, False, 4, 8),
+        ])
+        self.design_pre_json = sc.DNADesign(helices=helices, strands=[s1, s2], grid=sc.square)
+
+        json_str = self.design_pre_json.to_json()
+        json_map = json.loads(json_str)
+        design = sc.DNADesign.from_json(json_map)
+
+        self.assertEqual(3, len(design.helices))
+
+        self.assertEqual(2, design.helices[2].idx)
+        self.assertEqual(3, design.helices[3].idx)
+        self.assertEqual(5, design.helices[5].idx)
+
+    def test_from_json__helices_non_default_indices_mixed_with_default(self):
+        h2 = sc.Helix(idx=2)
+        h3 = sc.Helix()
+        h5 = sc.Helix(idx=5)
+        helices = [h2, h3, h5]
+        s1 = sc.Strand([
+            sc.Substrand(2, True, 0, 4),
+            sc.Substrand(1, False, 0, 4),
+        ])
+        s2 = sc.Strand([
+            sc.Substrand(1, True, 4, 8),
+            sc.Substrand(5, False, 4, 8),
+        ])
+        self.design_pre_json = sc.DNADesign(helices=helices, strands=[s1, s2], grid=sc.square)
+
+        json_str = self.design_pre_json.to_json()
+        print(json_str)
+        json_map = json.loads(json_str)
+        design = sc.DNADesign.from_json(json_map)
+
+        self.assertEqual(3, len(design.helices))
+
+        self.assertEqual(2, design.helices[2].idx)
+        self.assertEqual(1, design.helices[1].idx)
+        self.assertEqual(5, design.helices[5].idx)
+
+    def test_from_json__helices_non_default_error_if_some_have_idx_not_others(self):
+        h2 = sc.Helix(idx=2)
+        h3 = sc.Helix(idx=3)
+        h3_2 = sc.Helix(idx=3)
+        helices = [h2, h3, h3_2]
+        with self.assertRaises(sc.IllegalDNADesignError):
+            self.design_pre_json = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+
+    def test_from_json__helices_non_default_error_if_some_have_idx_not_others_mixed_default(self):
+        h0 = sc.Helix()
+        h0_2 = sc.Helix(idx=0)
+        helices = [h0, h0_2]
+        with self.assertRaises(sc.IllegalDNADesignError):
+            self.design_pre_json = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
 
 
 class TestStrandReversePolarity(unittest.TestCase):
@@ -1548,7 +1621,41 @@ class TestAutocalculatedData(unittest.TestCase):
         self.assertEqual(5, design.helices[2].max_offset)
 
 
+class TestSetHelixIdx(unittest.TestCase):
+    def test_set_helix_idx(self):
+        helices = [sc.Helix(max_offset=20), sc.Helix(max_offset=20), sc.Helix(max_offset=20)]
+        ss_0 = sc.Substrand(helix=0, forward=True, start=0, end=6)
+        ss_1 = sc.Substrand(helix=1, forward=True, start=0, end=7)
+        ss_2 = sc.Substrand(helix=2, forward=True, start=0, end=8)
+        strand = sc.Strand([ss_0, ss_1, ss_2])
+        design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        design.set_helix_idx(2, 5)
+        design.set_helix_idx(1, 3)
+        design.set_helix_idx(0, 2)
+        self.assertEqual(3, len(design.helices))
+        self.assertTrue(2 in design.helices)
+        self.assertTrue(3 in design.helices)
+        self.assertTrue(5 in design.helices)
+        h2 = design.helices[2]
+        h3 = design.helices[3]
+        h5 = design.helices[5]
+        self.assertEqual(2, h2.idx)
+        self.assertEqual(3, h3.idx)
+        self.assertEqual(5, h5.idx)
+
+        ss2 = design.substrand_at(2, 0, True)
+        ss3 = design.substrand_at(3, 0, True)
+        ss5 = design.substrand_at(5, 0, True)
+        self.assertEqual(2, ss2.helix)
+        self.assertEqual(3, ss3.helix)
+        self.assertEqual(5, ss5.helix)
+        self.assertEqual(6, ss2.end)
+        self.assertEqual(7, ss3.end)
+        self.assertEqual(8, ss5.end)
+
+
 class TestJSON(unittest.TestCase):
+
     def test_to_json__hairpin(self):
         """
         01234
@@ -1583,6 +1690,30 @@ class TestJSON(unittest.TestCase):
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
+
+
+    def test_to_json__error_if_DNAOrigamiDesign_no_scaffold(self):
+        # we are allowed to delay assigning a scaffold to a DNAOrigamiDesign,
+        # but to_json should fail
+        st_l = sc.Strand([
+            sc.Substrand(1, True, 0, 8, insertions=[(4, 2)]),
+            sc.Substrand(0, False, 0, 8, deletions=[3]),
+        ])
+        st_r = sc.Strand([
+            sc.Substrand(0, False, 8, 16),
+            sc.Substrand(1, True, 8, 16),
+        ])
+        scaf = sc.Strand([
+            sc.Substrand(1, False, 0, 8, insertions=[(4, 2)]),
+            sc.Substrand(0, True, 0, 16, deletions=[3]),
+            sc.Loopout(3),
+            sc.Substrand(1, False, 8, 16, deletions=[]),
+        ])
+        design_pre_json = sc.DNAOrigamiDesign(strands=[st_l, st_r, scaf], grid=sc.square)
+
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design_pre_json.to_json()
+
 
     def test_consecutive_substrands_loopout(self):
         helices = [sc.Helix(max_offset=10)]
