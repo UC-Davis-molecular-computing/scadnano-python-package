@@ -1,0 +1,5 @@
+name: base
+channels:
+  - defaults
+dependencies:
+  - xlwt=1.3.0=py37_0
