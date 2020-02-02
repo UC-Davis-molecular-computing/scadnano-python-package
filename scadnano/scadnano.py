@@ -2333,11 +2333,11 @@ class DNADesign(_JSONSerializable):
                 y = helix.grid_position[1]
 
                 # following is for odd-q system: https://www.redblobgames.com/grids/hexagons/
-                if x % 2 == 1 and y % 2 == 0:
-                    raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                                                'coordinates (x,y,_) if x is odd and y is even, '
-                                                f'but helix {helix.idx} has grid position '
-                                                f'{helix.grid_position}')
+                # if x % 2 == 1 and y % 2 == 0:
+                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
+                #                                 'coordinates (x,y,_) if x is odd and y is even, '
+                #                                 f'but helix {helix.idx} has grid position '
+                #                                 f'{helix.grid_position}')
 
                 # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
                 # if x % 2 == 1 and y % 2 == 1:
