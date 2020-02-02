@@ -100,9 +100,12 @@ Fields:
         Description
         ===========
             -"row", "col": 
-                They increase in these directions:  |---->
+                They increase in these directions:   ---->row
                                                     |
-                                                    +
+                                                    |
+                                                    V
+                                                   col
+
                 When honey comb lattice, a "row" is in fact a zigzag pattern:
                       .   .
                     .   .   .  or .   .   .
