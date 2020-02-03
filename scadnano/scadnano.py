@@ -43,25 +43,16 @@ import itertools
 import re
 from dataclasses import dataclass, field, InitVar
 from typing import Tuple, List, Dict, Union, Optional
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 import xlwt
 from docutils.nodes import subscript
 
 
-# from scadnano.json_utils import JSONSerializable, json_encode, NoIndent
-
-
-# TODO: add Boolean field Strand.circular
-
 # TODO: make explicit rules about when strands can be added and sequences assigned.
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
-
-# TODO: add support for writing 3D positions (in addition to 2D svg_positions)
-
-# TODO: add support for writing files uploadable to other synthesis company websites besides IDT
 
 # TODO: see if :param the_paramter: and :return: can be used with Sphinx
 
@@ -291,7 +282,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.1.0"
+current_version: str = "0.2.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -332,14 +323,17 @@ some regions of the strand are not bound to the strand that was just assigned. A
 DNA sequence assigned to a strand is too short; the sequence is padded with :any:`DNA_base_wildcard` to 
 make its length the same as the length of the strand."""
 
+
 def _rotate_string(string: str, rotation: int):
     rotation = rotation % len(string)
     return string[rotation:] + string[:rotation]
 
-def m13(rotation: int = 5588):
-    return _rotate_string(m13_sequence_5588, rotation - 5588)
 
-m13_sequence_5588 = \
+def m13(rotation: int = 5588):
+    return _rotate_string(_m13_sequence_5588, rotation - 5588)
+
+
+_m13_sequence_5588 = \
     "TTCCCTTCCTTTCTCGCCACGTTCGCCGGCTTTCCCCGTCAAGCTCTAAATCGGGGGCTCCCTTTAGGGTTCCGATTTAGTGCTTTACGGCACCTCGACC" \
     "CCAAAAAACTTGATTTGGGTGATGGTTCACGTAGTGGGCCATCGCCCTGATAGACGGTTTTTCGCCCTTTGACGTTGGAGTCCACGTTCTTTAATAGTGG" \
     "ACTCTTGTTCCAAACTGGAACAACACTCAACCCTATCTCGGGCTATTCTTTTGATTTATAAGGGATTTTGCCGATTTCGGAACCACCATCAAACAGGATT" \
@@ -453,7 +447,7 @@ helices_view_order_key = "helices_view_order"
 is_origami_key = 'is_origami'
 
 # Helix keys
-idx_key = 'idx'
+idx_on_helix_key = 'idx'
 max_offset_key = 'max_offset'
 min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
@@ -623,7 +617,11 @@ class Helix(_JSONSerializable):
     Optional if :py:data:`Helix.grid_position` is specified. 
     Default is pitch, roll, yaw are 0, and x,y,z are determined by grid position h, v, b."""
 
-    _idx: int = -1
+    idx: int = None
+    """Index of this :any:`Helix`.
+    
+    Optional if no other :any:`Helix` specifies a value for *idx*.
+    Default is the order of the :any:`Helix` is listed in constructor for :any:`DNADesign`."""
 
     # for optimization; list of substrands on that Helix
     _substrands: List['Substrand'] = field(default_factory=list)
@@ -662,6 +660,8 @@ class Helix(_JSONSerializable):
         if self.rotation_anchor != 0:
             dct[rotation_anchor_key] = self.rotation_anchor
 
+        dct[idx_on_helix_key] = self.idx
+
         return _NoIndent(dct) if suppress_indent else dct
 
     def __post_init__(self):
@@ -673,16 +673,10 @@ class Helix(_JSONSerializable):
                                                 f'{self.max_offset}')
 
     def default_svg_position(self):
-        return 0, self._idx * distance_between_helices_svg
-
-    def set_idx(self, new_idx):
-        self._idx = new_idx
-
-    def idx(self):
-        return self._idx
+        return 0, self.idx * distance_between_helices_svg
 
     def default_grid_position(self):
-        return (0, self.idx(), 0)
+        return (0, self.idx, 0)
 
     def calculate_major_ticks(self, default_major_tick_distance):
         """
@@ -724,6 +718,7 @@ class Helix(_JSONSerializable):
         rotation = json_map.get(rotation_key, default_helix_rotation)
         rotation_anchor = json_map.get(rotation_anchor_key, default_helix_rotation_anchor)
         position3d = json_map.get(position3d_key)
+        idx = json_map.get(idx_on_helix_key)
 
         return Helix(
             major_tick_distance=major_tick_distance,
@@ -735,6 +730,7 @@ class Helix(_JSONSerializable):
             rotation=rotation,
             rotation_anchor=rotation_anchor,
             position3d=position3d,
+            idx=idx,
         )
 
 
@@ -750,8 +746,7 @@ class Substrand(_JSONSerializable):
     """
 
     helix: int
-    """index of the :any:`Helix` on which this :any:`Substrand` resides 
-    in the list :any:`DNADesign.helices`."""
+    """index of the :any:`Helix` on which this :any:`Substrand` resides."""
 
     forward: bool
     """Whether the strand "points" forward (i.e., its 3' end has a larger offset than its 5' end).
@@ -1328,6 +1323,10 @@ class Strand(_JSONSerializable):
     and s and e are the respective start and end offsets on those helices.
     """
 
+    is_scaffold: bool = False
+    """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
+    :any:`DNADesign` is a scaffold, then the design is considered a DNA origami design."""
+
     # not serialized; efficient way to see a list of all substrands on a given helix
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
         init=False, repr=False, compare=False, default=None)
@@ -1342,7 +1341,7 @@ class Strand(_JSONSerializable):
             dct[idt_key] = self.idt.to_json_serializable(suppress_indent)
         dct[substrands_key] = [substrand.to_json_serializable(suppress_indent) for substrand in
                                self.substrands]
-        if hasattr(self, is_scaffold_key):
+        if hasattr(self, is_scaffold_key) and self.is_scaffold == True:
             dct[is_scaffold_key] = self.is_scaffold
         return dct
 
@@ -1383,7 +1382,7 @@ class Strand(_JSONSerializable):
 
     def set_color(self, color: Color):
         """Sets color of this :any:`Strand`."""
-        self.color = color;
+        self.color = color
 
     def set_default_idt(self, use_default_idt):
         """Sets idt field to be the default given the Substrand data of this :any:`Strand`."""
@@ -1650,6 +1649,7 @@ class Strand(_JSONSerializable):
             dna_sequence=dna_sequence,
             color=color,
             idt=idt,
+            is_scaffold=is_scaffold,
         )
 
 
@@ -1791,6 +1791,20 @@ class _PlateCoordinate:
         return f'{self.row()}{self.col()}'
 
 
+def remove_helix_idxs_if_default(helices: List[Dict]):
+    # removes indices from each helix if they are the default (order of appearance in list)
+    default = True
+    for expected_idx, helix in enumerate(helices):
+        idx = helix[idx_on_helix_key]
+        if idx != expected_idx:
+            default = False
+            break
+
+    if default:
+        for helix in helices:
+            del helix[idx_on_helix_key]
+
+
 @dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
@@ -1800,8 +1814,10 @@ class DNADesign(_JSONSerializable):
     
     Required field."""
 
-    helices: List[Helix] = None
+    helices: Dict[int, Helix] = None
     """All of the :any:`Helix`'s in this :any:`DNADesign`. 
+    This is a dictionary mapping index to the :any:`Helix` with that index; if helices have indices 
+    0, 1, ..., num_helices-1, then this can be used as a list of Helices. 
     
     Optional field. If not specified, then the number of helices will be just large enough to store the
     largest index :py:data:`Substrand.helix` 
@@ -1831,6 +1847,71 @@ class DNADesign(_JSONSerializable):
 
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
+
+    def __init__(self, *,
+                 helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
+                 strands: List[Strand] = None,
+                 grid: Grid = Grid.square,
+                 major_tick_distance: int = -1,
+                 helices_view_order: List[int] = None):
+        self.helices = helices
+        self.strands = strands
+        self.grid = grid
+        self.major_tick_distance = major_tick_distance
+        self.helices_view_order = helices_view_order
+
+        if self.major_tick_distance < 0 or self.major_tick_distance is None:
+            self.major_tick_distance = default_major_tick_distance(self.grid)
+
+        if self.helices is None:
+            if len(self.strands) > 0:
+                max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
+                self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
+            else:
+                self.helices = {}
+
+        self.helices = DNADesign._normalize_helices_as_dict(self.helices)
+
+        self.__post_init__()
+
+    @staticmethod
+    def _normalize_helices_as_dict(helices: Union[List[Helix], Dict[int, Helix]]) -> Dict[int, Helix]:
+        def idx_of(helix: Helix, order: int):
+            return order if helix.idx is None else helix.idx
+
+        if isinstance(helices, list):
+            indices = [idx_of(helix, idx) for idx, helix in enumerate(helices)]
+            if len(set(indices)) < len(indices):
+                duplicates = [index for index, count in Counter(indices).items() if count > 1]
+                raise IllegalDNADesignError('No two helices can share an index, but these indices appear on '
+                                            f'multiple helices: {", ".join(map(str, duplicates))}')
+            helices = {idx_of(helix, idx): helix for idx, helix in enumerate(helices)}
+
+        for idx, helix in helices.items():
+            helix.idx = idx
+
+        return helices
+
+    def __post_init__(self):
+        # if self.major_tick_distance < 0 or self.major_tick_distance is None:
+        #     self.major_tick_distance = default_major_tick_distance(self.grid)
+        #
+        # # doing this first matters because most of DNADesign assumes helices has been set
+        # if self.helices is None:
+        #     if len(self.strands) > 0:
+        #         max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
+        #         self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
+        #     else:
+        #         self.helices = {}
+
+        # XXX: exact order of these calls is important
+        self._set_helices_idxs()
+        self._set_helices_grid_and_svg_positions()
+        self._build_substrands_on_helix_lists()
+        self._set_helices_min_max_offsets(update=False)
+        self._check_legal_design()
+
+        self._set_and_check_helices_view_order()
 
     @staticmethod
     def from_file(filename: str) -> DNADesign:
@@ -1866,18 +1947,17 @@ class DNADesign(_JSONSerializable):
         num_helices = len(deserialized_helices_list)
 
         # create Helices
-        idx = 0
+        idx_default = 0
         for helix_json in deserialized_helices_list:
             helix = Helix.from_json(helix_json)
-            helix.set_idx(idx)
-            if (grid_is_none and grid_position_key in helix_json):
+            if grid_is_none and grid_position_key in helix_json:
                 raise IllegalDNADesignError(
-                    f'grid is none, but Helix {idx} has grid_position = {helix_json[grid_position_key]}')
+                    f'grid is none, but Helix {idx_default} has grid_position = {helix_json[grid_position_key]}')
             elif not grid_is_none and position3d_key in helix_json:
                 raise IllegalDNADesignError(
                     'grid is not none, but Helix $idx has position = ${helix_json[constants.position3d_key]}')
             helices.append(helix)
-            idx += 1
+            idx_default += 1
 
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
@@ -1890,19 +1970,33 @@ class DNADesign(_JSONSerializable):
                 raise IllegalDNADesignError(f'helices_view_order = {helices_view_order} is not a permutation')
 
         # strands
+        scaffold = None
         strands = []
         deserialized_strand_list = json_map[strands_key]
         for strand_json in deserialized_strand_list:
             strand = Strand.from_json(strand_json)
             strands.append(strand)
+            if strand.is_scaffold:
+                scaffold = strand
 
-        return DNADesign(
-            helices=helices,
-            strands=strands,
-            grid=grid,
-            major_tick_distance=major_tick_distance,
-            helices_view_order=helices_view_order,
-        )
+        if scaffold is None:
+            return DNADesign(
+                helices=helices,
+                strands=strands,
+                grid=grid,
+                major_tick_distance=major_tick_distance,
+                helices_view_order=helices_view_order,
+            )
+        else:
+            return DNAOrigamiDesign(
+                scaffold=scaffold,
+                helices=helices,
+                strands=strands,
+                grid=grid,
+                major_tick_distance=major_tick_distance,
+                helices_view_order=helices_view_order,
+            )
+
 
     @staticmethod
     def from_cadnano_v2(directory, filename) -> DNAOrigamiDesign:
@@ -1930,14 +2024,14 @@ class DNADesign(_JSONSerializable):
         helices = []
         for cadnano_helix in cadnano_v2_design['vstrands']:
             col, row = cadnano_helix['col'], cadnano_helix['row']
-            helix = Helix(max_offset=num_bases, grid_position=[col - min_col, row - min_row, 0])
-            helix.set_idx(cadnano_helix['num'])
+            helix = Helix(idx=cadnano_helix['num'], max_offset=num_bases,
+                          grid_position=[col - min_col, row - min_row, 0])
             helices.append(helix)
 
         sorted_helices = sorted(helices, key=lambda
-            h: h.idx())  # Needed to show helices in the same order than cadnano in the grid view
+            h: h.idx)  # Needed to show helices in the same order than cadnano in the grid view
         design = DNAOrigamiDesign(grid=grid_type, helices=sorted_helices, strands=[])
-        design.set_helices_view_order([h.idx() for h in helices])
+        design.set_helices_view_order([h.idx for h in helices])
 
         return design
 
@@ -1950,7 +2044,13 @@ class DNADesign(_JSONSerializable):
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
 
-        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices]
+        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices.values()]
+
+        # remove idx key from list of helices if they have the default index
+        unwrapped_helices = dct[helices_key]
+        if len(unwrapped_helices) > 0 and isinstance(unwrapped_helices[0], _NoIndent):
+            unwrapped_helices = [wrapped.value for wrapped in unwrapped_helices]
+        remove_helix_idxs_if_default(unwrapped_helices)
 
         default_helices_view_order = list(range(0, len(self.helices)))
         if self.helices_view_order != default_helices_view_order:
@@ -1958,8 +2058,8 @@ class DNADesign(_JSONSerializable):
 
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
-        for helix in self.helices:
-            helix_json = dct[helices_key][helix.idx()].value  # get past NoIndent surrounding helix
+        for helix_list_order, helix in enumerate(self.helices.values()):
+            helix_json = dct[helices_key][helix_list_order].value  # get past NoIndent surrounding helix
             # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
@@ -2018,7 +2118,7 @@ class DNADesign(_JSONSerializable):
                                     strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
-        as given by helix.idx().
+        as given by helix.idx.
         """
 
         helix_from = helix_from_dct['num']
@@ -2066,9 +2166,9 @@ class DNADesign(_JSONSerializable):
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
-        for i, helix in enumerate(self.helices):
+        for i, helix in self.helices.items():
             helix_dct = OrderedDict()
-            helix_dct['num'] = helix.idx()
+            helix_dct['num'] = helix.idx
 
             if self.grid == Grid.square:
                 helix_dct['row'] = helix.grid_position[1]
@@ -2115,7 +2215,7 @@ class DNADesign(_JSONSerializable):
             if num_bases % 21 == 0: then we are on grid honey
         '''
         num_bases = 0
-        for helix in self.helices:
+        for helix in self.values():
             num_bases = max(num_bases, helix.max_offset)
 
         if self.grid == Grid.square:
@@ -2151,27 +2251,6 @@ class DNADesign(_JSONSerializable):
 
         return dct
 
-    def __post_init__(self):
-        if self.major_tick_distance < 0 or self.major_tick_distance is None:
-            self.major_tick_distance = default_major_tick_distance(self.grid)
-
-        # doing this first matters because most of DNADesign assumes helices has been set
-        if self.helices is None:
-            if len(self.strands) > 0:
-                max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
-                self.helices = list(Helix() for _ in range(max_helix_idx + 1))
-            else:
-                self.helices = []
-
-        # XXX: exact order of these calls is important
-        self._set_helices_idxs()
-        self._set_helices_grid_and_svg_positions()
-        self._build_substrands_on_helix_lists()
-        self._set_helices_min_max_offsets(update=False)
-        self._check_legal_design()
-
-        self._set_and_check_helices_view_order()
-
     def _set_and_check_helices_view_order(self):
         identity = list(range(0, len(self.helices)))
         if self.helices_view_order is None:
@@ -2190,11 +2269,12 @@ class DNADesign(_JSONSerializable):
                 f"is not a bijection from [0,{len(self.helices) - 1}] to [0,{len(self.helices) - 1}].")
 
     def _set_helices_idxs(self):
-        for idx, helix in enumerate(self.helices):
-            helix.set_idx(idx)
+        for idx, helix in self.helices.items():
+            if helix.idx is None:
+                helix.idx = idx
 
     def _set_helices_grid_and_svg_positions(self):
-        for idx, helix in enumerate(self.helices):
+        for idx, helix in self.helices.items():
             if helix.grid_position is None:
                 helix.grid_position = helix.default_grid_position()
             if helix.svg_position is None:
@@ -2203,7 +2283,7 @@ class DNADesign(_JSONSerializable):
     def _set_helices_min_max_offsets(self, update: bool):
         """update = whether to overwrite existing Helix.max_offset and Helix.min_offset.
         Don't do this when DNADesign is first created, but do it later when updating."""
-        for helix in self.helices:
+        for helix in self.helices.values():
 
             if update or helix.max_offset is None:
                 max_offset = None if len(helix._substrands) == 0 else helix._substrands[0].end
@@ -2248,41 +2328,43 @@ class DNADesign(_JSONSerializable):
     def _check_grid_honeycomb_positions_legal(self):
         # ensures grid positions are legal if honeycomb lattice is used
         if self.grid == Grid.honeycomb:
-            for helix in self.helices:
+            for helix in self.helices.values():
                 x = helix.grid_position[0]
                 y = helix.grid_position[1]
 
                 # following is for odd-q system: https://www.redblobgames.com/grids/hexagons/
-                if x % 2 == 1 and y % 2 == 0:
-                    raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                                                'coordinates (x,y,_) if x is odd and y is even, '
-                                                f'but helix {helix.idx()} has grid position '
-                                                f'{helix.grid_position}')
+                # if x % 2 == 1 and y % 2 == 0:
+                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
+                #                                 'coordinates (x,y,_) if x is odd and y is even, '
+                #                                 f'but helix {helix.idx} has grid position '
+                #                                 f'{helix.grid_position}')
 
                 # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
                 # if x % 2 == 1 and y % 2 == 1:
                 #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
                 #                                 'coordinates (x,y,_) if both x and y are odd, '
-                #                                 f'but helix {helix.idx()} has grid position '
+                #                                 f'but helix {helix.idx} has grid position '
                 #                                 f'{helix.grid_position}')
 
                 # following is for odd-r system: https://www.redblobgames.com/grids/hexagons/
                 # if x % 3 == 0 and y % 2 == 0:
                 #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
                 #                                 'coordinates (x,y,_) with y even and x a multiple of 3, '
-                #                                 f'but helix {helix.idx()} has grid position '
+                #                                 f'but helix {helix.idx} has grid position '
                 #                                 f'{helix.grid_position}')
                 # if x % 3 == 1 and y % 2 == 1:
                 #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
                 #                                 'coordinates (x,y) with y odd and x = 1 + a multiple of 3, '
-                #                                 f'but helix {helix.idx()} has grid position '
+                #                                 f'but helix {helix.idx} has grid position '
                 #                                 f'{helix.grid_position}')
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self):
-        for helix in self.helices:
-            if helix.min_offset >= helix.max_offset:
-                err_msg = f'for helix {helix.idx()}, ' \
+        for helix in self.helices.values():
+            if helix.min_offset is not None \
+                    and helix.max_offset is not None \
+                    and helix.min_offset >= helix.max_offset:
+                err_msg = f'for helix {helix.idx}, ' \
                           f'helix.min_offset = {helix.min_offset} must be strictly less than ' \
                           f'helix.max_offset = {helix.max_offset}'
                 raise IllegalDNADesignError(err_msg)
@@ -2309,7 +2391,7 @@ class DNADesign(_JSONSerializable):
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
-        for helix_idx, substrands in enumerate(helix._substrands for helix in self.helices):
+        for helix_idx, substrands in enumerate(helix._substrands for helix in self.helices.values()):
             if substrand_to_check is not None and substrand_to_check.helix != helix_idx:
                 # TODO: if necessary, we can be more efficient by only checking this one substrand
                 continue
@@ -2395,8 +2477,9 @@ class DNADesign(_JSONSerializable):
 
     def _check_strand_references_legal_helices(self, strand: Strand):
         for substrand in strand.substrands:
-            if substrand.is_substrand() and not (0 <= substrand.helix < len(self.helices)):
-                err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}"
+            if substrand.is_substrand() and substrand.helix not in self.helices:
+                err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}; " \
+                          f"here are the list of valid helices: {self._helices_to_string()}"
                 raise StrandError(substrand._parent_strand, err_msg)
 
         # ensure helix_idx's are never negative twice in a row
@@ -2405,6 +2488,17 @@ class DNADesign(_JSONSerializable):
                 err_msg = f"Loopouts {ss1} and {ss2} are consecutive on strand {strand}. " \
                           f"At least one of any consecutive pair must be a Substrand, not a Loopout."
                 raise StrandError(strand, err_msg)
+
+    def set_helix_idx(self, old_idx: int, new_idx: int):
+        if new_idx in self.helices:
+            raise IllegalDNADesignError(f'cannot assign idx {new_idx} to helix {old_idx}; '
+                                        'another helix already has that index')
+        helix: Helix = self.helices[old_idx]
+        del self.helices[old_idx]
+        self.helices[new_idx] = helix
+        helix.idx = new_idx
+        for substrand in helix._substrands:
+            substrand.helix = new_idx
 
     def substrand_at(self, helix: int, offset: int, forward: bool):
         """
@@ -2468,20 +2562,38 @@ class DNADesign(_JSONSerializable):
             self.helices[substrand.helix]._substrands.remove(substrand)
 
     def _build_substrands_on_helix_lists(self):
-        for helix in self.helices:
+        for helix in self.helices.values():
             helix._substrands = []
         for strand in self.strands:
             for substrand in strand.substrands:
                 if substrand.is_substrand():
-                    if substrand.helix < len(self.helices):
+                    if substrand.helix in self.helices:
                         self.helices[substrand.helix]._substrands.append(substrand)
                     else:
-                        msg = f"substrand's helix is {substrand.helix} but largest helix is {len(self.helices) - 1}"
+                        msg = f"substrand's helix is {substrand.helix} but no helix has that index; here " \
+                              f"are the list of helix indices: {self._helices_to_string()}"
                         raise StrandError(strand=strand, the_cause=msg)
+
+    def _helices_to_string(self):
+        return ', '.join(map(str, self.helices.keys()))
 
     def to_json(self, suppress_indent=True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file ending in extension .dna"""
+        if isinstance(self, DNAOrigamiDesign):
+            scaf = None
+            for strand in self.strands:
+                if strand.is_scaffold == True:
+                    scaf = strand
+                    break
+            if self.scaffold is None:
+                msg = 'No scaffold specified for DNAOrigamiDesign. You can delay assigning the scaffold ' \
+                      'until after creating the DNAOrigamiDesign object, but you must assign a scaffold ' \
+                      'using the method set_scaffold() before calling to_json().'
+                if scaf is not None:
+                    msg += f'There is a strand marked as a scaffold. Try calling set_scaffold with it as ' \
+                           f'a parameter:\n{scaf}'
+                raise IllegalDNADesignError(msg)
         return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
@@ -3069,7 +3181,7 @@ class DNADesign(_JSONSerializable):
         so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
         and 1 plus its maximum offset, the latter being just to the right of the last offset on the helix.
         """
-        for helix in self.helices:
+        for helix in self.helices.values():
             self._inline_deletions_insertions_on_helix(helix)
 
     def _inline_deletions_insertions_on_helix(self, helix):
@@ -3260,10 +3372,24 @@ class DNAOrigamiDesign(DNADesign):
     
     Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
 
+    def __init__(self, *,
+                 helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
+                 strands: List[Strand] = None,
+                 grid: Grid = Grid.square,
+                 major_tick_distance: int = -1,
+                 helices_view_order: List[int] = None,
+                 scaffold: Optional[Strand] = None):
+        super().__init__(helices=helices, strands=strands, grid=grid,
+                         major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
+        self.scaffold = scaffold
+        if scaffold is not None:
+            scaffold.is_scaffold = True
+            scaffold.color = default_scaffold_color
+
     def __post_init__(self):
         super().__post_init__()
 
-        # XXX: it's not a great idea to allow scaffold to ne None, but this helps when someone wants
+        # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
         # to create an origami by starting with several simple Strands and add nicks and crossovers.
         if self.scaffold is not None:
             self.scaffold.color = default_scaffold_color

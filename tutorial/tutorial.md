@@ -100,7 +100,7 @@ This is a file format called [JSON format](https://en.wikipedia.org/wiki/JSON). 
 
 ## Add helices
 
-As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `DNADesign` constructor; if they are omitted, then constructor infers which helices are present by inspecting the `Substrand`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
+As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `DNADesign` or `DNAOrigamiDesign` constructors; if they are omitted, then constructor infers which helices are present by inspecting the `Substrand`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
 
 We want 24 helices. We need to ensure each helix has enough offsets for all the bases we will need. We will use a standard M13mp18 scaffold strand, of length 7249. We won't use all of it, but we'll use most of it. We have 7249 / 24 &asymp; 302, so length 304 should be enough for each helix.
 
@@ -255,7 +255,7 @@ It is worth noting that the `start` and `end` offsets follow the standard progra
 
 ## Add nicks to scaffold
 
-Currently, neither the scadnano [Python scripting library](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/14) nor the [web interface](https://github.com/UC-Davis-molecular-computing/scadnano/issues/5) scadnano supports circular strands. However, if we add crossovers prematurely, we could introduce a circular strand in an intermediate design. So generally it is best to add all the nicks we require first, to separate the strands as much as possible.
+Currently, neither the [Python scripting library](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/14) nor the [web interface](https://github.com/UC-Davis-molecular-computing/scadnano/issues/5) for scadnano supports circular strands. However, if we add crossovers prematurely, we could mistakenly introduce a circular strand in an intermediate design, which would cause the script to raise an error. So generally it is best to add all the nicks we require first, to separate the strands as much as possible.
 
 For the scaffold, we want nicks all along the "seam" (the offsets near the middle, other than the topmost helix). Since we are done writing the function `precursor_scaffolds()`, we will omit it in the code below:
 
