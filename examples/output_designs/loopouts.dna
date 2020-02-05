@@ -81,6 +81,15 @@
         {"loopout": 8},
         {"helix": 4, "forward": false, "start": 24, "end": 32}
       ]
+    },
+    {
+      "color": "#32b86c",
+      "dna_sequence": "ACGTAGTGACTGAGCGATGCTATCGTACTATC",
+      "substrands": [
+        {"helix": 0, "forward": true, "start": 48, "end": 56},
+        {"loopout": 8},
+        {"helix": 1, "forward": false, "start": 48, "end": 64}
+      ]
     }
   ],
   "helices": [
