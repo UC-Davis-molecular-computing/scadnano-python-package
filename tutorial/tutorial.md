@@ -32,7 +32,7 @@ The design will look like this when we are done:
 The completed design is available as a [`.dna` file](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/web/examples/24_helix_rectangle_twist_corrected.dna) readable by scadnano. Download it and save it somewhere on your local file system.
 
 To view it, first open scadnano in your browser : 
-https://web.cs.ucdavis.edu/~doty/scadnano/.
+http://scadnano.org.
 Currently only [Chrome](https://www.google.com/chrome/) 
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
@@ -531,7 +531,7 @@ def export_idt_plate_file(design: sc.DNAOrigamiDesign):
 
 This will write an Excel file named `24_helix_origami_rectangle_twist_corrected.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
 
-There are many options to customize how the strands are exported and what information goes into the `idt` field (e.g., purification, synthesis scale); see the [API documentation](https://web.cs.ucdavis.edu/~doty/scadnano/docs/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file).
+There are many options to customize how the strands are exported and what information goes into the `idt` field (e.g., purification, synthesis scale); see the [API documentation](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file).
 
 
 
