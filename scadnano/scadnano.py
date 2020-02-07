@@ -1997,6 +1997,36 @@ class DNADesign(_JSONSerializable):
                 helices_view_order=helices_view_order,
             )
 
+    @staticmethod
+    def cadnano_v2_explore_strand(cadnano_helix, num_bases, strand_type, seen, base_id):
+        """ Routine that will follow a cadnano v2 strand accross helices and create
+            cadnano substrands and strand accordingly.
+        """
+        helix_num = cadnano_helix['num']
+        seen[(helix_num, base_id)] = True
+        id_from, base_from, id_to, base_to = cadnano_helix[strand_type][base_id]
+
+        if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
+            return None
+
+        strand_direction_forward = True
+        if helix_num%2 == 0 and strand_type == 'scaf' or 
+           helix_num%2 == 1 and strand_type == 'stap':
+           strand_direction_forward = False
+
+        end = num_bases+1
+        for base_id_2 in range(base_id, num_bases):
+            id_from_2, base_from_2, id_to_2, base_to_2 = cadnano_helix[strand_type][base_id_2]:
+            if (id_from_2 == -1 and base_from_2 == -1) or
+               (id_to_2 == -1 and base_to_2 == -1):
+               end = base_id_2+1
+
+        start = base_id
+        sub_strand = Substrand(helix_num, strand_direction_forward, start, end)
+
+
+
+        
 
     @staticmethod
     def from_cadnano_v2(directory, filename) -> DNAOrigamiDesign:
@@ -2021,17 +2051,32 @@ class DNADesign(_JSONSerializable):
             min_row = row if row < min_row else min_row
             min_col = col if col < min_col else min_col
 
-        helices = []
+        helices = OrderedDict({})
         for cadnano_helix in cadnano_v2_design['vstrands']:
             col, row = cadnano_helix['col'], cadnano_helix['row']
-            helix = Helix(idx=cadnano_helix['num'], max_offset=num_bases,
+            num = cadnano_helix['num']
+            helix = Helix(idx=num, max_offset=num_bases,
                           grid_position=[col - min_col, row - min_row, 0])
-            helices.append(helix)
+            helices[num] = helix
 
-        sorted_helices = sorted(helices, key=lambda
-            h: h.idx)  # Needed to show helices in the same order than cadnano in the grid view
-        design = DNAOrigamiDesign(grid=grid_type, helices=sorted_helices, strands=[])
-        design.set_helices_view_order([h.idx for h in helices])
+        # We do a DFS on strands
+        seen = {'scaf': {}, 'stap': {}}
+        strands = []
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            helix_num = cadnano_helix['num']
+            for strand_type in ['scaf', 'stap']:
+                for base_id in range(num_bases):
+                    if (helix_num, base_id) in seen[strand_type]:
+                        continue
+
+                    strand = DNAOrigamiDesign.cadnano_v2_explore_strand(cadnano_helix, num_bases, strand_type,
+                                                                        seen[strand_type], base_id)
+                    if not strand is None:
+                        strands.append(strand)
+
+        design = DNADesign(grid=grid_type, helices=helices, strands=strands)
+        #TODO: set_helices_view_order obsolete as it
+        #design.set_helices_view_order([num for num in helices])
 
         return design
 
