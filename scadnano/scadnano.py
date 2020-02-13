@@ -2004,36 +2004,51 @@ class DNADesign(_JSONSerializable):
             )
 
     @staticmethod
-    def cadnano_v2_explore_strand(vstrands, num_bases, strand_type, seen, helix_num, base_id):
-        """ Routine that will follow a cadnano v2 strand accross helices and create
-            cadnano substrands and strand accordingly.
+    def cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int, base_from: int):
+        """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
+        helix and the base of the 5' end.
         """
-
-        seen[(helix_num, base_id)] = True
-        id_from, base_from, id_to, base_to = vstrands[helix_num][strand_type][base_id]
-
-        if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
-            return None
-
         id_from_before = helix_num
         base_from_before = base_id
         while not (id_from == -1 and base_from == -1):
             id_from_before = id_from
             base_from_before = base_from    
-            id_from, base_from, id_to, base_to = vstrands[id_from][strand_type][base_from]
-        
+            id_from, base_from, _, _ = vstrands[id_from][strand_type][base_from]
+        return id_from_before, base_from_before
 
-
-        strand_5_end_helix =  id_from_before
-        strand_5_end_base = base_from_before
-
+    @staticmethod
+    def cadnano_v2_import_find_strand_color(vstrands, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
+        """ Routines which finds the color of a cadnano v2 strand. """
         color = default_scaffold_color
         if strand_type == 'stap':
             for base_id,stap_color in vstrands[strand_5_end_helix]['stap_colors']:
                 if base_id == strand_5_end_base:
                     color = Color.from_cadnano_v2_int_hex(stap_color)
                     break
+        return color
 
+    @staticmethod
+    def cadnano_v2_import_extract_deletions(skip_table, start, end):
+        """ Routines which converts cadnano skips to scadnano deletions """
+        to_return = []
+        for base_id in range(start, end):
+            if skip_table[base_id] == -1:
+                to_return.append(base_id)
+        return to_return
+
+    @staticmethod
+    def cadnano_v2_import_extract_insertions(loop_table, start, end):
+        """ Routines which converts cadnano skips to scadnano insertions """
+        to_return = []
+        for base_id in range(start, end):
+            if loop_table[base_id] != 0:
+                to_return.append([base_id, loop_table[base_id]])
+        return to_return
+
+
+    @staticmethod
+    def cadnano_v2_import_explore_substrands(vstrands, seen, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
+        """ Routines finds all substrands of a cadnano v2 strand. """
         curr_helix = strand_5_end_helix
         curr_base = strand_5_end_base
         substrands = []
@@ -2044,8 +2059,6 @@ class DNADesign(_JSONSerializable):
             start = curr_base
         else:
             end = curr_base
-
-        
 
         while not (curr_helix == -1 and curr_base == -1):
             old_helix = curr_helix
@@ -2059,7 +2072,9 @@ class DNADesign(_JSONSerializable):
                 else:
                     start = old_base
 
-                substrands.append(Substrand(old_helix, direction_forward, start, end))
+                substrands.append(Substrand(old_helix, direction_forward, start, end,
+                                            deletions = DNADesign.cadnano_v2_import_extract_deletions(vstrands[old_helix]['skip'], start, end),
+                                            insertions = DNADesign.cadnano_v2_import_extract_insertions(vstrands[old_helix]['loop'], start, end)))
                 
                 direction_forward = (strand_type == 'scaf' and curr_helix%2 == 0) or ((strand_type == 'stap' and curr_helix%2 == 1))
                 start,end = -1,-1
@@ -2068,7 +2083,24 @@ class DNADesign(_JSONSerializable):
                 else:
                     end = curr_base
 
-        strand = Strand(substrands=substrands, is_scaffold= (strand_type == 'scaf'), color=color)
+        return substrands
+
+    @staticmethod
+    def cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen, helix_num: int, base_id: int):
+        """ Routine that will follow a cadnano v2 strand accross helices and create
+            cadnano substrands and strand accordingly.
+        """
+
+        seen[(helix_num, base_id)] = True
+        id_from, base_from, id_to, base_to = vstrands[helix_num][strand_type][base_id]
+
+        if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
+            return None
+          
+        strand_5_end_helix, strand_5_end_base = DNADesign.cadnano_v2_import_find_5_end(vstrands, strand_type, helix_num, base_id, id_from, base_from)
+        strand_color = DNADesign.cadnano_v2_import_find_strand_color(vstrands, strand_type, strand_5_end_base, strand_5_end_helix)
+        substrands = DNADesign.cadnano_v2_import_explore_substrands(vstrands, seen, strand_type, strand_5_end_base, strand_5_end_helix)
+        strand = Strand(substrands=substrands, is_scaffold= (strand_type == 'scaf'), color=strand_color)
 
         return strand
 
@@ -2118,7 +2150,7 @@ class DNADesign(_JSONSerializable):
                     if (helix_num, base_id) in seen[strand_type]:
                         continue
                     
-                    strand = DNAOrigamiDesign.cadnano_v2_explore_strand(cadnano_helices, num_bases, strand_type,
+                    strand = DNAOrigamiDesign.cadnano_v2_import_explore_strand(cadnano_helices, num_bases, strand_type,
                                                                         seen[strand_type], helix_num, base_id)
                     if not strand is None:
                         strands.append(strand)
