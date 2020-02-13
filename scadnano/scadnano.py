@@ -2004,7 +2004,7 @@ class DNADesign(_JSONSerializable):
             )
 
     @staticmethod
-    def cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int, base_from: int):
+    def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int, base_from: int):
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
         """
@@ -2017,7 +2017,7 @@ class DNADesign(_JSONSerializable):
         return id_from_before, base_from_before
 
     @staticmethod
-    def cadnano_v2_import_find_strand_color(vstrands, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
+    def _cadnano_v2_import_find_strand_color(vstrands, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
         """ Routines which finds the color of a cadnano v2 strand. """
         color = default_scaffold_color
         if strand_type == 'stap':
@@ -2028,7 +2028,7 @@ class DNADesign(_JSONSerializable):
         return color
 
     @staticmethod
-    def cadnano_v2_import_extract_deletions(skip_table, start, end):
+    def _cadnano_v2_import_extract_deletions(skip_table, start, end):
         """ Routines which converts cadnano skips to scadnano deletions """
         to_return = []
         for base_id in range(start, end):
@@ -2037,7 +2037,7 @@ class DNADesign(_JSONSerializable):
         return to_return
 
     @staticmethod
-    def cadnano_v2_import_extract_insertions(loop_table, start, end):
+    def _cadnano_v2_import_extract_insertions(loop_table, start, end):
         """ Routines which converts cadnano skips to scadnano insertions """
         to_return = []
         for base_id in range(start, end):
@@ -2047,7 +2047,7 @@ class DNADesign(_JSONSerializable):
 
 
     @staticmethod
-    def cadnano_v2_import_explore_substrands(vstrands, seen, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
+    def _cadnano_v2_import_explore_substrands(vstrands, seen, strand_type: str, strand_5_end_base: int, strand_5_end_helix: int):
         """ Routines finds all substrands of a cadnano v2 strand. """
         curr_helix = strand_5_end_helix
         curr_base = strand_5_end_base
@@ -2074,8 +2074,8 @@ class DNADesign(_JSONSerializable):
                     start = old_base
 
                 substrands.append(Substrand(old_helix, direction_forward, min(start,end), max(start,end),
-                                            deletions = DNADesign.cadnano_v2_import_extract_deletions(vstrands[old_helix]['skip'], start, end),
-                                            insertions = DNADesign.cadnano_v2_import_extract_insertions(vstrands[old_helix]['loop'], start, end)))
+                                            deletions = DNADesign._cadnano_v2_import_extract_deletions(vstrands[old_helix]['skip'], start, end),
+                                            insertions = DNADesign._cadnano_v2_import_extract_insertions(vstrands[old_helix]['loop'], start, end)))
                 
                 direction_forward = (strand_type == 'scaf' and curr_helix%2 == 0) or ((strand_type == 'stap' and curr_helix%2 == 1))
                 start,end = -1,-1
@@ -2087,7 +2087,7 @@ class DNADesign(_JSONSerializable):
         return substrands
 
     @staticmethod
-    def cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen, helix_num: int, base_id: int):
+    def _cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen, helix_num: int, base_id: int):
         """ Routine that will follow a cadnano v2 strand accross helices and create
             cadnano substrands and strand accordingly.
         """
@@ -2098,9 +2098,9 @@ class DNADesign(_JSONSerializable):
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
           
-        strand_5_end_helix, strand_5_end_base = DNADesign.cadnano_v2_import_find_5_end(vstrands, strand_type, helix_num, base_id, id_from, base_from)
-        strand_color = DNADesign.cadnano_v2_import_find_strand_color(vstrands, strand_type, strand_5_end_base, strand_5_end_helix)
-        substrands = DNADesign.cadnano_v2_import_explore_substrands(vstrands, seen, strand_type, strand_5_end_base, strand_5_end_helix)
+        strand_5_end_helix, strand_5_end_base = DNADesign._cadnano_v2_import_find_5_end(vstrands, strand_type, helix_num, base_id, id_from, base_from)
+        strand_color = DNADesign._cadnano_v2_import_find_strand_color(vstrands, strand_type, strand_5_end_base, strand_5_end_helix)
+        substrands = DNADesign._cadnano_v2_import_explore_substrands(vstrands, seen, strand_type, strand_5_end_base, strand_5_end_helix)
         strand = Strand(substrands=substrands, is_scaffold= (strand_type == 'scaf'), color=strand_color)
 
         return strand
@@ -2150,7 +2150,7 @@ class DNADesign(_JSONSerializable):
                     if (helix_num, base_id) in seen[strand_type]:
                         continue
                     
-                    strand = DNAOrigamiDesign.cadnano_v2_import_explore_strand(cadnano_helices, num_bases, strand_type,
+                    strand = DNAOrigamiDesign._cadnano_v2_import_explore_strand(cadnano_helices, num_bases, strand_type,
                                                                         seen[strand_type], helix_num, base_id)
                     if not strand is None:
                         strands.append(strand)
@@ -2198,11 +2198,6 @@ class DNADesign(_JSONSerializable):
 
     def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int) -> int:
         return y if y % x == 0 else y + (x - y % x)
-
-    def _cadnano_v2_convert_honeycomb_coords(self, grid_position: Tuple[int, int, int]):
-        """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
-        raise NotImplementedError('The honeycomb lattice is not exportable yet')
-        pass
 
     def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand,
                                          strand_type: str = 'scaf') -> None:
@@ -2301,8 +2296,7 @@ class DNADesign(_JSONSerializable):
                 helix_dct['col'] = helix.grid_position[0]
 
             if self.grid == Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = self._cadnano_v2_convert_honeycomb_coords(
-                    helix.grid_position)
+                helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
             helix_dct['stap'] = []
