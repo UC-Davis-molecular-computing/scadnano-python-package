@@ -57,6 +57,12 @@ class TestImportCadnanoV2(unittest.TestCase):
         design.write_scadnano_file(directory=os.path.join('tests_outputs', self.io_folder),
                                    filename='test_helices_order.dna')
 
+    def test_huge_hex(self):
+        design = sc.DNADesign.from_cadnano_v2(directory=os.path.join('tests_outputs', self.io_folder),
+                                              filename='test_huge_hex.json')
+        design.write_scadnano_file(directory=os.path.join('tests_outputs', self.io_folder),
+                                   filename='test_huge_hex.dna')
+
 
 class TestExportCadnanoV2(unittest.TestCase):
     """

@@ -2066,13 +2066,14 @@ class DNADesign(_JSONSerializable):
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
-            if curr_helix != old_helix:
+            # We have a crossover when we jump helix or when order is broken on same helix
+            if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (direction_forward and curr_base < old_base):
                 if direction_forward:
                     end = old_base
                 else:
                     start = old_base
 
-                substrands.append(Substrand(old_helix, direction_forward, start, end,
+                substrands.append(Substrand(old_helix, direction_forward, min(start,end), max(start,end),
                                             deletions = DNADesign.cadnano_v2_import_extract_deletions(vstrands[old_helix]['skip'], start, end),
                                             insertions = DNADesign.cadnano_v2_import_extract_insertions(vstrands[old_helix]['loop'], start, end)))
                 
@@ -2117,7 +2118,6 @@ class DNADesign(_JSONSerializable):
         grid_type = Grid.square
         if num_bases % 21 == 0:
             grid_type = Grid.honeycomb
-            raise NotImplementedError("Can't import honeycomb yet")
 
         min_row, min_col = None, None
         for cadnano_helix in cadnano_v2_design['vstrands']:

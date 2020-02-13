@@ -1,0 +1,1814 @@
+{
+  "version": "0.2.0",
+  "grid": "honeycomb",
+  "helices": [
+    {"max_offset": 861, "grid_position": [3, 1]},
+    {"max_offset": 861, "grid_position": [4, 1]},
+    {"max_offset": 861, "grid_position": [5, 1]},
+    {"max_offset": 861, "grid_position": [5, 0]},
+    {"max_offset": 861, "grid_position": [4, 0]},
+    {"max_offset": 861, "grid_position": [3, 0]},
+    {"max_offset": 861, "grid_position": [1, 3]},
+    {"max_offset": 861, "grid_position": [0, 3]},
+    {"max_offset": 861, "grid_position": [0, 4]},
+    {"max_offset": 861, "grid_position": [1, 4]},
+    {"max_offset": 861, "grid_position": [7, 1]},
+    {"max_offset": 861, "grid_position": [8, 1]},
+    {"max_offset": 861, "grid_position": [9, 1]},
+    {"max_offset": 861, "grid_position": [9, 0]},
+    {"max_offset": 861, "grid_position": [8, 0]},
+    {"max_offset": 861, "grid_position": [7, 0]},
+    {"max_offset": 861, "grid_position": [7, 3]},
+    {"max_offset": 861, "grid_position": [6, 3]},
+    {"max_offset": 861, "grid_position": [6, 4]},
+    {"max_offset": 861, "grid_position": [7, 4]},
+    {"max_offset": 861, "grid_position": [11, 1]},
+    {"max_offset": 861, "grid_position": [12, 1]},
+    {"max_offset": 861, "grid_position": [13, 1]},
+    {"max_offset": 861, "grid_position": [13, 0]},
+    {"max_offset": 861, "grid_position": [12, 0]},
+    {"max_offset": 861, "grid_position": [11, 0]}
+  ],
+  "strands": [
+    {
+      "color": "#0066cc",
+      "substrands": [
+        {"helix": 10, "forward": true, "start": 221, "end": 232, "insertions": [[230, 1]]},
+        {"helix": 11, "forward": false, "start": 226, "end": 232},
+        {"helix": 12, "forward": true, "start": 226, "end": 246, "deletions": [230, 244]},
+        {"helix": 11, "forward": false, "start": 233, "end": 246},
+        {"helix": 10, "forward": true, "start": 233, "end": 295, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 11, "forward": false, "start": 263, "end": 295},
+        {"helix": 22, "forward": true, "start": 376, "end": 393, "deletions": [384]},
+        {"helix": 21, "forward": false, "start": 380, "end": 393},
+        {"helix": 20, "forward": true, "start": 380, "end": 400, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 21, "forward": false, "start": 394, "end": 400},
+        {"helix": 22, "forward": true, "start": 394, "end": 414, "deletions": [398, 412]},
+        {"helix": 21, "forward": false, "start": 401, "end": 414},
+        {"helix": 20, "forward": true, "start": 401, "end": 421, "insertions": [[412, 1]]},
+        {"helix": 21, "forward": false, "start": 415, "end": 421},
+        {"helix": 22, "forward": true, "start": 415, "end": 428, "deletions": [426]},
+        {"helix": 23, "forward": false, "start": 411, "end": 428, "deletions": [412, 426]},
+        {"helix": 24, "forward": true, "start": 411, "end": 424},
+        {"helix": 25, "forward": false, "start": 404, "end": 424, "insertions": [[412, 1]]},
+        {"helix": 24, "forward": true, "start": 404, "end": 410},
+        {"helix": 23, "forward": false, "start": 390, "end": 410, "deletions": [398]},
+        {"helix": 24, "forward": true, "start": 390, "end": 403},
+        {"helix": 25, "forward": false, "start": 383, "end": 403, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 24, "forward": true, "start": 383, "end": 389},
+        {"helix": 23, "forward": false, "start": 366, "end": 389, "deletions": [370, 384]},
+        {"helix": 14, "forward": true, "start": 269, "end": 284},
+        {"helix": 13, "forward": false, "start": 271, "end": 284, "deletions": [272]},
+        {"helix": 12, "forward": true, "start": 271, "end": 309, "deletions": [272, 286, 300]},
+        {"helix": 11, "forward": false, "start": 296, "end": 309},
+        {"helix": 10, "forward": true, "start": 296, "end": 337, "insertions": [[300, 1], [314, 1], [328, 1]]},
+        {"helix": 11, "forward": false, "start": 331, "end": 337},
+        {"helix": 12, "forward": true, "start": 331, "end": 351, "deletions": [342]},
+        {"helix": 11, "forward": false, "start": 338, "end": 351},
+        {"helix": 10, "forward": true, "start": 338, "end": 358, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 11, "forward": false, "start": 352, "end": 358},
+        {"helix": 12, "forward": true, "start": 352, "end": 375, "deletions": [356, 370]},
+        {"helix": 1, "forward": false, "start": 247, "end": 262},
+        {"helix": 2, "forward": true, "start": 247, "end": 260, "deletions": [258]},
+        {"helix": 3, "forward": false, "start": 222, "end": 260, "deletions": [230, 244, 258]},
+        {"helix": 4, "forward": true, "start": 222, "end": 235},
+        {"helix": 5, "forward": false, "start": 215, "end": 235, "insertions": [[216, 1], [230, 1]]},
+        {"helix": 4, "forward": true, "start": 215, "end": 221},
+        {"helix": 3, "forward": false, "start": 219, "end": 221},
+        {"helix": 2, "forward": true, "start": 219, "end": 225},
+        {"helix": 1, "forward": false, "start": 212, "end": 225},
+        {"helix": 0, "forward": true, "start": 212, "end": 232, "insertions": [[216, 1], [230, 1]]},
+        {"helix": 1, "forward": false, "start": 226, "end": 232},
+        {"helix": 2, "forward": true, "start": 226, "end": 246, "deletions": [230, 244]},
+        {"helix": 1, "forward": false, "start": 233, "end": 246},
+        {"helix": 0, "forward": true, "start": 233, "end": 295, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 1, "forward": false, "start": 263, "end": 295},
+        {"helix": 12, "forward": true, "start": 376, "end": 393, "deletions": [384]},
+        {"helix": 11, "forward": false, "start": 380, "end": 393},
+        {"helix": 10, "forward": true, "start": 380, "end": 400, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 11, "forward": false, "start": 394, "end": 400},
+        {"helix": 12, "forward": true, "start": 394, "end": 414, "deletions": [398, 412]},
+        {"helix": 11, "forward": false, "start": 401, "end": 414},
+        {"helix": 10, "forward": true, "start": 401, "end": 421, "insertions": [[412, 1]]},
+        {"helix": 11, "forward": false, "start": 415, "end": 421},
+        {"helix": 12, "forward": true, "start": 415, "end": 428, "deletions": [426]},
+        {"helix": 13, "forward": false, "start": 411, "end": 428, "deletions": [412, 426]},
+        {"helix": 14, "forward": true, "start": 411, "end": 424},
+        {"helix": 15, "forward": false, "start": 404, "end": 424, "insertions": [[412, 1]]},
+        {"helix": 14, "forward": true, "start": 404, "end": 410},
+        {"helix": 13, "forward": false, "start": 390, "end": 410, "deletions": [398]},
+        {"helix": 14, "forward": true, "start": 390, "end": 403},
+        {"helix": 15, "forward": false, "start": 383, "end": 403, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 14, "forward": true, "start": 383, "end": 389},
+        {"helix": 13, "forward": false, "start": 366, "end": 389, "deletions": [370, 384]},
+        {"helix": 4, "forward": true, "start": 269, "end": 284},
+        {"helix": 3, "forward": false, "start": 271, "end": 284, "deletions": [272]},
+        {"helix": 2, "forward": true, "start": 271, "end": 309, "deletions": [272, 286, 300]},
+        {"helix": 1, "forward": false, "start": 296, "end": 309},
+        {"helix": 0, "forward": true, "start": 296, "end": 337, "insertions": [[300, 1], [314, 1], [328, 1]]},
+        {"helix": 1, "forward": false, "start": 331, "end": 337},
+        {"helix": 2, "forward": true, "start": 331, "end": 351, "deletions": [342]},
+        {"helix": 1, "forward": false, "start": 338, "end": 351},
+        {"helix": 0, "forward": true, "start": 338, "end": 358, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 1, "forward": false, "start": 352, "end": 358},
+        {"helix": 2, "forward": true, "start": 352, "end": 365, "deletions": [356]},
+        {"helix": 21, "forward": false, "start": 37, "end": 58},
+        {"helix": 22, "forward": true, "start": 37, "end": 50, "deletions": [48]},
+        {"helix": 23, "forward": false, "start": 12, "end": 50, "deletions": [20, 34, 48]},
+        {"helix": 24, "forward": true, "start": 12, "end": 25},
+        {"helix": 25, "forward": false, "start": 5, "end": 25, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 24, "forward": true, "start": 5, "end": 11},
+        {"helix": 23, "forward": false, "start": 9, "end": 11},
+        {"helix": 22, "forward": true, "start": 9, "end": 15},
+        {"helix": 21, "forward": false, "start": 2, "end": 15},
+        {"helix": 20, "forward": true, "start": 2, "end": 22, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 21, "forward": false, "start": 16, "end": 22},
+        {"helix": 22, "forward": true, "start": 16, "end": 36, "deletions": [20, 34]},
+        {"helix": 21, "forward": false, "start": 23, "end": 36},
+        {"helix": 20, "forward": true, "start": 23, "end": 85, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 21, "forward": false, "start": 59, "end": 85},
+        {"helix": 2, "forward": true, "start": 366, "end": 393, "deletions": [370, 384]},
+        {"helix": 1, "forward": false, "start": 380, "end": 393},
+        {"helix": 0, "forward": true, "start": 380, "end": 400, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 1, "forward": false, "start": 394, "end": 400},
+        {"helix": 2, "forward": true, "start": 394, "end": 414, "deletions": [398, 412]},
+        {"helix": 1, "forward": false, "start": 401, "end": 414},
+        {"helix": 0, "forward": true, "start": 401, "end": 421, "insertions": [[412, 1]]},
+        {"helix": 1, "forward": false, "start": 415, "end": 421},
+        {"helix": 2, "forward": true, "start": 415, "end": 428, "deletions": [426]},
+        {"helix": 3, "forward": false, "start": 411, "end": 428, "deletions": [412, 426]},
+        {"helix": 4, "forward": true, "start": 411, "end": 424},
+        {"helix": 5, "forward": false, "start": 404, "end": 424, "insertions": [[412, 1]]},
+        {"helix": 4, "forward": true, "start": 404, "end": 410},
+        {"helix": 3, "forward": false, "start": 390, "end": 410, "deletions": [398]},
+        {"helix": 4, "forward": true, "start": 390, "end": 403},
+        {"helix": 5, "forward": false, "start": 383, "end": 403, "insertions": [[384, 1], [398, 1]]},
+        {"helix": 4, "forward": true, "start": 383, "end": 389},
+        {"helix": 3, "forward": false, "start": 376, "end": 389, "deletions": [384]},
+        {"helix": 24, "forward": true, "start": 53, "end": 74},
+        {"helix": 23, "forward": false, "start": 61, "end": 74, "deletions": [62]},
+        {"helix": 22, "forward": true, "start": 61, "end": 99, "deletions": [62, 76, 90]},
+        {"helix": 21, "forward": false, "start": 86, "end": 99},
+        {"helix": 20, "forward": true, "start": 86, "end": 127, "insertions": [[90, 1], [104, 1], [118, 1]]},
+        {"helix": 21, "forward": false, "start": 121, "end": 127},
+        {"helix": 22, "forward": true, "start": 121, "end": 141, "deletions": [132]},
+        {"helix": 21, "forward": false, "start": 128, "end": 141},
+        {"helix": 20, "forward": true, "start": 128, "end": 148, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 21, "forward": false, "start": 142, "end": 148},
+        {"helix": 22, "forward": true, "start": 142, "end": 155, "deletions": [146]},
+        {"helix": 11, "forward": false, "start": 37, "end": 58},
+        {"helix": 12, "forward": true, "start": 37, "end": 50, "deletions": [48]},
+        {"helix": 13, "forward": false, "start": 12, "end": 50, "deletions": [20, 34, 48]},
+        {"helix": 14, "forward": true, "start": 12, "end": 25},
+        {"helix": 15, "forward": false, "start": 5, "end": 25, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 14, "forward": true, "start": 5, "end": 11},
+        {"helix": 13, "forward": false, "start": 9, "end": 11},
+        {"helix": 12, "forward": true, "start": 9, "end": 15},
+        {"helix": 11, "forward": false, "start": 2, "end": 15},
+        {"helix": 10, "forward": true, "start": 2, "end": 22, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 11, "forward": false, "start": 16, "end": 22},
+        {"helix": 12, "forward": true, "start": 16, "end": 36, "deletions": [20, 34]},
+        {"helix": 11, "forward": false, "start": 23, "end": 36},
+        {"helix": 10, "forward": true, "start": 23, "end": 85, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 11, "forward": false, "start": 59, "end": 85},
+        {"helix": 22, "forward": true, "start": 156, "end": 183, "deletions": [160, 174]},
+        {"helix": 21, "forward": false, "start": 170, "end": 183},
+        {"helix": 20, "forward": true, "start": 170, "end": 190, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 21, "forward": false, "start": 184, "end": 190},
+        {"helix": 22, "forward": true, "start": 184, "end": 204, "deletions": [188, 202]},
+        {"helix": 21, "forward": false, "start": 191, "end": 204},
+        {"helix": 20, "forward": true, "start": 191, "end": 211, "insertions": [[202, 1]]},
+        {"helix": 21, "forward": false, "start": 205, "end": 211},
+        {"helix": 22, "forward": true, "start": 205, "end": 218, "deletions": [216]},
+        {"helix": 23, "forward": false, "start": 201, "end": 218, "deletions": [202, 216]},
+        {"helix": 24, "forward": true, "start": 201, "end": 214},
+        {"helix": 25, "forward": false, "start": 194, "end": 214, "insertions": [[202, 1]]},
+        {"helix": 24, "forward": true, "start": 194, "end": 200},
+        {"helix": 23, "forward": false, "start": 180, "end": 200, "deletions": [188]},
+        {"helix": 24, "forward": true, "start": 180, "end": 193},
+        {"helix": 25, "forward": false, "start": 173, "end": 193, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 24, "forward": true, "start": 173, "end": 179},
+        {"helix": 23, "forward": false, "start": 166, "end": 179, "deletions": [174]},
+        {"helix": 14, "forward": true, "start": 53, "end": 74},
+        {"helix": 13, "forward": false, "start": 61, "end": 74, "deletions": [62]},
+        {"helix": 12, "forward": true, "start": 61, "end": 99, "deletions": [62, 76, 90]},
+        {"helix": 11, "forward": false, "start": 86, "end": 99},
+        {"helix": 10, "forward": true, "start": 86, "end": 106, "insertions": [[90, 1], [104, 1]]},
+        {"helix": 11, "forward": false, "start": 100, "end": 106},
+        {"helix": 12, "forward": true, "start": 100, "end": 113, "deletions": [104]},
+        {"helix": 13, "forward": false, "start": 96, "end": 113, "deletions": [104]},
+        {"helix": 14, "forward": true, "start": 96, "end": 109},
+        {"helix": 15, "forward": false, "start": 89, "end": 109, "insertions": [[90, 1], [104, 1]]},
+        {"helix": 14, "forward": true, "start": 89, "end": 95},
+        {"helix": 13, "forward": false, "start": 75, "end": 95, "deletions": [76, 90]},
+        {"helix": 14, "forward": true, "start": 75, "end": 88},
+        {"helix": 15, "forward": false, "start": 26, "end": 88, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 14, "forward": true, "start": 26, "end": 52},
+        {"helix": 23, "forward": false, "start": 138, "end": 165, "deletions": [146, 160]},
+        {"helix": 24, "forward": true, "start": 138, "end": 151},
+        {"helix": 25, "forward": false, "start": 131, "end": 151, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 24, "forward": true, "start": 131, "end": 137},
+        {"helix": 23, "forward": false, "start": 117, "end": 137, "deletions": [118, 132]},
+        {"helix": 24, "forward": true, "start": 117, "end": 130},
+        {"helix": 25, "forward": false, "start": 110, "end": 130, "insertions": [[118, 1]]},
+        {"helix": 24, "forward": true, "start": 110, "end": 116},
+        {"helix": 23, "forward": false, "start": 114, "end": 116},
+        {"helix": 22, "forward": true, "start": 114, "end": 120, "deletions": [118]},
+        {"helix": 21, "forward": false, "start": 100, "end": 120},
+        {"helix": 22, "forward": true, "start": 100, "end": 113, "deletions": [104]},
+        {"helix": 23, "forward": false, "start": 96, "end": 113, "deletions": [104]},
+        {"helix": 24, "forward": true, "start": 96, "end": 109},
+        {"helix": 25, "forward": false, "start": 89, "end": 109, "insertions": [[90, 1], [104, 1]]},
+        {"helix": 24, "forward": true, "start": 89, "end": 95},
+        {"helix": 23, "forward": false, "start": 75, "end": 95, "deletions": [76, 90]},
+        {"helix": 24, "forward": true, "start": 75, "end": 88},
+        {"helix": 25, "forward": false, "start": 26, "end": 88, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 24, "forward": true, "start": 26, "end": 52},
+        {"helix": 3, "forward": false, "start": 348, "end": 375, "deletions": [356, 370]},
+        {"helix": 4, "forward": true, "start": 348, "end": 361},
+        {"helix": 5, "forward": false, "start": 341, "end": 361, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 4, "forward": true, "start": 341, "end": 347},
+        {"helix": 3, "forward": false, "start": 327, "end": 347, "deletions": [328, 342]},
+        {"helix": 4, "forward": true, "start": 327, "end": 340},
+        {"helix": 5, "forward": false, "start": 320, "end": 340, "insertions": [[328, 1]]},
+        {"helix": 4, "forward": true, "start": 320, "end": 326},
+        {"helix": 3, "forward": false, "start": 324, "end": 326},
+        {"helix": 2, "forward": true, "start": 324, "end": 330, "deletions": [328]},
+        {"helix": 1, "forward": false, "start": 310, "end": 330},
+        {"helix": 2, "forward": true, "start": 310, "end": 323, "deletions": [314]},
+        {"helix": 3, "forward": false, "start": 306, "end": 323, "deletions": [314]},
+        {"helix": 4, "forward": true, "start": 306, "end": 319},
+        {"helix": 5, "forward": false, "start": 299, "end": 319, "insertions": [[300, 1], [314, 1]]},
+        {"helix": 4, "forward": true, "start": 299, "end": 305},
+        {"helix": 3, "forward": false, "start": 285, "end": 305, "deletions": [286, 300]},
+        {"helix": 4, "forward": true, "start": 285, "end": 298},
+        {"helix": 5, "forward": false, "start": 236, "end": 298, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 4, "forward": true, "start": 236, "end": 268},
+        {"helix": 13, "forward": false, "start": 348, "end": 365, "deletions": [356]},
+        {"helix": 14, "forward": true, "start": 348, "end": 361},
+        {"helix": 15, "forward": false, "start": 341, "end": 361, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 14, "forward": true, "start": 341, "end": 347},
+        {"helix": 13, "forward": false, "start": 327, "end": 347, "deletions": [328, 342]},
+        {"helix": 14, "forward": true, "start": 327, "end": 340},
+        {"helix": 15, "forward": false, "start": 320, "end": 340, "insertions": [[328, 1]]},
+        {"helix": 14, "forward": true, "start": 320, "end": 326},
+        {"helix": 13, "forward": false, "start": 324, "end": 326},
+        {"helix": 12, "forward": true, "start": 324, "end": 330, "deletions": [328]},
+        {"helix": 11, "forward": false, "start": 310, "end": 330},
+        {"helix": 12, "forward": true, "start": 310, "end": 323, "deletions": [314]},
+        {"helix": 13, "forward": false, "start": 306, "end": 323, "deletions": [314]},
+        {"helix": 14, "forward": true, "start": 306, "end": 319},
+        {"helix": 15, "forward": false, "start": 299, "end": 319, "insertions": [[300, 1], [314, 1]]},
+        {"helix": 14, "forward": true, "start": 299, "end": 305},
+        {"helix": 13, "forward": false, "start": 285, "end": 305, "deletions": [286, 300]},
+        {"helix": 14, "forward": true, "start": 285, "end": 298},
+        {"helix": 15, "forward": false, "start": 236, "end": 298, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 14, "forward": true, "start": 236, "end": 268},
+        {"helix": 23, "forward": false, "start": 348, "end": 365, "deletions": [356]},
+        {"helix": 24, "forward": true, "start": 348, "end": 361},
+        {"helix": 25, "forward": false, "start": 341, "end": 361, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 24, "forward": true, "start": 341, "end": 347},
+        {"helix": 23, "forward": false, "start": 327, "end": 347, "deletions": [328, 342]},
+        {"helix": 24, "forward": true, "start": 327, "end": 340},
+        {"helix": 25, "forward": false, "start": 320, "end": 340, "insertions": [[328, 1]]},
+        {"helix": 24, "forward": true, "start": 320, "end": 326},
+        {"helix": 23, "forward": false, "start": 324, "end": 326},
+        {"helix": 22, "forward": true, "start": 324, "end": 330, "deletions": [328]},
+        {"helix": 21, "forward": false, "start": 310, "end": 330},
+        {"helix": 22, "forward": true, "start": 310, "end": 323, "deletions": [314]},
+        {"helix": 23, "forward": false, "start": 306, "end": 323, "deletions": [314]},
+        {"helix": 24, "forward": true, "start": 306, "end": 319},
+        {"helix": 25, "forward": false, "start": 299, "end": 319, "insertions": [[300, 1], [314, 1]]},
+        {"helix": 24, "forward": true, "start": 299, "end": 305},
+        {"helix": 23, "forward": false, "start": 285, "end": 305, "deletions": [286, 300]},
+        {"helix": 24, "forward": true, "start": 285, "end": 298},
+        {"helix": 25, "forward": false, "start": 236, "end": 298, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 24, "forward": true, "start": 236, "end": 268},
+        {"helix": 3, "forward": false, "start": 138, "end": 155, "deletions": [146]},
+        {"helix": 4, "forward": true, "start": 138, "end": 151},
+        {"helix": 5, "forward": false, "start": 131, "end": 151, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 4, "forward": true, "start": 131, "end": 137},
+        {"helix": 3, "forward": false, "start": 117, "end": 137, "deletions": [118, 132]},
+        {"helix": 4, "forward": true, "start": 117, "end": 130},
+        {"helix": 5, "forward": false, "start": 110, "end": 130, "insertions": [[118, 1]]},
+        {"helix": 4, "forward": true, "start": 110, "end": 116},
+        {"helix": 3, "forward": false, "start": 114, "end": 116},
+        {"helix": 2, "forward": true, "start": 114, "end": 120, "deletions": [118]},
+        {"helix": 1, "forward": false, "start": 100, "end": 120},
+        {"helix": 2, "forward": true, "start": 100, "end": 113, "deletions": [104]},
+        {"helix": 3, "forward": false, "start": 96, "end": 113, "deletions": [104]},
+        {"helix": 4, "forward": true, "start": 96, "end": 109},
+        {"helix": 5, "forward": false, "start": 89, "end": 109, "insertions": [[90, 1], [104, 1]]},
+        {"helix": 4, "forward": true, "start": 89, "end": 95},
+        {"helix": 3, "forward": false, "start": 75, "end": 95, "deletions": [76, 90]},
+        {"helix": 4, "forward": true, "start": 75, "end": 88},
+        {"helix": 5, "forward": false, "start": 26, "end": 88, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 4, "forward": true, "start": 26, "end": 52},
+        {"helix": 13, "forward": false, "start": 138, "end": 165, "deletions": [146, 160]},
+        {"helix": 14, "forward": true, "start": 138, "end": 151},
+        {"helix": 15, "forward": false, "start": 131, "end": 151, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 14, "forward": true, "start": 131, "end": 137},
+        {"helix": 13, "forward": false, "start": 117, "end": 137, "deletions": [118, 132]},
+        {"helix": 14, "forward": true, "start": 117, "end": 130},
+        {"helix": 15, "forward": false, "start": 110, "end": 130, "insertions": [[118, 1]]},
+        {"helix": 14, "forward": true, "start": 110, "end": 116},
+        {"helix": 13, "forward": false, "start": 114, "end": 116},
+        {"helix": 12, "forward": true, "start": 114, "end": 120, "deletions": [118]},
+        {"helix": 11, "forward": false, "start": 107, "end": 120},
+        {"helix": 10, "forward": true, "start": 107, "end": 127, "insertions": [[118, 1]]},
+        {"helix": 11, "forward": false, "start": 121, "end": 127},
+        {"helix": 12, "forward": true, "start": 121, "end": 141, "deletions": [132]},
+        {"helix": 11, "forward": false, "start": 128, "end": 141},
+        {"helix": 10, "forward": true, "start": 128, "end": 148, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 11, "forward": false, "start": 142, "end": 148},
+        {"helix": 12, "forward": true, "start": 142, "end": 155, "deletions": [146]},
+        {"helix": 1, "forward": false, "start": 37, "end": 58},
+        {"helix": 2, "forward": true, "start": 37, "end": 50, "deletions": [48]},
+        {"helix": 3, "forward": false, "start": 12, "end": 50, "deletions": [20, 34, 48]},
+        {"helix": 4, "forward": true, "start": 12, "end": 25},
+        {"helix": 5, "forward": false, "start": 5, "end": 25, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 4, "forward": true, "start": 5, "end": 11},
+        {"helix": 3, "forward": false, "start": 9, "end": 11},
+        {"helix": 2, "forward": true, "start": 9, "end": 15},
+        {"helix": 1, "forward": false, "start": 2, "end": 15},
+        {"helix": 0, "forward": true, "start": 2, "end": 22, "insertions": [[6, 1], [20, 1]]},
+        {"helix": 1, "forward": false, "start": 16, "end": 22},
+        {"helix": 2, "forward": true, "start": 16, "end": 36, "deletions": [20, 34]},
+        {"helix": 1, "forward": false, "start": 23, "end": 36},
+        {"helix": 0, "forward": true, "start": 23, "end": 85, "insertions": [[34, 1], [48, 1], [62, 1], [76, 1]]},
+        {"helix": 1, "forward": false, "start": 59, "end": 85},
+        {"helix": 12, "forward": true, "start": 156, "end": 183, "deletions": [160, 174]},
+        {"helix": 11, "forward": false, "start": 170, "end": 183},
+        {"helix": 10, "forward": true, "start": 170, "end": 190, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 11, "forward": false, "start": 184, "end": 190},
+        {"helix": 12, "forward": true, "start": 184, "end": 204, "deletions": [188, 202]},
+        {"helix": 11, "forward": false, "start": 191, "end": 204},
+        {"helix": 10, "forward": true, "start": 191, "end": 211, "insertions": [[202, 1]]},
+        {"helix": 11, "forward": false, "start": 205, "end": 211},
+        {"helix": 12, "forward": true, "start": 205, "end": 218, "deletions": [216]},
+        {"helix": 13, "forward": false, "start": 201, "end": 218, "deletions": [202, 216]},
+        {"helix": 14, "forward": true, "start": 201, "end": 214},
+        {"helix": 15, "forward": false, "start": 194, "end": 214, "insertions": [[202, 1]]},
+        {"helix": 14, "forward": true, "start": 194, "end": 200},
+        {"helix": 13, "forward": false, "start": 180, "end": 200, "deletions": [188]},
+        {"helix": 14, "forward": true, "start": 180, "end": 193},
+        {"helix": 15, "forward": false, "start": 173, "end": 193, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 14, "forward": true, "start": 173, "end": 179},
+        {"helix": 13, "forward": false, "start": 166, "end": 179, "deletions": [174]},
+        {"helix": 4, "forward": true, "start": 53, "end": 74},
+        {"helix": 3, "forward": false, "start": 61, "end": 74, "deletions": [62]},
+        {"helix": 2, "forward": true, "start": 61, "end": 99, "deletions": [62, 76, 90]},
+        {"helix": 1, "forward": false, "start": 86, "end": 99},
+        {"helix": 0, "forward": true, "start": 86, "end": 127, "insertions": [[90, 1], [104, 1], [118, 1]]},
+        {"helix": 1, "forward": false, "start": 121, "end": 127},
+        {"helix": 2, "forward": true, "start": 121, "end": 141, "deletions": [132]},
+        {"helix": 1, "forward": false, "start": 128, "end": 141},
+        {"helix": 0, "forward": true, "start": 128, "end": 148, "insertions": [[132, 1], [146, 1]]},
+        {"helix": 1, "forward": false, "start": 142, "end": 148},
+        {"helix": 2, "forward": true, "start": 142, "end": 165, "deletions": [146, 160]},
+        {"helix": 21, "forward": false, "start": 247, "end": 262},
+        {"helix": 22, "forward": true, "start": 247, "end": 260, "deletions": [258]},
+        {"helix": 23, "forward": false, "start": 222, "end": 260, "deletions": [230, 244, 258]},
+        {"helix": 24, "forward": true, "start": 222, "end": 235},
+        {"helix": 25, "forward": false, "start": 215, "end": 235, "insertions": [[216, 1], [230, 1]]},
+        {"helix": 24, "forward": true, "start": 215, "end": 221},
+        {"helix": 23, "forward": false, "start": 219, "end": 221},
+        {"helix": 22, "forward": true, "start": 219, "end": 225},
+        {"helix": 21, "forward": false, "start": 212, "end": 225},
+        {"helix": 20, "forward": true, "start": 212, "end": 232, "insertions": [[216, 1], [230, 1]]},
+        {"helix": 21, "forward": false, "start": 226, "end": 232},
+        {"helix": 22, "forward": true, "start": 226, "end": 246, "deletions": [230, 244]},
+        {"helix": 21, "forward": false, "start": 233, "end": 246},
+        {"helix": 20, "forward": true, "start": 233, "end": 295, "insertions": [[244, 1], [258, 1], [272, 1], [286, 1]]},
+        {"helix": 21, "forward": false, "start": 263, "end": 295},
+        {"helix": 2, "forward": true, "start": 166, "end": 183, "deletions": [174]},
+        {"helix": 1, "forward": false, "start": 170, "end": 183},
+        {"helix": 0, "forward": true, "start": 170, "end": 190, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 1, "forward": false, "start": 184, "end": 190},
+        {"helix": 2, "forward": true, "start": 184, "end": 204, "deletions": [188, 202]},
+        {"helix": 1, "forward": false, "start": 191, "end": 204},
+        {"helix": 0, "forward": true, "start": 191, "end": 211, "insertions": [[202, 1]]},
+        {"helix": 1, "forward": false, "start": 205, "end": 211},
+        {"helix": 2, "forward": true, "start": 205, "end": 218, "deletions": [216]},
+        {"helix": 3, "forward": false, "start": 201, "end": 218, "deletions": [202, 216]},
+        {"helix": 4, "forward": true, "start": 201, "end": 214},
+        {"helix": 5, "forward": false, "start": 194, "end": 214, "insertions": [[202, 1]]},
+        {"helix": 4, "forward": true, "start": 194, "end": 200},
+        {"helix": 3, "forward": false, "start": 180, "end": 200, "deletions": [188]},
+        {"helix": 4, "forward": true, "start": 180, "end": 193},
+        {"helix": 5, "forward": false, "start": 173, "end": 193, "insertions": [[174, 1], [188, 1]]},
+        {"helix": 4, "forward": true, "start": 173, "end": 179},
+        {"helix": 3, "forward": false, "start": 156, "end": 179, "deletions": [160, 174]},
+        {"helix": 24, "forward": true, "start": 269, "end": 284},
+        {"helix": 23, "forward": false, "start": 271, "end": 284, "deletions": [272]},
+        {"helix": 22, "forward": true, "start": 271, "end": 309, "deletions": [272, 286, 300]},
+        {"helix": 21, "forward": false, "start": 296, "end": 309},
+        {"helix": 20, "forward": true, "start": 296, "end": 337, "insertions": [[300, 1], [314, 1], [328, 1]]},
+        {"helix": 21, "forward": false, "start": 331, "end": 337},
+        {"helix": 22, "forward": true, "start": 331, "end": 351, "deletions": [342]},
+        {"helix": 21, "forward": false, "start": 338, "end": 351},
+        {"helix": 20, "forward": true, "start": 338, "end": 358, "insertions": [[342, 1], [356, 1]]},
+        {"helix": 21, "forward": false, "start": 352, "end": 358},
+        {"helix": 22, "forward": true, "start": 352, "end": 375, "deletions": [356, 370]},
+        {"helix": 11, "forward": false, "start": 247, "end": 262},
+        {"helix": 12, "forward": true, "start": 247, "end": 260, "deletions": [258]},
+        {"helix": 13, "forward": false, "start": 222, "end": 260, "deletions": [230, 244, 258]},
+        {"helix": 14, "forward": true, "start": 222, "end": 235},
+        {"helix": 15, "forward": false, "start": 215, "end": 235, "insertions": [[216, 1], [230, 1]]},
+        {"helix": 14, "forward": true, "start": 215, "end": 221},
+        {"helix": 13, "forward": false, "start": 219, "end": 221},
+        {"helix": 12, "forward": true, "start": 219, "end": 225},
+        {"helix": 11, "forward": false, "start": 212, "end": 225},
+        {"helix": 10, "forward": true, "start": 212, "end": 220, "insertions": [[216, 1]]}
+      ],
+      "is_scaffold": true
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 2, "end": 13, "insertions": [[6, 1]]},
+        {"helix": 0, "forward": false, "start": 413, "end": 421},
+        {"helix": 5, "forward": true, "start": 413, "end": 424},
+        {"helix": 5, "forward": true, "start": 5, "end": 13, "insertions": [[6, 1]]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 21, "end": 34},
+        {"helix": 0, "forward": false, "start": 14, "end": 34, "insertions": [[20, 1]]},
+        {"helix": 5, "forward": true, "start": 14, "end": 20}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 35, "end": 41},
+        {"helix": 5, "forward": true, "start": 35, "end": 41},
+        {"helix": 4, "forward": false, "start": 28, "end": 41},
+        {"helix": 3, "forward": true, "start": 28, "end": 34},
+        {"helix": 2, "forward": false, "start": 28, "end": 34}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 14, "end": 48},
+        {"helix": 0, "forward": false, "start": 42, "end": 48}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 42, "end": 48},
+        {"helix": 5, "forward": true, "start": 42, "end": 55, "insertions": [[48, 1]]},
+        {"helix": 0, "forward": false, "start": 49, "end": 55},
+        {"helix": 1, "forward": true, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 63, "end": 69},
+        {"helix": 0, "forward": false, "start": 56, "end": 69, "insertions": [[62, 1]]},
+        {"helix": 5, "forward": true, "start": 56, "end": 62},
+        {"helix": 4, "forward": false, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 63, "end": 76},
+        {"helix": 5, "forward": true, "start": 63, "end": 76},
+        {"helix": 0, "forward": false, "start": 70, "end": 76},
+        {"helix": 1, "forward": true, "start": 70, "end": 76}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 77, "end": 90},
+        {"helix": 5, "forward": true, "start": 77, "end": 97, "insertions": [[90, 1]]},
+        {"helix": 0, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 98, "end": 104},
+        {"helix": 5, "forward": true, "start": 98, "end": 118, "insertions": [[104, 1]]},
+        {"helix": 0, "forward": false, "start": 112, "end": 118},
+        {"helix": 1, "forward": true, "start": 112, "end": 118}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 84, "end": 90},
+        {"helix": 1, "forward": true, "start": 84, "end": 111},
+        {"helix": 0, "forward": false, "start": 105, "end": 111}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 126, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 0, "forward": false, "start": 119, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 5, "forward": true, "start": 119, "end": 125}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 140, "end": 148, "insertions": [[146, 1]]},
+        {"helix": 5, "forward": true, "start": 140, "end": 151, "insertions": [[146, 1]]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 173, "end": 181, "insertions": [[174, 1]]},
+        {"helix": 0, "forward": false, "start": 170, "end": 181, "insertions": [[174, 1]]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 189, "end": 202},
+        {"helix": 0, "forward": false, "start": 182, "end": 202, "insertions": [[188, 1]]},
+        {"helix": 5, "forward": true, "start": 182, "end": 188}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 210, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 0, "forward": false, "start": 203, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 5, "forward": true, "start": 203, "end": 209}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 231, "end": 244},
+        {"helix": 0, "forward": false, "start": 224, "end": 244, "insertions": [[230, 1]]},
+        {"helix": 5, "forward": true, "start": 224, "end": 230}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 245, "end": 258},
+        {"helix": 0, "forward": false, "start": 245, "end": 258},
+        {"helix": 5, "forward": true, "start": 245, "end": 251},
+        {"helix": 4, "forward": false, "start": 245, "end": 251}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 259, "end": 265},
+        {"helix": 0, "forward": false, "start": 259, "end": 265},
+        {"helix": 1, "forward": true, "start": 259, "end": 272},
+        {"helix": 2, "forward": false, "start": 271, "end": 272}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 266, "end": 272},
+        {"helix": 5, "forward": true, "start": 266, "end": 272},
+        {"helix": 4, "forward": false, "start": 259, "end": 272},
+        {"helix": 3, "forward": true, "start": 259, "end": 260}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 271, "end": 286, "deletions": [272]},
+        {"helix": 2, "forward": false, "start": 273, "end": 286},
+        {"helix": 1, "forward": true, "start": 273, "end": 279},
+        {"helix": 0, "forward": false, "start": 273, "end": 279}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 273, "end": 286},
+        {"helix": 5, "forward": true, "start": 273, "end": 286},
+        {"helix": 0, "forward": false, "start": 280, "end": 286},
+        {"helix": 1, "forward": true, "start": 280, "end": 286}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 294, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 0, "forward": false, "start": 287, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 5, "forward": true, "start": 287, "end": 293}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 308, "end": 314},
+        {"helix": 5, "forward": true, "start": 308, "end": 328, "insertions": [[314, 1]]},
+        {"helix": 0, "forward": false, "start": 322, "end": 328},
+        {"helix": 1, "forward": true, "start": 322, "end": 328}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 294, "end": 300},
+        {"helix": 1, "forward": true, "start": 294, "end": 321},
+        {"helix": 0, "forward": false, "start": 315, "end": 321}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 336, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 0, "forward": false, "start": 329, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 5, "forward": true, "start": 329, "end": 335}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 0, "forward": false, "start": 350, "end": 358, "insertions": [[356, 1]]},
+        {"helix": 5, "forward": true, "start": 350, "end": 361, "insertions": [[356, 1]]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 383, "end": 391, "insertions": [[384, 1]]},
+        {"helix": 0, "forward": false, "start": 380, "end": 391, "insertions": [[384, 1]]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 5, "forward": true, "start": 399, "end": 412},
+        {"helix": 0, "forward": false, "start": 392, "end": 412, "insertions": [[398, 1]]},
+        {"helix": 5, "forward": true, "start": 392, "end": 398}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 406, "end": 421},
+        {"helix": 1, "forward": true, "start": 2, "end": 13}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 77, "end": 83},
+        {"helix": 2, "forward": false, "start": 77, "end": 83},
+        {"helix": 3, "forward": true, "start": 77, "end": 97, "deletions": [90]},
+        {"helix": 2, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 119, "end": 148}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 170, "end": 202}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 203, "end": 244}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 287, "end": 293},
+        {"helix": 2, "forward": false, "start": 287, "end": 293},
+        {"helix": 3, "forward": true, "start": 287, "end": 307, "deletions": [300]},
+        {"helix": 2, "forward": false, "start": 301, "end": 307}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 329, "end": 358}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 1, "forward": true, "start": 380, "end": 405}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 2, "forward": false, "start": 413, "end": 428, "deletions": [426]},
+        {"helix": 3, "forward": true, "start": 413, "end": 419}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 35, "end": 50, "deletions": [48]},
+        {"helix": 3, "forward": true, "start": 35, "end": 50, "deletions": [48]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 61, "end": 76, "deletions": [62]},
+        {"helix": 2, "forward": false, "start": 61, "end": 76, "deletions": [62]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 98, "end": 118, "deletions": [104]},
+        {"helix": 3, "forward": true, "start": 98, "end": 118, "deletions": [104]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 119, "end": 139, "deletions": [132]},
+        {"helix": 2, "forward": false, "start": 119, "end": 139, "deletions": [132]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 140, "end": 160, "deletions": [146]},
+        {"helix": 3, "forward": true, "start": 140, "end": 160, "deletions": [146]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 161, "end": 181, "deletions": [174]},
+        {"helix": 2, "forward": false, "start": 161, "end": 181, "deletions": [174]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 194, "end": 202},
+        {"helix": 2, "forward": false, "start": 182, "end": 202, "deletions": [188]},
+        {"helix": 3, "forward": true, "start": 182, "end": 193, "deletions": [188]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 203, "end": 223, "deletions": [216]},
+        {"helix": 3, "forward": true, "start": 203, "end": 223, "deletions": [216]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 238, "end": 244},
+        {"helix": 3, "forward": true, "start": 238, "end": 244},
+        {"helix": 2, "forward": false, "start": 224, "end": 244, "deletions": [230]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 245, "end": 260, "deletions": [258]},
+        {"helix": 3, "forward": true, "start": 245, "end": 258},
+        {"helix": 4, "forward": false, "start": 252, "end": 258},
+        {"helix": 5, "forward": true, "start": 252, "end": 258}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 308, "end": 328, "deletions": [314]},
+        {"helix": 3, "forward": true, "start": 308, "end": 328, "deletions": [314]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 329, "end": 349, "deletions": [342]},
+        {"helix": 2, "forward": false, "start": 329, "end": 349, "deletions": [342]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 2, "forward": false, "start": 350, "end": 370, "deletions": [356]},
+        {"helix": 3, "forward": true, "start": 350, "end": 370, "deletions": [356]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 371, "end": 391, "deletions": [384]},
+        {"helix": 2, "forward": false, "start": 371, "end": 391, "deletions": [384]}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 403, "end": 412},
+        {"helix": 2, "forward": false, "start": 392, "end": 412, "deletions": [398]},
+        {"helix": 3, "forward": true, "start": 392, "end": 402, "deletions": [398]}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 420, "end": 428, "deletions": [426]},
+        {"helix": 3, "forward": true, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 4, "forward": false, "start": 21, "end": 27}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 3, "forward": true, "start": 224, "end": 237, "deletions": [230]},
+        {"helix": 4, "forward": false, "start": 210, "end": 237}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 5, "end": 20},
+        {"helix": 4, "forward": false, "start": 406, "end": 424}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 77, "end": 118}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 119, "end": 151}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 173, "end": 209}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 287, "end": 328}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 329, "end": 361}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "substrands": [
+        {"helix": 4, "forward": false, "start": 383, "end": 405}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 2, "end": 13, "insertions": [[6, 1]]},
+        {"helix": 10, "forward": false, "start": 413, "end": 421},
+        {"helix": 15, "forward": true, "start": 413, "end": 424},
+        {"helix": 15, "forward": true, "start": 5, "end": 13, "insertions": [[6, 1]]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 21, "end": 34},
+        {"helix": 10, "forward": false, "start": 14, "end": 34, "insertions": [[20, 1]]},
+        {"helix": 15, "forward": true, "start": 14, "end": 20}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 35, "end": 41},
+        {"helix": 15, "forward": true, "start": 35, "end": 41},
+        {"helix": 14, "forward": false, "start": 28, "end": 41},
+        {"helix": 13, "forward": true, "start": 28, "end": 34},
+        {"helix": 12, "forward": false, "start": 28, "end": 34}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 14, "end": 48},
+        {"helix": 10, "forward": false, "start": 42, "end": 48}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 42, "end": 48},
+        {"helix": 15, "forward": true, "start": 42, "end": 55, "insertions": [[48, 1]]},
+        {"helix": 10, "forward": false, "start": 49, "end": 55},
+        {"helix": 11, "forward": true, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 63, "end": 69},
+        {"helix": 10, "forward": false, "start": 56, "end": 69, "insertions": [[62, 1]]},
+        {"helix": 15, "forward": true, "start": 56, "end": 62},
+        {"helix": 14, "forward": false, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 63, "end": 76},
+        {"helix": 15, "forward": true, "start": 63, "end": 76},
+        {"helix": 10, "forward": false, "start": 70, "end": 76},
+        {"helix": 11, "forward": true, "start": 70, "end": 76}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 77, "end": 90},
+        {"helix": 15, "forward": true, "start": 77, "end": 97, "insertions": [[90, 1]]},
+        {"helix": 10, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 98, "end": 104},
+        {"helix": 15, "forward": true, "start": 98, "end": 118, "insertions": [[104, 1]]},
+        {"helix": 10, "forward": false, "start": 105, "end": 118}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 126, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 10, "forward": false, "start": 119, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 15, "forward": true, "start": 119, "end": 125}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 140, "end": 148, "insertions": [[146, 1]]},
+        {"helix": 15, "forward": true, "start": 140, "end": 151, "insertions": [[146, 1]]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 173, "end": 181, "insertions": [[174, 1]]},
+        {"helix": 10, "forward": false, "start": 170, "end": 181, "insertions": [[174, 1]]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 189, "end": 202},
+        {"helix": 10, "forward": false, "start": 182, "end": 202, "insertions": [[188, 1]]},
+        {"helix": 15, "forward": true, "start": 182, "end": 188}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 210, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 10, "forward": false, "start": 203, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 15, "forward": true, "start": 203, "end": 209}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 231, "end": 244},
+        {"helix": 10, "forward": false, "start": 224, "end": 244, "insertions": [[230, 1]]},
+        {"helix": 15, "forward": true, "start": 224, "end": 230}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 245, "end": 258},
+        {"helix": 10, "forward": false, "start": 245, "end": 258},
+        {"helix": 15, "forward": true, "start": 245, "end": 251},
+        {"helix": 14, "forward": false, "start": 245, "end": 251}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 259, "end": 265},
+        {"helix": 10, "forward": false, "start": 259, "end": 265},
+        {"helix": 11, "forward": true, "start": 259, "end": 272},
+        {"helix": 12, "forward": false, "start": 271, "end": 272}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 266, "end": 272},
+        {"helix": 15, "forward": true, "start": 266, "end": 272},
+        {"helix": 14, "forward": false, "start": 259, "end": 272},
+        {"helix": 13, "forward": true, "start": 259, "end": 260}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 271, "end": 286, "deletions": [272]},
+        {"helix": 12, "forward": false, "start": 273, "end": 286},
+        {"helix": 11, "forward": true, "start": 273, "end": 279},
+        {"helix": 10, "forward": false, "start": 273, "end": 279}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 273, "end": 286},
+        {"helix": 15, "forward": true, "start": 273, "end": 286},
+        {"helix": 10, "forward": false, "start": 280, "end": 286},
+        {"helix": 11, "forward": true, "start": 280, "end": 286}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 294, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 10, "forward": false, "start": 287, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 15, "forward": true, "start": 287, "end": 293}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 308, "end": 314},
+        {"helix": 15, "forward": true, "start": 308, "end": 328, "insertions": [[314, 1]]},
+        {"helix": 10, "forward": false, "start": 322, "end": 328},
+        {"helix": 11, "forward": true, "start": 322, "end": 328}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 294, "end": 300},
+        {"helix": 11, "forward": true, "start": 294, "end": 321},
+        {"helix": 10, "forward": false, "start": 315, "end": 321}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 336, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 10, "forward": false, "start": 329, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 15, "forward": true, "start": 329, "end": 335}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 10, "forward": false, "start": 350, "end": 358, "insertions": [[356, 1]]},
+        {"helix": 15, "forward": true, "start": 350, "end": 361, "insertions": [[356, 1]]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 383, "end": 391, "insertions": [[384, 1]]},
+        {"helix": 10, "forward": false, "start": 380, "end": 391, "insertions": [[384, 1]]}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 15, "forward": true, "start": 399, "end": 412},
+        {"helix": 10, "forward": false, "start": 392, "end": 412, "insertions": [[398, 1]]},
+        {"helix": 15, "forward": true, "start": 392, "end": 398}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 406, "end": 421},
+        {"helix": 11, "forward": true, "start": 2, "end": 13}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 77, "end": 83},
+        {"helix": 12, "forward": false, "start": 77, "end": 83},
+        {"helix": 13, "forward": true, "start": 77, "end": 97, "deletions": [90]},
+        {"helix": 12, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 84, "end": 90},
+        {"helix": 11, "forward": true, "start": 84, "end": 118}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 119, "end": 148}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 170, "end": 202}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 203, "end": 244}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 287, "end": 293},
+        {"helix": 12, "forward": false, "start": 287, "end": 293},
+        {"helix": 13, "forward": true, "start": 287, "end": 307, "deletions": [300]},
+        {"helix": 12, "forward": false, "start": 301, "end": 307}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 329, "end": 358}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 11, "forward": true, "start": 380, "end": 405}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 12, "forward": false, "start": 413, "end": 428, "deletions": [426]},
+        {"helix": 13, "forward": true, "start": 413, "end": 419}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 35, "end": 50, "deletions": [48]},
+        {"helix": 13, "forward": true, "start": 35, "end": 50, "deletions": [48]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 61, "end": 76, "deletions": [62]},
+        {"helix": 12, "forward": false, "start": 61, "end": 76, "deletions": [62]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 98, "end": 118, "deletions": [104]},
+        {"helix": 13, "forward": true, "start": 98, "end": 118, "deletions": [104]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 119, "end": 139, "deletions": [132]},
+        {"helix": 12, "forward": false, "start": 119, "end": 139, "deletions": [132]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 140, "end": 160, "deletions": [146]},
+        {"helix": 13, "forward": true, "start": 140, "end": 160, "deletions": [146]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 161, "end": 181, "deletions": [174]},
+        {"helix": 12, "forward": false, "start": 161, "end": 181, "deletions": [174]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 194, "end": 202},
+        {"helix": 12, "forward": false, "start": 182, "end": 202, "deletions": [188]},
+        {"helix": 13, "forward": true, "start": 182, "end": 193, "deletions": [188]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 203, "end": 223, "deletions": [216]},
+        {"helix": 13, "forward": true, "start": 203, "end": 223, "deletions": [216]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 238, "end": 244},
+        {"helix": 13, "forward": true, "start": 238, "end": 244},
+        {"helix": 12, "forward": false, "start": 224, "end": 244, "deletions": [230]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 245, "end": 260, "deletions": [258]},
+        {"helix": 13, "forward": true, "start": 245, "end": 258},
+        {"helix": 14, "forward": false, "start": 252, "end": 258},
+        {"helix": 15, "forward": true, "start": 252, "end": 258}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 308, "end": 328, "deletions": [314]},
+        {"helix": 13, "forward": true, "start": 308, "end": 328, "deletions": [314]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 329, "end": 349, "deletions": [342]},
+        {"helix": 12, "forward": false, "start": 329, "end": 349, "deletions": [342]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 12, "forward": false, "start": 350, "end": 370, "deletions": [356]},
+        {"helix": 13, "forward": true, "start": 350, "end": 370, "deletions": [356]}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 371, "end": 391, "deletions": [384]},
+        {"helix": 12, "forward": false, "start": 371, "end": 391, "deletions": [384]}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 403, "end": 412},
+        {"helix": 12, "forward": false, "start": 392, "end": 412, "deletions": [398]},
+        {"helix": 13, "forward": true, "start": 392, "end": 402, "deletions": [398]}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 420, "end": 428, "deletions": [426]},
+        {"helix": 13, "forward": true, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 14, "forward": false, "start": 21, "end": 27}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 13, "forward": true, "start": 224, "end": 237, "deletions": [230]},
+        {"helix": 14, "forward": false, "start": 210, "end": 237}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 5, "end": 20},
+        {"helix": 14, "forward": false, "start": 406, "end": 424}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 77, "end": 118}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 119, "end": 151}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 173, "end": 209}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 287, "end": 328}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 329, "end": 361}
+      ]
+    },
+    {
+      "color": "#7300de",
+      "substrands": [
+        {"helix": 14, "forward": false, "start": 383, "end": 405}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 2, "end": 13, "insertions": [[6, 1]]},
+        {"helix": 20, "forward": false, "start": 413, "end": 421},
+        {"helix": 25, "forward": true, "start": 413, "end": 424},
+        {"helix": 25, "forward": true, "start": 5, "end": 13, "insertions": [[6, 1]]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 21, "end": 34},
+        {"helix": 20, "forward": false, "start": 14, "end": 34, "insertions": [[20, 1]]},
+        {"helix": 25, "forward": true, "start": 14, "end": 20}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 35, "end": 41},
+        {"helix": 25, "forward": true, "start": 35, "end": 41},
+        {"helix": 24, "forward": false, "start": 28, "end": 41},
+        {"helix": 23, "forward": true, "start": 28, "end": 34},
+        {"helix": 22, "forward": false, "start": 28, "end": 34}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 14, "end": 48},
+        {"helix": 20, "forward": false, "start": 42, "end": 48}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 42, "end": 48},
+        {"helix": 25, "forward": true, "start": 42, "end": 55, "insertions": [[48, 1]]},
+        {"helix": 20, "forward": false, "start": 49, "end": 55},
+        {"helix": 21, "forward": true, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 63, "end": 69},
+        {"helix": 20, "forward": false, "start": 56, "end": 69, "insertions": [[62, 1]]},
+        {"helix": 25, "forward": true, "start": 56, "end": 62},
+        {"helix": 24, "forward": false, "start": 49, "end": 62}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 63, "end": 76},
+        {"helix": 25, "forward": true, "start": 63, "end": 76},
+        {"helix": 20, "forward": false, "start": 70, "end": 76},
+        {"helix": 21, "forward": true, "start": 70, "end": 76}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 77, "end": 90},
+        {"helix": 25, "forward": true, "start": 77, "end": 97, "insertions": [[90, 1]]},
+        {"helix": 20, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 98, "end": 104},
+        {"helix": 25, "forward": true, "start": 98, "end": 118, "insertions": [[104, 1]]},
+        {"helix": 20, "forward": false, "start": 112, "end": 118},
+        {"helix": 21, "forward": true, "start": 112, "end": 118}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 84, "end": 90},
+        {"helix": 21, "forward": true, "start": 84, "end": 111},
+        {"helix": 20, "forward": false, "start": 105, "end": 111}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 126, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 20, "forward": false, "start": 119, "end": 139, "insertions": [[132, 1]]},
+        {"helix": 25, "forward": true, "start": 119, "end": 125}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 140, "end": 148, "insertions": [[146, 1]]},
+        {"helix": 25, "forward": true, "start": 140, "end": 151, "insertions": [[146, 1]]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 173, "end": 181, "insertions": [[174, 1]]},
+        {"helix": 20, "forward": false, "start": 170, "end": 181, "insertions": [[174, 1]]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 189, "end": 202},
+        {"helix": 20, "forward": false, "start": 182, "end": 202, "insertions": [[188, 1]]},
+        {"helix": 25, "forward": true, "start": 182, "end": 188}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 210, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 20, "forward": false, "start": 203, "end": 223, "insertions": [[216, 1]]},
+        {"helix": 25, "forward": true, "start": 203, "end": 209}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 231, "end": 244},
+        {"helix": 20, "forward": false, "start": 224, "end": 244, "insertions": [[230, 1]]},
+        {"helix": 25, "forward": true, "start": 224, "end": 230}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 245, "end": 258},
+        {"helix": 20, "forward": false, "start": 245, "end": 258},
+        {"helix": 25, "forward": true, "start": 245, "end": 251},
+        {"helix": 24, "forward": false, "start": 245, "end": 251}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 259, "end": 265},
+        {"helix": 20, "forward": false, "start": 259, "end": 265},
+        {"helix": 21, "forward": true, "start": 259, "end": 272},
+        {"helix": 22, "forward": false, "start": 271, "end": 272}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 266, "end": 272},
+        {"helix": 25, "forward": true, "start": 266, "end": 272},
+        {"helix": 24, "forward": false, "start": 259, "end": 272},
+        {"helix": 23, "forward": true, "start": 259, "end": 260}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 271, "end": 286, "deletions": [272]},
+        {"helix": 22, "forward": false, "start": 273, "end": 286},
+        {"helix": 21, "forward": true, "start": 273, "end": 279},
+        {"helix": 20, "forward": false, "start": 273, "end": 279}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 273, "end": 286},
+        {"helix": 25, "forward": true, "start": 273, "end": 286},
+        {"helix": 20, "forward": false, "start": 280, "end": 286},
+        {"helix": 21, "forward": true, "start": 280, "end": 286}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 294, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 20, "forward": false, "start": 287, "end": 307, "insertions": [[300, 1]]},
+        {"helix": 25, "forward": true, "start": 287, "end": 293}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 308, "end": 314},
+        {"helix": 25, "forward": true, "start": 308, "end": 328, "insertions": [[314, 1]]},
+        {"helix": 20, "forward": false, "start": 322, "end": 328},
+        {"helix": 21, "forward": true, "start": 322, "end": 328}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 294, "end": 300},
+        {"helix": 21, "forward": true, "start": 294, "end": 321},
+        {"helix": 20, "forward": false, "start": 315, "end": 321}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 336, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 20, "forward": false, "start": 329, "end": 349, "insertions": [[342, 1]]},
+        {"helix": 25, "forward": true, "start": 329, "end": 335}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 20, "forward": false, "start": 350, "end": 358, "insertions": [[356, 1]]},
+        {"helix": 25, "forward": true, "start": 350, "end": 361, "insertions": [[356, 1]]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 383, "end": 391, "insertions": [[384, 1]]},
+        {"helix": 20, "forward": false, "start": 380, "end": 391, "insertions": [[384, 1]]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 25, "forward": true, "start": 399, "end": 412},
+        {"helix": 20, "forward": false, "start": 392, "end": 412, "insertions": [[398, 1]]},
+        {"helix": 25, "forward": true, "start": 392, "end": 398}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 406, "end": 421},
+        {"helix": 21, "forward": true, "start": 2, "end": 13}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 77, "end": 83},
+        {"helix": 22, "forward": false, "start": 77, "end": 83},
+        {"helix": 23, "forward": true, "start": 77, "end": 97, "deletions": [90]},
+        {"helix": 22, "forward": false, "start": 91, "end": 97}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 119, "end": 148}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 170, "end": 202}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 203, "end": 244}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 287, "end": 293},
+        {"helix": 22, "forward": false, "start": 287, "end": 293},
+        {"helix": 23, "forward": true, "start": 287, "end": 307, "deletions": [300]},
+        {"helix": 22, "forward": false, "start": 301, "end": 307}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 329, "end": 358}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 21, "forward": true, "start": 380, "end": 405}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 22, "forward": false, "start": 413, "end": 428, "deletions": [426]},
+        {"helix": 23, "forward": true, "start": 413, "end": 419}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 35, "end": 50, "deletions": [48]},
+        {"helix": 23, "forward": true, "start": 35, "end": 50, "deletions": [48]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 61, "end": 76, "deletions": [62]},
+        {"helix": 22, "forward": false, "start": 61, "end": 76, "deletions": [62]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 98, "end": 118, "deletions": [104]},
+        {"helix": 23, "forward": true, "start": 98, "end": 118, "deletions": [104]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 119, "end": 139, "deletions": [132]},
+        {"helix": 22, "forward": false, "start": 119, "end": 139, "deletions": [132]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 140, "end": 160, "deletions": [146]},
+        {"helix": 23, "forward": true, "start": 140, "end": 160, "deletions": [146]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 161, "end": 181, "deletions": [174]},
+        {"helix": 22, "forward": false, "start": 161, "end": 181, "deletions": [174]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 194, "end": 202},
+        {"helix": 22, "forward": false, "start": 182, "end": 202, "deletions": [188]},
+        {"helix": 23, "forward": true, "start": 182, "end": 193, "deletions": [188]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 203, "end": 223, "deletions": [216]},
+        {"helix": 23, "forward": true, "start": 203, "end": 223, "deletions": [216]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 238, "end": 244},
+        {"helix": 23, "forward": true, "start": 238, "end": 244},
+        {"helix": 22, "forward": false, "start": 224, "end": 244, "deletions": [230]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 245, "end": 260, "deletions": [258]},
+        {"helix": 23, "forward": true, "start": 245, "end": 258},
+        {"helix": 24, "forward": false, "start": 252, "end": 258},
+        {"helix": 25, "forward": true, "start": 252, "end": 258}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 308, "end": 328, "deletions": [314]},
+        {"helix": 23, "forward": true, "start": 308, "end": 328, "deletions": [314]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 329, "end": 349, "deletions": [342]},
+        {"helix": 22, "forward": false, "start": 329, "end": 349, "deletions": [342]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 22, "forward": false, "start": 350, "end": 370, "deletions": [356]},
+        {"helix": 23, "forward": true, "start": 350, "end": 370, "deletions": [356]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 371, "end": 391, "deletions": [384]},
+        {"helix": 22, "forward": false, "start": 371, "end": 391, "deletions": [384]}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 403, "end": 412},
+        {"helix": 22, "forward": false, "start": 392, "end": 412, "deletions": [398]},
+        {"helix": 23, "forward": true, "start": 392, "end": 402, "deletions": [398]}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 420, "end": 428, "deletions": [426]},
+        {"helix": 23, "forward": true, "start": 9, "end": 27, "deletions": [20]},
+        {"helix": 24, "forward": false, "start": 21, "end": 27}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 23, "forward": true, "start": 224, "end": 237, "deletions": [230]},
+        {"helix": 24, "forward": false, "start": 210, "end": 237}
+      ]
+    },
+    {
+      "color": "#333333",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 5, "end": 20},
+        {"helix": 24, "forward": false, "start": 406, "end": 424}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 77, "end": 118}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 119, "end": 151}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 173, "end": 209}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 287, "end": 328}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 329, "end": 361}
+      ]
+    },
+    {
+      "color": "#f74308",
+      "substrands": [
+        {"helix": 24, "forward": false, "start": 383, "end": 405}
+      ]
+    }
+  ]
+}
