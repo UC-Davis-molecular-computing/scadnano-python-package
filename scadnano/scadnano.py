@@ -167,6 +167,12 @@ class Color(_JSONSerializable):
     def to_cadnano_v2_int_hex(self):
         return int(f'{self.r:02x}{self.g:02x}{self.b:02x}', 16)
 
+    @classmethod
+    def from_cadnano_v2_int_hex(cls, hex_int):
+        hex_str = "0x{:06x}".format(hex_int)
+        return Color(hex=hex_str[2:])
+        
+
 
 class ColorCycler:
     """
@@ -1998,35 +2004,73 @@ class DNADesign(_JSONSerializable):
             )
 
     @staticmethod
-    def cadnano_v2_explore_strand(cadnano_helix, num_bases, strand_type, seen, base_id):
+    def cadnano_v2_explore_strand(vstrands, num_bases, strand_type, seen, helix_num, base_id):
         """ Routine that will follow a cadnano v2 strand accross helices and create
             cadnano substrands and strand accordingly.
         """
-        helix_num = cadnano_helix['num']
+
         seen[(helix_num, base_id)] = True
-        id_from, base_from, id_to, base_to = cadnano_helix[strand_type][base_id]
+        id_from, base_from, id_to, base_to = vstrands[helix_num][strand_type][base_id]
 
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
 
-        strand_direction_forward = True
-        if helix_num%2 == 0 and strand_type == 'scaf' or \
-           helix_num%2 == 1 and strand_type == 'stap':
-           strand_direction_forward = False
-
-        end = num_bases+1
-        for base_id_2 in range(base_id, num_bases):
-            id_from_2, base_from_2, id_to_2, base_to_2 = cadnano_helix[strand_type][base_id_2]
-            if (id_from_2 == -1 and base_from_2 == -1) or \
-               (id_to_2 == -1 and base_to_2 == -1):
-               end = base_id_2+1
-
-        start = base_id
-        sub_strand = Substrand(helix_num, strand_direction_forward, start, end)
+        id_from_before = helix_num
+        base_from_before = base_id
+        while not (id_from == -1 and base_from == -1):
+            id_from_before = id_from
+            base_from_before = base_from    
+            id_from, base_from, id_to, base_to = vstrands[id_from][strand_type][base_from]
+        
 
 
+        strand_5_end_helix =  id_from_before
+        strand_5_end_base = base_from_before
+
+        color = default_scaffold_color
+        if strand_type == 'stap':
+            for base_id,stap_color in vstrands[strand_5_end_helix]['stap_colors']:
+                if base_id == strand_5_end_base:
+                    color = Color.from_cadnano_v2_int_hex(stap_color)
+                    break
+
+        curr_helix = strand_5_end_helix
+        curr_base = strand_5_end_base
+        substrands = []
+
+        direction_forward = (strand_type == 'scaf' and curr_helix%2 == 0) or ((strand_type == 'stap' and curr_helix%2 == 1))
+        start,end = -1,-1
+        if direction_forward:
+            start = curr_base
+        else:
+            end = curr_base
 
         
+
+        while not (curr_helix == -1 and curr_base == -1):
+            old_helix = curr_helix
+            old_base = curr_base
+            seen[(curr_helix, curr_base)] = True
+            curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
+            # Add crossover
+            if curr_helix != old_helix:
+                if direction_forward:
+                    end = old_base
+                else:
+                    start = old_base
+
+                substrands.append(Substrand(old_helix, direction_forward, start, end))
+                
+                direction_forward = (strand_type == 'scaf' and curr_helix%2 == 0) or ((strand_type == 'stap' and curr_helix%2 == 1))
+                start,end = -1,-1
+                if direction_forward:
+                    start = curr_base
+                else:
+                    end = curr_base
+
+        strand = Strand(substrands=substrands, is_scaffold= (strand_type == 'scaf'), color=color)
+
+        return strand
 
     @staticmethod
     def from_cadnano_v2(directory, filename) -> DNAOrigamiDesign:
@@ -2062,21 +2106,26 @@ class DNADesign(_JSONSerializable):
         # We do a DFS on strands
         seen = {'scaf': {}, 'stap': {}}
         strands = []
+        cadnano_helices = OrderedDict({})
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            helix_num = cadnano_helix['num']
+            cadnano_helices[helix_num] = cadnano_helix
+
         for cadnano_helix in cadnano_v2_design['vstrands']:
             helix_num = cadnano_helix['num']
             for strand_type in ['scaf', 'stap']:
                 for base_id in range(num_bases):
                     if (helix_num, base_id) in seen[strand_type]:
                         continue
-
-                    strand = DNAOrigamiDesign.cadnano_v2_explore_strand(cadnano_helix, num_bases, strand_type,
-                                                                        seen[strand_type], base_id)
+                    
+                    strand = DNAOrigamiDesign.cadnano_v2_explore_strand(cadnano_helices, num_bases, strand_type,
+                                                                        seen[strand_type], helix_num, base_id)
                     if not strand is None:
                         strands.append(strand)
 
         design = DNADesign(grid=grid_type, helices=helices, strands=strands)
-        #TODO: set_helices_view_order obsolete as it
-        #design.set_helices_view_order([num for num in helices])
+        design.set_helices_view_order([num for num in helices])
+
 
         return design
 
@@ -2297,7 +2346,7 @@ class DNADesign(_JSONSerializable):
         return dct
 
     def _set_and_check_helices_view_order(self):
-        identity = list(range(0, len(self.helices)))
+        identity = list(self.helices.keys())
         if self.helices_view_order is None:
             self.helices_view_order = identity
         self._check_helices_view_order_is_bijection()
@@ -2307,11 +2356,10 @@ class DNADesign(_JSONSerializable):
         self._check_helices_view_order_is_bijection()
 
     def _check_helices_view_order_is_bijection(self):
-        identity = list(range(0, len(self.helices)))
-        if not (sorted(self.helices_view_order) == identity):
+        if not (sorted(self.helices_view_order) == sorted(self.helices.keys())):
             raise IllegalDNADesignError(
                 f"The specified helices view order: {self.helices_view_order}\n "
-                f"is not a bijection from [0,{len(self.helices) - 1}] to [0,{len(self.helices) - 1}].")
+                f"is not a bijection on helices indices: {self.helices_view_order} {self.helices.keys()}.")
 
     def _set_helices_idxs(self):
         for idx, helix in self.helices.items():

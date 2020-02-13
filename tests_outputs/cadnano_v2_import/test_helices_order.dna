@@ -13,5 +13,6 @@
     {"max_offset": 64, "grid_position": [0, 7], "idx": 8},
     {"max_offset": 64, "grid_position": [0, 8], "idx": 11}
   ],
+  "helices_view_order": [1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11],
   "strands": []
 }
