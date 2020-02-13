@@ -2010,7 +2010,7 @@ class DNADesign(_JSONSerializable):
             return None
 
         strand_direction_forward = True
-        if helix_num%2 == 0 and strand_type == 'scaf' or 
+        if helix_num%2 == 0 and strand_type == 'scaf' or \
            helix_num%2 == 1 and strand_type == 'stap':
            strand_direction_forward = False
 
