@@ -2016,8 +2016,8 @@ class DNADesign(_JSONSerializable):
 
         end = num_bases+1
         for base_id_2 in range(base_id, num_bases):
-            id_from_2, base_from_2, id_to_2, base_to_2 = cadnano_helix[strand_type][base_id_2]:
-            if (id_from_2 == -1 and base_from_2 == -1) or
+            id_from_2, base_from_2, id_to_2, base_to_2 = cadnano_helix[strand_type][base_id_2]
+            if (id_from_2 == -1 and base_from_2 == -1) or \
                (id_to_2 == -1 and base_to_2 == -1):
                end = base_id_2+1
 
@@ -2188,7 +2188,7 @@ class DNADesign(_JSONSerializable):
         """Place a scadnano strand in cadnano v2.
         """
         strand_type = 'stap'
-        if hasattr(strand, is_scaffold_key):
+        if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
             strand_type = 'scaf'
 
         for i, substrand in enumerate(strand.substrands):
@@ -2260,7 +2260,7 @@ class DNADesign(_JSONSerializable):
             if num_bases % 21 == 0: then we are on grid honey
         '''
         num_bases = 0
-        for helix in self.values():
+        for helix in self.helices.values():
             num_bases = max(num_bases, helix.max_offset)
 
         if self.grid == Grid.square:
@@ -2273,17 +2273,17 @@ class DNADesign(_JSONSerializable):
         '''Figuring out if helices numbers have good parity.
         In cadnano v2, only even helices have the scaffold go forward, only odd helices
         have the scaffold go backward.
-        TODO: test for that case
+
         '''
         for strand in self.strands:
-            if hasattr(strand, is_scaffold_key):
+            if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
                 for substrand in strand.substrands:
                     if type(substrand) == Loopout:
                         raise ValueError(
                             'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
                     if substrand.helix % 2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
-                                                  going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')
+                                                  going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(substrand))
 
         '''Filling the helices with blank.
         '''
