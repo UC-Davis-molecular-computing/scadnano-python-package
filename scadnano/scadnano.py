@@ -1920,7 +1920,7 @@ class DNADesign(_JSONSerializable):
         self._set_and_check_helices_view_order()
 
     @staticmethod
-    def from_file(filename: str) -> DNADesign:
+    def from_scadnano_file(filename: str) -> DNADesign:
         """
         Loads a :any:`DNADesign` from the file with the given name.
 
