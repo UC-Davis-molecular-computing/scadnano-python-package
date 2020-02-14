@@ -246,13 +246,13 @@ class TestDesignFromJson(unittest.TestCase):
     def test_from_json__from_and_to_file_contents(self):
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_json(json_map)
+        design = sc.DNADesign._from_scadnano_json(json_map)
         design.to_json_serializable()
 
     def test_from_json__three_strands(self):
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design: sc.DNAOrigamiDesign = sc.DNADesign.from_json(json_map)
+        design: sc.DNAOrigamiDesign = sc.DNADesign._from_scadnano_json(json_map)
 
         self.assertTrue(isinstance(design, sc.DNAOrigamiDesign))
 
@@ -359,7 +359,7 @@ class TestDesignFromJson(unittest.TestCase):
 
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_json(json_map)
+        design = sc.DNADesign._from_scadnano_json(json_map)
 
         self.assertEqual(3, len(design.helices))
 
@@ -385,7 +385,7 @@ class TestDesignFromJson(unittest.TestCase):
         json_str = self.design_pre_json.to_json()
         print(json_str)
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_json(json_map)
+        design = sc.DNADesign._from_scadnano_json(json_map)
 
         self.assertEqual(3, len(design.helices))
 
