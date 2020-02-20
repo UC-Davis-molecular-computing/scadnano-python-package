@@ -2074,7 +2074,7 @@ class DNADesign(_JSONSerializable):
                 else:
                     start = old_base
 
-                substrands.append(Substrand(old_helix, direction_forward, min(start,end), max(start,end),
+                substrands.append(Substrand(old_helix, direction_forward, min(start,end), max(start,end)+1,
                                             deletions = DNADesign._cadnano_v2_import_extract_deletions(vstrands[old_helix]['skip'], start, end),
                                             insertions = DNADesign._cadnano_v2_import_extract_insertions(vstrands[old_helix]['loop'], start, end)))
                 

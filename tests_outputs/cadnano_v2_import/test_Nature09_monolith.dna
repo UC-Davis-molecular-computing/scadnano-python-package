@@ -67,1652 +67,1652 @@
     {
       "color": "#0066cc",
       "substrands": [
-        {"helix": 4, "forward": true, "start": 73, "end": 85},
-        {"helix": 3, "forward": false, "start": 16, "end": 85},
-        {"helix": 2, "forward": true, "start": 16, "end": 85},
-        {"helix": 1, "forward": false, "start": 16, "end": 85},
-        {"helix": 0, "forward": true, "start": 16, "end": 141},
-        {"helix": 1, "forward": false, "start": 86, "end": 141},
-        {"helix": 2, "forward": true, "start": 86, "end": 141},
-        {"helix": 3, "forward": false, "start": 86, "end": 141},
-        {"helix": 4, "forward": true, "start": 86, "end": 141},
-        {"helix": 5, "forward": false, "start": 82, "end": 141},
-        {"helix": 6, "forward": true, "start": 82, "end": 137},
-        {"helix": 7, "forward": false, "start": 79, "end": 137},
-        {"helix": 8, "forward": true, "start": 79, "end": 137},
-        {"helix": 9, "forward": false, "start": 79, "end": 137},
-        {"helix": 10, "forward": true, "start": 79, "end": 137},
-        {"helix": 11, "forward": false, "start": 82, "end": 137},
-        {"helix": 12, "forward": true, "start": 82, "end": 141},
-        {"helix": 13, "forward": false, "start": 86, "end": 141},
-        {"helix": 14, "forward": true, "start": 86, "end": 141},
-        {"helix": 15, "forward": false, "start": 86, "end": 141},
-        {"helix": 16, "forward": true, "start": 86, "end": 141},
-        {"helix": 17, "forward": false, "start": 82, "end": 141},
-        {"helix": 18, "forward": true, "start": 82, "end": 137},
-        {"helix": 19, "forward": false, "start": 79, "end": 137},
-        {"helix": 20, "forward": true, "start": 79, "end": 137},
-        {"helix": 21, "forward": false, "start": 79, "end": 137},
-        {"helix": 22, "forward": true, "start": 79, "end": 137},
-        {"helix": 23, "forward": false, "start": 82, "end": 137},
-        {"helix": 24, "forward": true, "start": 82, "end": 141},
-        {"helix": 25, "forward": false, "start": 86, "end": 141},
-        {"helix": 26, "forward": true, "start": 86, "end": 141},
-        {"helix": 27, "forward": false, "start": 86, "end": 141},
-        {"helix": 28, "forward": true, "start": 86, "end": 141},
-        {"helix": 29, "forward": false, "start": 82, "end": 141},
-        {"helix": 30, "forward": true, "start": 82, "end": 137},
-        {"helix": 31, "forward": false, "start": 79, "end": 137},
-        {"helix": 32, "forward": true, "start": 79, "end": 137},
-        {"helix": 33, "forward": false, "start": 79, "end": 137},
-        {"helix": 34, "forward": true, "start": 79, "end": 137},
-        {"helix": 35, "forward": false, "start": 82, "end": 137},
-        {"helix": 36, "forward": true, "start": 82, "end": 141},
-        {"helix": 37, "forward": false, "start": 86, "end": 141},
-        {"helix": 38, "forward": true, "start": 86, "end": 141},
-        {"helix": 39, "forward": false, "start": 86, "end": 141},
-        {"helix": 40, "forward": true, "start": 86, "end": 141},
-        {"helix": 41, "forward": false, "start": 82, "end": 141},
-        {"helix": 42, "forward": true, "start": 82, "end": 137},
-        {"helix": 43, "forward": false, "start": 79, "end": 137},
-        {"helix": 44, "forward": true, "start": 79, "end": 137},
-        {"helix": 45, "forward": false, "start": 79, "end": 137},
-        {"helix": 46, "forward": true, "start": 79, "end": 137},
-        {"helix": 47, "forward": false, "start": 82, "end": 137},
-        {"helix": 48, "forward": true, "start": 82, "end": 141},
-        {"helix": 49, "forward": false, "start": 86, "end": 141},
-        {"helix": 50, "forward": true, "start": 86, "end": 141},
-        {"helix": 51, "forward": false, "start": 86, "end": 141},
-        {"helix": 52, "forward": true, "start": 86, "end": 141},
-        {"helix": 53, "forward": false, "start": 82, "end": 141},
-        {"helix": 54, "forward": true, "start": 82, "end": 137},
-        {"helix": 55, "forward": false, "start": 79, "end": 137},
-        {"helix": 56, "forward": true, "start": 79, "end": 137},
-        {"helix": 57, "forward": false, "start": 79, "end": 137},
-        {"helix": 58, "forward": true, "start": 79, "end": 137},
-        {"helix": 59, "forward": false, "start": 12, "end": 137},
-        {"helix": 58, "forward": true, "start": 12, "end": 78},
-        {"helix": 57, "forward": false, "start": 12, "end": 78},
-        {"helix": 56, "forward": true, "start": 12, "end": 78},
-        {"helix": 55, "forward": false, "start": 12, "end": 78},
-        {"helix": 54, "forward": true, "start": 12, "end": 81},
-        {"helix": 53, "forward": false, "start": 16, "end": 81},
-        {"helix": 52, "forward": true, "start": 16, "end": 85},
-        {"helix": 51, "forward": false, "start": 16, "end": 85},
-        {"helix": 50, "forward": true, "start": 16, "end": 85},
-        {"helix": 49, "forward": false, "start": 16, "end": 85},
-        {"helix": 48, "forward": true, "start": 16, "end": 81},
-        {"helix": 47, "forward": false, "start": 12, "end": 81},
-        {"helix": 46, "forward": true, "start": 12, "end": 78},
-        {"helix": 45, "forward": false, "start": 12, "end": 78},
-        {"helix": 44, "forward": true, "start": 12, "end": 78},
-        {"helix": 43, "forward": false, "start": 12, "end": 78},
-        {"helix": 42, "forward": true, "start": 12, "end": 81},
-        {"helix": 41, "forward": false, "start": 16, "end": 81},
-        {"helix": 40, "forward": true, "start": 16, "end": 85},
-        {"helix": 39, "forward": false, "start": 16, "end": 85},
-        {"helix": 38, "forward": true, "start": 16, "end": 85},
-        {"helix": 37, "forward": false, "start": 16, "end": 85},
-        {"helix": 36, "forward": true, "start": 16, "end": 81},
-        {"helix": 35, "forward": false, "start": 12, "end": 81},
-        {"helix": 34, "forward": true, "start": 12, "end": 78},
-        {"helix": 33, "forward": false, "start": 12, "end": 78},
-        {"helix": 32, "forward": true, "start": 12, "end": 78},
-        {"helix": 31, "forward": false, "start": 12, "end": 78},
-        {"helix": 30, "forward": true, "start": 12, "end": 81},
-        {"helix": 29, "forward": false, "start": 16, "end": 81},
-        {"helix": 28, "forward": true, "start": 16, "end": 85},
-        {"helix": 27, "forward": false, "start": 16, "end": 85},
-        {"helix": 26, "forward": true, "start": 16, "end": 85},
-        {"helix": 25, "forward": false, "start": 16, "end": 85},
-        {"helix": 24, "forward": true, "start": 16, "end": 81},
-        {"helix": 23, "forward": false, "start": 12, "end": 81},
-        {"helix": 22, "forward": true, "start": 12, "end": 78},
-        {"helix": 21, "forward": false, "start": 12, "end": 78},
-        {"helix": 20, "forward": true, "start": 12, "end": 78},
-        {"helix": 19, "forward": false, "start": 12, "end": 78},
-        {"helix": 18, "forward": true, "start": 12, "end": 81},
-        {"helix": 17, "forward": false, "start": 16, "end": 81},
-        {"helix": 16, "forward": true, "start": 16, "end": 85},
-        {"helix": 15, "forward": false, "start": 16, "end": 85},
-        {"helix": 14, "forward": true, "start": 16, "end": 85},
-        {"helix": 13, "forward": false, "start": 16, "end": 85},
-        {"helix": 12, "forward": true, "start": 16, "end": 81},
-        {"helix": 11, "forward": false, "start": 12, "end": 81},
-        {"helix": 10, "forward": true, "start": 12, "end": 78},
-        {"helix": 9, "forward": false, "start": 12, "end": 78},
-        {"helix": 8, "forward": true, "start": 12, "end": 78},
-        {"helix": 7, "forward": false, "start": 12, "end": 78},
-        {"helix": 6, "forward": true, "start": 12, "end": 81},
-        {"helix": 5, "forward": false, "start": 16, "end": 81},
-        {"helix": 4, "forward": true, "start": 16, "end": 72}
+        {"helix": 4, "forward": true, "start": 73, "end": 86},
+        {"helix": 3, "forward": false, "start": 16, "end": 86},
+        {"helix": 2, "forward": true, "start": 16, "end": 86},
+        {"helix": 1, "forward": false, "start": 16, "end": 86},
+        {"helix": 0, "forward": true, "start": 16, "end": 142},
+        {"helix": 1, "forward": false, "start": 86, "end": 142},
+        {"helix": 2, "forward": true, "start": 86, "end": 142},
+        {"helix": 3, "forward": false, "start": 86, "end": 142},
+        {"helix": 4, "forward": true, "start": 86, "end": 142},
+        {"helix": 5, "forward": false, "start": 82, "end": 142},
+        {"helix": 6, "forward": true, "start": 82, "end": 138},
+        {"helix": 7, "forward": false, "start": 79, "end": 138},
+        {"helix": 8, "forward": true, "start": 79, "end": 138},
+        {"helix": 9, "forward": false, "start": 79, "end": 138},
+        {"helix": 10, "forward": true, "start": 79, "end": 138},
+        {"helix": 11, "forward": false, "start": 82, "end": 138},
+        {"helix": 12, "forward": true, "start": 82, "end": 142},
+        {"helix": 13, "forward": false, "start": 86, "end": 142},
+        {"helix": 14, "forward": true, "start": 86, "end": 142},
+        {"helix": 15, "forward": false, "start": 86, "end": 142},
+        {"helix": 16, "forward": true, "start": 86, "end": 142},
+        {"helix": 17, "forward": false, "start": 82, "end": 142},
+        {"helix": 18, "forward": true, "start": 82, "end": 138},
+        {"helix": 19, "forward": false, "start": 79, "end": 138},
+        {"helix": 20, "forward": true, "start": 79, "end": 138},
+        {"helix": 21, "forward": false, "start": 79, "end": 138},
+        {"helix": 22, "forward": true, "start": 79, "end": 138},
+        {"helix": 23, "forward": false, "start": 82, "end": 138},
+        {"helix": 24, "forward": true, "start": 82, "end": 142},
+        {"helix": 25, "forward": false, "start": 86, "end": 142},
+        {"helix": 26, "forward": true, "start": 86, "end": 142},
+        {"helix": 27, "forward": false, "start": 86, "end": 142},
+        {"helix": 28, "forward": true, "start": 86, "end": 142},
+        {"helix": 29, "forward": false, "start": 82, "end": 142},
+        {"helix": 30, "forward": true, "start": 82, "end": 138},
+        {"helix": 31, "forward": false, "start": 79, "end": 138},
+        {"helix": 32, "forward": true, "start": 79, "end": 138},
+        {"helix": 33, "forward": false, "start": 79, "end": 138},
+        {"helix": 34, "forward": true, "start": 79, "end": 138},
+        {"helix": 35, "forward": false, "start": 82, "end": 138},
+        {"helix": 36, "forward": true, "start": 82, "end": 142},
+        {"helix": 37, "forward": false, "start": 86, "end": 142},
+        {"helix": 38, "forward": true, "start": 86, "end": 142},
+        {"helix": 39, "forward": false, "start": 86, "end": 142},
+        {"helix": 40, "forward": true, "start": 86, "end": 142},
+        {"helix": 41, "forward": false, "start": 82, "end": 142},
+        {"helix": 42, "forward": true, "start": 82, "end": 138},
+        {"helix": 43, "forward": false, "start": 79, "end": 138},
+        {"helix": 44, "forward": true, "start": 79, "end": 138},
+        {"helix": 45, "forward": false, "start": 79, "end": 138},
+        {"helix": 46, "forward": true, "start": 79, "end": 138},
+        {"helix": 47, "forward": false, "start": 82, "end": 138},
+        {"helix": 48, "forward": true, "start": 82, "end": 142},
+        {"helix": 49, "forward": false, "start": 86, "end": 142},
+        {"helix": 50, "forward": true, "start": 86, "end": 142},
+        {"helix": 51, "forward": false, "start": 86, "end": 142},
+        {"helix": 52, "forward": true, "start": 86, "end": 142},
+        {"helix": 53, "forward": false, "start": 82, "end": 142},
+        {"helix": 54, "forward": true, "start": 82, "end": 138},
+        {"helix": 55, "forward": false, "start": 79, "end": 138},
+        {"helix": 56, "forward": true, "start": 79, "end": 138},
+        {"helix": 57, "forward": false, "start": 79, "end": 138},
+        {"helix": 58, "forward": true, "start": 79, "end": 138},
+        {"helix": 59, "forward": false, "start": 12, "end": 138},
+        {"helix": 58, "forward": true, "start": 12, "end": 79},
+        {"helix": 57, "forward": false, "start": 12, "end": 79},
+        {"helix": 56, "forward": true, "start": 12, "end": 79},
+        {"helix": 55, "forward": false, "start": 12, "end": 79},
+        {"helix": 54, "forward": true, "start": 12, "end": 82},
+        {"helix": 53, "forward": false, "start": 16, "end": 82},
+        {"helix": 52, "forward": true, "start": 16, "end": 86},
+        {"helix": 51, "forward": false, "start": 16, "end": 86},
+        {"helix": 50, "forward": true, "start": 16, "end": 86},
+        {"helix": 49, "forward": false, "start": 16, "end": 86},
+        {"helix": 48, "forward": true, "start": 16, "end": 82},
+        {"helix": 47, "forward": false, "start": 12, "end": 82},
+        {"helix": 46, "forward": true, "start": 12, "end": 79},
+        {"helix": 45, "forward": false, "start": 12, "end": 79},
+        {"helix": 44, "forward": true, "start": 12, "end": 79},
+        {"helix": 43, "forward": false, "start": 12, "end": 79},
+        {"helix": 42, "forward": true, "start": 12, "end": 82},
+        {"helix": 41, "forward": false, "start": 16, "end": 82},
+        {"helix": 40, "forward": true, "start": 16, "end": 86},
+        {"helix": 39, "forward": false, "start": 16, "end": 86},
+        {"helix": 38, "forward": true, "start": 16, "end": 86},
+        {"helix": 37, "forward": false, "start": 16, "end": 86},
+        {"helix": 36, "forward": true, "start": 16, "end": 82},
+        {"helix": 35, "forward": false, "start": 12, "end": 82},
+        {"helix": 34, "forward": true, "start": 12, "end": 79},
+        {"helix": 33, "forward": false, "start": 12, "end": 79},
+        {"helix": 32, "forward": true, "start": 12, "end": 79},
+        {"helix": 31, "forward": false, "start": 12, "end": 79},
+        {"helix": 30, "forward": true, "start": 12, "end": 82},
+        {"helix": 29, "forward": false, "start": 16, "end": 82},
+        {"helix": 28, "forward": true, "start": 16, "end": 86},
+        {"helix": 27, "forward": false, "start": 16, "end": 86},
+        {"helix": 26, "forward": true, "start": 16, "end": 86},
+        {"helix": 25, "forward": false, "start": 16, "end": 86},
+        {"helix": 24, "forward": true, "start": 16, "end": 82},
+        {"helix": 23, "forward": false, "start": 12, "end": 82},
+        {"helix": 22, "forward": true, "start": 12, "end": 79},
+        {"helix": 21, "forward": false, "start": 12, "end": 79},
+        {"helix": 20, "forward": true, "start": 12, "end": 79},
+        {"helix": 19, "forward": false, "start": 12, "end": 79},
+        {"helix": 18, "forward": true, "start": 12, "end": 82},
+        {"helix": 17, "forward": false, "start": 16, "end": 82},
+        {"helix": 16, "forward": true, "start": 16, "end": 86},
+        {"helix": 15, "forward": false, "start": 16, "end": 86},
+        {"helix": 14, "forward": true, "start": 16, "end": 86},
+        {"helix": 13, "forward": false, "start": 16, "end": 86},
+        {"helix": 12, "forward": true, "start": 16, "end": 82},
+        {"helix": 11, "forward": false, "start": 12, "end": 82},
+        {"helix": 10, "forward": true, "start": 12, "end": 79},
+        {"helix": 9, "forward": false, "start": 12, "end": 79},
+        {"helix": 8, "forward": true, "start": 12, "end": 79},
+        {"helix": 7, "forward": false, "start": 12, "end": 79},
+        {"helix": 6, "forward": true, "start": 12, "end": 82},
+        {"helix": 5, "forward": false, "start": 16, "end": 82},
+        {"helix": 4, "forward": true, "start": 16, "end": 73}
       ],
       "is_scaffold": true
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 14, "forward": false, "start": 35, "end": 37},
-        {"helix": 9, "forward": true, "start": 35, "end": 41},
-        {"helix": 10, "forward": false, "start": 35, "end": 41},
-        {"helix": 1, "forward": true, "start": 35, "end": 41},
-        {"helix": 0, "forward": false, "start": 28, "end": 41}
+        {"helix": 14, "forward": false, "start": 35, "end": 38},
+        {"helix": 9, "forward": true, "start": 35, "end": 42},
+        {"helix": 10, "forward": false, "start": 35, "end": 42},
+        {"helix": 1, "forward": true, "start": 35, "end": 42},
+        {"helix": 0, "forward": false, "start": 28, "end": 42}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 0, "forward": false, "start": 42, "end": 48},
-        {"helix": 1, "forward": true, "start": 42, "end": 48},
-        {"helix": 2, "forward": false, "start": 42, "end": 48},
-        {"helix": 3, "forward": true, "start": 42, "end": 48},
-        {"helix": 4, "forward": false, "start": 42, "end": 48},
-        {"helix": 5, "forward": true, "start": 42, "end": 48}
+        {"helix": 0, "forward": false, "start": 42, "end": 49},
+        {"helix": 1, "forward": true, "start": 42, "end": 49},
+        {"helix": 2, "forward": false, "start": 42, "end": 49},
+        {"helix": 3, "forward": true, "start": 42, "end": 49},
+        {"helix": 4, "forward": false, "start": 42, "end": 49},
+        {"helix": 5, "forward": true, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 15, "forward": true, "start": 60, "end": 62},
-        {"helix": 14, "forward": false, "start": 56, "end": 62},
-        {"helix": 9, "forward": true, "start": 56, "end": 62},
-        {"helix": 10, "forward": false, "start": 56, "end": 62},
-        {"helix": 1, "forward": true, "start": 56, "end": 62},
-        {"helix": 0, "forward": false, "start": 49, "end": 62}
+        {"helix": 15, "forward": true, "start": 60, "end": 63},
+        {"helix": 14, "forward": false, "start": 56, "end": 63},
+        {"helix": 9, "forward": true, "start": 56, "end": 63},
+        {"helix": 10, "forward": false, "start": 56, "end": 63},
+        {"helix": 1, "forward": true, "start": 56, "end": 63},
+        {"helix": 0, "forward": false, "start": 49, "end": 63}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 0, "forward": false, "start": 63, "end": 69},
-        {"helix": 1, "forward": true, "start": 63, "end": 69},
-        {"helix": 2, "forward": false, "start": 63, "end": 69},
-        {"helix": 3, "forward": true, "start": 63, "end": 69},
-        {"helix": 4, "forward": false, "start": 63, "end": 69},
-        {"helix": 5, "forward": true, "start": 63, "end": 69}
+        {"helix": 0, "forward": false, "start": 63, "end": 70},
+        {"helix": 1, "forward": true, "start": 63, "end": 70},
+        {"helix": 2, "forward": false, "start": 63, "end": 70},
+        {"helix": 3, "forward": true, "start": 63, "end": 70},
+        {"helix": 4, "forward": false, "start": 63, "end": 70},
+        {"helix": 5, "forward": true, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 10, "forward": false, "start": 77, "end": 83},
-        {"helix": 1, "forward": true, "start": 77, "end": 83},
-        {"helix": 0, "forward": false, "start": 70, "end": 83}
+        {"helix": 10, "forward": false, "start": 77, "end": 84},
+        {"helix": 1, "forward": true, "start": 77, "end": 84},
+        {"helix": 0, "forward": false, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 0, "forward": false, "start": 84, "end": 90},
-        {"helix": 1, "forward": true, "start": 84, "end": 97},
-        {"helix": 10, "forward": false, "start": 91, "end": 97},
-        {"helix": 11, "forward": true, "start": 91, "end": 97},
-        {"helix": 12, "forward": false, "start": 91, "end": 97}
+        {"helix": 0, "forward": false, "start": 84, "end": 91},
+        {"helix": 1, "forward": true, "start": 84, "end": 98},
+        {"helix": 10, "forward": false, "start": 91, "end": 98},
+        {"helix": 11, "forward": true, "start": 91, "end": 98},
+        {"helix": 12, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 14, "forward": false, "start": 98, "end": 100},
-        {"helix": 9, "forward": true, "start": 98, "end": 104},
-        {"helix": 10, "forward": false, "start": 98, "end": 104},
-        {"helix": 1, "forward": true, "start": 98, "end": 104},
-        {"helix": 0, "forward": false, "start": 91, "end": 104}
+        {"helix": 14, "forward": false, "start": 98, "end": 101},
+        {"helix": 9, "forward": true, "start": 98, "end": 105},
+        {"helix": 10, "forward": false, "start": 98, "end": 105},
+        {"helix": 1, "forward": true, "start": 98, "end": 105},
+        {"helix": 0, "forward": false, "start": 91, "end": 105}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 0, "forward": false, "start": 105, "end": 111},
-        {"helix": 1, "forward": true, "start": 105, "end": 111},
-        {"helix": 2, "forward": false, "start": 105, "end": 111},
-        {"helix": 3, "forward": true, "start": 105, "end": 111},
-        {"helix": 4, "forward": false, "start": 105, "end": 111},
-        {"helix": 5, "forward": true, "start": 105, "end": 111}
+        {"helix": 0, "forward": false, "start": 105, "end": 112},
+        {"helix": 1, "forward": true, "start": 105, "end": 112},
+        {"helix": 2, "forward": false, "start": 105, "end": 112},
+        {"helix": 3, "forward": true, "start": 105, "end": 112},
+        {"helix": 4, "forward": false, "start": 105, "end": 112},
+        {"helix": 5, "forward": true, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 15, "forward": true, "start": 123, "end": 125},
-        {"helix": 14, "forward": false, "start": 119, "end": 125},
-        {"helix": 9, "forward": true, "start": 119, "end": 125},
-        {"helix": 10, "forward": false, "start": 119, "end": 125},
-        {"helix": 1, "forward": true, "start": 119, "end": 125},
-        {"helix": 0, "forward": false, "start": 112, "end": 125}
+        {"helix": 15, "forward": true, "start": 123, "end": 126},
+        {"helix": 14, "forward": false, "start": 119, "end": 126},
+        {"helix": 9, "forward": true, "start": 119, "end": 126},
+        {"helix": 10, "forward": false, "start": 119, "end": 126},
+        {"helix": 1, "forward": true, "start": 119, "end": 126},
+        {"helix": 0, "forward": false, "start": 112, "end": 126}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 2, "forward": false, "start": 28, "end": 34},
-        {"helix": 1, "forward": true, "start": 28, "end": 34},
-        {"helix": 10, "forward": false, "start": 28, "end": 34},
-        {"helix": 11, "forward": true, "start": 28, "end": 34},
-        {"helix": 12, "forward": false, "start": 28, "end": 34}
+        {"helix": 2, "forward": false, "start": 28, "end": 35},
+        {"helix": 1, "forward": true, "start": 28, "end": 35},
+        {"helix": 10, "forward": false, "start": 28, "end": 35},
+        {"helix": 11, "forward": true, "start": 28, "end": 35},
+        {"helix": 12, "forward": false, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 2, "forward": false, "start": 49, "end": 55},
-        {"helix": 1, "forward": true, "start": 49, "end": 55},
-        {"helix": 10, "forward": false, "start": 49, "end": 55},
-        {"helix": 11, "forward": true, "start": 49, "end": 55},
-        {"helix": 12, "forward": false, "start": 49, "end": 55}
+        {"helix": 2, "forward": false, "start": 49, "end": 56},
+        {"helix": 1, "forward": true, "start": 49, "end": 56},
+        {"helix": 10, "forward": false, "start": 49, "end": 56},
+        {"helix": 11, "forward": true, "start": 49, "end": 56},
+        {"helix": 12, "forward": false, "start": 49, "end": 56}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 2, "forward": false, "start": 70, "end": 76},
-        {"helix": 1, "forward": true, "start": 70, "end": 76},
-        {"helix": 10, "forward": false, "start": 70, "end": 76},
-        {"helix": 11, "forward": true, "start": 70, "end": 90},
-        {"helix": 10, "forward": false, "start": 84, "end": 90}
+        {"helix": 2, "forward": false, "start": 70, "end": 77},
+        {"helix": 1, "forward": true, "start": 70, "end": 77},
+        {"helix": 10, "forward": false, "start": 70, "end": 77},
+        {"helix": 11, "forward": true, "start": 70, "end": 91},
+        {"helix": 10, "forward": false, "start": 84, "end": 91}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 2, "forward": false, "start": 112, "end": 118},
-        {"helix": 1, "forward": true, "start": 112, "end": 118},
-        {"helix": 10, "forward": false, "start": 112, "end": 118},
-        {"helix": 11, "forward": true, "start": 112, "end": 118},
-        {"helix": 12, "forward": false, "start": 112, "end": 118}
+        {"helix": 2, "forward": false, "start": 112, "end": 119},
+        {"helix": 1, "forward": true, "start": 112, "end": 119},
+        {"helix": 10, "forward": false, "start": 112, "end": 119},
+        {"helix": 11, "forward": true, "start": 112, "end": 119},
+        {"helix": 12, "forward": false, "start": 112, "end": 119}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 18, "forward": false, "start": 35, "end": 41},
-        {"helix": 17, "forward": true, "start": 35, "end": 41},
-        {"helix": 16, "forward": false, "start": 35, "end": 41},
-        {"helix": 7, "forward": true, "start": 35, "end": 41},
-        {"helix": 8, "forward": false, "start": 35, "end": 41},
-        {"helix": 3, "forward": true, "start": 35, "end": 41},
-        {"helix": 2, "forward": false, "start": 35, "end": 41}
+        {"helix": 18, "forward": false, "start": 35, "end": 42},
+        {"helix": 17, "forward": true, "start": 35, "end": 42},
+        {"helix": 16, "forward": false, "start": 35, "end": 42},
+        {"helix": 7, "forward": true, "start": 35, "end": 42},
+        {"helix": 8, "forward": false, "start": 35, "end": 42},
+        {"helix": 3, "forward": true, "start": 35, "end": 42},
+        {"helix": 2, "forward": false, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 18, "forward": false, "start": 56, "end": 62},
-        {"helix": 17, "forward": true, "start": 56, "end": 62},
-        {"helix": 16, "forward": false, "start": 56, "end": 62},
-        {"helix": 7, "forward": true, "start": 56, "end": 62},
-        {"helix": 8, "forward": false, "start": 56, "end": 62},
-        {"helix": 3, "forward": true, "start": 56, "end": 62},
-        {"helix": 2, "forward": false, "start": 56, "end": 62}
+        {"helix": 18, "forward": false, "start": 56, "end": 63},
+        {"helix": 17, "forward": true, "start": 56, "end": 63},
+        {"helix": 16, "forward": false, "start": 56, "end": 63},
+        {"helix": 7, "forward": true, "start": 56, "end": 63},
+        {"helix": 8, "forward": false, "start": 56, "end": 63},
+        {"helix": 3, "forward": true, "start": 56, "end": 63},
+        {"helix": 2, "forward": false, "start": 56, "end": 63}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 9, "forward": true, "start": 84, "end": 90},
-        {"helix": 8, "forward": false, "start": 77, "end": 90},
-        {"helix": 3, "forward": true, "start": 77, "end": 83},
-        {"helix": 2, "forward": false, "start": 77, "end": 83}
+        {"helix": 9, "forward": true, "start": 84, "end": 91},
+        {"helix": 8, "forward": false, "start": 77, "end": 91},
+        {"helix": 3, "forward": true, "start": 77, "end": 84},
+        {"helix": 2, "forward": false, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 2, "forward": false, "start": 84, "end": 97},
-        {"helix": 3, "forward": true, "start": 84, "end": 97},
-        {"helix": 8, "forward": false, "start": 91, "end": 97},
-        {"helix": 9, "forward": true, "start": 91, "end": 97},
-        {"helix": 14, "forward": false, "start": 91, "end": 97}
+        {"helix": 2, "forward": false, "start": 84, "end": 98},
+        {"helix": 3, "forward": true, "start": 84, "end": 98},
+        {"helix": 8, "forward": false, "start": 91, "end": 98},
+        {"helix": 9, "forward": true, "start": 91, "end": 98},
+        {"helix": 14, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 18, "forward": false, "start": 98, "end": 104},
-        {"helix": 17, "forward": true, "start": 98, "end": 104},
-        {"helix": 16, "forward": false, "start": 98, "end": 104},
-        {"helix": 7, "forward": true, "start": 98, "end": 104},
-        {"helix": 8, "forward": false, "start": 98, "end": 104},
-        {"helix": 3, "forward": true, "start": 98, "end": 104},
-        {"helix": 2, "forward": false, "start": 98, "end": 104}
+        {"helix": 18, "forward": false, "start": 98, "end": 105},
+        {"helix": 17, "forward": true, "start": 98, "end": 105},
+        {"helix": 16, "forward": false, "start": 98, "end": 105},
+        {"helix": 7, "forward": true, "start": 98, "end": 105},
+        {"helix": 8, "forward": false, "start": 98, "end": 105},
+        {"helix": 3, "forward": true, "start": 98, "end": 105},
+        {"helix": 2, "forward": false, "start": 98, "end": 105}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 18, "forward": false, "start": 119, "end": 125},
-        {"helix": 17, "forward": true, "start": 119, "end": 125},
-        {"helix": 16, "forward": false, "start": 119, "end": 125},
-        {"helix": 7, "forward": true, "start": 119, "end": 125},
-        {"helix": 8, "forward": false, "start": 119, "end": 125},
-        {"helix": 3, "forward": true, "start": 119, "end": 125},
-        {"helix": 2, "forward": false, "start": 119, "end": 125}
+        {"helix": 18, "forward": false, "start": 119, "end": 126},
+        {"helix": 17, "forward": true, "start": 119, "end": 126},
+        {"helix": 16, "forward": false, "start": 119, "end": 126},
+        {"helix": 7, "forward": true, "start": 119, "end": 126},
+        {"helix": 8, "forward": false, "start": 119, "end": 126},
+        {"helix": 3, "forward": true, "start": 119, "end": 126},
+        {"helix": 2, "forward": false, "start": 119, "end": 126}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 4, "forward": false, "start": 28, "end": 34},
-        {"helix": 3, "forward": true, "start": 28, "end": 34},
-        {"helix": 8, "forward": false, "start": 28, "end": 34},
-        {"helix": 9, "forward": true, "start": 28, "end": 34},
-        {"helix": 14, "forward": false, "start": 28, "end": 34},
-        {"helix": 13, "forward": true, "start": 28, "end": 31}
+        {"helix": 4, "forward": false, "start": 28, "end": 35},
+        {"helix": 3, "forward": true, "start": 28, "end": 35},
+        {"helix": 8, "forward": false, "start": 28, "end": 35},
+        {"helix": 9, "forward": true, "start": 28, "end": 35},
+        {"helix": 14, "forward": false, "start": 28, "end": 35},
+        {"helix": 13, "forward": true, "start": 28, "end": 32}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 6, "forward": false, "start": 56, "end": 62},
-        {"helix": 5, "forward": true, "start": 56, "end": 62},
-        {"helix": 4, "forward": false, "start": 49, "end": 62},
-        {"helix": 3, "forward": true, "start": 49, "end": 55},
-        {"helix": 8, "forward": false, "start": 52, "end": 55}
+        {"helix": 6, "forward": false, "start": 56, "end": 63},
+        {"helix": 5, "forward": true, "start": 56, "end": 63},
+        {"helix": 4, "forward": false, "start": 49, "end": 63},
+        {"helix": 3, "forward": true, "start": 49, "end": 56},
+        {"helix": 8, "forward": false, "start": 52, "end": 56}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 5, "forward": true, "start": 70, "end": 83},
-        {"helix": 4, "forward": false, "start": 70, "end": 83},
-        {"helix": 3, "forward": true, "start": 70, "end": 76},
-        {"helix": 8, "forward": false, "start": 70, "end": 76},
-        {"helix": 9, "forward": true, "start": 70, "end": 73}
+        {"helix": 5, "forward": true, "start": 70, "end": 84},
+        {"helix": 4, "forward": false, "start": 70, "end": 84},
+        {"helix": 3, "forward": true, "start": 70, "end": 77},
+        {"helix": 8, "forward": false, "start": 70, "end": 77},
+        {"helix": 9, "forward": true, "start": 70, "end": 74}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 6, "forward": false, "start": 119, "end": 125},
-        {"helix": 5, "forward": true, "start": 119, "end": 125},
-        {"helix": 4, "forward": false, "start": 112, "end": 125},
-        {"helix": 3, "forward": true, "start": 112, "end": 118},
-        {"helix": 8, "forward": false, "start": 115, "end": 118}
+        {"helix": 6, "forward": false, "start": 119, "end": 126},
+        {"helix": 5, "forward": true, "start": 119, "end": 126},
+        {"helix": 4, "forward": false, "start": 112, "end": 126},
+        {"helix": 3, "forward": true, "start": 112, "end": 119},
+        {"helix": 8, "forward": false, "start": 115, "end": 119}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 6, "forward": false, "start": 35, "end": 41},
-        {"helix": 5, "forward": true, "start": 35, "end": 41},
-        {"helix": 4, "forward": false, "start": 35, "end": 41}
+        {"helix": 6, "forward": false, "start": 35, "end": 42},
+        {"helix": 5, "forward": true, "start": 35, "end": 42},
+        {"helix": 4, "forward": false, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 6, "forward": false, "start": 98, "end": 104},
-        {"helix": 5, "forward": true, "start": 98, "end": 104},
-        {"helix": 4, "forward": false, "start": 84, "end": 104},
-        {"helix": 5, "forward": true, "start": 84, "end": 90}
+        {"helix": 6, "forward": false, "start": 98, "end": 105},
+        {"helix": 5, "forward": true, "start": 98, "end": 105},
+        {"helix": 4, "forward": false, "start": 84, "end": 105},
+        {"helix": 5, "forward": true, "start": 84, "end": 91}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 5, "forward": true, "start": 28, "end": 34},
-        {"helix": 6, "forward": false, "start": 28, "end": 34},
-        {"helix": 7, "forward": true, "start": 28, "end": 34},
-        {"helix": 16, "forward": false, "start": 28, "end": 34},
-        {"helix": 15, "forward": true, "start": 28, "end": 34},
-        {"helix": 20, "forward": false, "start": 31, "end": 34}
+        {"helix": 5, "forward": true, "start": 28, "end": 35},
+        {"helix": 6, "forward": false, "start": 28, "end": 35},
+        {"helix": 7, "forward": true, "start": 28, "end": 35},
+        {"helix": 16, "forward": false, "start": 28, "end": 35},
+        {"helix": 15, "forward": true, "start": 28, "end": 35},
+        {"helix": 20, "forward": false, "start": 31, "end": 35}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 5, "forward": true, "start": 49, "end": 55},
-        {"helix": 6, "forward": false, "start": 49, "end": 55},
-        {"helix": 7, "forward": true, "start": 49, "end": 55},
-        {"helix": 16, "forward": false, "start": 49, "end": 55},
-        {"helix": 15, "forward": true, "start": 49, "end": 55},
-        {"helix": 20, "forward": false, "start": 52, "end": 55}
+        {"helix": 5, "forward": true, "start": 49, "end": 56},
+        {"helix": 6, "forward": false, "start": 49, "end": 56},
+        {"helix": 7, "forward": true, "start": 49, "end": 56},
+        {"helix": 16, "forward": false, "start": 49, "end": 56},
+        {"helix": 15, "forward": true, "start": 49, "end": 56},
+        {"helix": 20, "forward": false, "start": 52, "end": 56}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 5, "forward": true, "start": 91, "end": 97},
-        {"helix": 6, "forward": false, "start": 91, "end": 97},
-        {"helix": 7, "forward": true, "start": 91, "end": 97},
-        {"helix": 16, "forward": false, "start": 91, "end": 97}
+        {"helix": 5, "forward": true, "start": 91, "end": 98},
+        {"helix": 6, "forward": false, "start": 91, "end": 98},
+        {"helix": 7, "forward": true, "start": 91, "end": 98},
+        {"helix": 16, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 5, "forward": true, "start": 112, "end": 118},
-        {"helix": 6, "forward": false, "start": 112, "end": 118},
-        {"helix": 7, "forward": true, "start": 112, "end": 118},
-        {"helix": 16, "forward": false, "start": 112, "end": 118},
-        {"helix": 15, "forward": true, "start": 112, "end": 118},
-        {"helix": 20, "forward": false, "start": 115, "end": 118}
+        {"helix": 5, "forward": true, "start": 112, "end": 119},
+        {"helix": 6, "forward": false, "start": 112, "end": 119},
+        {"helix": 7, "forward": true, "start": 112, "end": 119},
+        {"helix": 16, "forward": false, "start": 112, "end": 119},
+        {"helix": 15, "forward": true, "start": 112, "end": 119},
+        {"helix": 20, "forward": false, "start": 115, "end": 119}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 11, "forward": true, "start": 42, "end": 48},
-        {"helix": 10, "forward": false, "start": 42, "end": 48},
-        {"helix": 9, "forward": true, "start": 42, "end": 48},
-        {"helix": 8, "forward": false, "start": 42, "end": 48},
-        {"helix": 7, "forward": true, "start": 42, "end": 48},
-        {"helix": 6, "forward": false, "start": 42, "end": 48}
+        {"helix": 11, "forward": true, "start": 42, "end": 49},
+        {"helix": 10, "forward": false, "start": 42, "end": 49},
+        {"helix": 9, "forward": true, "start": 42, "end": 49},
+        {"helix": 8, "forward": false, "start": 42, "end": 49},
+        {"helix": 7, "forward": true, "start": 42, "end": 49},
+        {"helix": 6, "forward": false, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 11, "forward": true, "start": 63, "end": 69},
-        {"helix": 10, "forward": false, "start": 63, "end": 69},
-        {"helix": 9, "forward": true, "start": 63, "end": 69},
-        {"helix": 8, "forward": false, "start": 63, "end": 69},
-        {"helix": 7, "forward": true, "start": 63, "end": 69},
-        {"helix": 6, "forward": false, "start": 63, "end": 69}
+        {"helix": 11, "forward": true, "start": 63, "end": 70},
+        {"helix": 10, "forward": false, "start": 63, "end": 70},
+        {"helix": 9, "forward": true, "start": 63, "end": 70},
+        {"helix": 8, "forward": false, "start": 63, "end": 70},
+        {"helix": 7, "forward": true, "start": 63, "end": 70},
+        {"helix": 6, "forward": false, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 6, "forward": false, "start": 70, "end": 83},
-        {"helix": 7, "forward": true, "start": 70, "end": 76},
-        {"helix": 16, "forward": false, "start": 70, "end": 76},
-        {"helix": 15, "forward": true, "start": 70, "end": 76},
-        {"helix": 20, "forward": false, "start": 73, "end": 76}
+        {"helix": 6, "forward": false, "start": 70, "end": 84},
+        {"helix": 7, "forward": true, "start": 70, "end": 77},
+        {"helix": 16, "forward": false, "start": 70, "end": 77},
+        {"helix": 15, "forward": true, "start": 70, "end": 77},
+        {"helix": 20, "forward": false, "start": 73, "end": 77}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 17, "forward": true, "start": 70, "end": 83},
-        {"helix": 16, "forward": false, "start": 77, "end": 83},
-        {"helix": 7, "forward": true, "start": 77, "end": 90},
-        {"helix": 6, "forward": false, "start": 84, "end": 90}
+        {"helix": 17, "forward": true, "start": 70, "end": 84},
+        {"helix": 16, "forward": false, "start": 77, "end": 84},
+        {"helix": 7, "forward": true, "start": 77, "end": 91},
+        {"helix": 6, "forward": false, "start": 84, "end": 91}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 11, "forward": true, "start": 105, "end": 111},
-        {"helix": 10, "forward": false, "start": 105, "end": 111},
-        {"helix": 9, "forward": true, "start": 105, "end": 111},
-        {"helix": 8, "forward": false, "start": 105, "end": 111},
-        {"helix": 7, "forward": true, "start": 105, "end": 111},
-        {"helix": 6, "forward": false, "start": 105, "end": 111}
+        {"helix": 11, "forward": true, "start": 105, "end": 112},
+        {"helix": 10, "forward": false, "start": 105, "end": 112},
+        {"helix": 9, "forward": true, "start": 105, "end": 112},
+        {"helix": 8, "forward": false, "start": 105, "end": 112},
+        {"helix": 7, "forward": true, "start": 105, "end": 112},
+        {"helix": 6, "forward": false, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 8, "forward": false, "start": 49, "end": 51},
-        {"helix": 9, "forward": true, "start": 49, "end": 55},
-        {"helix": 14, "forward": false, "start": 49, "end": 55},
-        {"helix": 13, "forward": true, "start": 49, "end": 55},
-        {"helix": 22, "forward": false, "start": 49, "end": 55},
-        {"helix": 23, "forward": true, "start": 49, "end": 55},
-        {"helix": 24, "forward": false, "start": 49, "end": 55}
+        {"helix": 8, "forward": false, "start": 49, "end": 52},
+        {"helix": 9, "forward": true, "start": 49, "end": 56},
+        {"helix": 14, "forward": false, "start": 49, "end": 56},
+        {"helix": 13, "forward": true, "start": 49, "end": 56},
+        {"helix": 22, "forward": false, "start": 49, "end": 56},
+        {"helix": 23, "forward": true, "start": 49, "end": 56},
+        {"helix": 24, "forward": false, "start": 49, "end": 56}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 8, "forward": false, "start": 112, "end": 114},
-        {"helix": 9, "forward": true, "start": 112, "end": 118},
-        {"helix": 14, "forward": false, "start": 112, "end": 118},
-        {"helix": 13, "forward": true, "start": 112, "end": 118},
-        {"helix": 22, "forward": false, "start": 112, "end": 118},
-        {"helix": 23, "forward": true, "start": 112, "end": 118},
-        {"helix": 24, "forward": false, "start": 112, "end": 118}
+        {"helix": 8, "forward": false, "start": 112, "end": 115},
+        {"helix": 9, "forward": true, "start": 112, "end": 119},
+        {"helix": 14, "forward": false, "start": 112, "end": 119},
+        {"helix": 13, "forward": true, "start": 112, "end": 119},
+        {"helix": 22, "forward": false, "start": 112, "end": 119},
+        {"helix": 23, "forward": true, "start": 112, "end": 119},
+        {"helix": 24, "forward": false, "start": 112, "end": 119}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 9, "forward": true, "start": 74, "end": 76},
-        {"helix": 14, "forward": false, "start": 70, "end": 76},
-        {"helix": 13, "forward": true, "start": 70, "end": 76},
-        {"helix": 22, "forward": false, "start": 70, "end": 76},
-        {"helix": 23, "forward": true, "start": 70, "end": 83}
+        {"helix": 9, "forward": true, "start": 74, "end": 77},
+        {"helix": 14, "forward": false, "start": 70, "end": 77},
+        {"helix": 13, "forward": true, "start": 70, "end": 77},
+        {"helix": 22, "forward": false, "start": 70, "end": 77},
+        {"helix": 23, "forward": true, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 21, "forward": true, "start": 84, "end": 90},
-        {"helix": 20, "forward": false, "start": 77, "end": 90},
-        {"helix": 15, "forward": true, "start": 77, "end": 83},
-        {"helix": 14, "forward": false, "start": 77, "end": 83},
-        {"helix": 9, "forward": true, "start": 77, "end": 83}
+        {"helix": 21, "forward": true, "start": 84, "end": 91},
+        {"helix": 20, "forward": false, "start": 77, "end": 91},
+        {"helix": 15, "forward": true, "start": 77, "end": 84},
+        {"helix": 14, "forward": false, "start": 77, "end": 84},
+        {"helix": 9, "forward": true, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 26, "forward": false, "start": 35, "end": 37},
-        {"helix": 21, "forward": true, "start": 35, "end": 41},
-        {"helix": 22, "forward": false, "start": 35, "end": 41},
-        {"helix": 13, "forward": true, "start": 35, "end": 41},
-        {"helix": 12, "forward": false, "start": 35, "end": 41},
-        {"helix": 11, "forward": true, "start": 35, "end": 41}
+        {"helix": 26, "forward": false, "start": 35, "end": 38},
+        {"helix": 21, "forward": true, "start": 35, "end": 42},
+        {"helix": 22, "forward": false, "start": 35, "end": 42},
+        {"helix": 13, "forward": true, "start": 35, "end": 42},
+        {"helix": 12, "forward": false, "start": 35, "end": 42},
+        {"helix": 11, "forward": true, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 27, "forward": true, "start": 60, "end": 62},
-        {"helix": 26, "forward": false, "start": 56, "end": 62},
-        {"helix": 21, "forward": true, "start": 56, "end": 62},
-        {"helix": 22, "forward": false, "start": 56, "end": 62},
-        {"helix": 13, "forward": true, "start": 56, "end": 62},
-        {"helix": 12, "forward": false, "start": 56, "end": 62},
-        {"helix": 11, "forward": true, "start": 56, "end": 62}
+        {"helix": 27, "forward": true, "start": 60, "end": 63},
+        {"helix": 26, "forward": false, "start": 56, "end": 63},
+        {"helix": 21, "forward": true, "start": 56, "end": 63},
+        {"helix": 22, "forward": false, "start": 56, "end": 63},
+        {"helix": 13, "forward": true, "start": 56, "end": 63},
+        {"helix": 12, "forward": false, "start": 56, "end": 63},
+        {"helix": 11, "forward": true, "start": 56, "end": 63}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 27, "forward": true, "start": 102, "end": 104},
-        {"helix": 26, "forward": false, "start": 98, "end": 104},
-        {"helix": 21, "forward": true, "start": 98, "end": 104},
-        {"helix": 22, "forward": false, "start": 98, "end": 104},
-        {"helix": 13, "forward": true, "start": 98, "end": 104},
-        {"helix": 12, "forward": false, "start": 98, "end": 104},
-        {"helix": 11, "forward": true, "start": 98, "end": 104}
+        {"helix": 27, "forward": true, "start": 102, "end": 105},
+        {"helix": 26, "forward": false, "start": 98, "end": 105},
+        {"helix": 21, "forward": true, "start": 98, "end": 105},
+        {"helix": 22, "forward": false, "start": 98, "end": 105},
+        {"helix": 13, "forward": true, "start": 98, "end": 105},
+        {"helix": 12, "forward": false, "start": 98, "end": 105},
+        {"helix": 11, "forward": true, "start": 98, "end": 105}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 27, "forward": true, "start": 123, "end": 125},
-        {"helix": 26, "forward": false, "start": 119, "end": 125},
-        {"helix": 21, "forward": true, "start": 119, "end": 125},
-        {"helix": 22, "forward": false, "start": 119, "end": 125},
-        {"helix": 13, "forward": true, "start": 119, "end": 125},
-        {"helix": 12, "forward": false, "start": 119, "end": 125},
-        {"helix": 11, "forward": true, "start": 119, "end": 125}
+        {"helix": 27, "forward": true, "start": 123, "end": 126},
+        {"helix": 26, "forward": false, "start": 119, "end": 126},
+        {"helix": 21, "forward": true, "start": 119, "end": 126},
+        {"helix": 22, "forward": false, "start": 119, "end": 126},
+        {"helix": 13, "forward": true, "start": 119, "end": 126},
+        {"helix": 12, "forward": false, "start": 119, "end": 126},
+        {"helix": 11, "forward": true, "start": 119, "end": 126}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 12, "forward": false, "start": 42, "end": 48},
-        {"helix": 13, "forward": true, "start": 42, "end": 48},
-        {"helix": 14, "forward": false, "start": 42, "end": 48},
-        {"helix": 15, "forward": true, "start": 42, "end": 48},
-        {"helix": 16, "forward": false, "start": 42, "end": 48},
-        {"helix": 17, "forward": true, "start": 42, "end": 48}
+        {"helix": 12, "forward": false, "start": 42, "end": 49},
+        {"helix": 13, "forward": true, "start": 42, "end": 49},
+        {"helix": 14, "forward": false, "start": 42, "end": 49},
+        {"helix": 15, "forward": true, "start": 42, "end": 49},
+        {"helix": 16, "forward": false, "start": 42, "end": 49},
+        {"helix": 17, "forward": true, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 12, "forward": false, "start": 63, "end": 69},
-        {"helix": 13, "forward": true, "start": 63, "end": 69},
-        {"helix": 14, "forward": false, "start": 63, "end": 69},
-        {"helix": 15, "forward": true, "start": 63, "end": 69},
-        {"helix": 16, "forward": false, "start": 63, "end": 69},
-        {"helix": 17, "forward": true, "start": 63, "end": 69}
+        {"helix": 12, "forward": false, "start": 63, "end": 70},
+        {"helix": 13, "forward": true, "start": 63, "end": 70},
+        {"helix": 14, "forward": false, "start": 63, "end": 70},
+        {"helix": 15, "forward": true, "start": 63, "end": 70},
+        {"helix": 16, "forward": false, "start": 63, "end": 70},
+        {"helix": 17, "forward": true, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 23, "forward": true, "start": 84, "end": 90},
-        {"helix": 22, "forward": false, "start": 77, "end": 90},
-        {"helix": 13, "forward": true, "start": 77, "end": 83},
-        {"helix": 12, "forward": false, "start": 70, "end": 83}
+        {"helix": 23, "forward": true, "start": 84, "end": 91},
+        {"helix": 22, "forward": false, "start": 77, "end": 91},
+        {"helix": 13, "forward": true, "start": 77, "end": 84},
+        {"helix": 12, "forward": false, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 12, "forward": false, "start": 84, "end": 90},
-        {"helix": 13, "forward": true, "start": 84, "end": 97},
-        {"helix": 22, "forward": false, "start": 91, "end": 97},
-        {"helix": 23, "forward": true, "start": 91, "end": 97},
-        {"helix": 24, "forward": false, "start": 91, "end": 97}
+        {"helix": 12, "forward": false, "start": 84, "end": 91},
+        {"helix": 13, "forward": true, "start": 84, "end": 98},
+        {"helix": 22, "forward": false, "start": 91, "end": 98},
+        {"helix": 23, "forward": true, "start": 91, "end": 98},
+        {"helix": 24, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 12, "forward": false, "start": 105, "end": 111},
-        {"helix": 13, "forward": true, "start": 105, "end": 111},
-        {"helix": 14, "forward": false, "start": 105, "end": 111},
-        {"helix": 15, "forward": true, "start": 105, "end": 111},
-        {"helix": 16, "forward": false, "start": 105, "end": 111},
-        {"helix": 17, "forward": true, "start": 105, "end": 111}
+        {"helix": 12, "forward": false, "start": 105, "end": 112},
+        {"helix": 13, "forward": true, "start": 105, "end": 112},
+        {"helix": 14, "forward": false, "start": 105, "end": 112},
+        {"helix": 15, "forward": true, "start": 105, "end": 112},
+        {"helix": 16, "forward": false, "start": 105, "end": 112},
+        {"helix": 17, "forward": true, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 13, "forward": true, "start": 32, "end": 34},
-        {"helix": 22, "forward": false, "start": 28, "end": 34},
-        {"helix": 23, "forward": true, "start": 28, "end": 34},
-        {"helix": 24, "forward": false, "start": 28, "end": 34}
+        {"helix": 13, "forward": true, "start": 32, "end": 35},
+        {"helix": 22, "forward": false, "start": 28, "end": 35},
+        {"helix": 23, "forward": true, "start": 28, "end": 35},
+        {"helix": 24, "forward": false, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 30, "forward": false, "start": 35, "end": 41},
-        {"helix": 29, "forward": true, "start": 35, "end": 41},
-        {"helix": 28, "forward": false, "start": 35, "end": 41},
-        {"helix": 19, "forward": true, "start": 35, "end": 41},
-        {"helix": 20, "forward": false, "start": 35, "end": 41},
-        {"helix": 15, "forward": true, "start": 35, "end": 41},
-        {"helix": 14, "forward": false, "start": 38, "end": 41}
+        {"helix": 30, "forward": false, "start": 35, "end": 42},
+        {"helix": 29, "forward": true, "start": 35, "end": 42},
+        {"helix": 28, "forward": false, "start": 35, "end": 42},
+        {"helix": 19, "forward": true, "start": 35, "end": 42},
+        {"helix": 20, "forward": false, "start": 35, "end": 42},
+        {"helix": 15, "forward": true, "start": 35, "end": 42},
+        {"helix": 14, "forward": false, "start": 38, "end": 42}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 14, "forward": false, "start": 84, "end": 90},
-        {"helix": 15, "forward": true, "start": 84, "end": 97},
-        {"helix": 20, "forward": false, "start": 91, "end": 97},
-        {"helix": 21, "forward": true, "start": 91, "end": 97},
-        {"helix": 26, "forward": false, "start": 91, "end": 97}
+        {"helix": 14, "forward": false, "start": 84, "end": 91},
+        {"helix": 15, "forward": true, "start": 84, "end": 98},
+        {"helix": 20, "forward": false, "start": 91, "end": 98},
+        {"helix": 21, "forward": true, "start": 91, "end": 98},
+        {"helix": 26, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 30, "forward": false, "start": 98, "end": 104},
-        {"helix": 29, "forward": true, "start": 98, "end": 104},
-        {"helix": 28, "forward": false, "start": 98, "end": 104},
-        {"helix": 19, "forward": true, "start": 98, "end": 104},
-        {"helix": 20, "forward": false, "start": 98, "end": 104},
-        {"helix": 15, "forward": true, "start": 98, "end": 104},
-        {"helix": 14, "forward": false, "start": 101, "end": 104}
+        {"helix": 30, "forward": false, "start": 98, "end": 105},
+        {"helix": 29, "forward": true, "start": 98, "end": 105},
+        {"helix": 28, "forward": false, "start": 98, "end": 105},
+        {"helix": 19, "forward": true, "start": 98, "end": 105},
+        {"helix": 20, "forward": false, "start": 98, "end": 105},
+        {"helix": 15, "forward": true, "start": 98, "end": 105},
+        {"helix": 14, "forward": false, "start": 101, "end": 105}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 30, "forward": false, "start": 56, "end": 62},
-        {"helix": 29, "forward": true, "start": 56, "end": 62},
-        {"helix": 28, "forward": false, "start": 56, "end": 62},
-        {"helix": 19, "forward": true, "start": 56, "end": 62},
-        {"helix": 20, "forward": false, "start": 56, "end": 62},
-        {"helix": 15, "forward": true, "start": 56, "end": 59}
+        {"helix": 30, "forward": false, "start": 56, "end": 63},
+        {"helix": 29, "forward": true, "start": 56, "end": 63},
+        {"helix": 28, "forward": false, "start": 56, "end": 63},
+        {"helix": 19, "forward": true, "start": 56, "end": 63},
+        {"helix": 20, "forward": false, "start": 56, "end": 63},
+        {"helix": 15, "forward": true, "start": 56, "end": 60}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 30, "forward": false, "start": 119, "end": 125},
-        {"helix": 29, "forward": true, "start": 119, "end": 125},
-        {"helix": 28, "forward": false, "start": 119, "end": 125},
-        {"helix": 19, "forward": true, "start": 119, "end": 125},
-        {"helix": 20, "forward": false, "start": 119, "end": 125},
-        {"helix": 15, "forward": true, "start": 119, "end": 122}
+        {"helix": 30, "forward": false, "start": 119, "end": 126},
+        {"helix": 29, "forward": true, "start": 119, "end": 126},
+        {"helix": 28, "forward": false, "start": 119, "end": 126},
+        {"helix": 19, "forward": true, "start": 119, "end": 126},
+        {"helix": 20, "forward": false, "start": 119, "end": 126},
+        {"helix": 15, "forward": true, "start": 119, "end": 123}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 16, "forward": false, "start": 84, "end": 90},
-        {"helix": 17, "forward": true, "start": 84, "end": 97},
-        {"helix": 18, "forward": false, "start": 91, "end": 97},
-        {"helix": 19, "forward": true, "start": 91, "end": 97},
-        {"helix": 28, "forward": false, "start": 91, "end": 97}
+        {"helix": 16, "forward": false, "start": 84, "end": 91},
+        {"helix": 17, "forward": true, "start": 84, "end": 98},
+        {"helix": 18, "forward": false, "start": 91, "end": 98},
+        {"helix": 19, "forward": true, "start": 91, "end": 98},
+        {"helix": 28, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 17, "forward": true, "start": 28, "end": 34},
-        {"helix": 18, "forward": false, "start": 28, "end": 34},
-        {"helix": 19, "forward": true, "start": 28, "end": 34},
-        {"helix": 28, "forward": false, "start": 28, "end": 34},
-        {"helix": 27, "forward": true, "start": 28, "end": 34},
-        {"helix": 32, "forward": false, "start": 31, "end": 34}
+        {"helix": 17, "forward": true, "start": 28, "end": 35},
+        {"helix": 18, "forward": false, "start": 28, "end": 35},
+        {"helix": 19, "forward": true, "start": 28, "end": 35},
+        {"helix": 28, "forward": false, "start": 28, "end": 35},
+        {"helix": 27, "forward": true, "start": 28, "end": 35},
+        {"helix": 32, "forward": false, "start": 31, "end": 35}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 17, "forward": true, "start": 49, "end": 55},
-        {"helix": 18, "forward": false, "start": 49, "end": 55},
-        {"helix": 19, "forward": true, "start": 49, "end": 55},
-        {"helix": 28, "forward": false, "start": 49, "end": 55},
-        {"helix": 27, "forward": true, "start": 49, "end": 55},
-        {"helix": 32, "forward": false, "start": 52, "end": 55}
+        {"helix": 17, "forward": true, "start": 49, "end": 56},
+        {"helix": 18, "forward": false, "start": 49, "end": 56},
+        {"helix": 19, "forward": true, "start": 49, "end": 56},
+        {"helix": 28, "forward": false, "start": 49, "end": 56},
+        {"helix": 27, "forward": true, "start": 49, "end": 56},
+        {"helix": 32, "forward": false, "start": 52, "end": 56}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 17, "forward": true, "start": 112, "end": 118},
-        {"helix": 18, "forward": false, "start": 112, "end": 118},
-        {"helix": 19, "forward": true, "start": 112, "end": 118},
-        {"helix": 28, "forward": false, "start": 112, "end": 118},
-        {"helix": 27, "forward": true, "start": 112, "end": 118},
-        {"helix": 32, "forward": false, "start": 115, "end": 118}
+        {"helix": 17, "forward": true, "start": 112, "end": 119},
+        {"helix": 18, "forward": false, "start": 112, "end": 119},
+        {"helix": 19, "forward": true, "start": 112, "end": 119},
+        {"helix": 28, "forward": false, "start": 112, "end": 119},
+        {"helix": 27, "forward": true, "start": 112, "end": 119},
+        {"helix": 32, "forward": false, "start": 115, "end": 119}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 23, "forward": true, "start": 42, "end": 48},
-        {"helix": 22, "forward": false, "start": 42, "end": 48},
-        {"helix": 21, "forward": true, "start": 42, "end": 48},
-        {"helix": 20, "forward": false, "start": 42, "end": 48},
-        {"helix": 19, "forward": true, "start": 42, "end": 48},
-        {"helix": 18, "forward": false, "start": 42, "end": 48}
+        {"helix": 23, "forward": true, "start": 42, "end": 49},
+        {"helix": 22, "forward": false, "start": 42, "end": 49},
+        {"helix": 21, "forward": true, "start": 42, "end": 49},
+        {"helix": 20, "forward": false, "start": 42, "end": 49},
+        {"helix": 19, "forward": true, "start": 42, "end": 49},
+        {"helix": 18, "forward": false, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 23, "forward": true, "start": 63, "end": 69},
-        {"helix": 22, "forward": false, "start": 63, "end": 69},
-        {"helix": 21, "forward": true, "start": 63, "end": 69},
-        {"helix": 20, "forward": false, "start": 63, "end": 69},
-        {"helix": 19, "forward": true, "start": 63, "end": 69},
-        {"helix": 18, "forward": false, "start": 63, "end": 69}
+        {"helix": 23, "forward": true, "start": 63, "end": 70},
+        {"helix": 22, "forward": false, "start": 63, "end": 70},
+        {"helix": 21, "forward": true, "start": 63, "end": 70},
+        {"helix": 20, "forward": false, "start": 63, "end": 70},
+        {"helix": 19, "forward": true, "start": 63, "end": 70},
+        {"helix": 18, "forward": false, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 19, "forward": true, "start": 84, "end": 90},
-        {"helix": 18, "forward": false, "start": 70, "end": 90},
-        {"helix": 19, "forward": true, "start": 70, "end": 76},
-        {"helix": 28, "forward": false, "start": 73, "end": 76}
+        {"helix": 19, "forward": true, "start": 84, "end": 91},
+        {"helix": 18, "forward": false, "start": 70, "end": 91},
+        {"helix": 19, "forward": true, "start": 70, "end": 77},
+        {"helix": 28, "forward": false, "start": 73, "end": 77}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 23, "forward": true, "start": 105, "end": 111},
-        {"helix": 22, "forward": false, "start": 105, "end": 111},
-        {"helix": 21, "forward": true, "start": 105, "end": 111},
-        {"helix": 20, "forward": false, "start": 105, "end": 111},
-        {"helix": 19, "forward": true, "start": 105, "end": 111},
-        {"helix": 18, "forward": false, "start": 105, "end": 111}
+        {"helix": 23, "forward": true, "start": 105, "end": 112},
+        {"helix": 22, "forward": false, "start": 105, "end": 112},
+        {"helix": 21, "forward": true, "start": 105, "end": 112},
+        {"helix": 20, "forward": false, "start": 105, "end": 112},
+        {"helix": 19, "forward": true, "start": 105, "end": 112},
+        {"helix": 18, "forward": false, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 29, "forward": true, "start": 70, "end": 83},
-        {"helix": 28, "forward": false, "start": 77, "end": 83},
-        {"helix": 19, "forward": true, "start": 77, "end": 83}
+        {"helix": 29, "forward": true, "start": 70, "end": 84},
+        {"helix": 28, "forward": false, "start": 77, "end": 84},
+        {"helix": 19, "forward": true, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 20, "forward": false, "start": 28, "end": 30},
-        {"helix": 21, "forward": true, "start": 28, "end": 34},
-        {"helix": 26, "forward": false, "start": 28, "end": 34},
-        {"helix": 25, "forward": true, "start": 28, "end": 34},
-        {"helix": 34, "forward": false, "start": 28, "end": 34},
-        {"helix": 35, "forward": true, "start": 28, "end": 34},
-        {"helix": 36, "forward": false, "start": 28, "end": 34}
+        {"helix": 20, "forward": false, "start": 28, "end": 31},
+        {"helix": 21, "forward": true, "start": 28, "end": 35},
+        {"helix": 26, "forward": false, "start": 28, "end": 35},
+        {"helix": 25, "forward": true, "start": 28, "end": 35},
+        {"helix": 34, "forward": false, "start": 28, "end": 35},
+        {"helix": 35, "forward": true, "start": 28, "end": 35},
+        {"helix": 36, "forward": false, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 20, "forward": false, "start": 49, "end": 51},
-        {"helix": 21, "forward": true, "start": 49, "end": 55},
-        {"helix": 26, "forward": false, "start": 49, "end": 55},
-        {"helix": 25, "forward": true, "start": 49, "end": 55},
-        {"helix": 34, "forward": false, "start": 49, "end": 55},
-        {"helix": 35, "forward": true, "start": 49, "end": 55},
-        {"helix": 36, "forward": false, "start": 49, "end": 55}
+        {"helix": 20, "forward": false, "start": 49, "end": 52},
+        {"helix": 21, "forward": true, "start": 49, "end": 56},
+        {"helix": 26, "forward": false, "start": 49, "end": 56},
+        {"helix": 25, "forward": true, "start": 49, "end": 56},
+        {"helix": 34, "forward": false, "start": 49, "end": 56},
+        {"helix": 35, "forward": true, "start": 49, "end": 56},
+        {"helix": 36, "forward": false, "start": 49, "end": 56}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 20, "forward": false, "start": 70, "end": 72},
-        {"helix": 21, "forward": true, "start": 70, "end": 76},
-        {"helix": 26, "forward": false, "start": 70, "end": 76},
-        {"helix": 25, "forward": true, "start": 70, "end": 76},
-        {"helix": 34, "forward": false, "start": 70, "end": 76},
-        {"helix": 35, "forward": true, "start": 70, "end": 76}
+        {"helix": 20, "forward": false, "start": 70, "end": 73},
+        {"helix": 21, "forward": true, "start": 70, "end": 77},
+        {"helix": 26, "forward": false, "start": 70, "end": 77},
+        {"helix": 25, "forward": true, "start": 70, "end": 77},
+        {"helix": 34, "forward": false, "start": 70, "end": 77},
+        {"helix": 35, "forward": true, "start": 70, "end": 77}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 20, "forward": false, "start": 112, "end": 114},
-        {"helix": 21, "forward": true, "start": 112, "end": 118},
-        {"helix": 26, "forward": false, "start": 112, "end": 118},
-        {"helix": 25, "forward": true, "start": 112, "end": 118},
-        {"helix": 34, "forward": false, "start": 112, "end": 118},
-        {"helix": 35, "forward": true, "start": 112, "end": 118},
-        {"helix": 36, "forward": false, "start": 112, "end": 118}
+        {"helix": 20, "forward": false, "start": 112, "end": 115},
+        {"helix": 21, "forward": true, "start": 112, "end": 119},
+        {"helix": 26, "forward": false, "start": 112, "end": 119},
+        {"helix": 25, "forward": true, "start": 112, "end": 119},
+        {"helix": 34, "forward": false, "start": 112, "end": 119},
+        {"helix": 35, "forward": true, "start": 112, "end": 119},
+        {"helix": 36, "forward": false, "start": 112, "end": 119}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 33, "forward": true, "start": 84, "end": 90},
-        {"helix": 32, "forward": false, "start": 77, "end": 90},
-        {"helix": 27, "forward": true, "start": 77, "end": 83},
-        {"helix": 26, "forward": false, "start": 77, "end": 83},
-        {"helix": 21, "forward": true, "start": 77, "end": 83}
+        {"helix": 33, "forward": true, "start": 84, "end": 91},
+        {"helix": 32, "forward": false, "start": 77, "end": 91},
+        {"helix": 27, "forward": true, "start": 77, "end": 84},
+        {"helix": 26, "forward": false, "start": 77, "end": 84},
+        {"helix": 21, "forward": true, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 39, "forward": true, "start": 39, "end": 41},
-        {"helix": 38, "forward": false, "start": 35, "end": 41},
-        {"helix": 33, "forward": true, "start": 35, "end": 41},
-        {"helix": 34, "forward": false, "start": 35, "end": 41},
-        {"helix": 25, "forward": true, "start": 35, "end": 41},
-        {"helix": 24, "forward": false, "start": 35, "end": 41},
-        {"helix": 23, "forward": true, "start": 35, "end": 41}
+        {"helix": 39, "forward": true, "start": 39, "end": 42},
+        {"helix": 38, "forward": false, "start": 35, "end": 42},
+        {"helix": 33, "forward": true, "start": 35, "end": 42},
+        {"helix": 34, "forward": false, "start": 35, "end": 42},
+        {"helix": 25, "forward": true, "start": 35, "end": 42},
+        {"helix": 24, "forward": false, "start": 35, "end": 42},
+        {"helix": 23, "forward": true, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 38, "forward": false, "start": 56, "end": 58},
-        {"helix": 33, "forward": true, "start": 56, "end": 62},
-        {"helix": 34, "forward": false, "start": 56, "end": 62},
-        {"helix": 25, "forward": true, "start": 56, "end": 62},
-        {"helix": 24, "forward": false, "start": 56, "end": 62},
-        {"helix": 23, "forward": true, "start": 56, "end": 62}
+        {"helix": 38, "forward": false, "start": 56, "end": 59},
+        {"helix": 33, "forward": true, "start": 56, "end": 63},
+        {"helix": 34, "forward": false, "start": 56, "end": 63},
+        {"helix": 25, "forward": true, "start": 56, "end": 63},
+        {"helix": 24, "forward": false, "start": 56, "end": 63},
+        {"helix": 23, "forward": true, "start": 56, "end": 63}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 39, "forward": true, "start": 102, "end": 104},
-        {"helix": 38, "forward": false, "start": 98, "end": 104},
-        {"helix": 33, "forward": true, "start": 98, "end": 104},
-        {"helix": 34, "forward": false, "start": 98, "end": 104},
-        {"helix": 25, "forward": true, "start": 98, "end": 104},
-        {"helix": 24, "forward": false, "start": 98, "end": 104},
-        {"helix": 23, "forward": true, "start": 98, "end": 104}
+        {"helix": 39, "forward": true, "start": 102, "end": 105},
+        {"helix": 38, "forward": false, "start": 98, "end": 105},
+        {"helix": 33, "forward": true, "start": 98, "end": 105},
+        {"helix": 34, "forward": false, "start": 98, "end": 105},
+        {"helix": 25, "forward": true, "start": 98, "end": 105},
+        {"helix": 24, "forward": false, "start": 98, "end": 105},
+        {"helix": 23, "forward": true, "start": 98, "end": 105}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 39, "forward": true, "start": 123, "end": 125},
-        {"helix": 38, "forward": false, "start": 119, "end": 125},
-        {"helix": 33, "forward": true, "start": 119, "end": 125},
-        {"helix": 34, "forward": false, "start": 119, "end": 125},
-        {"helix": 25, "forward": true, "start": 119, "end": 125},
-        {"helix": 24, "forward": false, "start": 119, "end": 125},
-        {"helix": 23, "forward": true, "start": 119, "end": 125}
+        {"helix": 39, "forward": true, "start": 123, "end": 126},
+        {"helix": 38, "forward": false, "start": 119, "end": 126},
+        {"helix": 33, "forward": true, "start": 119, "end": 126},
+        {"helix": 34, "forward": false, "start": 119, "end": 126},
+        {"helix": 25, "forward": true, "start": 119, "end": 126},
+        {"helix": 24, "forward": false, "start": 119, "end": 126},
+        {"helix": 23, "forward": true, "start": 119, "end": 126}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 24, "forward": false, "start": 42, "end": 48},
-        {"helix": 25, "forward": true, "start": 42, "end": 48},
-        {"helix": 26, "forward": false, "start": 42, "end": 48},
-        {"helix": 27, "forward": true, "start": 42, "end": 48},
-        {"helix": 28, "forward": false, "start": 42, "end": 48},
-        {"helix": 29, "forward": true, "start": 42, "end": 48}
+        {"helix": 24, "forward": false, "start": 42, "end": 49},
+        {"helix": 25, "forward": true, "start": 42, "end": 49},
+        {"helix": 26, "forward": false, "start": 42, "end": 49},
+        {"helix": 27, "forward": true, "start": 42, "end": 49},
+        {"helix": 28, "forward": false, "start": 42, "end": 49},
+        {"helix": 29, "forward": true, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 24, "forward": false, "start": 63, "end": 69},
-        {"helix": 25, "forward": true, "start": 63, "end": 69},
-        {"helix": 26, "forward": false, "start": 63, "end": 69},
-        {"helix": 27, "forward": true, "start": 63, "end": 69},
-        {"helix": 28, "forward": false, "start": 63, "end": 69},
-        {"helix": 29, "forward": true, "start": 63, "end": 69}
+        {"helix": 24, "forward": false, "start": 63, "end": 70},
+        {"helix": 25, "forward": true, "start": 63, "end": 70},
+        {"helix": 26, "forward": false, "start": 63, "end": 70},
+        {"helix": 27, "forward": true, "start": 63, "end": 70},
+        {"helix": 28, "forward": false, "start": 63, "end": 70},
+        {"helix": 29, "forward": true, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 35, "forward": true, "start": 77, "end": 90},
-        {"helix": 34, "forward": false, "start": 77, "end": 90},
-        {"helix": 25, "forward": true, "start": 77, "end": 83},
-        {"helix": 24, "forward": false, "start": 70, "end": 83}
+        {"helix": 35, "forward": true, "start": 77, "end": 91},
+        {"helix": 34, "forward": false, "start": 77, "end": 91},
+        {"helix": 25, "forward": true, "start": 77, "end": 84},
+        {"helix": 24, "forward": false, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 24, "forward": false, "start": 84, "end": 90},
-        {"helix": 25, "forward": true, "start": 84, "end": 97},
-        {"helix": 34, "forward": false, "start": 91, "end": 97},
-        {"helix": 35, "forward": true, "start": 91, "end": 97},
-        {"helix": 36, "forward": false, "start": 91, "end": 97}
+        {"helix": 24, "forward": false, "start": 84, "end": 91},
+        {"helix": 25, "forward": true, "start": 84, "end": 98},
+        {"helix": 34, "forward": false, "start": 91, "end": 98},
+        {"helix": 35, "forward": true, "start": 91, "end": 98},
+        {"helix": 36, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 24, "forward": false, "start": 105, "end": 111},
-        {"helix": 25, "forward": true, "start": 105, "end": 111},
-        {"helix": 26, "forward": false, "start": 105, "end": 111},
-        {"helix": 27, "forward": true, "start": 105, "end": 111},
-        {"helix": 28, "forward": false, "start": 105, "end": 111},
-        {"helix": 29, "forward": true, "start": 105, "end": 111}
+        {"helix": 24, "forward": false, "start": 105, "end": 112},
+        {"helix": 25, "forward": true, "start": 105, "end": 112},
+        {"helix": 26, "forward": false, "start": 105, "end": 112},
+        {"helix": 27, "forward": true, "start": 105, "end": 112},
+        {"helix": 28, "forward": false, "start": 105, "end": 112},
+        {"helix": 29, "forward": true, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 42, "forward": false, "start": 35, "end": 41},
-        {"helix": 41, "forward": true, "start": 35, "end": 41},
-        {"helix": 40, "forward": false, "start": 35, "end": 41},
-        {"helix": 31, "forward": true, "start": 35, "end": 41},
-        {"helix": 32, "forward": false, "start": 35, "end": 41},
-        {"helix": 27, "forward": true, "start": 35, "end": 41},
-        {"helix": 26, "forward": false, "start": 38, "end": 41}
+        {"helix": 42, "forward": false, "start": 35, "end": 42},
+        {"helix": 41, "forward": true, "start": 35, "end": 42},
+        {"helix": 40, "forward": false, "start": 35, "end": 42},
+        {"helix": 31, "forward": true, "start": 35, "end": 42},
+        {"helix": 32, "forward": false, "start": 35, "end": 42},
+        {"helix": 27, "forward": true, "start": 35, "end": 42},
+        {"helix": 26, "forward": false, "start": 38, "end": 42}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 26, "forward": false, "start": 84, "end": 90},
-        {"helix": 27, "forward": true, "start": 84, "end": 97},
-        {"helix": 32, "forward": false, "start": 91, "end": 97},
-        {"helix": 33, "forward": true, "start": 91, "end": 97},
-        {"helix": 38, "forward": false, "start": 91, "end": 97}
+        {"helix": 26, "forward": false, "start": 84, "end": 91},
+        {"helix": 27, "forward": true, "start": 84, "end": 98},
+        {"helix": 32, "forward": false, "start": 91, "end": 98},
+        {"helix": 33, "forward": true, "start": 91, "end": 98},
+        {"helix": 38, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 42, "forward": false, "start": 56, "end": 62},
-        {"helix": 41, "forward": true, "start": 56, "end": 62},
-        {"helix": 40, "forward": false, "start": 56, "end": 62},
-        {"helix": 31, "forward": true, "start": 56, "end": 62},
-        {"helix": 32, "forward": false, "start": 56, "end": 62},
-        {"helix": 27, "forward": true, "start": 56, "end": 59}
+        {"helix": 42, "forward": false, "start": 56, "end": 63},
+        {"helix": 41, "forward": true, "start": 56, "end": 63},
+        {"helix": 40, "forward": false, "start": 56, "end": 63},
+        {"helix": 31, "forward": true, "start": 56, "end": 63},
+        {"helix": 32, "forward": false, "start": 56, "end": 63},
+        {"helix": 27, "forward": true, "start": 56, "end": 60}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 28, "forward": false, "start": 70, "end": 72},
-        {"helix": 27, "forward": true, "start": 70, "end": 76},
-        {"helix": 32, "forward": false, "start": 70, "end": 76},
-        {"helix": 33, "forward": true, "start": 70, "end": 76},
-        {"helix": 38, "forward": false, "start": 73, "end": 76}
+        {"helix": 28, "forward": false, "start": 70, "end": 73},
+        {"helix": 27, "forward": true, "start": 70, "end": 77},
+        {"helix": 32, "forward": false, "start": 70, "end": 77},
+        {"helix": 33, "forward": true, "start": 70, "end": 77},
+        {"helix": 38, "forward": false, "start": 73, "end": 77}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 42, "forward": false, "start": 98, "end": 104},
-        {"helix": 41, "forward": true, "start": 98, "end": 104},
-        {"helix": 40, "forward": false, "start": 98, "end": 104},
-        {"helix": 31, "forward": true, "start": 98, "end": 104},
-        {"helix": 32, "forward": false, "start": 98, "end": 104},
-        {"helix": 27, "forward": true, "start": 98, "end": 101}
+        {"helix": 42, "forward": false, "start": 98, "end": 105},
+        {"helix": 41, "forward": true, "start": 98, "end": 105},
+        {"helix": 40, "forward": false, "start": 98, "end": 105},
+        {"helix": 31, "forward": true, "start": 98, "end": 105},
+        {"helix": 32, "forward": false, "start": 98, "end": 105},
+        {"helix": 27, "forward": true, "start": 98, "end": 102}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 42, "forward": false, "start": 119, "end": 125},
-        {"helix": 41, "forward": true, "start": 119, "end": 125},
-        {"helix": 40, "forward": false, "start": 119, "end": 125},
-        {"helix": 31, "forward": true, "start": 119, "end": 125},
-        {"helix": 32, "forward": false, "start": 119, "end": 125},
-        {"helix": 27, "forward": true, "start": 119, "end": 122}
+        {"helix": 42, "forward": false, "start": 119, "end": 126},
+        {"helix": 41, "forward": true, "start": 119, "end": 126},
+        {"helix": 40, "forward": false, "start": 119, "end": 126},
+        {"helix": 31, "forward": true, "start": 119, "end": 126},
+        {"helix": 32, "forward": false, "start": 119, "end": 126},
+        {"helix": 27, "forward": true, "start": 119, "end": 123}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 28, "forward": false, "start": 84, "end": 90},
-        {"helix": 29, "forward": true, "start": 84, "end": 97},
-        {"helix": 30, "forward": false, "start": 91, "end": 97},
-        {"helix": 31, "forward": true, "start": 91, "end": 97},
-        {"helix": 40, "forward": false, "start": 91, "end": 97}
+        {"helix": 28, "forward": false, "start": 84, "end": 91},
+        {"helix": 29, "forward": true, "start": 84, "end": 98},
+        {"helix": 30, "forward": false, "start": 91, "end": 98},
+        {"helix": 31, "forward": true, "start": 91, "end": 98},
+        {"helix": 40, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 29, "forward": true, "start": 28, "end": 34},
-        {"helix": 30, "forward": false, "start": 28, "end": 34},
-        {"helix": 31, "forward": true, "start": 28, "end": 34},
-        {"helix": 40, "forward": false, "start": 28, "end": 34},
-        {"helix": 39, "forward": true, "start": 28, "end": 34},
-        {"helix": 44, "forward": false, "start": 31, "end": 34}
+        {"helix": 29, "forward": true, "start": 28, "end": 35},
+        {"helix": 30, "forward": false, "start": 28, "end": 35},
+        {"helix": 31, "forward": true, "start": 28, "end": 35},
+        {"helix": 40, "forward": false, "start": 28, "end": 35},
+        {"helix": 39, "forward": true, "start": 28, "end": 35},
+        {"helix": 44, "forward": false, "start": 31, "end": 35}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 29, "forward": true, "start": 49, "end": 55},
-        {"helix": 30, "forward": false, "start": 49, "end": 55},
-        {"helix": 31, "forward": true, "start": 49, "end": 55},
-        {"helix": 40, "forward": false, "start": 49, "end": 55},
-        {"helix": 39, "forward": true, "start": 49, "end": 55},
-        {"helix": 44, "forward": false, "start": 52, "end": 55}
+        {"helix": 29, "forward": true, "start": 49, "end": 56},
+        {"helix": 30, "forward": false, "start": 49, "end": 56},
+        {"helix": 31, "forward": true, "start": 49, "end": 56},
+        {"helix": 40, "forward": false, "start": 49, "end": 56},
+        {"helix": 39, "forward": true, "start": 49, "end": 56},
+        {"helix": 44, "forward": false, "start": 52, "end": 56}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 29, "forward": true, "start": 112, "end": 118},
-        {"helix": 30, "forward": false, "start": 112, "end": 118},
-        {"helix": 31, "forward": true, "start": 112, "end": 118},
-        {"helix": 40, "forward": false, "start": 112, "end": 118},
-        {"helix": 39, "forward": true, "start": 112, "end": 118},
-        {"helix": 44, "forward": false, "start": 115, "end": 118}
+        {"helix": 29, "forward": true, "start": 112, "end": 119},
+        {"helix": 30, "forward": false, "start": 112, "end": 119},
+        {"helix": 31, "forward": true, "start": 112, "end": 119},
+        {"helix": 40, "forward": false, "start": 112, "end": 119},
+        {"helix": 39, "forward": true, "start": 112, "end": 119},
+        {"helix": 44, "forward": false, "start": 115, "end": 119}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 35, "forward": true, "start": 42, "end": 48},
-        {"helix": 34, "forward": false, "start": 42, "end": 48},
-        {"helix": 33, "forward": true, "start": 42, "end": 48},
-        {"helix": 32, "forward": false, "start": 42, "end": 48},
-        {"helix": 31, "forward": true, "start": 42, "end": 48},
-        {"helix": 30, "forward": false, "start": 42, "end": 48}
+        {"helix": 35, "forward": true, "start": 42, "end": 49},
+        {"helix": 34, "forward": false, "start": 42, "end": 49},
+        {"helix": 33, "forward": true, "start": 42, "end": 49},
+        {"helix": 32, "forward": false, "start": 42, "end": 49},
+        {"helix": 31, "forward": true, "start": 42, "end": 49},
+        {"helix": 30, "forward": false, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 35, "forward": true, "start": 63, "end": 69},
-        {"helix": 34, "forward": false, "start": 63, "end": 69},
-        {"helix": 33, "forward": true, "start": 63, "end": 69},
-        {"helix": 32, "forward": false, "start": 63, "end": 69},
-        {"helix": 31, "forward": true, "start": 63, "end": 69},
-        {"helix": 30, "forward": false, "start": 63, "end": 69}
+        {"helix": 35, "forward": true, "start": 63, "end": 70},
+        {"helix": 34, "forward": false, "start": 63, "end": 70},
+        {"helix": 33, "forward": true, "start": 63, "end": 70},
+        {"helix": 32, "forward": false, "start": 63, "end": 70},
+        {"helix": 31, "forward": true, "start": 63, "end": 70},
+        {"helix": 30, "forward": false, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 30, "forward": false, "start": 70, "end": 76},
-        {"helix": 31, "forward": true, "start": 70, "end": 76},
-        {"helix": 40, "forward": false, "start": 70, "end": 76},
-        {"helix": 39, "forward": true, "start": 70, "end": 76},
-        {"helix": 44, "forward": false, "start": 70, "end": 76},
-        {"helix": 45, "forward": true, "start": 70, "end": 73}
+        {"helix": 30, "forward": false, "start": 70, "end": 77},
+        {"helix": 31, "forward": true, "start": 70, "end": 77},
+        {"helix": 40, "forward": false, "start": 70, "end": 77},
+        {"helix": 39, "forward": true, "start": 70, "end": 77},
+        {"helix": 44, "forward": false, "start": 70, "end": 77},
+        {"helix": 45, "forward": true, "start": 70, "end": 74}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 41, "forward": true, "start": 70, "end": 83},
-        {"helix": 40, "forward": false, "start": 77, "end": 83},
-        {"helix": 31, "forward": true, "start": 77, "end": 90},
-        {"helix": 30, "forward": false, "start": 77, "end": 90}
+        {"helix": 41, "forward": true, "start": 70, "end": 84},
+        {"helix": 40, "forward": false, "start": 77, "end": 84},
+        {"helix": 31, "forward": true, "start": 77, "end": 91},
+        {"helix": 30, "forward": false, "start": 77, "end": 91}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 35, "forward": true, "start": 105, "end": 111},
-        {"helix": 34, "forward": false, "start": 105, "end": 111},
-        {"helix": 33, "forward": true, "start": 105, "end": 111},
-        {"helix": 32, "forward": false, "start": 105, "end": 111},
-        {"helix": 31, "forward": true, "start": 105, "end": 111},
-        {"helix": 30, "forward": false, "start": 105, "end": 111}
+        {"helix": 35, "forward": true, "start": 105, "end": 112},
+        {"helix": 34, "forward": false, "start": 105, "end": 112},
+        {"helix": 33, "forward": true, "start": 105, "end": 112},
+        {"helix": 32, "forward": false, "start": 105, "end": 112},
+        {"helix": 31, "forward": true, "start": 105, "end": 112},
+        {"helix": 30, "forward": false, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 32, "forward": false, "start": 28, "end": 30},
-        {"helix": 33, "forward": true, "start": 28, "end": 34},
-        {"helix": 38, "forward": false, "start": 28, "end": 34},
-        {"helix": 37, "forward": true, "start": 28, "end": 34},
-        {"helix": 46, "forward": false, "start": 28, "end": 34},
-        {"helix": 47, "forward": true, "start": 28, "end": 34},
-        {"helix": 48, "forward": false, "start": 28, "end": 34}
+        {"helix": 32, "forward": false, "start": 28, "end": 31},
+        {"helix": 33, "forward": true, "start": 28, "end": 35},
+        {"helix": 38, "forward": false, "start": 28, "end": 35},
+        {"helix": 37, "forward": true, "start": 28, "end": 35},
+        {"helix": 46, "forward": false, "start": 28, "end": 35},
+        {"helix": 47, "forward": true, "start": 28, "end": 35},
+        {"helix": 48, "forward": false, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 32, "forward": false, "start": 49, "end": 51},
-        {"helix": 33, "forward": true, "start": 49, "end": 55},
-        {"helix": 38, "forward": false, "start": 49, "end": 55},
-        {"helix": 37, "forward": true, "start": 49, "end": 55},
-        {"helix": 46, "forward": false, "start": 49, "end": 55},
-        {"helix": 47, "forward": true, "start": 49, "end": 55},
-        {"helix": 48, "forward": false, "start": 49, "end": 55}
+        {"helix": 32, "forward": false, "start": 49, "end": 52},
+        {"helix": 33, "forward": true, "start": 49, "end": 56},
+        {"helix": 38, "forward": false, "start": 49, "end": 56},
+        {"helix": 37, "forward": true, "start": 49, "end": 56},
+        {"helix": 46, "forward": false, "start": 49, "end": 56},
+        {"helix": 47, "forward": true, "start": 49, "end": 56},
+        {"helix": 48, "forward": false, "start": 49, "end": 56}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 32, "forward": false, "start": 112, "end": 114},
-        {"helix": 33, "forward": true, "start": 112, "end": 118},
-        {"helix": 38, "forward": false, "start": 112, "end": 118},
-        {"helix": 37, "forward": true, "start": 112, "end": 118},
-        {"helix": 46, "forward": false, "start": 112, "end": 118},
-        {"helix": 47, "forward": true, "start": 112, "end": 118},
-        {"helix": 48, "forward": false, "start": 112, "end": 118}
+        {"helix": 32, "forward": false, "start": 112, "end": 115},
+        {"helix": 33, "forward": true, "start": 112, "end": 119},
+        {"helix": 38, "forward": false, "start": 112, "end": 119},
+        {"helix": 37, "forward": true, "start": 112, "end": 119},
+        {"helix": 46, "forward": false, "start": 112, "end": 119},
+        {"helix": 47, "forward": true, "start": 112, "end": 119},
+        {"helix": 48, "forward": false, "start": 112, "end": 119}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 45, "forward": true, "start": 84, "end": 90},
-        {"helix": 44, "forward": false, "start": 77, "end": 90},
-        {"helix": 39, "forward": true, "start": 77, "end": 83},
-        {"helix": 38, "forward": false, "start": 77, "end": 83},
-        {"helix": 33, "forward": true, "start": 77, "end": 83}
+        {"helix": 45, "forward": true, "start": 84, "end": 91},
+        {"helix": 44, "forward": false, "start": 77, "end": 91},
+        {"helix": 39, "forward": true, "start": 77, "end": 84},
+        {"helix": 38, "forward": false, "start": 77, "end": 84},
+        {"helix": 33, "forward": true, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 46, "forward": false, "start": 35, "end": 37},
-        {"helix": 37, "forward": true, "start": 35, "end": 41},
-        {"helix": 36, "forward": false, "start": 35, "end": 41},
-        {"helix": 35, "forward": true, "start": 35, "end": 41}
+        {"helix": 46, "forward": false, "start": 35, "end": 38},
+        {"helix": 37, "forward": true, "start": 35, "end": 42},
+        {"helix": 36, "forward": false, "start": 35, "end": 42},
+        {"helix": 35, "forward": true, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 51, "forward": true, "start": 60, "end": 62},
-        {"helix": 50, "forward": false, "start": 56, "end": 62},
-        {"helix": 45, "forward": true, "start": 56, "end": 62},
-        {"helix": 46, "forward": false, "start": 56, "end": 62},
-        {"helix": 37, "forward": true, "start": 56, "end": 62},
-        {"helix": 36, "forward": false, "start": 56, "end": 62},
-        {"helix": 35, "forward": true, "start": 56, "end": 62}
+        {"helix": 51, "forward": true, "start": 60, "end": 63},
+        {"helix": 50, "forward": false, "start": 56, "end": 63},
+        {"helix": 45, "forward": true, "start": 56, "end": 63},
+        {"helix": 46, "forward": false, "start": 56, "end": 63},
+        {"helix": 37, "forward": true, "start": 56, "end": 63},
+        {"helix": 36, "forward": false, "start": 56, "end": 63},
+        {"helix": 35, "forward": true, "start": 56, "end": 63}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 45, "forward": true, "start": 102, "end": 104},
-        {"helix": 46, "forward": false, "start": 98, "end": 104},
-        {"helix": 37, "forward": true, "start": 98, "end": 104},
-        {"helix": 36, "forward": false, "start": 98, "end": 104},
-        {"helix": 35, "forward": true, "start": 98, "end": 104}
+        {"helix": 45, "forward": true, "start": 102, "end": 105},
+        {"helix": 46, "forward": false, "start": 98, "end": 105},
+        {"helix": 37, "forward": true, "start": 98, "end": 105},
+        {"helix": 36, "forward": false, "start": 98, "end": 105},
+        {"helix": 35, "forward": true, "start": 98, "end": 105}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 51, "forward": true, "start": 123, "end": 125},
-        {"helix": 50, "forward": false, "start": 119, "end": 125},
-        {"helix": 45, "forward": true, "start": 119, "end": 125},
-        {"helix": 46, "forward": false, "start": 119, "end": 125},
-        {"helix": 37, "forward": true, "start": 119, "end": 125},
-        {"helix": 36, "forward": false, "start": 119, "end": 125},
-        {"helix": 35, "forward": true, "start": 119, "end": 125}
+        {"helix": 51, "forward": true, "start": 123, "end": 126},
+        {"helix": 50, "forward": false, "start": 119, "end": 126},
+        {"helix": 45, "forward": true, "start": 119, "end": 126},
+        {"helix": 46, "forward": false, "start": 119, "end": 126},
+        {"helix": 37, "forward": true, "start": 119, "end": 126},
+        {"helix": 36, "forward": false, "start": 119, "end": 126},
+        {"helix": 35, "forward": true, "start": 119, "end": 126}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 36, "forward": false, "start": 42, "end": 48},
-        {"helix": 37, "forward": true, "start": 42, "end": 48},
-        {"helix": 38, "forward": false, "start": 42, "end": 48},
-        {"helix": 39, "forward": true, "start": 42, "end": 48},
-        {"helix": 40, "forward": false, "start": 42, "end": 48},
-        {"helix": 41, "forward": true, "start": 42, "end": 48}
+        {"helix": 36, "forward": false, "start": 42, "end": 49},
+        {"helix": 37, "forward": true, "start": 42, "end": 49},
+        {"helix": 38, "forward": false, "start": 42, "end": 49},
+        {"helix": 39, "forward": true, "start": 42, "end": 49},
+        {"helix": 40, "forward": false, "start": 42, "end": 49},
+        {"helix": 41, "forward": true, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 36, "forward": false, "start": 63, "end": 69},
-        {"helix": 37, "forward": true, "start": 63, "end": 69},
-        {"helix": 38, "forward": false, "start": 63, "end": 69},
-        {"helix": 39, "forward": true, "start": 63, "end": 69},
-        {"helix": 40, "forward": false, "start": 63, "end": 69},
-        {"helix": 41, "forward": true, "start": 63, "end": 69}
+        {"helix": 36, "forward": false, "start": 63, "end": 70},
+        {"helix": 37, "forward": true, "start": 63, "end": 70},
+        {"helix": 38, "forward": false, "start": 63, "end": 70},
+        {"helix": 39, "forward": true, "start": 63, "end": 70},
+        {"helix": 40, "forward": false, "start": 63, "end": 70},
+        {"helix": 41, "forward": true, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 47, "forward": true, "start": 77, "end": 90},
-        {"helix": 46, "forward": false, "start": 77, "end": 90},
-        {"helix": 37, "forward": true, "start": 77, "end": 83},
-        {"helix": 36, "forward": false, "start": 70, "end": 83}
+        {"helix": 47, "forward": true, "start": 77, "end": 91},
+        {"helix": 46, "forward": false, "start": 77, "end": 91},
+        {"helix": 37, "forward": true, "start": 77, "end": 84},
+        {"helix": 36, "forward": false, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 36, "forward": false, "start": 84, "end": 90},
-        {"helix": 37, "forward": true, "start": 84, "end": 97},
-        {"helix": 46, "forward": false, "start": 91, "end": 97},
-        {"helix": 47, "forward": true, "start": 91, "end": 97},
-        {"helix": 48, "forward": false, "start": 91, "end": 97}
+        {"helix": 36, "forward": false, "start": 84, "end": 91},
+        {"helix": 37, "forward": true, "start": 84, "end": 98},
+        {"helix": 46, "forward": false, "start": 91, "end": 98},
+        {"helix": 47, "forward": true, "start": 91, "end": 98},
+        {"helix": 48, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 36, "forward": false, "start": 105, "end": 111},
-        {"helix": 37, "forward": true, "start": 105, "end": 111},
-        {"helix": 38, "forward": false, "start": 105, "end": 111},
-        {"helix": 39, "forward": true, "start": 105, "end": 111},
-        {"helix": 40, "forward": false, "start": 105, "end": 111},
-        {"helix": 41, "forward": true, "start": 105, "end": 111}
+        {"helix": 36, "forward": false, "start": 105, "end": 112},
+        {"helix": 37, "forward": true, "start": 105, "end": 112},
+        {"helix": 38, "forward": false, "start": 105, "end": 112},
+        {"helix": 39, "forward": true, "start": 105, "end": 112},
+        {"helix": 40, "forward": false, "start": 105, "end": 112},
+        {"helix": 41, "forward": true, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 38, "forward": false, "start": 70, "end": 72},
-        {"helix": 37, "forward": true, "start": 70, "end": 76},
-        {"helix": 46, "forward": false, "start": 70, "end": 76},
-        {"helix": 47, "forward": true, "start": 70, "end": 76}
+        {"helix": 38, "forward": false, "start": 70, "end": 73},
+        {"helix": 37, "forward": true, "start": 70, "end": 77},
+        {"helix": 46, "forward": false, "start": 70, "end": 77},
+        {"helix": 47, "forward": true, "start": 70, "end": 77}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 54, "forward": false, "start": 56, "end": 62},
-        {"helix": 53, "forward": true, "start": 56, "end": 62},
-        {"helix": 52, "forward": false, "start": 56, "end": 62},
-        {"helix": 43, "forward": true, "start": 56, "end": 62},
-        {"helix": 44, "forward": false, "start": 56, "end": 62},
-        {"helix": 39, "forward": true, "start": 56, "end": 62},
-        {"helix": 38, "forward": false, "start": 59, "end": 62}
+        {"helix": 54, "forward": false, "start": 56, "end": 63},
+        {"helix": 53, "forward": true, "start": 56, "end": 63},
+        {"helix": 52, "forward": false, "start": 56, "end": 63},
+        {"helix": 43, "forward": true, "start": 56, "end": 63},
+        {"helix": 44, "forward": false, "start": 56, "end": 63},
+        {"helix": 39, "forward": true, "start": 56, "end": 63},
+        {"helix": 38, "forward": false, "start": 59, "end": 63}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 38, "forward": false, "start": 84, "end": 90},
-        {"helix": 39, "forward": true, "start": 84, "end": 97},
-        {"helix": 44, "forward": false, "start": 91, "end": 97},
-        {"helix": 45, "forward": true, "start": 91, "end": 97},
-        {"helix": 50, "forward": false, "start": 91, "end": 97}
+        {"helix": 38, "forward": false, "start": 84, "end": 91},
+        {"helix": 39, "forward": true, "start": 84, "end": 98},
+        {"helix": 44, "forward": false, "start": 91, "end": 98},
+        {"helix": 45, "forward": true, "start": 91, "end": 98},
+        {"helix": 50, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#f7931e",
       "substrands": [
-        {"helix": 54, "forward": false, "start": 35, "end": 41},
-        {"helix": 53, "forward": true, "start": 35, "end": 41},
-        {"helix": 52, "forward": false, "start": 35, "end": 41},
-        {"helix": 43, "forward": true, "start": 35, "end": 41},
-        {"helix": 44, "forward": false, "start": 35, "end": 41},
-        {"helix": 39, "forward": true, "start": 35, "end": 38}
+        {"helix": 54, "forward": false, "start": 35, "end": 42},
+        {"helix": 53, "forward": true, "start": 35, "end": 42},
+        {"helix": 52, "forward": false, "start": 35, "end": 42},
+        {"helix": 43, "forward": true, "start": 35, "end": 42},
+        {"helix": 44, "forward": false, "start": 35, "end": 42},
+        {"helix": 39, "forward": true, "start": 35, "end": 39}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 54, "forward": false, "start": 98, "end": 104},
-        {"helix": 53, "forward": true, "start": 98, "end": 104},
-        {"helix": 52, "forward": false, "start": 98, "end": 104},
-        {"helix": 43, "forward": true, "start": 98, "end": 104},
-        {"helix": 44, "forward": false, "start": 98, "end": 104},
-        {"helix": 39, "forward": true, "start": 98, "end": 101}
+        {"helix": 54, "forward": false, "start": 98, "end": 105},
+        {"helix": 53, "forward": true, "start": 98, "end": 105},
+        {"helix": 52, "forward": false, "start": 98, "end": 105},
+        {"helix": 43, "forward": true, "start": 98, "end": 105},
+        {"helix": 44, "forward": false, "start": 98, "end": 105},
+        {"helix": 39, "forward": true, "start": 98, "end": 102}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 54, "forward": false, "start": 119, "end": 125},
-        {"helix": 53, "forward": true, "start": 119, "end": 125},
-        {"helix": 52, "forward": false, "start": 119, "end": 125},
-        {"helix": 43, "forward": true, "start": 119, "end": 125},
-        {"helix": 44, "forward": false, "start": 119, "end": 125},
-        {"helix": 39, "forward": true, "start": 119, "end": 122}
+        {"helix": 54, "forward": false, "start": 119, "end": 126},
+        {"helix": 53, "forward": true, "start": 119, "end": 126},
+        {"helix": 52, "forward": false, "start": 119, "end": 126},
+        {"helix": 43, "forward": true, "start": 119, "end": 126},
+        {"helix": 44, "forward": false, "start": 119, "end": 126},
+        {"helix": 39, "forward": true, "start": 119, "end": 123}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 40, "forward": false, "start": 84, "end": 90},
-        {"helix": 41, "forward": true, "start": 84, "end": 97},
-        {"helix": 42, "forward": false, "start": 91, "end": 97},
-        {"helix": 43, "forward": true, "start": 91, "end": 97},
-        {"helix": 52, "forward": false, "start": 91, "end": 97}
+        {"helix": 40, "forward": false, "start": 84, "end": 91},
+        {"helix": 41, "forward": true, "start": 84, "end": 98},
+        {"helix": 42, "forward": false, "start": 91, "end": 98},
+        {"helix": 43, "forward": true, "start": 91, "end": 98},
+        {"helix": 52, "forward": false, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 41, "forward": true, "start": 28, "end": 34},
-        {"helix": 42, "forward": false, "start": 28, "end": 34},
-        {"helix": 43, "forward": true, "start": 28, "end": 34},
-        {"helix": 52, "forward": false, "start": 28, "end": 34},
-        {"helix": 51, "forward": true, "start": 28, "end": 34},
-        {"helix": 56, "forward": false, "start": 28, "end": 34},
-        {"helix": 57, "forward": true, "start": 28, "end": 34}
+        {"helix": 41, "forward": true, "start": 28, "end": 35},
+        {"helix": 42, "forward": false, "start": 28, "end": 35},
+        {"helix": 43, "forward": true, "start": 28, "end": 35},
+        {"helix": 52, "forward": false, "start": 28, "end": 35},
+        {"helix": 51, "forward": true, "start": 28, "end": 35},
+        {"helix": 56, "forward": false, "start": 28, "end": 35},
+        {"helix": 57, "forward": true, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 41, "forward": true, "start": 49, "end": 55},
-        {"helix": 42, "forward": false, "start": 49, "end": 55},
-        {"helix": 43, "forward": true, "start": 49, "end": 55},
-        {"helix": 52, "forward": false, "start": 49, "end": 55},
-        {"helix": 51, "forward": true, "start": 49, "end": 55},
-        {"helix": 56, "forward": false, "start": 49, "end": 55},
-        {"helix": 57, "forward": true, "start": 49, "end": 55}
+        {"helix": 41, "forward": true, "start": 49, "end": 56},
+        {"helix": 42, "forward": false, "start": 49, "end": 56},
+        {"helix": 43, "forward": true, "start": 49, "end": 56},
+        {"helix": 52, "forward": false, "start": 49, "end": 56},
+        {"helix": 51, "forward": true, "start": 49, "end": 56},
+        {"helix": 56, "forward": false, "start": 49, "end": 56},
+        {"helix": 57, "forward": true, "start": 49, "end": 56}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 41, "forward": true, "start": 112, "end": 118},
-        {"helix": 42, "forward": false, "start": 112, "end": 118},
-        {"helix": 43, "forward": true, "start": 112, "end": 118},
-        {"helix": 52, "forward": false, "start": 112, "end": 118},
-        {"helix": 51, "forward": true, "start": 112, "end": 118},
-        {"helix": 56, "forward": false, "start": 112, "end": 118},
-        {"helix": 57, "forward": true, "start": 112, "end": 118}
+        {"helix": 41, "forward": true, "start": 112, "end": 119},
+        {"helix": 42, "forward": false, "start": 112, "end": 119},
+        {"helix": 43, "forward": true, "start": 112, "end": 119},
+        {"helix": 52, "forward": false, "start": 112, "end": 119},
+        {"helix": 51, "forward": true, "start": 112, "end": 119},
+        {"helix": 56, "forward": false, "start": 112, "end": 119},
+        {"helix": 57, "forward": true, "start": 112, "end": 119}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 47, "forward": true, "start": 42, "end": 48},
-        {"helix": 46, "forward": false, "start": 42, "end": 48},
-        {"helix": 45, "forward": true, "start": 42, "end": 48},
-        {"helix": 44, "forward": false, "start": 42, "end": 48},
-        {"helix": 43, "forward": true, "start": 42, "end": 48},
-        {"helix": 42, "forward": false, "start": 42, "end": 48}
+        {"helix": 47, "forward": true, "start": 42, "end": 49},
+        {"helix": 46, "forward": false, "start": 42, "end": 49},
+        {"helix": 45, "forward": true, "start": 42, "end": 49},
+        {"helix": 44, "forward": false, "start": 42, "end": 49},
+        {"helix": 43, "forward": true, "start": 42, "end": 49},
+        {"helix": 42, "forward": false, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 47, "forward": true, "start": 63, "end": 69},
-        {"helix": 46, "forward": false, "start": 63, "end": 69},
-        {"helix": 45, "forward": true, "start": 63, "end": 69},
-        {"helix": 44, "forward": false, "start": 63, "end": 69},
-        {"helix": 43, "forward": true, "start": 63, "end": 69},
-        {"helix": 42, "forward": false, "start": 63, "end": 69}
+        {"helix": 47, "forward": true, "start": 63, "end": 70},
+        {"helix": 46, "forward": false, "start": 63, "end": 70},
+        {"helix": 45, "forward": true, "start": 63, "end": 70},
+        {"helix": 44, "forward": false, "start": 63, "end": 70},
+        {"helix": 43, "forward": true, "start": 63, "end": 70},
+        {"helix": 42, "forward": false, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 42, "forward": false, "start": 70, "end": 83},
-        {"helix": 43, "forward": true, "start": 70, "end": 76},
-        {"helix": 52, "forward": false, "start": 70, "end": 76},
-        {"helix": 51, "forward": true, "start": 70, "end": 76},
-        {"helix": 56, "forward": false, "start": 70, "end": 76},
-        {"helix": 57, "forward": true, "start": 70, "end": 76}
+        {"helix": 42, "forward": false, "start": 70, "end": 84},
+        {"helix": 43, "forward": true, "start": 70, "end": 77},
+        {"helix": 52, "forward": false, "start": 70, "end": 77},
+        {"helix": 51, "forward": true, "start": 70, "end": 77},
+        {"helix": 56, "forward": false, "start": 70, "end": 77},
+        {"helix": 57, "forward": true, "start": 70, "end": 77}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 53, "forward": true, "start": 70, "end": 83},
-        {"helix": 52, "forward": false, "start": 77, "end": 83},
-        {"helix": 43, "forward": true, "start": 77, "end": 90},
-        {"helix": 42, "forward": false, "start": 84, "end": 90}
+        {"helix": 53, "forward": true, "start": 70, "end": 84},
+        {"helix": 52, "forward": false, "start": 77, "end": 84},
+        {"helix": 43, "forward": true, "start": 77, "end": 91},
+        {"helix": 42, "forward": false, "start": 84, "end": 91}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 47, "forward": true, "start": 105, "end": 111},
-        {"helix": 46, "forward": false, "start": 105, "end": 111},
-        {"helix": 45, "forward": true, "start": 105, "end": 111},
-        {"helix": 44, "forward": false, "start": 105, "end": 111},
-        {"helix": 43, "forward": true, "start": 105, "end": 111},
-        {"helix": 42, "forward": false, "start": 105, "end": 111}
+        {"helix": 47, "forward": true, "start": 105, "end": 112},
+        {"helix": 46, "forward": false, "start": 105, "end": 112},
+        {"helix": 45, "forward": true, "start": 105, "end": 112},
+        {"helix": 44, "forward": false, "start": 105, "end": 112},
+        {"helix": 43, "forward": true, "start": 105, "end": 112},
+        {"helix": 42, "forward": false, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 44, "forward": false, "start": 28, "end": 30},
-        {"helix": 45, "forward": true, "start": 28, "end": 34},
-        {"helix": 50, "forward": false, "start": 28, "end": 34},
-        {"helix": 49, "forward": true, "start": 28, "end": 34},
-        {"helix": 58, "forward": false, "start": 28, "end": 34},
-        {"helix": 59, "forward": true, "start": 28, "end": 41}
+        {"helix": 44, "forward": false, "start": 28, "end": 31},
+        {"helix": 45, "forward": true, "start": 28, "end": 35},
+        {"helix": 50, "forward": false, "start": 28, "end": 35},
+        {"helix": 49, "forward": true, "start": 28, "end": 35},
+        {"helix": 58, "forward": false, "start": 28, "end": 35},
+        {"helix": 59, "forward": true, "start": 28, "end": 42}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 44, "forward": false, "start": 49, "end": 51},
-        {"helix": 45, "forward": true, "start": 49, "end": 55},
-        {"helix": 50, "forward": false, "start": 49, "end": 55},
-        {"helix": 49, "forward": true, "start": 49, "end": 55},
-        {"helix": 58, "forward": false, "start": 49, "end": 55},
-        {"helix": 59, "forward": true, "start": 49, "end": 62}
+        {"helix": 44, "forward": false, "start": 49, "end": 52},
+        {"helix": 45, "forward": true, "start": 49, "end": 56},
+        {"helix": 50, "forward": false, "start": 49, "end": 56},
+        {"helix": 49, "forward": true, "start": 49, "end": 56},
+        {"helix": 58, "forward": false, "start": 49, "end": 56},
+        {"helix": 59, "forward": true, "start": 49, "end": 63}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 44, "forward": false, "start": 112, "end": 114},
-        {"helix": 45, "forward": true, "start": 112, "end": 118},
-        {"helix": 50, "forward": false, "start": 112, "end": 118},
-        {"helix": 49, "forward": true, "start": 112, "end": 118},
-        {"helix": 58, "forward": false, "start": 112, "end": 118},
-        {"helix": 59, "forward": true, "start": 112, "end": 125}
+        {"helix": 44, "forward": false, "start": 112, "end": 115},
+        {"helix": 45, "forward": true, "start": 112, "end": 119},
+        {"helix": 50, "forward": false, "start": 112, "end": 119},
+        {"helix": 49, "forward": true, "start": 112, "end": 119},
+        {"helix": 58, "forward": false, "start": 112, "end": 119},
+        {"helix": 59, "forward": true, "start": 112, "end": 126}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 55, "forward": true, "start": 35, "end": 41},
-        {"helix": 56, "forward": false, "start": 35, "end": 41},
-        {"helix": 51, "forward": true, "start": 35, "end": 41},
-        {"helix": 50, "forward": false, "start": 35, "end": 41},
-        {"helix": 45, "forward": true, "start": 35, "end": 41},
-        {"helix": 46, "forward": false, "start": 38, "end": 41}
+        {"helix": 55, "forward": true, "start": 35, "end": 42},
+        {"helix": 56, "forward": false, "start": 35, "end": 42},
+        {"helix": 51, "forward": true, "start": 35, "end": 42},
+        {"helix": 50, "forward": false, "start": 35, "end": 42},
+        {"helix": 45, "forward": true, "start": 35, "end": 42},
+        {"helix": 46, "forward": false, "start": 38, "end": 42}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 45, "forward": true, "start": 74, "end": 76},
-        {"helix": 50, "forward": false, "start": 70, "end": 76},
-        {"helix": 49, "forward": true, "start": 70, "end": 76},
-        {"helix": 58, "forward": false, "start": 70, "end": 76},
-        {"helix": 59, "forward": true, "start": 70, "end": 76}
+        {"helix": 45, "forward": true, "start": 74, "end": 77},
+        {"helix": 50, "forward": false, "start": 70, "end": 77},
+        {"helix": 49, "forward": true, "start": 70, "end": 77},
+        {"helix": 58, "forward": false, "start": 70, "end": 77},
+        {"helix": 59, "forward": true, "start": 70, "end": 77}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 57, "forward": true, "start": 77, "end": 90},
-        {"helix": 56, "forward": false, "start": 77, "end": 90},
-        {"helix": 51, "forward": true, "start": 77, "end": 83},
-        {"helix": 50, "forward": false, "start": 77, "end": 83},
-        {"helix": 45, "forward": true, "start": 77, "end": 83}
+        {"helix": 57, "forward": true, "start": 77, "end": 91},
+        {"helix": 56, "forward": false, "start": 77, "end": 91},
+        {"helix": 51, "forward": true, "start": 77, "end": 84},
+        {"helix": 50, "forward": false, "start": 77, "end": 84},
+        {"helix": 45, "forward": true, "start": 77, "end": 84}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 55, "forward": true, "start": 98, "end": 104},
-        {"helix": 56, "forward": false, "start": 98, "end": 104},
-        {"helix": 51, "forward": true, "start": 98, "end": 104},
-        {"helix": 50, "forward": false, "start": 98, "end": 104},
-        {"helix": 45, "forward": true, "start": 98, "end": 101}
+        {"helix": 55, "forward": true, "start": 98, "end": 105},
+        {"helix": 56, "forward": false, "start": 98, "end": 105},
+        {"helix": 51, "forward": true, "start": 98, "end": 105},
+        {"helix": 50, "forward": false, "start": 98, "end": 105},
+        {"helix": 45, "forward": true, "start": 98, "end": 102}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 57, "forward": true, "start": 35, "end": 41},
-        {"helix": 58, "forward": false, "start": 35, "end": 41},
-        {"helix": 49, "forward": true, "start": 35, "end": 41},
-        {"helix": 48, "forward": false, "start": 35, "end": 41},
-        {"helix": 47, "forward": true, "start": 35, "end": 41}
+        {"helix": 57, "forward": true, "start": 35, "end": 42},
+        {"helix": 58, "forward": false, "start": 35, "end": 42},
+        {"helix": 49, "forward": true, "start": 35, "end": 42},
+        {"helix": 48, "forward": false, "start": 35, "end": 42},
+        {"helix": 47, "forward": true, "start": 35, "end": 42}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 57, "forward": true, "start": 56, "end": 62},
-        {"helix": 58, "forward": false, "start": 56, "end": 62},
-        {"helix": 49, "forward": true, "start": 56, "end": 62},
-        {"helix": 48, "forward": false, "start": 56, "end": 62},
-        {"helix": 47, "forward": true, "start": 56, "end": 62}
+        {"helix": 57, "forward": true, "start": 56, "end": 63},
+        {"helix": 58, "forward": false, "start": 56, "end": 63},
+        {"helix": 49, "forward": true, "start": 56, "end": 63},
+        {"helix": 48, "forward": false, "start": 56, "end": 63},
+        {"helix": 47, "forward": true, "start": 56, "end": 63}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 57, "forward": true, "start": 98, "end": 104},
-        {"helix": 58, "forward": false, "start": 98, "end": 104},
-        {"helix": 49, "forward": true, "start": 98, "end": 104},
-        {"helix": 48, "forward": false, "start": 98, "end": 104},
-        {"helix": 47, "forward": true, "start": 98, "end": 104}
+        {"helix": 57, "forward": true, "start": 98, "end": 105},
+        {"helix": 58, "forward": false, "start": 98, "end": 105},
+        {"helix": 49, "forward": true, "start": 98, "end": 105},
+        {"helix": 48, "forward": false, "start": 98, "end": 105},
+        {"helix": 47, "forward": true, "start": 98, "end": 105}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 57, "forward": true, "start": 119, "end": 125},
-        {"helix": 58, "forward": false, "start": 119, "end": 125},
-        {"helix": 49, "forward": true, "start": 119, "end": 125},
-        {"helix": 48, "forward": false, "start": 119, "end": 125},
-        {"helix": 47, "forward": true, "start": 119, "end": 125}
+        {"helix": 57, "forward": true, "start": 119, "end": 126},
+        {"helix": 58, "forward": false, "start": 119, "end": 126},
+        {"helix": 49, "forward": true, "start": 119, "end": 126},
+        {"helix": 48, "forward": false, "start": 119, "end": 126},
+        {"helix": 47, "forward": true, "start": 119, "end": 126}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 48, "forward": false, "start": 42, "end": 48},
-        {"helix": 49, "forward": true, "start": 42, "end": 48},
-        {"helix": 50, "forward": false, "start": 42, "end": 48},
-        {"helix": 51, "forward": true, "start": 42, "end": 48},
-        {"helix": 52, "forward": false, "start": 42, "end": 48},
-        {"helix": 53, "forward": true, "start": 42, "end": 48}
+        {"helix": 48, "forward": false, "start": 42, "end": 49},
+        {"helix": 49, "forward": true, "start": 42, "end": 49},
+        {"helix": 50, "forward": false, "start": 42, "end": 49},
+        {"helix": 51, "forward": true, "start": 42, "end": 49},
+        {"helix": 52, "forward": false, "start": 42, "end": 49},
+        {"helix": 53, "forward": true, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#b8056c",
       "substrands": [
-        {"helix": 48, "forward": false, "start": 63, "end": 69},
-        {"helix": 49, "forward": true, "start": 63, "end": 69},
-        {"helix": 50, "forward": false, "start": 63, "end": 69},
-        {"helix": 51, "forward": true, "start": 63, "end": 69},
-        {"helix": 52, "forward": false, "start": 63, "end": 69},
-        {"helix": 53, "forward": true, "start": 63, "end": 69}
+        {"helix": 48, "forward": false, "start": 63, "end": 70},
+        {"helix": 49, "forward": true, "start": 63, "end": 70},
+        {"helix": 50, "forward": false, "start": 63, "end": 70},
+        {"helix": 51, "forward": true, "start": 63, "end": 70},
+        {"helix": 52, "forward": false, "start": 63, "end": 70},
+        {"helix": 53, "forward": true, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#f74308",
       "substrands": [
-        {"helix": 59, "forward": true, "start": 77, "end": 90},
-        {"helix": 58, "forward": false, "start": 77, "end": 90},
-        {"helix": 49, "forward": true, "start": 77, "end": 83},
-        {"helix": 48, "forward": false, "start": 70, "end": 83}
+        {"helix": 59, "forward": true, "start": 77, "end": 91},
+        {"helix": 58, "forward": false, "start": 77, "end": 91},
+        {"helix": 49, "forward": true, "start": 77, "end": 84},
+        {"helix": 48, "forward": false, "start": 70, "end": 84}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 48, "forward": false, "start": 84, "end": 90},
-        {"helix": 49, "forward": true, "start": 84, "end": 97},
-        {"helix": 58, "forward": false, "start": 91, "end": 97},
-        {"helix": 59, "forward": true, "start": 91, "end": 104}
+        {"helix": 48, "forward": false, "start": 84, "end": 91},
+        {"helix": 49, "forward": true, "start": 84, "end": 98},
+        {"helix": 58, "forward": false, "start": 91, "end": 98},
+        {"helix": 59, "forward": true, "start": 91, "end": 105}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 48, "forward": false, "start": 105, "end": 111},
-        {"helix": 49, "forward": true, "start": 105, "end": 111},
-        {"helix": 50, "forward": false, "start": 105, "end": 111},
-        {"helix": 51, "forward": true, "start": 105, "end": 111},
-        {"helix": 52, "forward": false, "start": 105, "end": 111},
-        {"helix": 53, "forward": true, "start": 105, "end": 111}
+        {"helix": 48, "forward": false, "start": 105, "end": 112},
+        {"helix": 49, "forward": true, "start": 105, "end": 112},
+        {"helix": 50, "forward": false, "start": 105, "end": 112},
+        {"helix": 51, "forward": true, "start": 105, "end": 112},
+        {"helix": 52, "forward": false, "start": 105, "end": 112},
+        {"helix": 53, "forward": true, "start": 105, "end": 112}
       ]
     },
     {
       "color": "#333333",
       "substrands": [
-        {"helix": 50, "forward": false, "start": 84, "end": 90},
-        {"helix": 51, "forward": true, "start": 84, "end": 97},
-        {"helix": 56, "forward": false, "start": 91, "end": 97},
-        {"helix": 57, "forward": true, "start": 91, "end": 97}
+        {"helix": 50, "forward": false, "start": 84, "end": 91},
+        {"helix": 51, "forward": true, "start": 84, "end": 98},
+        {"helix": 56, "forward": false, "start": 91, "end": 98},
+        {"helix": 57, "forward": true, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#007200",
       "substrands": [
-        {"helix": 53, "forward": true, "start": 49, "end": 55},
-        {"helix": 54, "forward": false, "start": 49, "end": 55},
-        {"helix": 55, "forward": true, "start": 49, "end": 62},
-        {"helix": 56, "forward": false, "start": 56, "end": 62},
-        {"helix": 51, "forward": true, "start": 56, "end": 59}
+        {"helix": 53, "forward": true, "start": 49, "end": 56},
+        {"helix": 54, "forward": false, "start": 49, "end": 56},
+        {"helix": 55, "forward": true, "start": 49, "end": 63},
+        {"helix": 56, "forward": false, "start": 56, "end": 63},
+        {"helix": 51, "forward": true, "start": 56, "end": 60}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 53, "forward": true, "start": 112, "end": 118},
-        {"helix": 54, "forward": false, "start": 112, "end": 118},
-        {"helix": 55, "forward": true, "start": 112, "end": 125},
-        {"helix": 56, "forward": false, "start": 119, "end": 125},
-        {"helix": 51, "forward": true, "start": 119, "end": 122}
+        {"helix": 53, "forward": true, "start": 112, "end": 119},
+        {"helix": 54, "forward": false, "start": 112, "end": 119},
+        {"helix": 55, "forward": true, "start": 112, "end": 126},
+        {"helix": 56, "forward": false, "start": 119, "end": 126},
+        {"helix": 51, "forward": true, "start": 119, "end": 123}
       ]
     },
     {
       "color": "#03b6a2",
       "substrands": [
-        {"helix": 52, "forward": false, "start": 84, "end": 90},
-        {"helix": 53, "forward": true, "start": 84, "end": 97},
-        {"helix": 54, "forward": false, "start": 91, "end": 97},
-        {"helix": 55, "forward": true, "start": 91, "end": 97}
+        {"helix": 52, "forward": false, "start": 84, "end": 91},
+        {"helix": 53, "forward": true, "start": 84, "end": 98},
+        {"helix": 54, "forward": false, "start": 91, "end": 98},
+        {"helix": 55, "forward": true, "start": 91, "end": 98}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 53, "forward": true, "start": 28, "end": 34},
-        {"helix": 54, "forward": false, "start": 28, "end": 34},
-        {"helix": 55, "forward": true, "start": 28, "end": 34}
+        {"helix": 53, "forward": true, "start": 28, "end": 35},
+        {"helix": 54, "forward": false, "start": 28, "end": 35},
+        {"helix": 55, "forward": true, "start": 28, "end": 35}
       ]
     },
     {
       "color": "#57bb00",
       "substrands": [
-        {"helix": 59, "forward": true, "start": 42, "end": 48},
-        {"helix": 58, "forward": false, "start": 42, "end": 48},
-        {"helix": 57, "forward": true, "start": 42, "end": 48},
-        {"helix": 56, "forward": false, "start": 42, "end": 48},
-        {"helix": 55, "forward": true, "start": 42, "end": 48},
-        {"helix": 54, "forward": false, "start": 42, "end": 48}
+        {"helix": 59, "forward": true, "start": 42, "end": 49},
+        {"helix": 58, "forward": false, "start": 42, "end": 49},
+        {"helix": 57, "forward": true, "start": 42, "end": 49},
+        {"helix": 56, "forward": false, "start": 42, "end": 49},
+        {"helix": 55, "forward": true, "start": 42, "end": 49},
+        {"helix": 54, "forward": false, "start": 42, "end": 49}
       ]
     },
     {
       "color": "#7300de",
       "substrands": [
-        {"helix": 59, "forward": true, "start": 63, "end": 69},
-        {"helix": 58, "forward": false, "start": 63, "end": 69},
-        {"helix": 57, "forward": true, "start": 63, "end": 69},
-        {"helix": 56, "forward": false, "start": 63, "end": 69},
-        {"helix": 55, "forward": true, "start": 63, "end": 69},
-        {"helix": 54, "forward": false, "start": 63, "end": 69}
+        {"helix": 59, "forward": true, "start": 63, "end": 70},
+        {"helix": 58, "forward": false, "start": 63, "end": 70},
+        {"helix": 57, "forward": true, "start": 63, "end": 70},
+        {"helix": 56, "forward": false, "start": 63, "end": 70},
+        {"helix": 55, "forward": true, "start": 63, "end": 70},
+        {"helix": 54, "forward": false, "start": 63, "end": 70}
       ]
     },
     {
       "color": "#aaaa00",
       "substrands": [
-        {"helix": 54, "forward": false, "start": 70, "end": 83},
-        {"helix": 55, "forward": true, "start": 70, "end": 90},
-        {"helix": 54, "forward": false, "start": 84, "end": 90}
+        {"helix": 54, "forward": false, "start": 70, "end": 84},
+        {"helix": 55, "forward": true, "start": 70, "end": 91},
+        {"helix": 54, "forward": false, "start": 84, "end": 91}
       ]
     },
     {
       "color": "#1700de",
       "substrands": [
-        {"helix": 59, "forward": true, "start": 105, "end": 111},
-        {"helix": 58, "forward": false, "start": 105, "end": 111},
-        {"helix": 57, "forward": true, "start": 105, "end": 111},
-        {"helix": 56, "forward": false, "start": 105, "end": 111},
-        {"helix": 55, "forward": true, "start": 105, "end": 111},
-        {"helix": 54, "forward": false, "start": 105, "end": 111}
+        {"helix": 59, "forward": true, "start": 105, "end": 112},
+        {"helix": 58, "forward": false, "start": 105, "end": 112},
+        {"helix": 57, "forward": true, "start": 105, "end": 112},
+        {"helix": 56, "forward": false, "start": 105, "end": 112},
+        {"helix": 55, "forward": true, "start": 105, "end": 112},
+        {"helix": 54, "forward": false, "start": 105, "end": 112}
       ]
     }
   ]
