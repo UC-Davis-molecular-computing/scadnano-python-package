@@ -1271,22 +1271,29 @@ class Strand(_JSONSerializable):
     Two :any:`Loopout`'s cannot occur consecutively on a :any:`Strand`, nor can a :any:`Strand`
     contain only a :any:`Loopout` but no :any:`Substrand`.
 
-    To give a strand the same color that
-    `cadnano <https://cadnano.org/>`_
-    uses for the scaffold,
-    use :any:`scadnano.default_scaffold_color` in the :any:`Strand` constructor:
+
+    One set the strand to be a scaffold in the constructor:
 
     .. code-block:: Python
 
         import scadnano as sc
 
         scaffold_substrands = [ ... ]
-        scaffold_strand = sc.Strand(substrands=scaffold_substrands, color=sc.default_scaffold_color)
+        scaffold_strand = sc.Strand(substrands=scaffold_substrands, is_scaffold=True)
 
-    Alternately, one can use :any:`DNAOrigamiDesign`, which is a subclass of
-    :any:`DNADesign` that has one extra field representing the scaffold strand.
-    This class will automatically assign the color of the scaffold strand to be
-    :py:data:`default_scaffold_color`.
+    or by calling :py:meth:`Strand.set_scaffold` on the :any:`Strand` object:
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        scaffold_substrands = [ ... ]
+        scaffold_strand = sc.Strand(substrands=scaffold_substrands)
+        scaffold_strand.set_scaffold()
+
+    Both will give the strand the same color that
+    `cadnano <https://cadnano.org/>`_
+    uses for the scaffold.
     """
 
     substrands: List[Union[Substrand, Loopout]]
