@@ -1272,7 +1272,7 @@ class Strand(_JSONSerializable):
     contain only a :any:`Loopout` but no :any:`Substrand`.
 
 
-    One set the strand to be a scaffold in the constructor:
+    One can set the strand to be a scaffold in the constructor:
 
     .. code-block:: Python
 
