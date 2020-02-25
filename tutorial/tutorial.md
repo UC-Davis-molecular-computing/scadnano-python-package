@@ -115,7 +115,7 @@ Change the Python file as follows. We marked the changed lines in `main()` with 
 import scadnano as sc
 
 def main():
-    helices = [sc.Helix(max_offset=304) for _ in range(24)]                   ###
+    helices = [sc.Helix(max_offset=304) for _ in range(24)]            ###
     design = sc.DNADesign(helices=helices, strands=[], grid=sc.square) ###
     return design
 
@@ -262,7 +262,7 @@ It is worth noting that the `start` and `end` offsets follow the standard progra
 
 Currently, neither the [Python scripting library](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/14) nor the [web interface](https://github.com/UC-Davis-molecular-computing/scadnano/issues/5) for scadnano supports circular strands. However, if we add crossovers prematurely, we could mistakenly introduce a circular strand in an intermediate design, which would cause the script to raise an error. So generally it is best to add all the nicks we require first, to separate the strands as much as possible.
 
-For the scaffold, we want nicks all along the "seam" (the offsets near the middle, other than the topmost helix). Since we are done writing the function `precursor_scaffolds()`, we will omit it in the code below:
+For the scaffold, we want nicks all along the "seam" (the offsets near the middle, other than the topmost helix). Since we are done writing the function `precursor_scaffolds()`, we will omit its definition from the code below:
 
 ```python
 def main():
@@ -347,7 +347,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
 
     add_precursor_staples(design) ###
 
@@ -378,7 +378,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
     add_precursor_staples(design)
 
     add_staple_nicks(design) ###
@@ -409,7 +409,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
 
@@ -442,7 +442,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
@@ -477,7 +477,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
@@ -515,7 +515,7 @@ def main():
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
     scaffold = design.strands[0]
-    design.set_scaffold(scaffold)
+    scaffold.set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
