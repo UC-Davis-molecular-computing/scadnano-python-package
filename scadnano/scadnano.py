@@ -287,7 +287,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.2.0"
+current_version: str = "0.3.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
