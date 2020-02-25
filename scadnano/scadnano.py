@@ -167,6 +167,11 @@ class Color(_JSONSerializable):
     def to_cadnano_v2_int_hex(self):
         return int(f'{self.r:02x}{self.g:02x}{self.b:02x}', 16)
 
+    @classmethod
+    def from_cadnano_v2_int_hex(cls, hex_int):
+        hex_str = "0x{:06x}".format(hex_int)
+        return Color(hex=hex_str[2:])
+
 
 class ColorCycler:
     """
@@ -1350,7 +1355,10 @@ class Strand(_JSONSerializable):
         # unless caller specified not to
         global color_cycler
         if self.color is None and self.automatically_assign_color:
-            self.color = next(color_cycler)
+            if self.is_scaffold:
+                self.color = default_scaffold_color
+            else:
+                self.color = next(color_cycler)
 
         self._helix_idx_substrand_map = defaultdict(list)
 
@@ -1379,6 +1387,14 @@ class Strand(_JSONSerializable):
 
     def __hash__(self):
         return hash(self.substrands)
+
+    def set_scaffold(self, is_scaf: bool = True):
+        """Sets this :any:`Strand` as a scaffold. Alters color to default scaffold color.
+
+        If `is_scaf` == ``False``, sets this strand as not a scaffold, and leaves the color alone."""
+        self.is_scaffold = is_scaf
+        if is_scaf:
+            self.color = default_scaffold_color
 
     def set_color(self, color: Color):
         """Sets color of this :any:`Strand`."""
@@ -1805,6 +1821,69 @@ def remove_helix_idxs_if_default(helices: List[Dict]):
             del helix[idx_on_helix_key]
 
 
+# @dataclass
+# class DNAOrigamiDesign(DNADesign):
+#     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
+#     :py:data:`DNAOrigamiDesign.scaffold`.
+#
+#     The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
+#     or it may be set after the :any:`DNAOrigamiDesign` is created.
+#     It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
+#
+#     The :py:data:`Color` of the scaffold will be automatically assigned.
+#     To change from the default :any:`Color`,
+#     change the field :py:data:`Strand.color` of
+#     :py:data:`DNAOrigamiDesign.scaffold`
+#     *after* the :any:`DNAOrigamiDesign` is created.
+#     """
+#
+#     scaffold: Strand = None
+#     """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
+#
+#     Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
+#
+#     def __init__(self, *,
+#                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
+#                  strands: List[Strand] = None,
+#                  grid: Grid = Grid.square,
+#                  major_tick_distance: int = -1,
+#                  helices_view_order: List[int] = None,
+#                  scaffold: Optional[Strand] = None):
+#         super().__init__(helices=helices, strands=strands, grid=grid,
+#                          major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
+#         self.scaffold = scaffold
+#         if scaffold is not None:
+#             scaffold.is_scaffold = True
+#             scaffold.color = default_scaffold_color
+#
+#     def __post_init__(self):
+#         super().__post_init__()
+#
+#         # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
+#         # to create an origami by starting with several simple Strands and add nicks and crossovers.
+#         if self.scaffold is not None:
+#             self.scaffold.color = default_scaffold_color
+#             self.scaffold.is_scaffold = True
+#             if self.scaffold not in self.strands:
+#                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
+#
+#     def set_scaffold(self, scaffold: Strand):
+#         """
+#         Set the scaffold of this :any:`DNAOrigamiDesign`.
+#
+#         :param scaffold: The scaffold :any:`Strand`.
+#         """
+#         self.scaffold = scaffold
+#         scaffold.is_scaffold = True
+#         self.scaffold.color = default_scaffold_color
+#
+#     def assign_m13_to_scaffold(self, rotation: int = 5588):
+#         """
+#         Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
+#         """
+#         self.assign_dna(self.scaffold, m13(rotation))
+
+
 @dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
@@ -1847,6 +1926,14 @@ class DNADesign(_JSONSerializable):
 
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
+
+    @property
+    def scaffold(self) -> Optional[Strand]:
+        """Returns the first scaffold in this :any:`DNADesign`, if there is one, or ``None`` otherwise."""
+        for strand in self.strands:
+            if strand.is_scaffold:
+                return strand
+        return None
 
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
@@ -1914,7 +2001,7 @@ class DNADesign(_JSONSerializable):
         self._set_and_check_helices_view_order()
 
     @staticmethod
-    def from_file(filename: str) -> DNADesign:
+    def from_scadnano_file(filename: str) -> DNADesign:
         """
         Loads a :any:`DNADesign` from the file with the given name.
 
@@ -1924,10 +2011,11 @@ class DNADesign(_JSONSerializable):
         with open(filename) as f:
             json_str = f.read()
         json_map = json.loads(json_str)
-        return DNADesign.from_json(json_map)
+        return DNADesign._from_scadnano_json(json_map)
 
     @staticmethod
-    def from_json(json_map: dict) -> DNADesign:
+    def _from_scadnano_json(json_map: dict) -> DNADesign:
+        # reads scadnano .dna file format into a DNADesign object
         version = json_map.get(version_key, initial_version)  # not sure what to do with this
         grid = json_map.get(grid_key, Grid.square)
         grid_is_none = grid == Grid.none
@@ -1962,45 +2050,147 @@ class DNADesign(_JSONSerializable):
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
         if helices_view_order is not None:
-            identity_permutation = list(range(num_helices))
+            helix_idxs = [helix.idx for helix in helices]
             if len(helices_view_order) != num_helices:
                 raise IllegalDNADesignError(f'length of helices ({num_helices}) does not match '
                                             f'length of helices_view_order ({len(helices_view_order)})')
-            if sorted(helices_view_order) != identity_permutation:
-                raise IllegalDNADesignError(f'helices_view_order = {helices_view_order} is not a permutation')
+            if sorted(helices_view_order) != sorted(helix_idxs):
+                raise IllegalDNADesignError(f'helices_view_order = {helices_view_order} is not a '
+                                            f'permutation of the set of helices {helix_idxs}')
 
         # strands
-        scaffold = None
         strands = []
         deserialized_strand_list = json_map[strands_key]
         for strand_json in deserialized_strand_list:
             strand = Strand.from_json(strand_json)
             strands.append(strand)
-            if strand.is_scaffold:
-                scaffold = strand
 
-        if scaffold is None:
-            return DNADesign(
-                helices=helices,
-                strands=strands,
-                grid=grid,
-                major_tick_distance=major_tick_distance,
-                helices_view_order=helices_view_order,
-            )
-        else:
-            return DNAOrigamiDesign(
-                scaffold=scaffold,
-                helices=helices,
-                strands=strands,
-                grid=grid,
-                major_tick_distance=major_tick_distance,
-                helices_view_order=helices_view_order,
-            )
-
+        return DNADesign(
+            helices=helices,
+            strands=strands,
+            grid=grid,
+            major_tick_distance=major_tick_distance,
+            helices_view_order=helices_view_order,
+        )
 
     @staticmethod
-    def from_cadnano_v2(directory, filename) -> DNAOrigamiDesign:
-        """ Creates a DNAOrigamiDesign from a cadnano v2 file.
+    def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int,
+                                      base_from: int):
+        """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
+        helix and the base of the 5' end.
+        """
+        id_from_before = helix_num
+        base_from_before = base_id
+        while not (id_from == -1 and base_from == -1):
+            id_from_before = id_from
+            base_from_before = base_from
+            id_from, base_from, _, _ = vstrands[id_from][strand_type][base_from]
+        return id_from_before, base_from_before
+
+    @staticmethod
+    def _cadnano_v2_import_find_strand_color(vstrands, strand_type: str, strand_5_end_base: int,
+                                             strand_5_end_helix: int):
+        """ Routines which finds the color of a cadnano v2 strand. """
+        color = default_scaffold_color
+        if strand_type == 'stap':
+            for base_id, stap_color in vstrands[strand_5_end_helix]['stap_colors']:
+                if base_id == strand_5_end_base:
+                    color = Color.from_cadnano_v2_int_hex(stap_color)
+                    break
+        return color
+
+    @staticmethod
+    def _cadnano_v2_import_extract_deletions(skip_table, start, end):
+        """ Routines which converts cadnano skips to scadnano deletions """
+        to_return = []
+        for base_id in range(start, end):
+            if skip_table[base_id] == -1:
+                to_return.append(base_id)
+        return to_return
+
+    @staticmethod
+    def _cadnano_v2_import_extract_insertions(loop_table, start, end):
+        """ Routines which converts cadnano skips to scadnano insertions """
+        to_return = []
+        for base_id in range(start, end):
+            if loop_table[base_id] != 0:
+                to_return.append([base_id, loop_table[base_id]])
+        return to_return
+
+    @staticmethod
+    def _cadnano_v2_import_explore_substrands(vstrands, seen, strand_type: str, strand_5_end_base: int,
+                                              strand_5_end_helix: int):
+        """ Routines finds all substrands of a cadnano v2 strand. """
+        curr_helix = strand_5_end_helix
+        curr_base = strand_5_end_base
+        substrands = []
+
+        direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
+        (strand_type == 'stap' and curr_helix % 2 == 1))
+        start, end = -1, -1
+        if direction_forward:
+            start = curr_base
+        else:
+            end = curr_base
+
+        while not (curr_helix == -1 and curr_base == -1):
+            old_helix = curr_helix
+            old_base = curr_base
+            seen[(curr_helix, curr_base)] = True
+            curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
+            # Add crossover
+            # We have a crossover when we jump helix or when order is broken on same helix
+            if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
+                    direction_forward and curr_base < old_base):
+                if direction_forward:
+                    end = old_base
+                else:
+                    start = old_base
+
+                substrands.append(
+                    Substrand(old_helix, direction_forward, min(start, end), max(start, end) + 1,
+                              deletions=DNADesign._cadnano_v2_import_extract_deletions(
+                                  vstrands[old_helix]['skip'], start, end),
+                              insertions=DNADesign._cadnano_v2_import_extract_insertions(
+                                  vstrands[old_helix]['loop'], start, end)))
+
+                direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
+                (strand_type == 'stap' and curr_helix % 2 == 1))
+                start, end = -1, -1
+                if direction_forward:
+                    start = curr_base
+                else:
+                    end = curr_base
+
+        return substrands
+
+    @staticmethod
+    def _cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen, helix_num: int,
+                                          base_id: int):
+        """ Routine that will follow a cadnano v2 strand accross helices and create
+            cadnano substrands and strand accordingly.
+        """
+
+        seen[(helix_num, base_id)] = True
+        id_from, base_from, id_to, base_to = vstrands[helix_num][strand_type][base_id]
+
+        if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
+            return None
+
+        strand_5_end_helix, strand_5_end_base = DNADesign._cadnano_v2_import_find_5_end(vstrands, strand_type,
+                                                                                        helix_num, base_id,
+                                                                                        id_from, base_from)
+        strand_color = DNADesign._cadnano_v2_import_find_strand_color(vstrands, strand_type,
+                                                                      strand_5_end_base, strand_5_end_helix)
+        substrands = DNADesign._cadnano_v2_import_explore_substrands(vstrands, seen, strand_type,
+                                                                     strand_5_end_base, strand_5_end_helix)
+        strand = Strand(substrands=substrands, is_scaffold=(strand_type == 'scaf'), color=strand_color)
+
+        return strand
+
+    @staticmethod
+    def from_cadnano_v2(directory, filename) -> DNADesign:
+        """ Creates a DNADesign from a cadnano v2 file.
         """
         file_path = os.path.join(directory, filename)
         f = open(file_path, 'r')
@@ -2011,7 +2201,6 @@ class DNADesign(_JSONSerializable):
         grid_type = Grid.square
         if num_bases % 21 == 0:
             grid_type = Grid.honeycomb
-            raise NotImplementedError("Can't import honeycomb yet")
 
         min_row, min_col = None, None
         for cadnano_helix in cadnano_v2_design['vstrands']:
@@ -2021,19 +2210,61 @@ class DNADesign(_JSONSerializable):
             min_row = row if row < min_row else min_row
             min_col = col if col < min_col else min_col
 
-        helices = []
+        helices = OrderedDict({})
         for cadnano_helix in cadnano_v2_design['vstrands']:
             col, row = cadnano_helix['col'], cadnano_helix['row']
-            helix = Helix(idx=cadnano_helix['num'], max_offset=num_bases,
-                          grid_position=[col - min_col, row - min_row, 0])
-            helices.append(helix)
+            num = cadnano_helix['num']
+            helix = Helix(idx=num, max_offset=num_bases,
+                          grid_position=(col - min_col, row - min_row, 0))
+            helices[num] = helix
 
-        sorted_helices = sorted(helices, key=lambda
-            h: h.idx)  # Needed to show helices in the same order than cadnano in the grid view
-        design = DNAOrigamiDesign(grid=grid_type, helices=sorted_helices, strands=[])
-        design.set_helices_view_order([h.idx for h in helices])
+        # We do a DFS on strands
+        seen = {'scaf': {}, 'stap': {}}
+        strands = []
+        cadnano_helices = OrderedDict({})
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            helix_num = cadnano_helix['num']
+            cadnano_helices[helix_num] = cadnano_helix
+
+        for cadnano_helix in cadnano_v2_design['vstrands']:
+            helix_num = cadnano_helix['num']
+            for strand_type in ['scaf', 'stap']:
+                for base_id in range(num_bases):
+                    if (helix_num, base_id) in seen[strand_type]:
+                        continue
+
+                    strand = DNADesign._cadnano_v2_import_explore_strand(cadnano_helices, num_bases,
+                                                                         strand_type,
+                                                                         seen[strand_type], helix_num,
+                                                                         base_id)
+                    if not strand is None:
+                        strands.append(strand)
+
+        design = DNADesign(grid=grid_type, helices=helices, strands=strands)
+        design.set_helices_view_order([num for num in helices])
 
         return design
+
+    def assign_m13_to_scaffold(self, rotation: int = 5588):
+        """Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
+
+        Raises :any:`IllegalDNADesignError` if the number of scaffolds is not exactly 1.
+        """
+        scaffold = None
+        num_scafs = 0
+        for strand in self.strands:
+            if strand.is_scaffold:
+                num_scafs += 1
+                if scaffold is None:
+                    scaffold = strand
+        if num_scafs == 0:
+            raise IllegalDNADesignError('Tried to assign DNA to scaffold, but there is no scaffold strand. '
+                                        'You must set strand.is_scaffold to True for exactly one strand.')
+        elif num_scafs > 1:
+            raise IllegalDNADesignError('Tried to assign DNA to scaffold, but there are multiple scaffold '
+                                        'strands. You must set strand.is_scaffold to True for exactly one '
+                                        'strand.')
+        self.assign_dna(scaffold, m13(rotation))
 
     def to_json_serializable(self, suppress_indent=True):
         dct = OrderedDict()
@@ -2072,11 +2303,6 @@ class DNADesign(_JSONSerializable):
 
     def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int) -> int:
         return y if y % x == 0 else y + (x - y % x)
-
-    def _cadnano_v2_convert_honeycomb_coords(self, grid_position: Tuple[int, int, int]):
-        """Converts scadnano honeycomb coords ("odd-r horizontal layout") to cadnano v2 convention. """
-        raise NotImplementedError('The honeycomb lattice is not exportable yet')
-        pass
 
     def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand,
                                          strand_type: str = 'scaf') -> None:
@@ -2143,7 +2369,7 @@ class DNADesign(_JSONSerializable):
         """Place a scadnano strand in cadnano v2.
         """
         strand_type = 'stap'
-        if hasattr(strand, is_scaffold_key):
+        if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
             strand_type = 'scaf'
 
         for i, substrand in enumerate(strand.substrands):
@@ -2175,8 +2401,7 @@ class DNADesign(_JSONSerializable):
                 helix_dct['col'] = helix.grid_position[0]
 
             if self.grid == Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = self._cadnano_v2_convert_honeycomb_coords(
-                    helix.grid_position)
+                helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
             helix_dct['stap'] = []
@@ -2204,7 +2429,7 @@ class DNADesign(_JSONSerializable):
         dct = OrderedDict()
         dct['vstrands'] = []
 
-        if self.__class__ != DNAOrigamiDesign:
+        if self.__class__ != DNADesign:
             raise ValueError(
                 'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
 
@@ -2215,7 +2440,7 @@ class DNADesign(_JSONSerializable):
             if num_bases % 21 == 0: then we are on grid honey
         '''
         num_bases = 0
-        for helix in self.values():
+        for helix in self.helices.values():
             num_bases = max(num_bases, helix.max_offset)
 
         if self.grid == Grid.square:
@@ -2228,17 +2453,18 @@ class DNADesign(_JSONSerializable):
         '''Figuring out if helices numbers have good parity.
         In cadnano v2, only even helices have the scaffold go forward, only odd helices
         have the scaffold go backward.
-        TODO: test for that case
+
         '''
         for strand in self.strands:
-            if hasattr(strand, is_scaffold_key):
+            if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
                 for substrand in strand.substrands:
                     if type(substrand) == Loopout:
                         raise ValueError(
                             'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
                     if substrand.helix % 2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
-                                                  going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4.')
+                                                  going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(
+                            substrand))
 
         '''Filling the helices with blank.
         '''
@@ -2252,7 +2478,7 @@ class DNADesign(_JSONSerializable):
         return dct
 
     def _set_and_check_helices_view_order(self):
-        identity = list(range(0, len(self.helices)))
+        identity = list(self.helices.keys())
         if self.helices_view_order is None:
             self.helices_view_order = identity
         self._check_helices_view_order_is_bijection()
@@ -2262,11 +2488,10 @@ class DNADesign(_JSONSerializable):
         self._check_helices_view_order_is_bijection()
 
     def _check_helices_view_order_is_bijection(self):
-        identity = list(range(0, len(self.helices)))
-        if not (sorted(self.helices_view_order) == identity):
+        if not (sorted(self.helices_view_order) == sorted(self.helices.keys())):
             raise IllegalDNADesignError(
                 f"The specified helices view order: {self.helices_view_order}\n "
-                f"is not a bijection from [0,{len(self.helices) - 1}] to [0,{len(self.helices) - 1}].")
+                f"is not a bijection on helices indices: {self.helices_view_order} {self.helices.keys()}.")
 
     def _set_helices_idxs(self):
         for idx, helix in self.helices.items():
@@ -2580,20 +2805,20 @@ class DNADesign(_JSONSerializable):
     def to_json(self, suppress_indent=True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file ending in extension .dna"""
-        if isinstance(self, DNAOrigamiDesign):
-            scaf = None
-            for strand in self.strands:
-                if strand.is_scaffold == True:
-                    scaf = strand
-                    break
-            if self.scaffold is None:
-                msg = 'No scaffold specified for DNAOrigamiDesign. You can delay assigning the scaffold ' \
-                      'until after creating the DNAOrigamiDesign object, but you must assign a scaffold ' \
-                      'using the method set_scaffold() before calling to_json().'
-                if scaf is not None:
-                    msg += f'There is a strand marked as a scaffold. Try calling set_scaffold with it as ' \
-                           f'a parameter:\n{scaf}'
-                raise IllegalDNADesignError(msg)
+        # if isinstance(self, DNAOrigamiDesign):
+        #     scaf = None
+        #     for strand in self.strands:
+        #         if strand.is_scaffold == True:
+        #             scaf = strand
+        #             break
+        #     if self.scaffold is None:
+        #         msg = 'No scaffold specified for DNADesign. You can delay assigning the scaffold ' \
+        #               'until after creating the DNADesign object, but you must assign a scaffold ' \
+        #               'using the method Strand.set_scaffold() before calling to_json().'
+        #         if scaf is not None:
+        #             msg += f'There is a strand marked as a scaffold. Try calling set_scaffold with it as ' \
+        #                    f'a parameter:\n{scaf}'
+        #         raise IllegalDNADesignError(msg)
         return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
@@ -3350,70 +3575,69 @@ class Crossover:
         if self.forward2 is None:
             self.forward2 = not self.forward1
 
-
-@dataclass
-class DNAOrigamiDesign(DNADesign):
-    """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
-    :py:data:`DNAOrigamiDesign.scaffold`.
-
-    The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
-    or it may be set after the :any:`DNAOrigamiDesign` is created.
-    It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
-
-    The :py:data:`Color` of the scaffold will be automatically assigned.
-    To change from the default :any:`Color`,
-    change the field :py:data:`Strand.color` of
-    :py:data:`DNAOrigamiDesign.scaffold`
-    *after* the :any:`DNAOrigamiDesign` is created.
-    """
-
-    scaffold: Strand = None
-    """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
-    
-    Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
-
-    def __init__(self, *,
-                 helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
-                 strands: List[Strand] = None,
-                 grid: Grid = Grid.square,
-                 major_tick_distance: int = -1,
-                 helices_view_order: List[int] = None,
-                 scaffold: Optional[Strand] = None):
-        super().__init__(helices=helices, strands=strands, grid=grid,
-                         major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
-        self.scaffold = scaffold
-        if scaffold is not None:
-            scaffold.is_scaffold = True
-            scaffold.color = default_scaffold_color
-
-    def __post_init__(self):
-        super().__post_init__()
-
-        # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
-        # to create an origami by starting with several simple Strands and add nicks and crossovers.
-        if self.scaffold is not None:
-            self.scaffold.color = default_scaffold_color
-            self.scaffold.is_scaffold = True
-            if self.scaffold not in self.strands:
-                raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
-
-    def set_scaffold(self, scaffold: Strand):
-        """
-        Set the scaffold of this :any:`DNAOrigamiDesign`.
-
-        :param scaffold: The scaffold :any:`Strand`.
-        """
-        self.scaffold = scaffold
-        scaffold.is_scaffold = True
-        self.scaffold.color = default_scaffold_color
-
-    def assign_m13_to_scaffold(self, rotation: int = 5588):
-        """
-        Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
-        """
-        self.assign_dna(self.scaffold, m13(rotation))
-
-    # def to_json_serializable(self, suppress_indent=True):
-    #     json_map = super().to_json_serializable(suppress_indent)
-    #     json_map[is_origami_key] = True
-    #     return json_map
+# @dataclass
+# class DNAOrigamiDesign(DNADesign):
+#     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
+#     :py:data:`DNAOrigamiDesign.scaffold`.
+#
+#     The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
+#     or it may be set after the :any:`DNAOrigamiDesign` is created.
+#     It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
+#
+#     The :py:data:`Color` of the scaffold will be automatically assigned.
+#     To change from the default :any:`Color`,
+#     change the field :py:data:`Strand.color` of
+#     :py:data:`DNAOrigamiDesign.scaffold`
+#     *after* the :any:`DNAOrigamiDesign` is created.
+#     """
+#
+#     scaffold: Strand = None
+#     """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
+#
+#     Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
+#
+#     def __init__(self, *,
+#                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
+#                  strands: List[Strand] = None,
+#                  grid: Grid = Grid.square,
+#                  major_tick_distance: int = -1,
+#                  helices_view_order: List[int] = None,
+#                  scaffold: Optional[Strand] = None):
+#         super().__init__(helices=helices, strands=strands, grid=grid,
+#                          major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
+#         self.scaffold = scaffold
+#         if scaffold is not None:
+#             scaffold.is_scaffold = True
+#             scaffold.color = default_scaffold_color
+#
+#     def __post_init__(self):
+#         super().__post_init__()
+#
+#         # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
+#         # to create an origami by starting with several simple Strands and add nicks and crossovers.
+#         if self.scaffold is not None:
+#             self.scaffold.color = default_scaffold_color
+#             self.scaffold.is_scaffold = True
+#             if self.scaffold not in self.strands:
+#                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
+#
+#     def set_scaffold(self, scaffold: Strand):
+#         """
+#         Set the scaffold of this :any:`DNAOrigamiDesign`.
+#
+#         :param scaffold: The scaffold :any:`Strand`.
+#         """
+#         self.scaffold = scaffold
+#         scaffold.is_scaffold = True
+#         self.scaffold.color = default_scaffold_color
+#
+#     def assign_m13_to_scaffold(self, rotation: int = 5588):
+#         """
+#         Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
+#         """
+#         self.assign_dna(self.scaffold, m13(rotation))
+#
+#     # def to_json_serializable(self, suppress_indent=True):
+#     #     json_map = super().to_json_serializable(suppress_indent)
+#     #     json_map[is_origami_key] = True
+#     #     return json_map

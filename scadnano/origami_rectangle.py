@@ -68,7 +68,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
            twist_correction_deletion_offset=-1,
            num_flanking_columns: int = 1, num_flanking_helices=0,
            custom_scaffold: str = None, edge_staples: bool = True,
-           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.DNAOrigamiDesign:
+           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.DNADesign:
     """
     Creates a DNA origami rectangle with a given number of helices and "columns" 
     (16-base-wide region in each helix). 
@@ -232,8 +232,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                               num_cols, nick_pattern, edge_staples, use_idt_defaults)
 
-    design = sc.DNAOrigamiDesign(helices=helices, strands=[scaffold] + staples, grid=sc.square,
-                                 scaffold=scaffold)
+    design = sc.DNADesign(helices=helices, strands=[scaffold] + staples, grid=sc.square)
 
     if twist_correction_deletion_spacing > 0:
         add_twist_correction_deletions(design=design,
@@ -285,7 +284,7 @@ def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_he
         substrands_right.append(right_substrand)
     substrands_left.reverse()
     substrands = substrands_left + [top_substrand] + substrands_right
-    return sc.Strand(substrands=substrands, color=sc.default_scaffold_color)
+    return sc.Strand(substrands=substrands, color=sc.default_scaffold_color, is_scaffold=True)
 
 
 def _create_staples(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
