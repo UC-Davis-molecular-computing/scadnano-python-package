@@ -33,7 +33,7 @@ Once Python is installed, there are two ways you can install the scadnano Python
     * *required*: [scadnano.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano.py) 
     * *optional*: [origami_rectangle.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
 
-    Unfortunately, the scadnano package depends on the Python [xlwt](https://pypi.org/project/xlwt/), so xlwt must be installed. To install, type `pip install xlwt` at the command line. If this does not work, then you can comment out the line `import xlwt` in `scadnano.py`, but then you will not be able to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences.
+    Unfortunately, the scadnano package depends on the Python package [xlwt](https://pypi.org/project/xlwt/), so xlwt must be installed. To install, type `pip install xlwt` at the command line. If this does not work, then you can comment out the line `import xlwt` in `scadnano.py`, but then you will not be able to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences.
 
 
 

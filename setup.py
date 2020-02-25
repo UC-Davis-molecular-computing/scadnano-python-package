@@ -10,7 +10,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(name='scadnano',
       packages=['scadnano'],
-      version='0.2.0',
+      version='0.3.0',
       license='MIT',
       description="Python scripting library for generating designs readable by scadnano.",
       author="David Doty",

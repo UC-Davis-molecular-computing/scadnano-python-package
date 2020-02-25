@@ -287,7 +287,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.2.0"
+current_version: str = "0.3.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -412,6 +412,8 @@ _m13_sequence_5588 = \
     "TCGGTGGCCTCACTGATTATAAAAACACTTCTCAGGATTCTGGCGTACCGTTCCTGTCTAAAATCCCTTTAATCGGCCTCCTGTTTAGCTCCCGCTCTGA" \
     "TTCTAACGAGGAAAGCACGTTATACGTGCTCGTCAAAGCAACCATAGTACGCGCCCTGTAGCGGCGCATTAAGCGCGGCGGGTGTGGTGGTTACGCGCAG" \
     "CGTGACCGCTACACTTGCCAGCGCCCTAGCGCCCGCTCCTTTCGCTTTC"
+
+
 """
 The M13mp18 DNA sequence (commonly called simply M13), starting from cyclic rotation 5588, as defined in
 `GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
