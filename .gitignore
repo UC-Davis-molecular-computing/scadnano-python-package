@@ -17,3 +17,6 @@ tests/tests_outputs/cadnano_v2_export/test_2_stape_2_helix_origami_extremely_sim
 tests/tests_outputs/cadnano_v2_export/test_6_helix_origami_rectangle.dna
 tests/tests_outputs/cadnano_v2_export/test_6_helix_origami_rectangle.json
 examples/run_all_examples.xls
+__pycache__/
+tests_outputs/
+.vscode/
