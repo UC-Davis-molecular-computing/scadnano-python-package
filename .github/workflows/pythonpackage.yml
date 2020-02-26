@@ -24,5 +24,7 @@ jobs:
     - run: which python
     - name: Setup conda environment
       run: conda env create -f environment.yml
+    - name: Activate conda enviornment
+      run: conda activate scadnano-test
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
