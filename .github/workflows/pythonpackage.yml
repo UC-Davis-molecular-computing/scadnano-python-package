@@ -23,6 +23,6 @@ jobs:
     - run: conda --version
     - run: which python
     - name: Setup conda environment
-    - run: conda env create -f environment.yml
+      run: conda env create -f environment.yml
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
