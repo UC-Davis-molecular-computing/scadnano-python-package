@@ -1956,6 +1956,9 @@ class DNADesign(_JSONSerializable):
         self.major_tick_distance = major_tick_distance
         self.helices_view_order = helices_view_order
 
+        if self.strands is None:
+            self.strands = []
+
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
