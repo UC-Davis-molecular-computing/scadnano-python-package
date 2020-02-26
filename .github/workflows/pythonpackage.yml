@@ -20,12 +20,14 @@ jobs:
       run: python setup.py install
     - name: Setup conda
       uses: s-weigand/setup-conda@v1
+      with:
+        activate-conda: true
     - run: conda --version
     - run: which python
     - name: Setup conda environment
       run: conda env create -f environment.yml
-    - name: Run conda.sh
-      run: source ~/anaconda3/etc/profile.d/conda.sh
+    # - name: Run conda.sh
+    #   run: source ~/anaconda3/etc/profile.d/conda.sh
     - name: Activate conda environment
       run: conda activate scadnano-test
     - name: Test with unittest
