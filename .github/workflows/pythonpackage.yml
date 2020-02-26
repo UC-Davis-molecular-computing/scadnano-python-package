@@ -18,10 +18,10 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: python setup.py install
-    - name: Setup conda
-      uses: s-weigand/setup-conda@v1
-    - run: conda --version
-    - run: which python
+    # - name: Setup conda
+    #   uses: s-weigand/setup-conda@v1
+    # - run: conda --version
+    # - run: which python
     - name: Setup conda environment
       run: conda env create -f environment.yml
     - name: Test with unittest
