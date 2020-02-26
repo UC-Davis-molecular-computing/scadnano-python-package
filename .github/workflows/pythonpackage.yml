@@ -26,10 +26,14 @@ jobs:
     - run: which python
     - name: Initialize conda shell
       run: conda init bash
-    - name: Setup conda environment
-      run: conda env create -f environment.yml
+    -name: --------TRYING TO FIND ANACONDA3 --------
+      run: |
+      ls ~/anaconda3
+
     # - name: Run conda.sh
     #   run: source ~/anaconda3/etc/profile.d/conda.sh
+    - name: Setup conda environment
+      run: conda env create -f environment.yml
     - name: Activate conda environment
       run: conda activate scadnano-test
     - name: Test with unittest
