@@ -24,6 +24,8 @@ jobs:
         activate-conda: true
     - run: conda --version
     - run: which python
+    - name: Initialize conda shell
+      run: conda init bash
     - name: Setup conda environment
       run: conda env create -f environment.yml
     # - name: Run conda.sh
