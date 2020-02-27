@@ -26,12 +26,12 @@ jobs:
     - run: which python
     - name: Initialize conda shell
       run: conda init bash
-    # - name: Run conda.sh
-    #   run: source ~/anaconda3/etc/profile.d/conda.sh
+    - name: Run conda.sh
+      run: source /usr/share/miniconda/etc/profile.d/conda.sh
     - name: Setup conda environment
       run: conda env create -f environment.yml
     - name: Activate conda environment
-      # run: conda activate scadnano-test
-      run: conda activate base
+      run: conda activate scadnano-test
+      # run: conda activate base
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
