@@ -28,8 +28,8 @@ jobs:
       run: conda env create -f environment.yml
     - name: Initialize conda shell
       run: conda init bash
-    - name: Activate conda environment -- conda
-      run: conda activate scadnano-test
+    # - name: Activate conda environment -- conda
+    #   run: conda activate scadnano-test
     - name: Activate conda environment -- source
       run: source activate scadnano-test
     - name: Run conda.sh -- first method
