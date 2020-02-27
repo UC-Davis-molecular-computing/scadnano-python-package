@@ -43,5 +43,7 @@ jobs:
     # - name: Restart shell -- fifth method
     #   run: exec $SHELL
       # run: conda activate base
+    - name: Manually install xlwt
+      run: sudo apt-get install python-xlwt
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
