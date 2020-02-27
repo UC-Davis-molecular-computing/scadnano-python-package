@@ -24,6 +24,8 @@ jobs:
         activate-conda: true
     - run: conda --version
     - run: which python
+    - name: List packages in conda environment before setup
+      run: conda list
     - name: Setup conda environment
       run: conda env create -f environment.yml
     - name: Initialize conda shell
@@ -45,7 +47,9 @@ jobs:
       # run: conda activate base
     - name: Manually install xlwt
       run: sudo apt-get install python-xlwt
-    - name: List linked packages in conda environment
+    - name: List linked packages in conda environment after setup
       run: conda list
+    - name: Install xlwt with conda
+      run: conda install xlwt-1.3.0
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
