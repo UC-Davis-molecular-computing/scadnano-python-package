@@ -30,6 +30,8 @@ jobs:
       run: source /usr/share/miniconda/etc/profile.d/conda.sh
     - name: Run conda.sh -- second method
       run: eval "$(conda shell.bash hook)"
+    - name: Restart shell -- third method
+      run: source ~/.bashrc
     - name: Setup conda environment
       run: conda env create -f environment.yml
     - name: Activate conda environment
