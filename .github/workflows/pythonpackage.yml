@@ -16,24 +16,24 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: python setup.py install
-    - name: Setup conda
-      uses: s-weigand/setup-conda@v1
-      with:
-        activate-conda: true
-    - run: conda --version
-    - run: which python
-    - name: List packages in conda environment before setup
-      run: conda list
-    - name: Setup conda environment
-      run: conda env create -f environment.yml
-    - name: Initialize conda shell
-      run: conda init bash
+    # - name: Install dependencies
+    #   run: python setup.py install
+    # - name: Setup conda
+    #   uses: s-weigand/setup-conda@v1
+    #   with:
+    #     activate-conda: true
+    # - run: conda --version
+    # - run: which python
+    # - name: List packages in conda environment before setup
+    #   run: conda list
+    # - name: Setup conda environment
+    #   run: conda env create -f environment.yml
+    # - name: Initialize conda shell
+    #   run: conda init bash
     # - name: Activate conda environment -- conda
     #   run: conda activate scadnano-test
-    - name: Activate conda environment -- source
-      run: source activate scadnano-test
+    # - name: Activate conda environment -- source
+    #   run: source activate scadnano-test
     # - name: Run conda.sh -- first method
     #   run: source /usr/share/miniconda/etc/profile.d/conda.sh
     # - name: Run conda.sh -- second method
@@ -45,10 +45,10 @@ jobs:
     # - name: Restart shell -- fifth method
     #   run: exec $SHELL
       # run: conda activate base
-    - name: Manually install xlwt
-      run: sudo apt-get install python-xlwt
-    - name: List linked packages in conda environment after setup
-      run: conda list
+    # - name: Manually install xlwt
+    #   run: sudo apt-get install python-xlwt
+    # - name: List linked packages in conda environment after setup
+    #   run: conda list
     - name: Install xlwt with conda
       run: conda install xlwt=1.3.0
     - name: Install docutils with conda
