@@ -27,8 +27,7 @@ jobs:
     - name: Initialize conda shell
       run: conda init bash
     -name: --------TRYING TO FIND ANACONDA3 --------
-      run: |
-      ls ~/anaconda3
+      run: ls ~/anaconda3
 
     # - name: Run conda.sh
     #   run: source ~/anaconda3/etc/profile.d/conda.sh
