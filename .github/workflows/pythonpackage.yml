@@ -32,16 +32,16 @@ jobs:
     #   run: conda activate scadnano-test
     - name: Activate conda environment -- source
       run: source activate scadnano-test
-    - name: Run conda.sh -- first method
-      run: source /usr/share/miniconda/etc/profile.d/conda.sh
-    - name: Run conda.sh -- second method
-      run: eval "$(conda shell.bash hook)"
-    - name: Restart shell -- third method
-      run: source ~/.bashrc
-    - name: Restart shell -- fourth method
-      run: exec bash
-    - name: Restart shell -- fifth method
-      run: exec $SHELL
+    # - name: Run conda.sh -- first method
+    #   run: source /usr/share/miniconda/etc/profile.d/conda.sh
+    # - name: Run conda.sh -- second method
+    #   run: eval "$(conda shell.bash hook)"
+    # - name: Restart shell -- third method
+    #   run: source ~/.bashrc
+    # - name: Restart shell -- fourth method
+    #   run: exec bash
+    # - name: Restart shell -- fifth method
+    #   run: exec $SHELL
       # run: conda activate base
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
