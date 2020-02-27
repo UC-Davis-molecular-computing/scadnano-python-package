@@ -34,6 +34,8 @@ jobs:
       run: source ~/.bashrc
     - name: Restart shell -- fourth method
       run: exec bash
+    - name: Restart shell -- fifth method
+      run: exec $SHELL
     - name: Setup conda environment
       run: conda env create -f environment.yml
     - name: Activate conda environment
