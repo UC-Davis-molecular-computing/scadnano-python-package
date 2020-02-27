@@ -1736,6 +1736,21 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
     #     with self.assertRaises(sc.IllegalDNADesignError):
     #         design_pre_json.to_json()
 
+    def test_strands_not_specified_in_DNADesign_constructor(self):
+        design = sc.DNADesign(helices=[])
+        self.assertEqual(0, len(design.helices))
+        self.assertEqual(0, len(design.strands))
+
+    def test_helices_not_specified_in_DNADesign_constructor(self):
+        design = sc.DNADesign(strands=[])
+        self.assertEqual(0, len(design.helices))
+        self.assertEqual(0, len(design.strands))
+
+    def test_strands_and_helices_not_specified_in_DNADesign_constructor(self):
+        design = sc.DNADesign()
+        self.assertEqual(0, len(design.helices))
+        self.assertEqual(0, len(design.strands))
+
     def test_consecutive_substrands_loopout(self):
         helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Substrand(0, sc.forward, 0, 3)
