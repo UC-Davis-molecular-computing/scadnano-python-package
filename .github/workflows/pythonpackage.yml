@@ -45,5 +45,7 @@ jobs:
       # run: conda activate base
     - name: Manually install xlwt
       run: sudo apt-get install python-xlwt
+      name: List linked packages in conda environment
+      run: conda list
     - name: Test with unittest
       run: python -m unittest -v tests/scadnano_tests.py
