@@ -195,7 +195,7 @@ class TestModifications(unittest.TestCase):
         strands = [strand5, strand3, strandI, strand53, strand53I]
         design = sc.DNADesign(strands=strands)
 
-        print(design.to_json())
+        # print(design.to_json())
 
         json_dict = design.to_json_serializable(suppress_indent=False)
         self.assertTrue(sc.design_modifications_key in json_dict)
@@ -223,8 +223,6 @@ class TestModifications(unittest.TestCase):
         self.assertEqual("/5Biosg/", strand53I_mod5_json)
         self.assertEqual("/3Bio/", strand53I_mod3_json)
         self.assertDictEqual({"1": "/iBiodT/", "2": "/iBiodT/"}, strand53I_mods_int_json)
-
-        # print(design.to_json())
 
 
 class TestImportCadnanoV2(unittest.TestCase):
