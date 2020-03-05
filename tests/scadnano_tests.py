@@ -42,81 +42,80 @@ def remove_whitespace(sequence):
 
 class TestModifications(unittest.TestCase):
 
-    def test_mod_illegal_exceptions_raised(self):
-        biotin5_1 = mod.Biotin(location=sc.ModLocation.prime5)
-        biotin5_2 = mod.Biotin(location=sc.ModLocation.prime5)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotin5_1, biotin5_2])
-
-        biotin3_1 = mod.Biotin(location=sc.ModLocation.prime3)
-        biotin3_2 = mod.Biotin(location=sc.ModLocation.prime3)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotin3_1, biotin3_2])
-
-        biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-        biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotinI_1, biotinI_2])
-
-        biotinI_small = mod.Biotin(location=sc.ModLocation.internal, offset=-1)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotinI_small])
-            seq = strand.idt_dna_sequence()
-
-        biotinI_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotinI_small])
-            seq = strand.idt_dna_sequence()
-
-        biotinI_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[biotinI_offset_not_T])
-            seq = strand.idt_dna_sequence()
-
-        cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-                               modifications=[cy3I_offset_off_end])
-            seq = strand.idt_dna_sequence()
+    # def test_mod_illegal_exceptions_raised(self):
+    #     biotin5_1 = mod.Biotin(location=sc.ModLocation.prime5)
+    #     biotin5_2 = mod.Biotin(location=sc.ModLocation.prime5)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotin5_1, biotin5_2])
+    #
+    #     biotin3_1 = mod.Biotin(location=sc.ModLocation.prime3)
+    #     biotin3_2 = mod.Biotin(location=sc.ModLocation.prime3)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotin3_1, biotin3_2])
+    #
+    #     biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+    #     biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotinI_1, biotinI_2])
+    #
+    #     biotinI_small = mod.Biotin(location=sc.ModLocation.internal, offset=-1)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotinI_small])
+    #         seq = strand.idt_dna_sequence()
+    #
+    #     biotinI_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotinI_small])
+    #         seq = strand.idt_dna_sequence()
+    #
+    #     biotinI_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[biotinI_offset_not_T])
+    #         seq = strand.idt_dna_sequence()
+    #
+    #     cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
+    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+    #                            modifications=[cy3I_offset_off_end])
+    #         seq = strand.idt_dna_sequence()
 
     def test_Cy3(self):
-        cy3_5 = mod.Cy3(location=sc.ModLocation.prime5)
-        self.assertEqual(r'/5Cy3/', cy3_5.idt)
+        cy3_5 = mod.cy3_5p
+        self.assertEqual(r'/5Cy3/', cy3_5.idt_text)
         self.assertEqual(r'/5Cy3/', cy3_5.json_short)
-        self.assertEqual('Cy3', cy3_5.display)
-        self.assertEqual(None, cy3_5.offset)
-        cy3_3 = mod.Cy3(location=sc.ModLocation.prime3)
-        self.assertEqual(r'/3Cy3Sp/', cy3_3.idt)
+        self.assertEqual('Cy3', cy3_5.display_text)
+        cy3_3 = mod.cy3_3p
+        self.assertEqual(r'/3Cy3Sp/', cy3_3.idt_text)
         self.assertEqual(r'/3Cy3Sp/', cy3_3.json_short)
-        self.assertEqual('Cy3', cy3_3.display)
-        self.assertEqual(None, cy3_3.offset)
-        cy3_i1 = mod.Cy3(location=sc.ModLocation.internal, offset=1)
-        self.assertEqual(r'/iCy3/', cy3_i1.idt)
+        self.assertEqual('Cy3', cy3_3.display_text)
+        # cy3_i1 = mod.Cy3(location=sc.ModLocation.internal, offset=1)
+        cy3_i1 = mod.cy3_int
+        self.assertEqual(r'/iCy3/', cy3_i1.idt_text)
         self.assertEqual(r'/iCy3/', cy3_i1.json_short)
-        self.assertEqual('Cy3', cy3_i1.display)
-        self.assertEqual(1, cy3_i1.offset)
-        cy3_i2 = mod.Cy3(location=sc.ModLocation.internal, offset=3)
-        self.assertEqual(r'/iCy3/', cy3_i2.idt)
+        self.assertEqual('Cy3', cy3_i1.display_text)
+        # cy3_i2 = mod.Cy3(location=sc.ModLocation.internal, offset=3)
+        cy3_i2 = mod.cy3_int
+        self.assertEqual(r'/iCy3/', cy3_i2.idt_text)
         self.assertEqual(r'/iCy3/', cy3_i2.json_short)
-        self.assertEqual('Cy3', cy3_i2.display)
-        self.assertEqual(3, cy3_i2.offset)
+        self.assertEqual('Cy3', cy3_i2.display_text)
 
         strand5 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[cy3_5])
-        strand3 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[cy3_3])
-        strandI = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[cy3_i1, cy3_i2])
-        strand53 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                             modifications=[cy3_5, cy3_3])
-        strand53I = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                              modifications=[cy3_5, cy3_3, cy3_i1, cy3_i2])
+                            modification_5p=cy3_5)
+        strand3 = sc.Strand(substrands=[sc.Substrand(1, True, 0, 5)], dna_sequence='ATTGC',
+                            modification_3p=cy3_3)
+        strandI = sc.Strand(substrands=[sc.Substrand(2, True, 0, 5)], dna_sequence='ATTGC',
+                            modifications_int={1: cy3_i1, 3: cy3_i2})
+        strand53 = sc.Strand(substrands=[sc.Substrand(3, True, 0, 5)], dna_sequence='ATTGC',
+                             modification_5p=cy3_5, modification_3p=cy3_3)
+        strand53I = sc.Strand(substrands=[sc.Substrand(4, True, 0, 5)], dna_sequence='ATTGC',
+                              modification_5p=cy3_5, modification_3p=cy3_3,
+                              modifications_int={1: cy3_i1, 3: cy3_i2})
 
         self.assertEqual(r'/5Cy3/ATTGC', strand5.idt_dna_sequence())
         self.assertEqual(r'ATTGC/3Cy3Sp/', strand3.idt_dna_sequence())
@@ -125,37 +124,36 @@ class TestModifications(unittest.TestCase):
         self.assertEqual(r'/5Cy3/AT/iCy3/TG/iCy3/C/3Cy3Sp/', strand53I.idt_dna_sequence())
 
     def test_biotin(self):
-        biotin5 = mod.Biotin(location=sc.ModLocation.prime5)
-        self.assertEqual(r'/5Biosg/', biotin5.idt)
+        biotin5 = mod.biotin_5p
+        self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.json_short)
-        self.assertEqual('B', biotin5.display)
-        self.assertEqual(None, biotin5.offset)
-        biotin3 = mod.Biotin(location=sc.ModLocation.prime3)
-        self.assertEqual(r'/3Bio/', biotin3.idt)
+        self.assertEqual('B', biotin5.display_text)
+        biotin3 = mod.biotin_3p
+        self.assertEqual(r'/3Bio/', biotin3.idt_text)
         self.assertEqual(r'/3Bio/', biotin3.json_short)
-        self.assertEqual('B', biotin3.display)
-        self.assertEqual(None, biotin3.offset)
-        biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
-        self.assertEqual(r'/iBiodT/', biotinI_1.idt)
+        self.assertEqual('B', biotin3.display_text)
+        # biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
+        biotinI_1 = mod.biotin_int
+        self.assertEqual(r'/iBiodT/', biotinI_1.idt_text)
         self.assertEqual(r'/iBiodT/', biotinI_1.json_short)
-        self.assertEqual('B', biotinI_1.display)
-        self.assertEqual(1, biotinI_1.offset)
-        biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-        self.assertEqual(r'/iBiodT/', biotinI_2.idt)
+        self.assertEqual('B', biotinI_1.display_text)
+        # biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+        biotinI_2 = mod.biotin_int
+        self.assertEqual(r'/iBiodT/', biotinI_2.idt_text)
         self.assertEqual(r'/iBiodT/', biotinI_2.json_short)
-        self.assertEqual('B', biotinI_2.display)
-        self.assertEqual(2, biotinI_2.offset)
+        self.assertEqual('B', biotinI_2.display_text)
 
         strand5 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotin5])
-        strand3 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotin3])
-        strandI = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotinI_1, biotinI_2])
-        strand53 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                             modifications=[biotin5, biotin3])
-        strand53I = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                              modifications=[biotin5, biotin3, biotinI_1, biotinI_2])
+                            modification_5p=biotin5)
+        strand3 = sc.Strand(substrands=[sc.Substrand(1, True, 0, 5)], dna_sequence='ATTGC',
+                            modification_3p=biotin3)
+        strandI = sc.Strand(substrands=[sc.Substrand(2, True, 0, 5)], dna_sequence='ATTGC',
+                            modifications_int={1: biotinI_1, 2: biotinI_2})
+        strand53 = sc.Strand(substrands=[sc.Substrand(3, True, 0, 5)], dna_sequence='ATTGC',
+                             modification_5p=biotin5, modification_3p=biotin3)
+        strand53I = sc.Strand(substrands=[sc.Substrand(4, True, 0, 5)], dna_sequence='ATTGC',
+                              modification_5p=biotin5, modification_3p=biotin3,
+                              modifications_int={1: biotinI_1, 2: biotinI_2})
         self.assertEqual(r'/5Biosg/ATTGC', strand5.idt_dna_sequence())
         self.assertEqual(r'ATTGC/3Bio/', strand3.idt_dna_sequence())
         self.assertEqual(r'A/iBiodT//iBiodT/GC', strandI.idt_dna_sequence())
@@ -163,38 +161,41 @@ class TestModifications(unittest.TestCase):
         self.assertEqual(r'/5Biosg/A/iBiodT//iBiodT/GC/3Bio/', strand53I.idt_dna_sequence())
 
     def test_to_json_serializable(self):
-        biotin5 = mod.Biotin(location=sc.ModLocation.prime5)
-        self.assertEqual(r'/5Biosg/', biotin5.idt)
+        biotin5 = mod.biotin_5p
+        self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.json_short)
-        self.assertEqual('B', biotin5.display)
-        self.assertEqual(None, biotin5.offset)
-        biotin3 = mod.Biotin(location=sc.ModLocation.prime3)
-        self.assertEqual(r'/3Bio/', biotin3.idt)
+        self.assertEqual('B', biotin5.display_text)
+        biotin3 = mod.biotin_3p
+        self.assertEqual(r'/3Bio/', biotin3.idt_text)
         self.assertEqual(r'/3Bio/', biotin3.json_short)
-        self.assertEqual('B', biotin3.display)
-        self.assertEqual(None, biotin3.offset)
-        biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
-        self.assertEqual(r'/iBiodT/', biotinI_1.idt)
+        self.assertEqual('B', biotin3.display_text)
+        # biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
+        biotinI_1 = mod.biotin_int
+        self.assertEqual(r'/iBiodT/', biotinI_1.idt_text)
         self.assertEqual(r'/iBiodT/', biotinI_1.json_short)
-        self.assertEqual('B', biotinI_1.display)
-        self.assertEqual(1, biotinI_1.offset)
-        biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-        self.assertEqual(r'/iBiodT/', biotinI_2.idt)
+        self.assertEqual('B', biotinI_1.display_text)
+        # biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+        biotinI_2 = mod.biotin_int
+        self.assertEqual(r'/iBiodT/', biotinI_2.idt_text)
         self.assertEqual(r'/iBiodT/', biotinI_2.json_short)
-        self.assertEqual('B', biotinI_2.display)
-        self.assertEqual(2, biotinI_2.offset)
+        self.assertEqual('B', biotinI_2.display_text)
+
         strand5 = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotin5])
+                            modification_5p=biotin5)
         strand3 = sc.Strand(substrands=[sc.Substrand(1, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotin3])
+                            modification_3p=biotin3)
         strandI = sc.Strand(substrands=[sc.Substrand(2, True, 0, 5)], dna_sequence='ATTGC',
-                            modifications=[biotinI_1, biotinI_2])
+                            modifications_int={1: biotinI_1, 2: biotinI_2})
         strand53 = sc.Strand(substrands=[sc.Substrand(3, True, 0, 5)], dna_sequence='ATTGC',
-                             modifications=[biotin5, biotin3])
+                             modification_5p=biotin5, modification_3p=biotin3)
         strand53I = sc.Strand(substrands=[sc.Substrand(4, True, 0, 5)], dna_sequence='ATTGC',
-                              modifications=[biotin5, biotin3, biotinI_1, biotinI_2])
+                              modification_5p=biotin5, modification_3p=biotin3,
+                              modifications_int={1: biotinI_1, 2: biotinI_2})
+
         strands = [strand5, strand3, strandI, strand53, strand53I]
         design = sc.DNADesign(strands=strands)
+
+        print(design.to_json())
 
         json_dict = design.to_json_serializable(suppress_indent=False)
         self.assertTrue(sc.design_modifications_key in json_dict)
@@ -202,18 +203,26 @@ class TestModifications(unittest.TestCase):
         self.assertTrue(r'/5Biosg/' in mods_dict)
         self.assertTrue(r'/3Bio/' in mods_dict)
         self.assertTrue(r'/iBiodT/' in mods_dict)
-        strand5_mods_json = json_dict[sc.strands_key][0][sc.modifications_key]
-        strand3_mods_json = json_dict[sc.strands_key][1][sc.modifications_key]
-        strandI_mods_json = json_dict[sc.strands_key][2][sc.modifications_key]
-        strand53_mods_json = json_dict[sc.strands_key][3][sc.modifications_key]
-        strand53I_mods_json = json_dict[sc.strands_key][4][sc.modifications_key]
-        # print(strand5_mods_json)
-        self.assertDictEqual({"5'": "/5Biosg/"}, strand5_mods_json)
-        self.assertDictEqual({"3'": "/3Bio/"}, strand3_mods_json)
-        self.assertDictEqual({"i1": "/iBiodT/", "i2": "/iBiodT/"}, strandI_mods_json)
-        self.assertDictEqual({"5'": "/5Biosg/", "3'": "/3Bio/"}, strand53_mods_json)
-        self.assertDictEqual({"5'": "/5Biosg/", "3'": "/3Bio/", "i1": "/iBiodT/", "i2": "/iBiodT/"},
-                             strand53I_mods_json)
+
+        strand5_mod5_json = json_dict[sc.strands_key][0][sc.modification_5p_key]
+        strand3_mod3_json = json_dict[sc.strands_key][1][sc.modification_3p_key]
+        self.assertEqual("/5Biosg/", strand5_mod5_json)
+        self.assertEqual("/3Bio/", strand3_mod3_json)
+
+        strandI_mods_int_json = json_dict[sc.strands_key][2][sc.modifications_int_key]
+        self.assertDictEqual({"1": "/iBiodT/", "2": "/iBiodT/"}, strandI_mods_int_json)
+
+        strand53_mod5_json = json_dict[sc.strands_key][3][sc.modification_5p_key]
+        strand53_mod3_json = json_dict[sc.strands_key][3][sc.modification_3p_key]
+        self.assertEqual("/5Biosg/", strand53_mod5_json)
+        self.assertEqual("/3Bio/", strand53_mod3_json)
+
+        strand53I_mod5_json = json_dict[sc.strands_key][4][sc.modification_5p_key]
+        strand53I_mod3_json = json_dict[sc.strands_key][4][sc.modification_3p_key]
+        strand53I_mods_int_json = json_dict[sc.strands_key][4][sc.modifications_int_key]
+        self.assertEqual("/5Biosg/", strand53I_mod5_json)
+        self.assertEqual("/3Bio/", strand53I_mod3_json)
+        self.assertDictEqual({"1": "/iBiodT/", "2": "/iBiodT/"}, strand53I_mods_int_json)
 
         # print(design.to_json())
 

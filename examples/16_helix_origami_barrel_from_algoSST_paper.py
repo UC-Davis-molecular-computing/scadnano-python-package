@@ -2,6 +2,7 @@ import origami_rectangle as rect
 import scadnano as sc
 
 
+
 def main():
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2,
@@ -22,6 +23,8 @@ def main():
     assign_dna_to_unzipper_toeholds(design)
 
     design.assign_m13_to_scaffold()
+
+    add_biotins(design)
 
     return design
 
@@ -241,6 +244,11 @@ def assign_dna_to_unzipper_toeholds(design):
     for strand, toe in zip(strands_h1 + strands_h18, uz_toes):
         seq = toe + sc.DNA_base_wildcard * (strand.dna_length() - 8)
         design.assign_dna(strand, seq)
+
+
+def add_biotins(design):
+    pass
+
 
 
 if not sc.in_browser() and __name__ == '__main__':
