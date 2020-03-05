@@ -41,7 +41,7 @@ import json
 import enum
 import itertools
 import re
-from dataclasses import dataclass, field, InitVar
+from dataclasses import dataclass, field, InitVar, replace
 from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -1406,16 +1406,16 @@ class Strand(_JSONSerializable):
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
     then the method :py:meth:`DNADesign.write_idt_bulk_input_file` can be called to automatically
     generate an text file for ordering strands in test tubes: 
-    https://eu.idtdna.com/site/order/oligoentry,
+    https://www.idtdna.com/site/order/oligoentry,
     as can the method :py:meth:`DNADesign.write_idt_plate_excel_file` for writing a Microsoft Excel 
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
     or 384-well plates."""
 
     use_default_idt: bool = False
     """If ``True``, assigns an :any:`IDTFields` to this :any:`Strand` with same naming convention as
-    cadnano, i.e., :py:data:`IDTFields.name` = "ST{h5}[{s}]{h3}[{e}]", where h5 and h3 are the 
+    cadnano, i.e., :py:data:`IDTFields.name` = "ST{h5}[{s}]{h3}[{e}]", where {h5} and {h3} are the 
     :any:`Helix`'s of the 5' and 3' ends, respectively, of the :any:`Strand`, 
-    and s and e are the respective start and end offsets on those helices.
+    and {s} and {e} are the respective start and end offsets on those helices.
     """
 
     is_scaffold: bool = False
@@ -1828,6 +1828,10 @@ class Strand(_JSONSerializable):
             ret_list.append(self.modification_3p.idt_text)
 
         return ''.join(ret_list)
+
+    def unmodified_version(self):
+        strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
+        return strand_nomods
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -3034,7 +3038,8 @@ class DNADesign(_JSONSerializable):
                 other_strand.assign_dna_complement_from(strand)
 
     def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
-                                 warn_on_non_idt_strands: bool = False) -> str:
+                                 warn_on_non_idt_strands: bool = False,
+                                 export_non_modified_strand_version: bool = False) -> str:
         """Return string that is written to the file in the method
         :py:meth:`DNADesign.write_idt_bulk_input_file`.
 
@@ -3048,8 +3053,12 @@ class DNADesign(_JSONSerializable):
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
         :any:`Strand.idt`. Such strands will not be part of the output.
+
+        `export_non_modified_strand_version` specifies whether, for each strand that has modifications,
+        to also output a version of the strand with no modifications, but otherwise having the same data.
         """
-        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands)
+        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
+                                          export_non_modified_strand_version)
 
         idt_lines = [
             delimiter.join(
@@ -3059,7 +3068,8 @@ class DNADesign(_JSONSerializable):
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
-    def _idt_strands(self, warn_duplicate_name, warn_on_non_idt_strands) -> Dict[str, Strand]:
+    def _idt_strands(self, warn_duplicate_name: bool, warn_on_non_idt_strands: bool,
+                     export_non_modified_strand_version: bool = False) -> Dict[str, Strand]:
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
             if strand.idt is not None:
@@ -3100,13 +3110,16 @@ class DNADesign(_JSONSerializable):
                             f'  strand 2: helix {existing_ss.helix}, 5\' end at offset '
                             f'{existing_ss.offset_5p()}\n')
                 added_strands[name] = strand
+                if export_non_modified_strand_version:
+                    added_strands[name + '_nomods'] = strand.unmodified_version()
             elif warn_on_non_idt_strands:
                 print(f"WARNING: strand with 5' end on helix {strand.first_substrand().helix} "
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
     def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
-                                  warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
+                                  warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool=False,
+                                  export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
         :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
@@ -3131,13 +3144,15 @@ class DNADesign(_JSONSerializable):
 
         The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
         """
-        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands)
+        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
+                                                 export_non_modified_strand_version)
         _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
 
     def write_idt_plate_excel_file(self, directory: str = '.', filename=None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands=False,
                                    use_default_plates=False, warn_using_default_plates=True,
-                                   plate_type: PlateType = PlateType.wells96):
+                                   plate_type: PlateType = PlateType.wells96,
+                                   export_non_modified_strand_version: bool = False):
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`DNADesign` with the field
         :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
@@ -3166,7 +3181,8 @@ class DNADesign(_JSONSerializable):
         by the user, who is free to use coordinates for either plate type.
         """
 
-        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands).values())
+        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
+                                             export_non_modified_strand_version).values())
 
         if not use_default_plates:
             self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
