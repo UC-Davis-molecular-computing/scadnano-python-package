@@ -413,7 +413,6 @@ _m13_sequence_5588 = \
     "TTCTAACGAGGAAAGCACGTTATACGTGCTCGTCAAAGCAACCATAGTACGCGCCCTGTAGCGGCGCATTAAGCGCGGCGGGTGTGGTGGTTACGCGCAG" \
     "CGTGACCGCTACACTTGCCAGCGCCCTAGCGCCCGCTCCTTTCGCTTTC"
 
-
 """
 The M13mp18 DNA sequence (commonly called simply M13), starting from cyclic rotation 5588, as defined in
 `GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
@@ -1830,69 +1829,6 @@ def remove_helix_idxs_if_default(helices: List[Dict]):
             del helix[idx_on_helix_key]
 
 
-# @dataclass
-# class DNAOrigamiDesign(DNADesign):
-#     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
-#     :py:data:`DNAOrigamiDesign.scaffold`.
-#
-#     The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
-#     or it may be set after the :any:`DNAOrigamiDesign` is created.
-#     It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
-#
-#     The :py:data:`Color` of the scaffold will be automatically assigned.
-#     To change from the default :any:`Color`,
-#     change the field :py:data:`Strand.color` of
-#     :py:data:`DNAOrigamiDesign.scaffold`
-#     *after* the :any:`DNAOrigamiDesign` is created.
-#     """
-#
-#     scaffold: Strand = None
-#     """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
-#
-#     Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
-#
-#     def __init__(self, *,
-#                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
-#                  strands: List[Strand] = None,
-#                  grid: Grid = Grid.square,
-#                  major_tick_distance: int = -1,
-#                  helices_view_order: List[int] = None,
-#                  scaffold: Optional[Strand] = None):
-#         super().__init__(helices=helices, strands=strands, grid=grid,
-#                          major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
-#         self.scaffold = scaffold
-#         if scaffold is not None:
-#             scaffold.is_scaffold = True
-#             scaffold.color = default_scaffold_color
-#
-#     def __post_init__(self):
-#         super().__post_init__()
-#
-#         # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
-#         # to create an origami by starting with several simple Strands and add nicks and crossovers.
-#         if self.scaffold is not None:
-#             self.scaffold.color = default_scaffold_color
-#             self.scaffold.is_scaffold = True
-#             if self.scaffold not in self.strands:
-#                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
-#
-#     def set_scaffold(self, scaffold: Strand):
-#         """
-#         Set the scaffold of this :any:`DNAOrigamiDesign`.
-#
-#         :param scaffold: The scaffold :any:`Strand`.
-#         """
-#         self.scaffold = scaffold
-#         scaffold.is_scaffold = True
-#         self.scaffold.color = default_scaffold_color
-#
-#     def assign_m13_to_scaffold(self, rotation: int = 5588):
-#         """
-#         Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
-#         """
-#         self.assign_dna(self.scaffold, m13(rotation))
-
-
 @dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
@@ -1955,6 +1891,9 @@ class DNADesign(_JSONSerializable):
         self.grid = grid
         self.major_tick_distance = major_tick_distance
         self.helices_view_order = helices_view_order
+
+        if self.strands is None:
+            self.strands = []
 
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
@@ -2135,7 +2074,7 @@ class DNADesign(_JSONSerializable):
         substrands = []
 
         direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
-        (strand_type == 'stap' and curr_helix % 2 == 1))
+            (strand_type == 'stap' and curr_helix % 2 == 1))
         start, end = -1, -1
         if direction_forward:
             start = curr_base
@@ -2164,7 +2103,7 @@ class DNADesign(_JSONSerializable):
                                   vstrands[old_helix]['loop'], start, end)))
 
                 direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
-                (strand_type == 'stap' and curr_helix % 2 == 1))
+                    (strand_type == 'stap' and curr_helix % 2 == 1))
                 start, end = -1, -1
                 if direction_forward:
                     start = curr_base
@@ -2255,7 +2194,7 @@ class DNADesign(_JSONSerializable):
         return design
 
     def assign_m13_to_scaffold(self, rotation: int = 5588):
-        """Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
+        """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
         Raises :any:`IllegalDNADesignError` if the number of scaffolds is not exactly 1.
         """
@@ -3584,69 +3523,4 @@ class Crossover:
         if self.forward2 is None:
             self.forward2 = not self.forward1
 
-# @dataclass
-# class DNAOrigamiDesign(DNADesign):
-#     """Subclass of :any:`DNADesign` that also defines a special "scaffold" strand as a field
-#     :py:data:`DNAOrigamiDesign.scaffold`.
-#
-#     The field :py:data:`DNAOrigamiDesign.scaffold` can be set in the constructor,
-#     or it may be set after the :any:`DNAOrigamiDesign` is created.
-#     It should be assigned using the method :py:meth:`DNAOrigamiDesign.set_scaffold`.
-#
-#     The :py:data:`Color` of the scaffold will be automatically assigned.
-#     To change from the default :any:`Color`,
-#     change the field :py:data:`Strand.color` of
-#     :py:data:`DNAOrigamiDesign.scaffold`
-#     *after* the :any:`DNAOrigamiDesign` is created.
-#     """
-#
-#     scaffold: Strand = None
-#     """The scaffold :any:`Strand` of this :any:`DNAOrigamiDesign`.
-#
-#     Must be an element of :py:data:`DNAOrigamiDesign.strands`."""
-#
-#     def __init__(self, *,
-#                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
-#                  strands: List[Strand] = None,
-#                  grid: Grid = Grid.square,
-#                  major_tick_distance: int = -1,
-#                  helices_view_order: List[int] = None,
-#                  scaffold: Optional[Strand] = None):
-#         super().__init__(helices=helices, strands=strands, grid=grid,
-#                          major_tick_distance=major_tick_distance, helices_view_order=helices_view_order)
-#         self.scaffold = scaffold
-#         if scaffold is not None:
-#             scaffold.is_scaffold = True
-#             scaffold.color = default_scaffold_color
-#
-#     def __post_init__(self):
-#         super().__post_init__()
-#
-#         # XXX: it's not a great idea to allow scaffold to be None, but this helps when someone wants
-#         # to create an origami by starting with several simple Strands and add nicks and crossovers.
-#         if self.scaffold is not None:
-#             self.scaffold.color = default_scaffold_color
-#             self.scaffold.is_scaffold = True
-#             if self.scaffold not in self.strands:
-#                 raise StrandError(self.scaffold, 'scaffold strand not contained in DNAOrigamiDesigns.strands')
-#
-#     def set_scaffold(self, scaffold: Strand):
-#         """
-#         Set the scaffold of this :any:`DNAOrigamiDesign`.
-#
-#         :param scaffold: The scaffold :any:`Strand`.
-#         """
-#         self.scaffold = scaffold
-#         scaffold.is_scaffold = True
-#         self.scaffold.color = default_scaffold_color
-#
-#     def assign_m13_to_scaffold(self, rotation: int = 5588):
-#         """
-#         Assigns the scaffold to be the sequence of M13: :py:data:`m13_sequence` with the given `rotation`.
-#         """
-#         self.assign_dna(self.scaffold, m13(rotation))
-#
-#     # def to_json_serializable(self, suppress_indent=True):
-#     #     json_map = super().to_json_serializable(suppress_indent)
-#     #     json_map[is_origami_key] = True
-#     #     return json_map
+
