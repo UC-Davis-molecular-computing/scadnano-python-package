@@ -451,6 +451,7 @@ strands_key = 'strands'
 scaffold_key = 'scaffold'
 helices_view_order_key = "helices_view_order"
 is_origami_key = 'is_origami'
+design_modifications_key = 'modifications_in_design'
 
 # Helix keys
 idx_on_helix_key = 'idx'
@@ -466,6 +467,7 @@ dna_sequence_key = 'dna_sequence'
 substrands_key = 'substrands'
 idt_key = 'idt'
 is_scaffold_key = 'is_scaffold'
+modifications_key = 'modifications'
 
 # Substrand keys
 helix_idx_key = 'helix'
@@ -478,12 +480,86 @@ insertions_key = 'insertions'
 # Loopout keys
 loopout_key = 'loopout'
 
+# Modification keys
+mod_location_key = 'location'
+mod_display_key = 'display'
+mod_json_short_key = 'json_short'
+mod_idt_key = 'idt'
+mod_offset_key = 'offset'
+mod_attached_to_base_key = 'attached_to_base'
+mod_allowed_bases_key = 'allowed_bases'
+
 
 # end keys
 ##################
 
 # end constants
 ##########################################################################
+
+
+##########################################################################
+# modification abstract base classes
+
+class ModLocation(enum.Enum):
+    prime5 = "5'"
+    prime3 = "3'"
+    internal = "internal"
+
+
+@dataclass
+class Modification(_JSONSerializable):
+    """Abstract base class of modifications. Use :any:`Modification3`, :any:`Modification5`, or
+    :any:`ModificationInternal` to instantiate."""
+    location: ModLocation
+    """Location of modification (5' end, 3' end, or internal)."""
+
+    display: str
+    """Short string to display in the web interface as an "icon"
+    visually representing the modification."""
+
+    json_short: str
+    """Short representation as a JSON string."""
+
+    idt: Optional[str] = None
+    """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin)."""
+
+    offset: Optional[int] = None
+    """If :py:data:`location` = :py:data:`ModificationLocation.internal`, then this is the offset
+    of the modified base."""
+
+    attached_to_base: bool = False
+    """``False`` if this is a 5' or 3' modification, or an internal modification that is not attached to a 
+    base. If ``True``, then :py:data:`Modification.allowed_bases` indicates bases to which it may be 
+    attached."""
+
+    allowed_bases: List[str] = field(default_factory=lambda: ['A', 'C', 'G', 'T'])
+    """Allowed bases for this internal modification to be placed at, in case 
+    :py:data:`Modification.attached_to_base` is ``True``. For example, internal biotins for IDT
+    must be at a T. Some internal modifications, such as IDT /iCy3/, have , so they
+    can be anywhere and this field is """
+
+    def __post_init__(self):
+        if self.location == ModLocation.internal and self.offset is None:
+            raise IllegalDNADesignError('if location is internal then offset must be an integer')
+
+    def to_json_serializable(self, suppress_indent=True):
+        ret = {
+            mod_location_key: self.location.name,
+            mod_display_key: self.display,
+            mod_json_short_key: self.json_short,
+            mod_idt_key: self.idt,
+            mod_attached_to_base_key: self.attached_to_base,
+        }
+        if self.attached_to_base and set(self.allowed_bases) != {'A', 'C', 'G', 'T'}:
+            ret[mod_allowed_bases_key] = _NoIndent(
+                self.allowed_bases) if suppress_indent else self.allowed_bases
+
+        return ret
+
+
+# end modification abstract base classes
+##########################################################################
+
 
 @dataclass
 class Position3D(_JSONSerializable):
@@ -515,9 +591,6 @@ def in_browser() -> bool:
     except ModuleNotFoundError:
         return False
 
-
-# TODO: add rotation field to Helix
-#   doc: https://docs.google.com/document/d/1OysNEI1RIwzJ6IqbfTgLR3fYsmEUqIiuHJKxO7CeuaQ/edit#
 
 @dataclass
 class Helix(_JSONSerializable):
@@ -1340,6 +1413,9 @@ class Strand(_JSONSerializable):
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
     :any:`DNADesign` is a scaffold, then the design is considered a DNA origami design."""
 
+    modifications: List[Modification] = field(default_factory=list)
+    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores)."""
+
     # not serialized; efficient way to see a list of all substrands on a given helix
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
         init=False, repr=False, compare=False, default=None)
@@ -1356,6 +1432,18 @@ class Strand(_JSONSerializable):
                                self.substrands]
         if hasattr(self, is_scaffold_key) and self.is_scaffold == True:
             dct[is_scaffold_key] = self.is_scaffold
+
+        if len(self.modifications) > 0:
+            mods_dict = {}
+            for mod in self.modifications:
+                if mod.location == ModLocation.prime5:
+                    mods_dict["5'"] = mod.json_short
+                if mod.location == ModLocation.prime3:
+                    mods_dict["3'"] = mod.json_short
+                if mod.location == ModLocation.internal:
+                    mods_dict[f"i{mod.offset}"] = mod.json_short
+            dct[modifications_key] = _NoIndent(mods_dict) if suppress_indent else mods_dict
+
         return dct
 
     def __post_init__(self):
@@ -1387,6 +1475,8 @@ class Strand(_JSONSerializable):
 
         if self.use_default_idt:
             self.set_default_idt(True)
+
+        self._ensure_modifications_legal()
 
     def __eq__(self, other: Strand) -> bool:
         if not isinstance(other, Strand):
@@ -1676,6 +1766,71 @@ class Strand(_JSONSerializable):
             is_scaffold=is_scaffold,
         )
 
+    def _ensure_modifications_legal(self, check_offsets_legal=False):
+        mod5s = [mod for mod in self.modifications if mod.location == ModLocation.prime5]
+        mod3s = [mod for mod in self.modifications if mod.location == ModLocation.prime3]
+        if len(mod5s) > 1:
+            raise IllegalDNADesignError(f"cannot have more than one 5' modification: {mod5s}")
+        if len(mod3s) > 1:
+            raise IllegalDNADesignError(f"cannot have more than one 3' modification: {mod3s}")
+        modIs = [mod for mod in self.modifications if mod.location == ModLocation.internal]
+        modI_offsets_list = [mod.offset for mod in modIs]
+        modI_offsets_list.sort()
+        modI_offsets_set = set(modI_offsets_list)
+        if len(modI_offsets_set) != len(modI_offsets_list):
+            raise IllegalDNADesignError(f"cannot have more than one internal modification with the same "
+                                        f"offset: {modIs}")
+        if check_offsets_legal:
+            if self.dna_sequence is None:
+                raise IllegalDNADesignError(f"must assign DNA sequence first")
+            min_offset = min(modI_offsets_list) if len(modI_offsets_list) > 0 else None
+            max_offset = max(modI_offsets_list) if len(modI_offsets_list) > 0 else None
+            if min_offset is not None and min_offset < 0:
+                raise IllegalDNADesignError(f"smallest offset is {min_offset} but must be nonnegative: "
+                                            f"{modIs}")
+            if max_offset is not None and max_offset > len(self.dna_sequence):
+                raise IllegalDNADesignError(f"largeest offset is {max_offset} but must be at most "
+                                            f"{len(self.dna_sequence)}: "
+                                            f"{modIs}")
+            for mod in modIs:
+                if mod.attached_to_base and self.dna_sequence[mod.offset] not in mod.allowed_bases:
+                    raise IllegalDNADesignError(f"internal modified bases must be one of "
+                                                f"{','.join(mod.allowed_bases)}")
+                elif not mod.attached_to_base and mod.offset >= len(self.dna_sequence) - 1:
+                    raise IllegalDNADesignError(f"internal modification, if not attached to a base, "
+                                                f"must be one of have offset between 0 and one less than "
+                                                f"DNA sequence length. In this case, DNA sequence length is "
+                                                f"{len(self.dna_sequence)}, but offset {mod.offset} was "
+                                                f"used: {modIs}")
+
+    def idt_dna_sequence(self):
+        self._ensure_modifications_legal(check_offsets_legal=True)
+
+        mod5s = [mod for mod in self.modifications if mod.location == ModLocation.prime5]
+        mod3s = [mod for mod in self.modifications if mod.location == ModLocation.prime3]
+        mod5 = mod5s[0] if len(mod5s) > 0 else None
+        mod3 = mod3s[0] if len(mod3s) > 0 else None
+        modIs = {mod.offset: mod for mod in self.modifications if mod.location == ModLocation.internal}
+
+        ret_list = []
+        if mod5:
+            ret_list.append(mod5.idt)
+
+        for offset in range(len(self.dna_sequence)):
+            base = self.dna_sequence[offset]
+            ret_list.append(base)
+            if offset in modIs:  # if internal mod attached to base, replace base
+                mod = modIs[offset]
+                if mod.attached_to_base:
+                    ret_list[-1] = mod.idt  # replace base with modified base
+                else:
+                    ret_list.append(mod.idt)  # append modification between two bases
+
+        if mod3:
+            ret_list.append(mod3.idt)
+
+        return ''.join(ret_list)
+
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
     """Takes a "union" of two equal-length strings `s1` and `s2`.
@@ -1928,17 +2083,6 @@ class DNADesign(_JSONSerializable):
         return helices
 
     def __post_init__(self):
-        # if self.major_tick_distance < 0 or self.major_tick_distance is None:
-        #     self.major_tick_distance = default_major_tick_distance(self.grid)
-        #
-        # # doing this first matters because most of DNADesign assumes helices has been set
-        # if self.helices is None:
-        #     if len(self.strands) > 0:
-        #         max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
-        #         self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
-        #     else:
-        #         self.helices = {}
-
         # XXX: exact order of these calls is important
         self._set_helices_idxs()
         self._set_helices_grid_and_svg_positions()
@@ -2193,6 +2337,10 @@ class DNADesign(_JSONSerializable):
 
         return design
 
+    def _all_modifications(self):
+        # List of all modifications.
+        return [mod for strand in self.strands for mod in strand.modifications]
+
     def assign_m13_to_scaffold(self, rotation: int = 5588):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
@@ -2238,7 +2386,9 @@ class DNADesign(_JSONSerializable):
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix_list_order, helix in enumerate(self.helices.values()):
-            helix_json = dct[helices_key][helix_list_order].value  # get past NoIndent surrounding helix
+            helix_json = dct[helices_key][helix_list_order]
+            if suppress_indent:
+                helix_json = helix_json.value  # get past NoIndent surrounding helix
             # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
@@ -2246,6 +2396,14 @@ class DNADesign(_JSONSerializable):
             max_offset = max((ss.end for ss in helix._substrands), default=-1)
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
+
+        mods = self._all_modifications()
+        if len(mods) > 0:
+            mods_dict = {}
+            for mod in mods:
+                if mod.json_short not in mods_dict:
+                    mods_dict[mod.json_short] = mod.to_json_serializable(suppress_indent)
+            dct[design_modifications_key] = mods_dict
 
         return dct
 
@@ -2893,7 +3051,8 @@ class DNADesign(_JSONSerializable):
         added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands)
 
         idt_lines = [
-            delimiter.join([strand.idt.name, strand.dna_sequence, strand.idt.scale, strand.idt.purification])
+            delimiter.join(
+                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification])
             for strand in added_strands.values()]
 
         idt_string = '\n'.join(idt_lines)
@@ -3039,7 +3198,7 @@ class DNADesign(_JSONSerializable):
             for row, strand in enumerate(strands_in_plate):
                 worksheet.write(row + 1, 0, strand.idt.well)
                 worksheet.write(row + 1, 1, strand.idt.name)
-                worksheet.write(row + 1, 2, strand.dna_sequence)
+                worksheet.write(row + 1, 2, strand.idt_dna_sequence())
 
             workbook.save(filename_plate)
 
@@ -3072,7 +3231,7 @@ class DNADesign(_JSONSerializable):
             well = plate_coord.well()
             worksheet.write(excel_row, 0, well)
             worksheet.write(excel_row, 1, strand.idt.name)
-            worksheet.write(excel_row, 2, strand.dna_sequence)
+            worksheet.write(excel_row, 2, strand.idt_dna_sequence())
             plate_coord.increment()
             if plate != plate_coord.plate():
                 workbook.save(filename_plate)
@@ -3522,5 +3681,3 @@ class Crossover:
             self.offset2 = self.offset1
         if self.forward2 is None:
             self.forward2 = not self.forward1
-
-
