@@ -24,8 +24,6 @@ def main():
 
     design.assign_m13_to_scaffold()
 
-    add_biotins(design)
-
     return design
 
 
@@ -246,13 +244,10 @@ def assign_dna_to_unzipper_toeholds(design):
         design.assign_dna(strand, seq)
 
 
-def add_biotins(design):
-    pass
-
 
 
 if not sc.in_browser() and __name__ == '__main__':
     the_design = main()
     the_design.write_scadnano_file(directory='output_designs')
-    # the_design.write_idt_bulk_input_file(directory='idt')
-    the_design.write_idt_plate_excel_file(directory='idt', export_non_modified_strand_version=True)
+    the_design.write_idt_bulk_input_file(directory='idt')
+    # the_design.write_idt_plate_excel_file(directory='idt', export_non_modified_strand_version=True)
