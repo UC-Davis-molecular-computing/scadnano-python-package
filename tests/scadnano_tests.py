@@ -419,17 +419,20 @@ class TestDesignFromJson(unittest.TestCase):
         st_l = sc.Strand([
             sc.Substrand(1, True, 0, 8, insertions=[(4, 2)]),
             sc.Substrand(0, False, 0, 8, deletions=[3]),
-        ])
+        ], modification_5p=mod.biotin_5p)
         st_r = sc.Strand([
             sc.Substrand(0, False, 8, 16),
             sc.Substrand(1, True, 8, 16),
-        ])
+        ], modification_5p=mod.biotin_5p, modification_3p=mod.cy3_3p, modifications_int={
+            1: mod.biotin_int, 2: mod.cy5_int
+        })
         scaf = sc.Strand([
             sc.Substrand(1, False, 0, 8, insertions=[(4, 2)]),
             sc.Substrand(0, True, 0, 16, deletions=[3]),
             sc.Loopout(3),
             sc.Substrand(1, False, 8, 16, deletions=[]),
         ], is_scaffold=True)
+
         self.design_pre_json = sc.DNADesign(strands=[st_l, st_r, scaf], grid=sc.square)
         self.design_pre_json.assign_dna(scaf, 'A' * 36)
 
@@ -446,34 +449,34 @@ class TestDesignFromJson(unittest.TestCase):
 
         self.assertTrue(isinstance(design, sc.DNADesign))
 
-        self.assertEquals(sc.Grid.square, design.grid)
+        self.assertEqual(sc.Grid.square, design.grid)
 
-        self.assertEquals(2, len(design.helices))
+        self.assertEqual(2, len(design.helices))
         helix0 = design.helices[0]
         helix1 = design.helices[1]
-        self.assertEquals(0, helix0.idx)
-        self.assertEquals(0, helix0.min_offset)
-        self.assertEquals(16, helix0.max_offset)
-        self.assertEquals((0, 0, 0), helix0.grid_position)
-        self.assertEquals(1, helix1.idx)
-        self.assertEquals(0, helix1.min_offset)
-        self.assertEquals(16, helix1.max_offset)
-        self.assertEquals((0, 1, 0), helix1.grid_position)
+        self.assertEqual(0, helix0.idx)
+        self.assertEqual(0, helix0.min_offset)
+        self.assertEqual(16, helix0.max_offset)
+        self.assertEqual((0, 0, 0), helix0.grid_position)
+        self.assertEqual(1, helix1.idx)
+        self.assertEqual(0, helix1.min_offset)
+        self.assertEqual(16, helix1.max_offset)
+        self.assertEqual((0, 1, 0), helix1.grid_position)
 
-        self.assertEquals(3, len(design.strands))
+        self.assertEqual(3, len(design.strands))
         st_l = design.strands[0]
         st_r = design.strands[1]
         scaf = design.strands[2]
 
-        self.assertEquals(scaf, design.scaffold)
+        self.assertEqual(scaf, design.scaffold)
 
-        self.assertEquals(2, len(st_l.substrands))
-        self.assertEquals(2, len(st_r.substrands))
-        self.assertEquals(4, len(scaf.substrands))
+        self.assertEqual(2, len(st_l.substrands))
+        self.assertEqual(2, len(st_r.substrands))
+        self.assertEqual(4, len(scaf.substrands))
 
-        self.assertEquals('A' * 36, scaf.dna_sequence)
-        self.assertEquals('T' * 17, st_l.dna_sequence)
-        self.assertEquals('T' * 16, st_r.dna_sequence)
+        self.assertEqual('A' * 36, scaf.dna_sequence)
+        self.assertEqual('T' * 17, st_l.dna_sequence)
+        self.assertEqual('T' * 16, st_r.dna_sequence)
 
         st_l_ss0 = st_l.substrands[0]
         st_l_ss1 = st_l.substrands[1]
@@ -484,38 +487,38 @@ class TestDesignFromJson(unittest.TestCase):
         scaf_loop = scaf.substrands[2]
         scaf_ss2 = scaf.substrands[3]
 
-        self.assertEquals(3, scaf_loop.length)
+        self.assertEqual(3, scaf_loop.length)
 
-        self.assertEquals(1, st_l_ss0.helix)
-        self.assertEquals(0, st_l_ss1.helix)
-        self.assertEquals(0, st_r_ss0.helix)
-        self.assertEquals(1, st_r_ss1.helix)
-        self.assertEquals(1, scaf_ss0.helix)
-        self.assertEquals(0, scaf_ss1.helix)
-        self.assertEquals(1, scaf_ss2.helix)
+        self.assertEqual(1, st_l_ss0.helix)
+        self.assertEqual(0, st_l_ss1.helix)
+        self.assertEqual(0, st_r_ss0.helix)
+        self.assertEqual(1, st_r_ss1.helix)
+        self.assertEqual(1, scaf_ss0.helix)
+        self.assertEqual(0, scaf_ss1.helix)
+        self.assertEqual(1, scaf_ss2.helix)
 
-        self.assertEquals(True, st_l_ss0.forward)
-        self.assertEquals(False, st_l_ss1.forward)
-        self.assertEquals(False, st_r_ss0.forward)
-        self.assertEquals(True, st_r_ss1.forward)
-        self.assertEquals(False, scaf_ss0.forward)
-        self.assertEquals(True, scaf_ss1.forward)
-        self.assertEquals(False, scaf_ss2.forward)
+        self.assertEqual(True, st_l_ss0.forward)
+        self.assertEqual(False, st_l_ss1.forward)
+        self.assertEqual(False, st_r_ss0.forward)
+        self.assertEqual(True, st_r_ss1.forward)
+        self.assertEqual(False, scaf_ss0.forward)
+        self.assertEqual(True, scaf_ss1.forward)
+        self.assertEqual(False, scaf_ss2.forward)
 
-        self.assertEquals(0, st_l_ss0.start)
-        self.assertEquals(8, st_l_ss0.end)
-        self.assertEquals(0, st_l_ss1.start)
-        self.assertEquals(8, st_l_ss1.end)
-        self.assertEquals(8, st_r_ss0.start)
-        self.assertEquals(16, st_r_ss0.end)
-        self.assertEquals(8, st_r_ss1.start)
-        self.assertEquals(16, st_r_ss1.end)
-        self.assertEquals(0, scaf_ss0.start)
-        self.assertEquals(8, scaf_ss0.end)
-        self.assertEquals(0, scaf_ss1.start)
-        self.assertEquals(16, scaf_ss1.end)
-        self.assertEquals(8, scaf_ss2.start)
-        self.assertEquals(16, scaf_ss2.end)
+        self.assertEqual(0, st_l_ss0.start)
+        self.assertEqual(8, st_l_ss0.end)
+        self.assertEqual(0, st_l_ss1.start)
+        self.assertEqual(8, st_l_ss1.end)
+        self.assertEqual(8, st_r_ss0.start)
+        self.assertEqual(16, st_r_ss0.end)
+        self.assertEqual(8, st_r_ss1.start)
+        self.assertEqual(16, st_r_ss1.end)
+        self.assertEqual(0, scaf_ss0.start)
+        self.assertEqual(8, scaf_ss0.end)
+        self.assertEqual(0, scaf_ss1.start)
+        self.assertEqual(16, scaf_ss1.end)
+        self.assertEqual(8, scaf_ss2.start)
+        self.assertEqual(16, scaf_ss2.end)
 
         self.assertListEqual([(4, 2)], st_l_ss0.insertions)
         self.assertListEqual([], st_l_ss0.deletions)
@@ -531,6 +534,19 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertListEqual([3], scaf_ss1.deletions)
         self.assertListEqual([], scaf_ss2.insertions)
         self.assertListEqual([], scaf_ss2.deletions)
+
+        self.assertEqual(mod.biotin_5p, st_l.modification_5p)
+        self.assertEqual(None, st_l.modification_3p)
+        self.assertDictEqual({}, st_l.modifications_int)
+
+        self.assertEqual(mod.biotin_5p, st_r.modification_5p)
+        self.assertEqual(mod.cy3_3p, st_r.modification_3p)
+        self.assertDictEqual({1: mod.biotin_int, 2: mod.cy5_int}, st_r.modifications_int)
+
+        self.assertEqual(None, scaf.modification_5p)
+        self.assertEqual(None, scaf.modification_3p)
+        self.assertDictEqual({}, scaf.modifications_int)
+
 
     def test_from_json__helices_non_default_indices(self):
         h2 = sc.Helix(idx=2)

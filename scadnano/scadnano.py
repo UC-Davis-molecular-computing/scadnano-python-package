@@ -525,6 +525,25 @@ class Modification(_JSONSerializable):
             ret[mod_idt_text_key] = self.idt_text
         return ret
 
+    @staticmethod
+    def from_json(json_map: dict) -> Modification:
+        display_text = json_map[mod_display_text_key]
+        json_short = json_map[mod_json_short_key]
+        location = json_map[mod_location_key]
+        idt_text = json_map.get(mod_idt_text_key)
+        if location == "5'":
+            return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+        elif location == "3'":
+            return Modification3Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+        elif location == "internal":
+            allowed_bases = json_map.get(mod_allowed_bases_key)
+            if allowed_bases is not None:
+                allowed_bases = frozenset(allowed_bases)
+            return ModificationInternal(display_text=display_text, json_short=json_short, idt_text=idt_text,
+                                        allowed_bases=allowed_bases)
+        else:
+            raise IllegalDNADesignError(f'unknown Modification location "{location}"')
+
 
 @dataclass(frozen=True)
 class Modification5Prime(Modification):
@@ -535,6 +554,15 @@ class Modification5Prime(Modification):
         ret[mod_location_key] = "5'"
         return ret
 
+    @staticmethod
+    def from_json(json_map: dict) -> Modification5Prime:
+        display_text = json_map[mod_display_text_key]
+        json_short = json_map[mod_json_short_key]
+        location = json_map[mod_location_key]
+        assert location == "5'"
+        idt_text = json_map.get(mod_idt_text_key)
+        return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+
 
 @dataclass(frozen=True)
 class Modification3Prime(Modification):
@@ -544,6 +572,15 @@ class Modification3Prime(Modification):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "3'"
         return ret
+
+    @staticmethod
+    def from_json(json_map: dict) -> Modification3Prime:
+        display_text = json_map[mod_display_text_key]
+        json_short = json_map[mod_json_short_key]
+        location = json_map[mod_location_key]
+        assert location == "3'"
+        idt_text = json_map.get(mod_idt_text_key)
+        return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
 
 
 @dataclass(frozen=True)
@@ -565,6 +602,17 @@ class ModificationInternal(Modification):
                 list(self.allowed_bases)) if suppress_indent else self.allowed_bases
         return ret
 
+    @staticmethod
+    def from_json(json_map: dict) -> ModificationInternal:
+        display_text = json_map[mod_display_text_key]
+        json_short = json_map[mod_json_short_key]
+        location = json_map[mod_location_key]
+        assert location == "internal"
+        idt_text = json_map.get(mod_idt_text_key)
+        allowed_bases = json_map.get(mod_allowed_bases_key)
+        return ModificationInternal(display_text=display_text, json_short=json_short, idt_text=idt_text,
+                                    allowed_bases=allowed_bases)
+
 
 # end modification abstract base classes
 ##########################################################################
@@ -576,12 +624,12 @@ class Position3D(_JSONSerializable):
     Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
     """
 
-    x: float
-    y: float
-    z: float
-    pitch: float
-    roll: float
-    yaw: float
+    x: float = 0
+    y: float = 0
+    z: float = 0
+    pitch: float = 0
+    roll: float = 0
+    yaw: float = 0
 
     def to_json_serializable(self, suppress_indent=True):
         dct = self.__dict__
@@ -766,7 +814,7 @@ class Helix(_JSONSerializable):
     def default_grid_position(self):
         return (0, self.idx, 0)
 
-    def calculate_major_ticks(self, default_major_tick_distance):
+    def calculate_major_ticks(self, default_major_tick_distance: int):
         """
         Calculates full list of major tick marks, whether using `default_major_tick_distance` (from
         :any:`DNADesign`), :py:data:`Helix.major_tick_distance`, or :py:data:`Helix.major_ticks`.
@@ -1521,8 +1569,11 @@ class Strand(_JSONSerializable):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
-    def set_default_idt(self, use_default_idt):
-        """Sets idt field to be the default given the Substrand data of this :any:`Strand`."""
+    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True):
+        """Sets idt field to be the default given the Substrand data of this :any:`Strand`.
+
+        """
+        if skip_scaffold and self.is_scaffold: return
         self.use_default_idt = use_default_idt
         if use_default_idt:
             start_helix = self.first_bound_substrand().helix
@@ -2154,10 +2205,18 @@ class DNADesign(_JSONSerializable):
 
         # strands
         strands = []
-        deserialized_strand_list = json_map[strands_key]
-        for strand_json in deserialized_strand_list:
+        strand_jsons = json_map[strands_key]
+        for strand_json in strand_jsons:
             strand = Strand.from_json(strand_json)
             strands.append(strand)
+
+        # modifications in whole design
+        if design_modifications_key in json_map:
+            all_mods_json = json_map[design_modifications_key]
+            all_mods = {}
+            for mod_key, mod_json in all_mods_json.items():
+                all_mods[mod_key] = Modification.from_json(mod_json)
+            DNADesign.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
         return DNADesign(
             helices=helices,
@@ -2166,6 +2225,22 @@ class DNADesign(_JSONSerializable):
             major_tick_distance=major_tick_distance,
             helices_view_order=helices_view_order,
         )
+
+    @staticmethod
+    def assign_modifications_to_strands(strands: List[Strand], strand_jsons: List[dict],
+                                        all_mods: Dict[str, Modification]):
+        for strand, strand_json in zip(strands, strand_jsons):
+            if modification_5p_key in strand_json:
+                mod_name = strand_json[modification_5p_key]
+                strand.modification_5p = all_mods[mod_name]
+            if modification_3p_key in strand_json:
+                mod_name = strand_json[modification_3p_key]
+                strand.modification_3p = all_mods[mod_name]
+            if modifications_int_key in strand_json:
+                mod_names_by_offset = strand_json[modifications_int_key]
+                for offset_str, mod_name in mod_names_by_offset.items():
+                    offset = int(offset_str)
+                    strand.modifications_int[offset] = all_mods[mod_name]
 
     @staticmethod
     def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int,
@@ -2372,8 +2447,8 @@ class DNADesign(_JSONSerializable):
         dct[version_key] = current_version
         if self.grid != default_grid:
             dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
-        if self.major_tick_distance >= 0 and (
-                self.major_tick_distance != default_major_tick_distance(self.grid)):
+        if self.major_tick_distance >= 0:  # and (
+            # self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
 
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices.values()]
@@ -2634,7 +2709,7 @@ class DNADesign(_JSONSerializable):
                 if min_offset > 0: min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt):
+    def set_default_idt(self, use_default_idt: bool = True):
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
         :any:`DNADesign` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
         default idt field.
@@ -3113,12 +3188,13 @@ class DNADesign(_JSONSerializable):
                 if export_non_modified_strand_version:
                     added_strands[name + '_nomods'] = strand.unmodified_version()
             elif warn_on_non_idt_strands:
-                print(f"WARNING: strand with 5' end on helix {strand.first_substrand().helix} "
+                print(f"WARNING: strand with 5' end at (helix, offset) "
+                      f"({strand.first_substrand().helix}, {strand.first_substrand().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
     def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
-                                  warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool=False,
+                                  warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
         :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
@@ -3173,7 +3249,10 @@ class DNADesign(_JSONSerializable):
         purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be output into the file.
+        :py:data:`Strand.idt`. Such strands will not be output into the file.
+
+        `warn_using_default_plates` specifies whether to print a warning for strands whose
+        :py:data:`Strand.idt` have the fields
 
         `plate_type` is a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
         if the `use_default_plates` parameter is ``True``.
@@ -3187,10 +3266,9 @@ class DNADesign(_JSONSerializable):
         if not use_default_plates:
             self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
         else:
-            if warn_using_default_plates:
-                print("WARNING: ignoring plate data in each strand and using default sequential assignment "
-                      "of plates and wells")
-            self._write_plates_default(directory, filename, idt_strands, plate_type=plate_type)
+            self._write_plates_default(directory=directory, filename=filename, idt_strands=idt_strands,
+                                       plate_type=plate_type,
+                                       warn_using_default_plates=warn_using_default_plates)
 
     def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: str,
                                                        idt_strands: List[Strand]):
@@ -3237,7 +3315,8 @@ class DNADesign(_JSONSerializable):
         return filename_plate, workbook
 
     def _write_plates_default(self, directory: str, filename: str, idt_strands: List[Strand],
-                              plate_type: PlateType = PlateType.wells96):
+                              plate_type: PlateType = PlateType.wells96,
+                              warn_using_default_plates: bool = True):
         plate_coord = _PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
@@ -3245,6 +3324,13 @@ class DNADesign(_JSONSerializable):
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
         for strand in idt_strands:
+            if warn_using_default_plates and strand.idt.plate is not None:
+                print(f"WARNING: strand {strand} has plate entry {strand.idt.plate}, which is being ignored "
+                      f"since we are using default plate/well addressing")
+            if warn_using_default_plates and strand.idt.well is not None:
+                print(f"WARNING: strand {strand} has well entry {strand.idt.well}, which is being ignored "
+                      f"since we are using default plate/well addressing")
+
             well = plate_coord.well()
             worksheet.write(excel_row, 0, well)
             worksheet.write(excel_row, 1, strand.idt.name)
@@ -3598,6 +3684,9 @@ class DNADesign(_JSONSerializable):
         """
         for strand in self.strands:
             strand.reverse()
+
+    def set_major_tick_distance(self, major_tick_distance: int):
+        self.major_tick_distance = major_tick_distance
 
 
 def _name_of_this_script() -> str:
