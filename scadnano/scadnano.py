@@ -485,7 +485,7 @@ loopout_key = 'loopout'
 # Modification keys
 mod_location_key = 'location'
 mod_display_text_key = 'display_text'
-mod_json_short_key = 'json_short'
+mod_id_key = 'id'
 mod_idt_text_key = 'idt_text'
 mod_allowed_bases_key = 'allowed_bases'
 
@@ -503,15 +503,17 @@ mod_allowed_bases_key = 'allowed_bases'
 
 @dataclass(frozen=True)
 class Modification(_JSONSerializable):
-    """Abstract base class of modifications (to DNA sequences, e.g., biotin or Cy3).
-    Use :any:`Modification3`, :any:`Modification5`, or :any:`ModificationI` to instantiate."""
+    """Base class of modifications (to DNA sequences, e.g., biotin or Cy3).
+    Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
+    to instantiate."""
 
     display_text: str
     """Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
 
-    json_short: str
-    """Short representation as a JSON string."""
+    id: str
+    """Short representation as a string; used to write in :any:`Strand` json representation,
+    while the full description of the modification is written under a global key in the :any:`DNADesign`."""
 
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin)."""
@@ -519,7 +521,7 @@ class Modification(_JSONSerializable):
     def to_json_serializable(self, suppress_indent=True):
         ret = {
             mod_display_text_key: self.display_text,
-            mod_json_short_key: self.json_short,
+            mod_id_key: self.id,
         }
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
@@ -528,18 +530,18 @@ class Modification(_JSONSerializable):
     @staticmethod
     def from_json(json_map: dict) -> Modification:
         display_text = json_map[mod_display_text_key]
-        json_short = json_map[mod_json_short_key]
+        id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         idt_text = json_map.get(mod_idt_text_key)
         if location == "5'":
-            return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+            return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text)
         elif location == "3'":
-            return Modification3Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+            return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text)
         elif location == "internal":
             allowed_bases = json_map.get(mod_allowed_bases_key)
             if allowed_bases is not None:
                 allowed_bases = frozenset(allowed_bases)
-            return ModificationInternal(display_text=display_text, json_short=json_short, idt_text=idt_text,
+            return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text,
                                         allowed_bases=allowed_bases)
         else:
             raise IllegalDNADesignError(f'unknown Modification location "{location}"')
@@ -557,11 +559,11 @@ class Modification5Prime(Modification):
     @staticmethod
     def from_json(json_map: dict) -> Modification5Prime:
         display_text = json_map[mod_display_text_key]
-        json_short = json_map[mod_json_short_key]
+        id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text)
 
 
 @dataclass(frozen=True)
@@ -576,11 +578,11 @@ class Modification3Prime(Modification):
     @staticmethod
     def from_json(json_map: dict) -> Modification3Prime:
         display_text = json_map[mod_display_text_key]
-        json_short = json_map[mod_json_short_key]
+        id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, json_short=json_short, idt_text=idt_text)
+        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text)
 
 
 @dataclass(frozen=True)
@@ -605,12 +607,12 @@ class ModificationInternal(Modification):
     @staticmethod
     def from_json(json_map: dict) -> ModificationInternal:
         display_text = json_map[mod_display_text_key]
-        json_short = json_map[mod_json_short_key]
+        id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "internal"
         idt_text = json_map.get(mod_idt_text_key)
         allowed_bases = json_map.get(mod_allowed_bases_key)
-        return ModificationInternal(display_text=display_text, json_short=json_short, idt_text=idt_text,
+        return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text,
                                     allowed_bases=allowed_bases)
 
 
@@ -1506,13 +1508,13 @@ class Strand(_JSONSerializable):
             dct[is_scaffold_key] = self.is_scaffold
 
         if self.modification_5p is not None:
-            dct[modification_5p_key] = self.modification_5p.json_short
+            dct[modification_5p_key] = self.modification_5p.id
         if self.modification_3p is not None:
-            dct[modification_3p_key] = self.modification_3p.json_short
+            dct[modification_3p_key] = self.modification_3p.id
         if len(self.modifications_int) > 0:
             mods_dict = {}
             for offset, mod in self.modifications_int.items():
-                mods_dict[f"{offset}"] = mod.json_short
+                mods_dict[f"{offset}"] = mod.id
             dct[modifications_int_key] = _NoIndent(mods_dict) if suppress_indent else mods_dict
 
         return dct
@@ -2481,8 +2483,8 @@ class DNADesign(_JSONSerializable):
         if len(mods) > 0:
             mods_dict = {}
             for mod in mods:
-                if mod.json_short not in mods_dict:
-                    mods_dict[mod.json_short] = mod.to_json_serializable(suppress_indent)
+                if mod.id not in mods_dict:
+                    mods_dict[mod.id] = mod.to_json_serializable(suppress_indent)
             dct[design_modifications_key] = mods_dict
 
         return dct
