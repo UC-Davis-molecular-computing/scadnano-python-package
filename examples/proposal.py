@@ -1,4 +1,5 @@
 import math
+import dataclasses
 import origami_rectangle as rect
 import scadnano as sc
 import modifications as mod
@@ -14,6 +15,7 @@ def main() -> sc.DNADesign:
     add_substrands_for_barrel_seam(design)
     add_twist_correct_deletions(design)
     add_angle_inducing_insertions_deletions(design)
+    design.set_helices_view_order(list(reversed(range(16))))
     design.set_default_idt()
 
     design.assign_m13_to_scaffold()
@@ -225,13 +227,14 @@ def add_biotins(design: sc.DNADesign, word: str):
     # also the offsets are off by 24
     coords = [(offset + 24, helix - 2) for (offset, helix) in coords_orig]
     print(f'{word}:\n{coords}')
+    biotin_mod_5p = dataclasses.replace(mod.biotin_5p, font_size=60, display_text="B")
     for staple in design.strands:
         if staple.is_scaffold: continue
         first_ss = staple.first_bound_substrand()
         end_5p = first_ss.offset_5p()
         helix = first_ss.helix
         if (end_5p, helix) in coords:
-            staple.set_modification_5p(mod.biotin_5p)
+            staple.set_modification_5p(biotin_mod_5p)
 
 
 if not sc.in_browser() and __name__ == '__main__':

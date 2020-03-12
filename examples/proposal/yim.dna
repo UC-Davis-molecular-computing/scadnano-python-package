@@ -20,6 +20,7 @@
     {"max_offset": 512, "position": {"x": -4.077465784244588, "y": 2.724475533879095, "z": 0, "pitch": 0, "roll": 0, "yaw": 0}},
     {"max_offset": 512, "position": {"x": -2.309698831278218, "y": 0.9567085809127276, "z": 0, "pitch": 0, "roll": 0, "yaw": 0}}
   ],
+  "helices_view_order": [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
   "strands": [
     {
       "color": "#0066cc",
@@ -2162,6 +2163,7 @@
       "display_text": "B",
       "id": "/5Biosg/",
       "idt_text": "/5Biosg/",
+      "font_size": 60,
       "location": "5'"
     }
   }
