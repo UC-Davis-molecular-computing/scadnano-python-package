@@ -42,48 +42,47 @@ def remove_whitespace(sequence):
 
 class TestModifications(unittest.TestCase):
 
-    # def test_mod_illegal_exceptions_raised(self):
-    #     biotin5_1 = mod.Biotin(location=sc.ModLocation.prime5)
-    #     biotin5_2 = mod.Biotin(location=sc.ModLocation.prime5)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotin5_1, biotin5_2])
-    #
-    #     biotin3_1 = mod.Biotin(location=sc.ModLocation.prime3)
-    #     biotin3_2 = mod.Biotin(location=sc.ModLocation.prime3)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotin3_1, biotin3_2])
-    #
-    #     biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-    #     biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotinI_1, biotinI_2])
-    #
-    #     biotinI_small = mod.Biotin(location=sc.ModLocation.internal, offset=-1)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotinI_small])
-    #         seq = strand.idt_dna_sequence()
-    #
-    #     biotinI_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotinI_small])
-    #         seq = strand.idt_dna_sequence()
-    #
-    #     biotinI_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[biotinI_offset_not_T])
-    #         seq = strand.idt_dna_sequence()
-    #
-    #     cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
-    #     with self.assertRaises(sc.IllegalDNADesignError):
-    #         strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
-    #                            modifications=[cy3I_offset_off_end])
-    #         seq = strand.idt_dna_sequence()
+    def test_mod_illegal_exceptions_raised(self):
+        strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC')
+        strand.set_modification_internal(2, mod.biotin_int)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            strand.set_modification_internal(1, mod.biotin_int)
+
+        # biotin3_1 = mod.Biotin(location=sc.ModLocation.prime3)
+        # biotin3_2 = mod.Biotin(location=sc.ModLocation.prime3)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[biotin3_1, biotin3_2])
+        #
+        # biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+        # biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[biotinI_1, biotinI_2])
+        #
+        # biotinI_small = mod.Biotin(location=sc.ModLocation.internal, offset=-1)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[biotinI_small])
+        #     seq = strand.idt_dna_sequence()
+        #
+        # biotinI_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[biotinI_small])
+        #     seq = strand.idt_dna_sequence()
+        #
+        # biotinI_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[biotinI_offset_not_T])
+        #     seq = strand.idt_dna_sequence()
+        #
+        # cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
+        # with self.assertRaises(sc.IllegalDNADesignError):
+        #     strand = sc.Strand(substrands=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
+        #                        modifications=[cy3I_offset_off_end])
+        #     seq = strand.idt_dna_sequence()
 
     def test_Cy3(self):
         cy3_5 = mod.cy3_5p

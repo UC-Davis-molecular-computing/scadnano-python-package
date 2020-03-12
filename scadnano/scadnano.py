@@ -529,20 +529,13 @@ class Modification(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map: dict) -> Modification:
-        display_text = json_map[mod_display_text_key]
-        id = json_map[mod_id_key]
         location = json_map[mod_location_key]
-        idt_text = json_map.get(mod_idt_text_key)
         if location == "5'":
-            return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text)
+            return Modification5Prime.from_json(json_map)
         elif location == "3'":
-            return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text)
+            return Modification3Prime.from_json(json_map)
         elif location == "internal":
-            allowed_bases = json_map.get(mod_allowed_bases_key)
-            if allowed_bases is not None:
-                allowed_bases = frozenset(allowed_bases)
-            return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text,
-                                        allowed_bases=allowed_bases)
+            return ModificationInternal.from_json(json_map)
         else:
             raise IllegalDNADesignError(f'unknown Modification location "{location}"')
 
@@ -582,7 +575,7 @@ class Modification3Prime(Modification):
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text)
+        return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text)
 
 
 @dataclass(frozen=True)
@@ -601,7 +594,7 @@ class ModificationInternal(Modification):
         ret[mod_location_key] = "internal"
         if self.allowed_bases is not None:
             ret[mod_allowed_bases_key] = _NoIndent(
-                list(self.allowed_bases)) if suppress_indent else self.allowed_bases
+                list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
         return ret
 
     @staticmethod
@@ -1067,8 +1060,8 @@ class Substrand(_JSONSerializable):
         if offset_right < 0:
             return ''
 
-        str_idx_left = self.offset_to_str_idx(offset_left, self.forward)
-        str_idx_right = self.offset_to_str_idx(offset_right, not self.forward)
+        str_idx_left = self.substrand_offset_to_strand_dna_idx(offset_left, self.forward)
+        str_idx_right = self.substrand_offset_to_strand_dna_idx(offset_right, not self.forward)
         if not self.forward:  # these will be out of order if strand is left
             str_idx_left, str_idx_right = str_idx_right, str_idx_left
         subseq = strand_seq[str_idx_left:str_idx_right + 1]
@@ -1085,7 +1078,7 @@ class Substrand(_JSONSerializable):
                                  for prev_substrand in substrands[:self_substrand_idx])
         return self_seq_idx_start
 
-    def offset_to_str_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
+    def substrand_offset_to_strand_dna_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
         """ Convert from offset on this :any:`Substrand`'s :any:`Helix`
         to string index on the parent :any:`Strand`'s DNA sequence.
 
@@ -1585,6 +1578,45 @@ class Strand(_JSONSerializable):
             self.idt = IDTFields(name=f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]')
         else:
             self.idt = None
+
+    def set_modification_5p(self, mod: Modification5Prime = None):
+        """Sets 5' modification to be `mod`."""
+        self.modification_5p = mod
+
+    def set_modification_3p(self, mod: Modification3Prime = None):
+        """Sets 3' modification to be `mod`."""
+        self.modification_3p = mod
+
+    def remove_modification_5p(self):
+        """Removes 5' modification."""
+        self.modification_5p = None
+
+    def remove_modification_3p(self):
+        """Removes 3' modification."""
+        self.modification_3p = None
+
+    def set_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool = True):
+        """Adds internal modification `mod` at given DNA index `idx`."""
+        if idx < 0:
+            raise IllegalDNADesignError('idx of modification must be nonnegative')
+        if idx >= self.dna_length():
+            raise IllegalDNADesignError(f'idx of modification must be at most length of DNA: '
+                                        f'{self.dna_length()}')
+        if self.dna_sequence is not None:
+            if mod.allowed_bases is not None and self.dna_sequence[idx] not in mod.allowed_bases:
+                raise IllegalDNADesignError(f'only bases {",".join(mod.allowed_bases)} are allowed at '
+                                            f'index {idx}, but sequence has base {self.dna_sequence[idx]} '
+                                            f'\nDNA sequence: {self.dna_sequence}'
+                                            f'\nmodification: {mod}')
+        elif warn_on_no_dna:
+            print('WARNING: no DNA sequence has been assigned, so certain error checks on the internal '
+                  'modification were not done. To be safe, first assign DNA, then add the modifications.')
+        self.modifications_int[idx] = mod
+
+    def remove_modification_internal(self, idx: int):
+        """Removes internal modification at given DNA index `idx`."""
+        if idx in self.modifications_int:
+            del self.modifications_int[idx]
 
     def first_substrand(self) -> Union[Substrand, Loopout]:
         """First substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
@@ -2479,6 +2511,7 @@ class DNADesign(_JSONSerializable):
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
 
+        # modifications
         mods = self._all_modifications()
         if len(mods) > 0:
             mods_dict = {}
@@ -3129,7 +3162,8 @@ class DNADesign(_JSONSerializable):
         purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be part of the output.
+        :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
+        scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
 
         `export_non_modified_strand_version` specifies whether, for each strand that has modifications,
         to also output a version of the strand with no modifications, but otherwise having the same data.
@@ -3189,7 +3223,7 @@ class DNADesign(_JSONSerializable):
                 added_strands[name] = strand
                 if export_non_modified_strand_version:
                     added_strands[name + '_nomods'] = strand.unmodified_version()
-            elif warn_on_non_idt_strands:
+            elif warn_on_non_idt_strands and not strand.is_scaffold:
                 print(f"WARNING: strand with 5' end at (helix, offset) "
                       f"({strand.first_substrand().helix}, {strand.first_substrand().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
@@ -3251,7 +3285,8 @@ class DNADesign(_JSONSerializable):
         purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :py:data:`Strand.idt`. Such strands will not be output into the file.
+        :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
+        for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
 
         `warn_using_default_plates` specifies whether to print a warning for strands whose
         :py:data:`Strand.idt` have the fields

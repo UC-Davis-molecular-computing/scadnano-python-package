@@ -231,7 +231,7 @@ def add_biotins(design: sc.DNADesign, word: str):
         end_5p = first_ss.offset_5p()
         helix = first_ss.helix
         if (end_5p, helix) in coords:
-            staple.modification_5p = mod.biotin_5p
+            staple.set_modification_5p(mod.biotin_5p)
 
 
 if not sc.in_browser() and __name__ == '__main__':
