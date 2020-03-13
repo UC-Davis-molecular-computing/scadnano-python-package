@@ -614,7 +614,8 @@ class ModificationInternal(Modification):
         location = json_map[mod_location_key]
         assert location == "internal"
         idt_text = json_map.get(mod_idt_text_key)
-        allowed_bases = json_map.get(mod_allowed_bases_key)
+        allowed_bases_list = json_map.get(mod_allowed_bases_key)
+        allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
         return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
                                     allowed_bases=allowed_bases)
 
