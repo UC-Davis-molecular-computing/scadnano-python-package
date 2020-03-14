@@ -41,8 +41,8 @@ import json
 import enum
 import itertools
 import re
-from dataclasses import dataclass, field, InitVar
-from typing import Tuple, List, Dict, Union, Optional
+from dataclasses import dataclass, field, InitVar, replace
+from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -451,6 +451,7 @@ strands_key = 'strands'
 scaffold_key = 'scaffold'
 helices_view_order_key = "helices_view_order"
 is_origami_key = 'is_origami'
+design_modifications_key = 'modifications_in_design'
 
 # Helix keys
 idx_on_helix_key = 'idx'
@@ -466,6 +467,9 @@ dna_sequence_key = 'dna_sequence'
 substrands_key = 'substrands'
 idt_key = 'idt'
 is_scaffold_key = 'is_scaffold'
+modification_5p_key = '5prime_modification'
+modification_3p_key = '3prime_modification'
+modifications_int_key = 'internal_modifications'
 
 # Substrand keys
 helix_idx_key = 'helix'
@@ -478,11 +482,163 @@ insertions_key = 'insertions'
 # Loopout keys
 loopout_key = 'loopout'
 
+# Modification keys
+mod_location_key = 'location'
+mod_display_text_key = 'display_text'
+mod_id_key = 'id'
+mod_idt_text_key = 'idt_text'
+mod_font_size_key = 'font_size'
+mod_display_connector_key = 'display_connector'
+mod_allowed_bases_key = 'allowed_bases'
+
 
 # end keys
 ##################
 
 # end constants
+##########################################################################
+
+
+##########################################################################
+# modification abstract base classes
+
+
+@dataclass(frozen=True, eq=True)
+class Modification(_JSONSerializable):
+    """Base class of modifications (to DNA sequences, e.g., biotin or Cy3).
+    Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
+    to instantiate."""
+
+    display_text: str
+    """Short text to display in the web interface as an "icon"
+    visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
+
+    id: str
+    """Short representation as a string; used to write in :any:`Strand` json representation,
+    while the full description of the modification is written under a global key in the :any:`DNADesign`."""
+
+    font_size: Optional[int] = None
+    """Font size to use when displaying :py:data:`Modification.display_text`, in units of px.
+    optional; if not specified, default value used in web interface is 8."""
+
+    idt_text: Optional[str] = None
+    """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
+
+    display_connector: bool = True
+    """Indicates whether in the web interface to display a fake "connector" between the DNA strand and
+    the visual depiction of the modification. If ``True``, then it will be displayed slight above 
+    (for forward substrands) or below (for reverse substrands) the DNA strand itself, to keep from blocking
+    the view of the rest of the design. If ``False``, the modification will
+    be displayed at the same veritical height as the DNA strand. The latter option is useful to 
+    visually test where the modifications will appear on the surface of a 2D design, for instance, whereas
+    the former distorts the locations of the modifications and does not as accurately represent their
+    positions relative to each other and the rest of the DNA design."""
+
+    def to_json_serializable(self, suppress_indent=True):
+        ret = {
+            mod_display_text_key: self.display_text,
+            mod_id_key: self.id,
+        }
+        if self.idt_text is not None:
+            ret[mod_idt_text_key] = self.idt_text
+        if self.font_size is not None:
+            ret[mod_font_size_key] = self.font_size
+        if self.display_connector == False:
+            ret[mod_display_connector_key] = False
+        return ret
+
+    @staticmethod
+    def from_json(json_map: dict) -> Modification:
+        location = json_map[mod_location_key]
+        if location == "5'":
+            return Modification5Prime.from_json(json_map)
+        elif location == "3'":
+            return Modification3Prime.from_json(json_map)
+        elif location == "internal":
+            return ModificationInternal.from_json(json_map)
+        else:
+            raise IllegalDNADesignError(f'unknown Modification location "{location}"')
+
+
+@dataclass(frozen=True, eq=True)
+class Modification5Prime(Modification):
+    """5' modification of DNA sequence, e.g., biotin or Cy3."""
+
+    def to_json_serializable(self, suppress_indent=True):
+        ret = super().to_json_serializable(suppress_indent)
+        ret[mod_location_key] = "5'"
+        return ret
+
+    @staticmethod
+    def from_json(json_map: dict) -> Modification5Prime:
+        display_text = json_map[mod_display_text_key]
+        font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
+        id = json_map[mod_id_key]
+        location = json_map[mod_location_key]
+        assert location == "5'"
+        idt_text = json_map.get(mod_idt_text_key)
+        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+                                  display_connector=display_connector)
+
+
+@dataclass(frozen=True, eq=True)
+class Modification3Prime(Modification):
+    """3' modification of DNA sequence, e.g., biotin or Cy3."""
+
+    def to_json_serializable(self, suppress_indent=True):
+        ret = super().to_json_serializable(suppress_indent)
+        ret[mod_location_key] = "3'"
+        return ret
+
+    @staticmethod
+    def from_json(json_map: dict) -> Modification3Prime:
+        display_text = json_map[mod_display_text_key]
+        font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
+        id = json_map[mod_id_key]
+        location = json_map[mod_location_key]
+        assert location == "3'"
+        idt_text = json_map.get(mod_idt_text_key)
+        return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+                                  display_connector=display_connector)
+
+
+@dataclass(frozen=True, eq=True)
+class ModificationInternal(Modification):
+    """Internal modification of DNA sequence, e.g., biotin or Cy3."""
+
+    allowed_bases: Optional[FrozenSet[str]] = None
+    """If None, then this is an internal modification that goes between bases. 
+    If instead it is a list of bases, then this is an internal modification that attaches to a base,
+    and this lists the allowed bases for this internal modification to be placed at. 
+    For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
+    ``['A','C','G','T']``."""
+
+    def to_json_serializable(self, suppress_indent=True):
+        ret = super().to_json_serializable(suppress_indent)
+        ret[mod_location_key] = "internal"
+        if self.allowed_bases is not None:
+            ret[mod_allowed_bases_key] = _NoIndent(
+                list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
+        return ret
+
+    @staticmethod
+    def from_json(json_map: dict) -> ModificationInternal:
+        display_text = json_map[mod_display_text_key]
+        font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
+        id = json_map[mod_id_key]
+        location = json_map[mod_location_key]
+        assert location == "internal"
+        idt_text = json_map.get(mod_idt_text_key)
+        allowed_bases_list = json_map.get(mod_allowed_bases_key)
+        allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
+        return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+                                    display_connector=display_connector, allowed_bases=allowed_bases)
+
+
+# end modification abstract base classes
 ##########################################################################
 
 @dataclass
@@ -491,12 +647,12 @@ class Position3D(_JSONSerializable):
     Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
     """
 
-    x: float
-    y: float
-    z: float
-    pitch: float
-    roll: float
-    yaw: float
+    x: float = 0
+    y: float = 0
+    z: float = 0
+    pitch: float = 0
+    roll: float = 0
+    yaw: float = 0
 
     def to_json_serializable(self, suppress_indent=True):
         dct = self.__dict__
@@ -515,9 +671,6 @@ def in_browser() -> bool:
     except ModuleNotFoundError:
         return False
 
-
-# TODO: add rotation field to Helix
-#   doc: https://docs.google.com/document/d/1OysNEI1RIwzJ6IqbfTgLR3fYsmEUqIiuHJKxO7CeuaQ/edit#
 
 @dataclass
 class Helix(_JSONSerializable):
@@ -641,17 +794,20 @@ class Helix(_JSONSerializable):
         dct[max_offset_key] = self.max_offset
 
         if self.position3d is None:
-            if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
+            if self.grid_position[
+                2] == 0:  # don't bother writing grid position base coordinate if it is 0
                 dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
             else:
-                dct[grid_position_key] = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
+                dct[grid_position_key] = (
+                    self.grid_position[0], self.grid_position[1], self.grid_position[2])
         else:
             dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
         # print(f'self.svg_position()    = {self.svg_position}')
         # print(f'default_svg_position() = {self.default_svg_position()}')
         default_x, default_y = self.default_svg_position()
-        if not (_is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1], default_y)):
+        if not (_is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1],
+                                                                         default_y)):
             dct[svg_position_key] = (self.svg_position[0], self.svg_position[1])
 
         if self.major_tick_distance is not None and self.major_tick_distance > 0:
@@ -684,7 +840,7 @@ class Helix(_JSONSerializable):
     def default_grid_position(self):
         return (0, self.idx, 0)
 
-    def calculate_major_ticks(self, default_major_tick_distance):
+    def calculate_major_ticks(self, default_major_tick_distance: int):
         """
         Calculates full list of major tick marks, whether using `default_major_tick_distance` (from
         :any:`DNADesign`), :py:data:`Helix.major_tick_distance`, or :py:data:`Helix.major_ticks`.
@@ -935,8 +1091,8 @@ class Substrand(_JSONSerializable):
         if offset_right < 0:
             return ''
 
-        str_idx_left = self.offset_to_str_idx(offset_left, self.forward)
-        str_idx_right = self.offset_to_str_idx(offset_right, not self.forward)
+        str_idx_left = self.substrand_offset_to_strand_dna_idx(offset_left, self.forward)
+        str_idx_right = self.substrand_offset_to_strand_dna_idx(offset_right, not self.forward)
         if not self.forward:  # these will be out of order if strand is left
             str_idx_left, str_idx_right = str_idx_right, str_idx_left
         subseq = strand_seq[str_idx_left:str_idx_right + 1]
@@ -953,7 +1109,7 @@ class Substrand(_JSONSerializable):
                                  for prev_substrand in substrands[:self_substrand_idx])
         return self_seq_idx_start
 
-    def offset_to_str_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
+    def substrand_offset_to_strand_dna_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
         """ Convert from offset on this :any:`Substrand`'s :any:`Helix`
         to string index on the parent :any:`Strand`'s DNA sequence.
 
@@ -1324,21 +1480,39 @@ class Strand(_JSONSerializable):
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
     then the method :py:meth:`DNADesign.write_idt_bulk_input_file` can be called to automatically
     generate an text file for ordering strands in test tubes: 
-    https://eu.idtdna.com/site/order/oligoentry,
+    https://www.idtdna.com/site/order/oligoentry,
     as can the method :py:meth:`DNADesign.write_idt_plate_excel_file` for writing a Microsoft Excel 
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
     or 384-well plates."""
 
     use_default_idt: bool = False
     """If ``True``, assigns an :any:`IDTFields` to this :any:`Strand` with same naming convention as
-    cadnano, i.e., :py:data:`IDTFields.name` = "ST{h5}[{s}]{h3}[{e}]", where h5 and h3 are the 
+    cadnano, i.e., :py:data:`IDTFields.name` = "ST{h5}[{s}]{h3}[{e}]", where {h5} and {h3} are the 
     :any:`Helix`'s of the 5' and 3' ends, respectively, of the :any:`Strand`, 
-    and s and e are the respective start and end offsets on those helices.
+    and {s} and {e} are the respective start and end offsets on those helices.
     """
 
     is_scaffold: bool = False
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
     :any:`DNADesign` is a scaffold, then the design is considered a DNA origami design."""
+
+    modification_5p: Optional[Modification5Prime] = None
+    """5' modification; None if there is no 5' modification."""
+
+    modification_3p: Optional[Modification3Prime] = None
+    """3' modification; None if there is no 5' modification."""
+
+    modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
+    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). Maps offset to 
+    modification. If the internal modification is attached to a base 
+    (e.g., internal biotin, /iBiodT/ from IDT), 
+    then the offset is that of the base.
+    If it goes between two bases 
+    (e.g., internal Cy3, /iCy3/ from IDT),
+    then the offset is that of the previous base, 
+    e.g., to put a Cy3 between bases at offsets 3 and 4, the offset should be 3. 
+    So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
+    and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
 
     # not serialized; efficient way to see a list of all substrands on a given helix
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
@@ -1356,6 +1530,17 @@ class Strand(_JSONSerializable):
                                self.substrands]
         if hasattr(self, is_scaffold_key) and self.is_scaffold == True:
             dct[is_scaffold_key] = self.is_scaffold
+
+        if self.modification_5p is not None:
+            dct[modification_5p_key] = self.modification_5p.id
+        if self.modification_3p is not None:
+            dct[modification_3p_key] = self.modification_3p.id
+        if len(self.modifications_int) > 0:
+            mods_dict = {}
+            for offset, mod in self.modifications_int.items():
+                mods_dict[f"{offset}"] = mod.id
+            dct[modifications_int_key] = _NoIndent(mods_dict) if suppress_indent else mods_dict
+
         return dct
 
     def __post_init__(self):
@@ -1388,6 +1573,8 @@ class Strand(_JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt(True)
 
+        self._ensure_modifications_legal()
+
     def __eq__(self, other: Strand) -> bool:
         if not isinstance(other, Strand):
             return False
@@ -1408,8 +1595,11 @@ class Strand(_JSONSerializable):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
-    def set_default_idt(self, use_default_idt):
-        """Sets idt field to be the default given the Substrand data of this :any:`Strand`."""
+    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True):
+        """Sets idt field to be the default given the Substrand data of this :any:`Strand`.
+
+        """
+        if skip_scaffold and self.is_scaffold: return
         self.use_default_idt = use_default_idt
         if use_default_idt:
             start_helix = self.first_bound_substrand().helix
@@ -1419,6 +1609,45 @@ class Strand(_JSONSerializable):
             self.idt = IDTFields(name=f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]')
         else:
             self.idt = None
+
+    def set_modification_5p(self, mod: Modification5Prime = None):
+        """Sets 5' modification to be `mod`."""
+        self.modification_5p = mod
+
+    def set_modification_3p(self, mod: Modification3Prime = None):
+        """Sets 3' modification to be `mod`."""
+        self.modification_3p = mod
+
+    def remove_modification_5p(self):
+        """Removes 5' modification."""
+        self.modification_5p = None
+
+    def remove_modification_3p(self):
+        """Removes 3' modification."""
+        self.modification_3p = None
+
+    def set_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool = True):
+        """Adds internal modification `mod` at given DNA index `idx`."""
+        if idx < 0:
+            raise IllegalDNADesignError('idx of modification must be nonnegative')
+        if idx >= self.dna_length():
+            raise IllegalDNADesignError(f'idx of modification must be at most length of DNA: '
+                                        f'{self.dna_length()}')
+        if self.dna_sequence is not None:
+            if mod.allowed_bases is not None and self.dna_sequence[idx] not in mod.allowed_bases:
+                raise IllegalDNADesignError(f'only bases {",".join(mod.allowed_bases)} are allowed at '
+                                            f'index {idx}, but sequence has base {self.dna_sequence[idx]} '
+                                            f'\nDNA sequence: {self.dna_sequence}'
+                                            f'\nmodification: {mod}')
+        elif warn_on_no_dna:
+            print('WARNING: no DNA sequence has been assigned, so certain error checks on the internal '
+                  'modification were not done. To be safe, first assign DNA, then add the modifications.')
+        self.modifications_int[idx] = mod
+
+    def remove_modification_internal(self, idx: int):
+        """Removes internal modification at given DNA index `idx`."""
+        if idx in self.modifications_int:
+            del self.modifications_int[idx]
 
     def first_substrand(self) -> Union[Substrand, Loopout]:
         """First substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
@@ -1645,8 +1874,9 @@ class Strand(_JSONSerializable):
     @staticmethod
     def from_json(json_map: dict) -> Strand:
         if substrands_key not in json_map:
-            raise IllegalDNADesignError(f'key "{substrands_key}" is missing from the description of a Strand:'
-                                        f'\n  {json_map}')
+            raise IllegalDNADesignError(
+                f'key "{substrands_key}" is missing from the description of a Strand:'
+                f'\n  {json_map}')
         substrand_jsons = json_map[substrands_key]
         if len(substrand_jsons) == 0:
             raise IllegalDNADesignError(f'substrands list cannot be empty')
@@ -1665,7 +1895,8 @@ class Strand(_JSONSerializable):
         is_scaffold = json_map.get(is_scaffold_key, False)
         dna_sequence = json_map.get(dna_sequence_key)
         idt = json_map.get(idt_key)
-        color_str = json_map.get(color_key, default_scaffold_color if is_scaffold else default_strand_color)
+        color_str = json_map.get(color_key,
+                                 default_scaffold_color if is_scaffold else default_strand_color)
         color = Color(hex=color_str)
 
         return Strand(
@@ -1675,6 +1906,50 @@ class Strand(_JSONSerializable):
             idt=idt,
             is_scaffold=is_scaffold,
         )
+
+    def _ensure_modifications_legal(self, check_offsets_legal=False):
+        if check_offsets_legal:
+            if self.dna_sequence is None:
+                raise IllegalDNADesignError(f"must assign DNA sequence first")
+            modI_offsets_list = list(self.modifications_int.keys())
+            min_offset = min(modI_offsets_list) if len(modI_offsets_list) > 0 else None
+            max_offset = max(modI_offsets_list) if len(modI_offsets_list) > 0 else None
+            if min_offset is not None and min_offset < 0:
+                raise IllegalDNADesignError(f"smallest offset is {min_offset} but must be nonnegative: "
+                                            f"{self.modifications_int}")
+            if max_offset is not None and max_offset > len(self.dna_sequence):
+                raise IllegalDNADesignError(f"largeest offset is {max_offset} but must be at most "
+                                            f"{len(self.dna_sequence)}: "
+                                            f"{self.modifications_int}")
+
+    def idt_dna_sequence(self):
+        self._ensure_modifications_legal(check_offsets_legal=True)
+
+        ret_list = []
+        if self.modification_5p is not None:
+            ret_list.append(self.modification_5p.idt_text)
+
+        for offset, base in enumerate(self.dna_sequence):
+            ret_list.append(base)
+            if offset in self.modifications_int:  # if internal mod attached to base, replace base
+                mod = self.modifications_int[offset]
+                if mod.allowed_bases is not None:
+                    if base not in mod.allowed_bases:
+                        msg = f'internal modification {mod} can only replace one of these bases: ' \
+                              f'{",".join(mod.allowed_bases)}, but the base at offset {offset} is {base}'
+                        raise IllegalDNADesignError(msg)
+                    ret_list[-1] = mod.idt_text  # replace base with modified base
+                else:
+                    ret_list.append(mod.idt_text)  # append modification between two bases
+
+        if self.modification_3p is not None:
+            ret_list.append(self.modification_3p.idt_text)
+
+        return ''.join(ret_list)
+
+    def unmodified_version(self):
+        strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
+        return strand_nomods
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -1751,7 +2026,6 @@ class StrandError(IllegalDNADesignError):
 #    - add Helix
 #    - remove Helix
 
-
 def _plates(idt_strands):
     plates = set()
     for strand in idt_strands:
@@ -1763,7 +2037,8 @@ def _plates(idt_strands):
 _96WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 _96WELL_PLATE_COLS: List[int] = list(range(1, 13))
 
-_384WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+_384WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+                                  'O',
                                   'P']
 _384WELL_PLATE_COLS: List[int] = list(range(1, 25))
 
@@ -1900,7 +2175,8 @@ class DNADesign(_JSONSerializable):
 
         if self.helices is None:
             if len(self.strands) > 0:
-                max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
+                max_helix_idx = max(
+                    ss.helix for strand in self.strands for ss in strand.bound_substrands())
                 self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
             else:
                 self.helices = {}
@@ -1918,8 +2194,9 @@ class DNADesign(_JSONSerializable):
             indices = [idx_of(helix, idx) for idx, helix in enumerate(helices)]
             if len(set(indices)) < len(indices):
                 duplicates = [index for index, count in Counter(indices).items() if count > 1]
-                raise IllegalDNADesignError('No two helices can share an index, but these indices appear on '
-                                            f'multiple helices: {", ".join(map(str, duplicates))}')
+                raise IllegalDNADesignError(
+                    'No two helices can share an index, but these indices appear on '
+                    f'multiple helices: {", ".join(map(str, duplicates))}')
             helices = {idx_of(helix, idx): helix for idx, helix in enumerate(helices)}
 
         for idx, helix in helices.items():
@@ -1928,17 +2205,6 @@ class DNADesign(_JSONSerializable):
         return helices
 
     def __post_init__(self):
-        # if self.major_tick_distance < 0 or self.major_tick_distance is None:
-        #     self.major_tick_distance = default_major_tick_distance(self.grid)
-        #
-        # # doing this first matters because most of DNADesign assumes helices has been set
-        # if self.helices is None:
-        #     if len(self.strands) > 0:
-        #         max_helix_idx = max(ss.helix for strand in self.strands for ss in strand.bound_substrands())
-        #         self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
-        #     else:
-        #         self.helices = {}
-
         # XXX: exact order of these calls is important
         self._set_helices_idxs()
         self._set_helices_grid_and_svg_positions()
@@ -2008,10 +2274,18 @@ class DNADesign(_JSONSerializable):
 
         # strands
         strands = []
-        deserialized_strand_list = json_map[strands_key]
-        for strand_json in deserialized_strand_list:
+        strand_jsons = json_map[strands_key]
+        for strand_json in strand_jsons:
             strand = Strand.from_json(strand_json)
             strands.append(strand)
+
+        # modifications in whole design
+        if design_modifications_key in json_map:
+            all_mods_json = json_map[design_modifications_key]
+            all_mods = {}
+            for mod_key, mod_json in all_mods_json.items():
+                all_mods[mod_key] = Modification.from_json(mod_json)
+            DNADesign.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
         return DNADesign(
             helices=helices,
@@ -2022,7 +2296,24 @@ class DNADesign(_JSONSerializable):
         )
 
     @staticmethod
-    def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int, id_from: int,
+    def assign_modifications_to_strands(strands: List[Strand], strand_jsons: List[dict],
+                                        all_mods: Dict[str, Modification]):
+        for strand, strand_json in zip(strands, strand_jsons):
+            if modification_5p_key in strand_json:
+                mod_name = strand_json[modification_5p_key]
+                strand.modification_5p = all_mods[mod_name]
+            if modification_3p_key in strand_json:
+                mod_name = strand_json[modification_3p_key]
+                strand.modification_3p = all_mods[mod_name]
+            if modifications_int_key in strand_json:
+                mod_names_by_offset = strand_json[modifications_int_key]
+                for offset_str, mod_name in mod_names_by_offset.items():
+                    offset = int(offset_str)
+                    strand.modifications_int[offset] = all_mods[mod_name]
+
+    @staticmethod
+    def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int,
+                                      id_from: int,
                                       base_from: int):
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
@@ -2113,7 +2404,8 @@ class DNADesign(_JSONSerializable):
         return substrands
 
     @staticmethod
-    def _cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen, helix_num: int,
+    def _cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen,
+                                          helix_num: int,
                                           base_id: int):
         """ Routine that will follow a cadnano v2 strand accross helices and create
             cadnano substrands and strand accordingly.
@@ -2125,13 +2417,18 @@ class DNADesign(_JSONSerializable):
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
 
-        strand_5_end_helix, strand_5_end_base = DNADesign._cadnano_v2_import_find_5_end(vstrands, strand_type,
-                                                                                        helix_num, base_id,
-                                                                                        id_from, base_from)
+        strand_5_end_helix, strand_5_end_base = DNADesign._cadnano_v2_import_find_5_end(vstrands,
+                                                                                        strand_type,
+                                                                                        helix_num,
+                                                                                        base_id,
+                                                                                        id_from,
+                                                                                        base_from)
         strand_color = DNADesign._cadnano_v2_import_find_strand_color(vstrands, strand_type,
-                                                                      strand_5_end_base, strand_5_end_helix)
+                                                                      strand_5_end_base,
+                                                                      strand_5_end_helix)
         substrands = DNADesign._cadnano_v2_import_explore_substrands(vstrands, seen, strand_type,
-                                                                     strand_5_end_base, strand_5_end_helix)
+                                                                     strand_5_end_base,
+                                                                     strand_5_end_helix)
         strand = Strand(substrands=substrands, is_scaffold=(strand_type == 'scaf'), color=strand_color)
 
         return strand
@@ -2193,6 +2490,15 @@ class DNADesign(_JSONSerializable):
 
         return design
 
+    def _all_modifications(self) -> Set[Modification]:
+        # List of all modifications.
+        mods_5p = {strand.modification_5p for strand in self.strands if
+                   strand.modification_5p is not None}
+        mods_3p = {strand.modification_3p for strand in self.strands if
+                   strand.modification_3p is not None}
+        mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+        return mods_5p | mods_3p | mods_int
+
     def assign_m13_to_scaffold(self, rotation: int = 5588):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
@@ -2206,12 +2512,14 @@ class DNADesign(_JSONSerializable):
                 if scaffold is None:
                     scaffold = strand
         if num_scafs == 0:
-            raise IllegalDNADesignError('Tried to assign DNA to scaffold, but there is no scaffold strand. '
-                                        'You must set strand.is_scaffold to True for exactly one strand.')
+            raise IllegalDNADesignError(
+                'Tried to assign DNA to scaffold, but there is no scaffold strand. '
+                'You must set strand.is_scaffold to True for exactly one strand.')
         elif num_scafs > 1:
-            raise IllegalDNADesignError('Tried to assign DNA to scaffold, but there are multiple scaffold '
-                                        'strands. You must set strand.is_scaffold to True for exactly one '
-                                        'strand.')
+            raise IllegalDNADesignError(
+                'Tried to assign DNA to scaffold, but there are multiple scaffold '
+                'strands. You must set strand.is_scaffold to True for exactly one '
+                'strand.')
         self.assign_dna(scaffold, m13(rotation))
 
     def to_json_serializable(self, suppress_indent=True):
@@ -2219,11 +2527,12 @@ class DNADesign(_JSONSerializable):
         dct[version_key] = current_version
         if self.grid != default_grid:
             dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
-        if self.major_tick_distance >= 0 and (
-                self.major_tick_distance != default_major_tick_distance(self.grid)):
+        if self.major_tick_distance >= 0:  # and (
+            # self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
 
-        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in self.helices.values()]
+        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in
+                            self.helices.values()]
 
         # remove idx key from list of helices if they have the default index
         unwrapped_helices = dct[helices_key]
@@ -2235,10 +2544,21 @@ class DNADesign(_JSONSerializable):
         if self.helices_view_order != default_helices_view_order:
             dct[helices_view_order_key] = _NoIndent(self.helices_view_order)
 
+        # modifications
+        mods = self._all_modifications()
+        if len(mods) > 0:
+            mods_dict = {}
+            for mod in mods:
+                if mod.id not in mods_dict:
+                    mods_dict[mod.id] = mod.to_json_serializable(suppress_indent)
+            dct[design_modifications_key] = mods_dict
+
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix_list_order, helix in enumerate(self.helices.values()):
-            helix_json = dct[helices_key][helix_list_order].value  # get past NoIndent surrounding helix
+            helix_json = dct[helices_key][helix_list_order]
+            if suppress_indent:
+                helix_json = helix_json.value  # get past NoIndent surrounding helix
             # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
@@ -2411,7 +2731,7 @@ class DNADesign(_JSONSerializable):
                             'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
                     if substrand.helix % 2 != int(not substrand.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
-                                                  going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(
+                                              going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(
                             substrand))
 
         '''Filling the helices with blank.
@@ -2471,7 +2791,7 @@ class DNADesign(_JSONSerializable):
                 if min_offset > 0: min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt):
+    def set_default_idt(self, use_default_idt: bool = True):
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
         :any:`DNADesign` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
         default idt field.
@@ -2875,7 +3195,8 @@ class DNADesign(_JSONSerializable):
                 other_strand.assign_dna_complement_from(strand)
 
     def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
-                                 warn_on_non_idt_strands: bool = False) -> str:
+                                 warn_on_non_idt_strands: bool = False,
+                                 export_non_modified_strand_version: bool = False) -> str:
         """Return string that is written to the file in the method
         :py:meth:`DNADesign.write_idt_bulk_input_file`.
 
@@ -2888,18 +3209,25 @@ class DNADesign(_JSONSerializable):
         purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be part of the output.
+        :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
+        scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+
+        `export_non_modified_strand_version` specifies whether, for each strand that has modifications,
+        to also output a version of the strand with no modifications, but otherwise having the same data.
         """
-        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands)
+        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
+                                          export_non_modified_strand_version)
 
         idt_lines = [
-            delimiter.join([strand.idt.name, strand.dna_sequence, strand.idt.scale, strand.idt.purification])
+            delimiter.join(
+                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification])
             for strand in added_strands.values()]
 
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
-    def _idt_strands(self, warn_duplicate_name, warn_on_non_idt_strands) -> Dict[str, Strand]:
+    def _idt_strands(self, warn_duplicate_name: bool, warn_on_non_idt_strands: bool,
+                     export_non_modified_strand_version: bool = False) -> Dict[str, Strand]:
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
             if strand.idt is not None:
@@ -2940,13 +3268,17 @@ class DNADesign(_JSONSerializable):
                             f'  strand 2: helix {existing_ss.helix}, 5\' end at offset '
                             f'{existing_ss.offset_5p()}\n')
                 added_strands[name] = strand
-            elif warn_on_non_idt_strands:
-                print(f"WARNING: strand with 5' end on helix {strand.first_substrand().helix} "
+                if export_non_modified_strand_version:
+                    added_strands[name + '_nomods'] = strand.unmodified_version()
+            elif warn_on_non_idt_strands and not strand.is_scaffold:
+                print(f"WARNING: strand with 5' end at (helix, offset) "
+                      f"({strand.first_substrand().helix}, {strand.first_substrand().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
     def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
-                                  warn_duplicate_name: bool = False, warn_on_non_idt_strands=False):
+                                  warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
+                                  export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
         :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
@@ -2971,13 +3303,15 @@ class DNADesign(_JSONSerializable):
 
         The string written is that returned by :meth:`DNADesign.to_idt_bulk_input_format`.
         """
-        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands)
+        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
+                                                 export_non_modified_strand_version)
         _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
 
     def write_idt_plate_excel_file(self, directory: str = '.', filename=None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands=False,
                                    use_default_plates=False, warn_using_default_plates=True,
-                                   plate_type: PlateType = PlateType.wells96):
+                                   plate_type: PlateType = PlateType.wells96,
+                                   export_non_modified_strand_version: bool = False):
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`DNADesign` with the field
         :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
@@ -2998,7 +3332,11 @@ class DNADesign(_JSONSerializable):
         purifications.
 
         `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be output into the file.
+        :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
+        for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+
+        `warn_using_default_plates` specifies whether to print a warning for strands whose
+        :py:data:`Strand.idt` have the fields
 
         `plate_type` is a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
         if the `use_default_plates` parameter is ``True``.
@@ -3006,15 +3344,15 @@ class DNADesign(_JSONSerializable):
         by the user, who is free to use coordinates for either plate type.
         """
 
-        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands).values())
+        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
+                                             export_non_modified_strand_version).values())
 
         if not use_default_plates:
             self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
         else:
-            if warn_using_default_plates:
-                print("WARNING: ignoring plate data in each strand and using default sequential assignment "
-                      "of plates and wells")
-            self._write_plates_default(directory, filename, idt_strands, plate_type=plate_type)
+            self._write_plates_default(directory=directory, filename=filename, idt_strands=idt_strands,
+                                       plate_type=plate_type,
+                                       warn_using_default_plates=warn_using_default_plates)
 
     def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: str,
                                                        idt_strands: List[Strand]):
@@ -3039,7 +3377,7 @@ class DNADesign(_JSONSerializable):
             for row, strand in enumerate(strands_in_plate):
                 worksheet.write(row + 1, 0, strand.idt.well)
                 worksheet.write(row + 1, 1, strand.idt.name)
-                worksheet.write(row + 1, 2, strand.dna_sequence)
+                worksheet.write(row + 1, 2, strand.idt_dna_sequence())
 
             workbook.save(filename_plate)
 
@@ -3061,7 +3399,8 @@ class DNADesign(_JSONSerializable):
         return filename_plate, workbook
 
     def _write_plates_default(self, directory: str, filename: str, idt_strands: List[Strand],
-                              plate_type: PlateType = PlateType.wells96):
+                              plate_type: PlateType = PlateType.wells96,
+                              warn_using_default_plates: bool = True):
         plate_coord = _PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
@@ -3069,10 +3408,19 @@ class DNADesign(_JSONSerializable):
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
         for strand in idt_strands:
+            if warn_using_default_plates and strand.idt.plate is not None:
+                print(
+                    f"WARNING: strand {strand} has plate entry {strand.idt.plate}, which is being ignored "
+                    f"since we are using default plate/well addressing")
+            if warn_using_default_plates and strand.idt.well is not None:
+                print(
+                    f"WARNING: strand {strand} has well entry {strand.idt.well}, which is being ignored "
+                    f"since we are using default plate/well addressing")
+
             well = plate_coord.well()
             worksheet.write(excel_row, 0, well)
             worksheet.write(excel_row, 1, strand.idt.name)
-            worksheet.write(excel_row, 2, strand.dna_sequence)
+            worksheet.write(excel_row, 2, strand.idt_dna_sequence())
             plate_coord.increment()
             if plate != plate_coord.plate():
                 workbook.save(filename_plate)
@@ -3170,8 +3518,9 @@ class DNADesign(_JSONSerializable):
         if strand.dna_sequence:
             dna_sequence_before = ''.join(ss.dna_sequence() for ss in substrands_before)
             dna_sequence_after = ''.join(ss.dna_sequence() for ss in substrands_after)
-            dna_sequence_on_substrand_left = substrand_to_remove.dna_sequence_in(substrand_to_remove.start,
-                                                                                 offset - 1)
+            dna_sequence_on_substrand_left = substrand_to_remove.dna_sequence_in(
+                substrand_to_remove.start,
+                offset - 1)
             dna_sequence_on_substrand_right = substrand_to_remove.dna_sequence_in(offset,
                                                                                   substrand_to_remove.end - 1)
             if substrand_to_remove.forward:
@@ -3229,11 +3578,13 @@ class DNADesign(_JSONSerializable):
         ss1 = self.substrand_at(helix1, offset1, forward1)
         ss2 = self.substrand_at(helix2, offset2, forward2)
         if ss1 is None:
-            raise IllegalDNADesignError(f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
-                                        f"There is no Substrand there.")
+            raise IllegalDNADesignError(
+                f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
+                f"There is no Substrand there.")
         if ss2 is None:
-            raise IllegalDNADesignError(f"Cannot add half crossover at (helix={helix2}, offset={offset2}). "
-                                        f"There is no Substrand there.")
+            raise IllegalDNADesignError(
+                f"Cannot add half crossover at (helix={helix2}, offset={offset2}). "
+                f"There is no Substrand there.")
         strand1 = ss1.strand()
         strand2 = ss2.strand()
 
@@ -3265,8 +3616,9 @@ class DNADesign(_JSONSerializable):
         elif strand_first.dna_sequence is not None and strand_last.dna_sequence is not None:
             new_dna = strand_first.dna_sequence + strand_last.dna_sequence
         else:
-            raise IllegalDNADesignError('cannot add crossover between two strands if one has a DNA sequence '
-                                        'and the other does not')
+            raise IllegalDNADesignError(
+                'cannot add crossover between two strands if one has a DNA sequence '
+                'and the other does not')
         new_strand = Strand(substrands=new_substrands, color=strand_first.color, dna_sequence=new_dna,
                             idt=strand_first.idt)
 
@@ -3423,6 +3775,9 @@ class DNADesign(_JSONSerializable):
         for strand in self.strands:
             strand.reverse()
 
+    def set_major_tick_distance(self, major_tick_distance: int):
+        self.major_tick_distance = major_tick_distance
+
 
 def _name_of_this_script() -> str:
     """Return name of the currently running script, WITHOUT the .py extension."""
@@ -3522,5 +3877,3 @@ class Crossover:
             self.offset2 = self.offset1
         if self.forward2 is None:
             self.forward2 = not self.forward1
-
-
