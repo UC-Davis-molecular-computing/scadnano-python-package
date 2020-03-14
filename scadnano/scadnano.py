@@ -488,6 +488,7 @@ mod_display_text_key = 'display_text'
 mod_id_key = 'id'
 mod_idt_text_key = 'idt_text'
 mod_font_size_key = 'font_size'
+mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 
 
@@ -523,6 +524,16 @@ class Modification(_JSONSerializable):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
+    display_connector: bool = True
+    """Indicates whether in the web interface to display a fake "connector" between the DNA strand and
+    the visual depiction of the modification. If ``True``, then it will be displayed slight above 
+    (for forward substrands) or below (for reverse substrands) the DNA strand itself, to keep from blocking
+    the view of the rest of the design. If ``False``, the modification will
+    be displayed at the same veritical height as the DNA strand. The latter option is useful to 
+    visually test where the modifications will appear on the surface of a 2D design, for instance, whereas
+    the former distorts the locations of the modifications and does not as accurately represent their
+    positions relative to each other and the rest of the DNA design."""
+
     def to_json_serializable(self, suppress_indent=True):
         ret = {
             mod_display_text_key: self.display_text,
@@ -532,6 +543,8 @@ class Modification(_JSONSerializable):
             ret[mod_idt_text_key] = self.idt_text
         if self.font_size is not None:
             ret[mod_font_size_key] = self.font_size
+        if self.display_connector == False:
+            ret[mod_display_connector_key] = False
         return ret
 
     @staticmethod
@@ -560,11 +573,13 @@ class Modification5Prime(Modification):
     def from_json(json_map: dict) -> Modification5Prime:
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
         id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size)
+        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+                                  display_connector=display_connector)
 
 
 @dataclass(frozen=True, eq=True)
@@ -580,11 +595,13 @@ class Modification3Prime(Modification):
     def from_json(json_map: dict) -> Modification3Prime:
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
         id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size)
+        return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+                                  display_connector=display_connector)
 
 
 @dataclass(frozen=True, eq=True)
@@ -610,6 +627,7 @@ class ModificationInternal(Modification):
     def from_json(json_map: dict) -> ModificationInternal:
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
+        display_connector = json_map.get(mod_display_connector_key, True)
         id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "internal"
@@ -617,7 +635,7 @@ class ModificationInternal(Modification):
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
         return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
-                                    allowed_bases=allowed_bases)
+                                    display_connector=display_connector, allowed_bases=allowed_bases)
 
 
 # end modification abstract base classes
@@ -2526,6 +2544,15 @@ class DNADesign(_JSONSerializable):
         if self.helices_view_order != default_helices_view_order:
             dct[helices_view_order_key] = _NoIndent(self.helices_view_order)
 
+        # modifications
+        mods = self._all_modifications()
+        if len(mods) > 0:
+            mods_dict = {}
+            for mod in mods:
+                if mod.id not in mods_dict:
+                    mods_dict[mod.id] = mod.to_json_serializable(suppress_indent)
+            dct[design_modifications_key] = mods_dict
+
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix_list_order, helix in enumerate(self.helices.values()):
@@ -2539,15 +2566,6 @@ class DNADesign(_JSONSerializable):
             max_offset = max((ss.end for ss in helix._substrands), default=-1)
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
-
-        # modifications
-        mods = self._all_modifications()
-        if len(mods) > 0:
-            mods_dict = {}
-            for mod in mods:
-                if mod.id not in mods_dict:
-                    mods_dict[mod.id] = mod.to_json_serializable(suppress_indent)
-            dct[design_modifications_key] = mods_dict
 
         return dct
 

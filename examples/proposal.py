@@ -227,7 +227,8 @@ def add_biotins(design: sc.DNADesign, word: str):
     # also the offsets are off by 24
     coords = [(offset + 24, helix - 2) for (offset, helix) in coords_orig]
     print(f'{word}:\n{coords}')
-    biotin_mod_5p = dataclasses.replace(mod.biotin_5p, font_size=60, display_text="B")
+    biotin_mod_5p = dataclasses.replace(mod.biotin_5p, font_size=60, display_text="B",
+                                        display_connector=False)
     for staple in design.strands:
         if staple.is_scaffold: continue
         first_ss = staple.first_bound_substrand()
