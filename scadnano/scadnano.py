@@ -2438,7 +2438,7 @@ class DNADesign(_JSONSerializable):
         """ Creates a DNADesign from a cadnano v2 file.
         """
 
-        if json_string is None:
+        if json_dict is None:
             file_path = os.path.join(directory, filename)
             f = open(file_path, 'r')
             cadnano_v2_design = json.load(f)
