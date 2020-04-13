@@ -2434,13 +2434,17 @@ class DNADesign(_JSONSerializable):
         return strand
 
     @staticmethod
-    def from_cadnano_v2(directory, filename) -> DNADesign:
+    def from_cadnano_v2(directory, filename, json_string = None) -> DNADesign:
         """ Creates a DNADesign from a cadnano v2 file.
         """
-        file_path = os.path.join(directory, filename)
-        f = open(file_path, 'r')
-        cadnano_v2_design = json.load(f)
-        f.close()
+
+        if json_string is None:
+            file_path = os.path.join(directory, filename)
+            f = open(file_path, 'r')
+            cadnano_v2_design = json.load(f)
+            f.close()
+        else:
+            cadnano_v2_design = json.loads(json_string)
 
         num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
         grid_type = Grid.square
