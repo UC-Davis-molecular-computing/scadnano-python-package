@@ -43,7 +43,7 @@ Select Load --> Open. Choose the file you downloaded. The design should look sim
 
 ## Terminology
 
-Before reading one, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
+Before going further in this tutorial, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
 
 
 
