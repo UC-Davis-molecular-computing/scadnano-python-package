@@ -119,7 +119,7 @@ if __name__ == '__main__':
     design.write_scadnano_file()
 ```
 
-To save space, below we will omit the import statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `main()` function, as well as any other functions it calls as we write them:
+To save space, below we will omit the `import scadnano as sc` statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `main()` function, as well as any other functions it calls as we write them:
 
 ```python
 def main():
