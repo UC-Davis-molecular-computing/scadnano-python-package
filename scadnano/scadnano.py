@@ -53,7 +53,7 @@ import xlwt
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
 
-# TODO: see if :param the_paramter: and :return: can be used with Sphinx
+# TODO: see if :param the_parameter: and :return: can be used with Sphinx
 
 
 def _pairwise(iterable):
@@ -286,7 +286,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.3.0"
+current_version: str = "0.4.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -617,8 +617,6 @@ _m13_variants = {
                       "TATGATTGACATGCTAGTTTTACGATTACCGTTCATCGATTCTCTTGTTTGCTCCAGACTCTCA",
 }
 
-
-
 ##################
 # keys
 
@@ -632,7 +630,7 @@ rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
 scaffold_key = 'scaffold'
-helices_view_order_key = "helices_view_order"
+helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
 design_modifications_key = 'modifications_in_design'
 
@@ -646,17 +644,20 @@ position3d_key = 'position'
 
 # Strand keys
 color_key = 'color'
-dna_sequence_key = 'dna_sequence'
-substrands_key = 'substrands'
+dna_sequence_key = 'sequence'
+legacy_dna_sequence_keys = 'dna_sequence'  # support legacy names for these ideas
+domains_key = 'domains'
+legacy_domains_keys = ['substrands']  # support legacy names for these ideas
 idt_key = 'idt'
 is_scaffold_key = 'is_scaffold'
 modification_5p_key = '5prime_modification'
 modification_3p_key = '3prime_modification'
 modifications_int_key = 'internal_modifications'
 
-# Substrand keys
+# Domain keys
 helix_idx_key = 'helix'
 forward_key = 'forward'
+legacy_forward_keys = 'right'  # support legacy names for these ideas
 start_key = 'start'
 end_key = 'end'
 deletions_key = 'deletions'
@@ -710,7 +711,7 @@ class Modification(_JSONSerializable):
     display_connector: bool = True
     """Indicates whether in the web interface to display a fake "connector" between the DNA strand and
     the visual depiction of the modification. If ``True``, then it will be displayed slight above 
-    (for forward substrands) or below (for reverse substrands) the DNA strand itself, to keep from blocking
+    (for forward domains) or below (for reverse domains) the DNA strand itself, to keep from blocking
     the view of the rest of the design. If ``False``, the modification will
     be displayed at the same veritical height as the DNA strand. The latter option is useful to 
     visually test where the modifications will appear on the surface of a 2D design, for instance, whereas
@@ -858,31 +859,31 @@ def in_browser() -> bool:
 @dataclass
 class Helix(_JSONSerializable):
     """
-    Represents a "helix" where :any:`Substrand`'s could go. Technically a :any:`Helix` can contain no
-    :any:`Substrand`'s. More commonly, some partial regions of it may have only 1 or 0 :any:`Substrand`'s.
+    Represents a "helix" where :any:`Domain`'s could go. Technically a :any:`Helix` can contain no
+    :any:`Domain`'s. More commonly, some partial regions of it may have only 1 or 0 :any:`Domain`'s.
     So it is best thought of as a "potential" double-helix.
 
     It has a 1-dimensional integer coordinate system given by "offsets", integers between
     :py:data:`Helix.min_offset` (inclusive) and :py:data:`Helix.max_offset` (exclusive).
-    At any valid offset for this :any:`Helix`, at most two :any:`Substrand`'s may share that offset
+    At any valid offset for this :any:`Helix`, at most two :any:`Domain`'s may share that offset
     on this :any:`Helix`, and if there are exactly two, then one must have
-    :py:data:`Substrand.forward` = ``true`` and the other must have
-    :py:data:`Substrand.forward` = ``false``.
+    :py:data:`Domain.forward` = ``true`` and the other must have
+    :py:data:`Domain.forward` = ``false``.
 
     Once part of a :any:`DNADesign`, a :any:`Helix` has an index (accessible  via :py:meth:`Helix.idx`
     once the :any:`DNADesign` is created)
-    representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Substrand` is
-    associated to the :any:`Helix` via the integer index :any:`Substrand.helix`.
+    representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Domain` is
+    associated to the :any:`Helix` via the integer index :any:`Domain.helix`.
     """
 
     max_offset: int = None
-    """Maximum offset (exclusive) of :any:`Substrand` that can be drawn on this :any:`Helix`. 
+    """Maximum offset (exclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
     If unspecified, it is calculated when the :any:`DNADesign` is instantiated as 
-    the largest :any:`Substrand.end` offset of any :any:`Substrand` in the design.
+    the largest :any:`Domain.end` offset of any :any:`Domain` in the design.
     """
 
     min_offset: int = 0
-    """Minimum offset (inclusive) of :any:`Substrand` that can be drawn on this :any:`Helix`. 
+    """Minimum offset (inclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
     If unspecified, it is set to 0.
     """
 
@@ -923,8 +924,8 @@ class Helix(_JSONSerializable):
     `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
     rotation: float = 0
-    """Rotation angle (in degrees) of backbone of the :any:`Substrand` on this :any:`Helix` with 
-    :py:data:`Substrand.forward` = ``True``. 
+    """Rotation angle (in degrees) of backbone of the :any:`Domain` on this :any:`Helix` with 
+    :py:data:`Domain.forward` = ``True``. 
     
     The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 degrees is defined to
     be pointing *up* in both the side view and main view.
@@ -965,8 +966,8 @@ class Helix(_JSONSerializable):
     Optional if no other :any:`Helix` specifies a value for *idx*.
     Default is the order of the :any:`Helix` is listed in constructor for :any:`DNADesign`."""
 
-    # for optimization; list of substrands on that Helix
-    _substrands: List['Substrand'] = field(default_factory=list)
+    # for optimization; list of domains on that Helix
+    _domains: List['Domain'] = field(default_factory=list)
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = dict()
@@ -1084,41 +1085,41 @@ def _is_close(x1: float, x2: float):
 
 
 @dataclass
-class Substrand(_JSONSerializable):
+class Domain(_JSONSerializable):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
-    A :any:`Strand` contains a list of :any:`Substrand`'s (and also potentially :any:`Loopout`'s).
+    A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
     """
 
     helix: int
-    """index of the :any:`Helix` on which this :any:`Substrand` resides."""
+    """index of the :any:`Helix` on which this :any:`Domain` resides."""
 
     forward: bool
     """Whether the strand "points" forward (i.e., its 3' end has a larger offset than its 5' end).
-    If :any:`Substrand.forward` is ``True``, then 
-    :any:`Substrand.start` is the 5' end of the :any:`Substrand` and 
-    :any:`Substrand.end` is the 3' end of the :any:`Substrand`.
-    If :any:`Substrand.forward` is ``False``, these roles are reversed."""
+    If :any:`Domain.forward` is ``True``, then 
+    :any:`Domain.start` is the 5' end of the :any:`Domain` and 
+    :any:`Domain.end` is the 3' end of the :any:`Domain`.
+    If :any:`Domain.forward` is ``False``, these roles are reversed."""
 
     start: int
     """
     The smallest offset position of any base on this Substrand
-    (3' end if :any:`Substrand.forward` = ``False``,
-    5' end if :any:`Substrand.forward` = ``True``).
+    (3' end if :any:`Domain.forward` = ``False``,
+    5' end if :any:`Domain.forward` = ``True``).
     """
 
     # TODO: give option to user in constructor to specify that end is inclusive (default exclusive)
     end: int
     """
     1 plus the largest offset position of any base on this Substrand
-    (5' end if :any:`Substrand.forward` = ``False``,
-    3' end if :any:`Substrand.forward` = ``True``).
+    (5' end if :any:`Domain.forward` = ``False``,
+    3' end if :any:`Domain.forward` = ``True``).
     Note that the set of base offsets occupied by this Substrand is {start, start+1, ..., end-1},
     i.e., inclusive for :py:data:`Strand.start` but exclusive for :py:data:`Strand.end`,
     the same convention used in Python for slices of lists and strings.
     (e.g., :samp:`"abcdef"[1:3] == "bc"`)
     
-    Some methods (such as :py:meth:`Substrand.dna_sequence_in`) use the convention of being inclusive on 
+    Some methods (such as :py:meth:`Domain.dna_sequence_in`) use the convention of being inclusive on 
     both ends and are marked with the word "INCLUSIVE".
     (Such a convention is easier to reason about when there are insertions and deletions.)
     """
@@ -1174,13 +1175,13 @@ class Substrand(_JSONSerializable):
     @staticmethod
     def is_loopout() -> bool:
         """Indicates if this is a :any:`Loopout` (always false)
-        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
+        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
         return False
 
     @staticmethod
-    def is_substrand() -> bool:
-        """Indicates if this is a :any:`Substrand` (always true)
-        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
+    def is_domain() -> bool:
+        """Indicates if this is a :any:`Domain` (always true)
+        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
         return True
 
     def set_start(self, new_start: int):
@@ -1192,7 +1193,7 @@ class Substrand(_JSONSerializable):
         self._check_start_end()
 
     def offset_5p(self) -> int:
-        """5' offset of this :any:`Substrand`, INCLUSIVE."""
+        """5' offset of this :any:`Domain`, INCLUSIVE."""
         if self.forward:
             return self.start
         else:
@@ -1200,7 +1201,7 @@ class Substrand(_JSONSerializable):
         # return self.start if self.forward else self.end - 1
 
     def offset_3p(self) -> int:
-        """3' offset of this :any:`Substrand`, INCLUSIVE."""
+        """3' offset of this :any:`Domain`, INCLUSIVE."""
         return self.end - 1 if self.forward else self.start
 
     def _num_insertions(self) -> int:
@@ -1208,7 +1209,7 @@ class Substrand(_JSONSerializable):
         return sum(insertion[1] for insertion in self.insertions)
 
     def contains_offset(self, offset: int) -> bool:
-        """Indicates if `offset` is the offset of a base on this substrand.
+        """Indicates if `offset` is the offset of a base on this :any:`Domain`.
 
         Note that offsets refer to visual portions of the displayed grid for the Helix.
         If for example, this Substrand starts at position 0 and ends at 10, and it has 5 deletions,
@@ -1216,9 +1217,9 @@ class Substrand(_JSONSerializable):
         return self.start <= offset < self.end
 
     def __len__(self):
-        """Same as :meth:`Substrand.dna_length`.
+        """Same as :meth:`Domain.dna_length`.
 
-        See also :meth:`Substrand.visual_length`."""
+        See also :meth:`Domain.visual_length`."""
         return self.dna_length()
 
     def dna_length(self) -> int:
@@ -1238,20 +1239,20 @@ class Substrand(_JSONSerializable):
         return (right - left + 1) - num_deletions + num_insertions
 
     def visual_length(self) -> int:
-        """Distance between :any:`Substrand.start` offset and :any:`Substrand.end` offset.
+        """Distance between :any:`Domain.start` offset and :any:`Domain.end` offset.
 
-        This can be more or less than the :meth:`Substrand.dna_length` due to insertions and deletions."""
+        This can be more or less than the :meth:`Domain.dna_length` due to insertions and deletions."""
         return self.end - self.start
 
     def dna_sequence(self) -> Optional[str]:
         """Return DNA sequence of this Substrand, or ``None`` if no DNA sequence has been assigned
-        to this :any:`Substrand`'s :any:`Strand`."""
+        to this :any:`Domain`'s :any:`Strand`."""
         return self.dna_sequence_in(self.start, self.end - 1)
 
     def dna_sequence_in(self, offset_left: int, offset_right: int) -> Optional[str]:
         """Return DNA sequence of this Substrand in the interval of offsets given by
         [`offset_left`, `offset_right`], INCLUSIVE, or ``None`` if no DNA sequence has been assigned
-        to this :any:`Substrand`'s :any:`Strand`.
+        to this :any:`Domain`'s :any:`Strand`.
 
         WARNING: This is inclusive on both ends,
         unlike other parts of this API where the right endpoint is exclusive.
@@ -1274,26 +1275,26 @@ class Substrand(_JSONSerializable):
         if offset_right < 0:
             return ''
 
-        str_idx_left = self.substrand_offset_to_strand_dna_idx(offset_left, self.forward)
-        str_idx_right = self.substrand_offset_to_strand_dna_idx(offset_right, not self.forward)
+        str_idx_left = self.domain_offset_to_strand_dna_idx(offset_left, self.forward)
+        str_idx_right = self.domain_offset_to_strand_dna_idx(offset_right, not self.forward)
         if not self.forward:  # these will be out of order if strand is left
             str_idx_left, str_idx_right = str_idx_right, str_idx_left
         subseq = strand_seq[str_idx_left:str_idx_right + 1]
         return subseq
 
     def get_seq_start_idx(self) -> int:
-        """Starting DNA subsequence index for first base of this :any:`Substrand` on its
+        """Starting DNA subsequence index for first base of this :any:`Domain` on its
         Parent :any:`Strand`'s DNA sequence."""
-        substrands = self._parent_strand.substrands
-        # index of self in parent strand's list of substrands
-        self_substrand_idx = substrands.index(self)
+        domains = self._parent_strand.domains
+        # index of self in parent strand's list of domains
+        self_domain_idx = domains.index(self)
         # index of self's position within the DNA sequence of parent strand
-        self_seq_idx_start = sum(prev_substrand.dna_length()
-                                 for prev_substrand in substrands[:self_substrand_idx])
+        self_seq_idx_start = sum(prev_domain.dna_length()
+                                 for prev_domain in domains[:self_domain_idx])
         return self_seq_idx_start
 
-    def substrand_offset_to_strand_dna_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
-        """ Convert from offset on this :any:`Substrand`'s :any:`Helix`
+    def domain_offset_to_strand_dna_idx(self, offset: int, offset_closer_to_5p: bool) -> int:
+        """ Convert from offset on this :any:`Domain`'s :any:`Helix`
         to string index on the parent :any:`Strand`'s DNA sequence.
 
         If `offset_closer_to_5p` is ``True``, (this only matters if `offset` contains an insertion)
@@ -1348,8 +1349,8 @@ class Substrand(_JSONSerializable):
 
     # The type hint 'Substrand' must be in quotes since Substrand is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
-    def overlaps(self, other: Substrand) -> bool:
-        r"""Indicates if this substrand's set of offsets (the set
+    def overlaps(self, other: Domain) -> bool:
+        r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
         :math:`\leq x \leq`
@@ -1362,8 +1363,8 @@ class Substrand(_JSONSerializable):
                 self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    def overlaps_illegally(self, other: Substrand):
-        r"""Indicates if this substrand's set of offsets (the set
+    def overlaps_illegally(self, other: Domain):
+        r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
         :math:`\leq x \leq`
@@ -1376,7 +1377,7 @@ class Substrand(_JSONSerializable):
                 self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    def compute_overlap(self, other: Substrand) -> Tuple[int, int]:
+    def compute_overlap(self, other: Domain) -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Substrand and `other`.
 
         Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
@@ -1394,12 +1395,21 @@ class Substrand(_JSONSerializable):
     @staticmethod
     def from_json(json_map):
         helix = json_map[helix_idx_key]
-        forward = json_map[forward_key]
+        if forward_key in json_map:
+            forward = json_map[forward_key]
+        else:
+            forward = None
+            for legacy_forward_key in legacy_dna_sequence_keys:
+                if legacy_forward_key in json_map:
+                    forward = json_map[legacy_forward_key]
+                    break
+            if forward is None:
+                raise IllegalDNADesignError(f'key {forward_key} missing from Substrand description')
         start = json_map[start_key]
         end = json_map[end_key]
         deletions = json_map.get(deletions_key, [])
         insertions = list(map(tuple, json_map.get(insertions_key, [])))
-        return Substrand(
+        return Domain(
             helix=helix,
             forward=forward,
             start=start,
@@ -1428,12 +1438,12 @@ class Substrand(_JSONSerializable):
 class Loopout(_JSONSerializable):
     """Represents a single-stranded loopout on a :any:`Strand`.
 
-    One could think of a :any:`Loopout` as a type of :any:`Substrand`, but none of the fields of
-    :any:`Substrand` make sense for :any:`Loopout`, so they are not related to each other in the type
+    One could think of a :any:`Loopout` as a type of :any:`Domain`, but none of the fields of
+    :any:`Domain` make sense for :any:`Loopout`, so they are not related to each other in the type
     hierarchy. It is interpreted that a :any:`Loopout` is a single-stranded region bridging two
-    :any:`Substrand`'s that are connected to :any:`Helix`'s, or if it occurs on the end of a :any:`Strand`,
-    then it is a single-stranded extension. It is illegal for two consecutive :any:`Substrand`'s to both
-    be :any:`Loopout`'s, and for a :any:`Strand` to have only one element of :any:`Strand.substrands`
+    :any:`Domain`'s that are connected to :any:`Helix`'s, or if it occurs on the end of a :any:`Strand`,
+    then it is a single-stranded extension. It is illegal for two consecutive :any:`Domain`'s to both
+    be :any:`Loopout`'s, and for a :any:`Strand` to have only one element of :any:`Strand.domains`
     that is a :any:`Loopout`.
 
     Loopout has only a single field :py:data:`Loopout.length` that specifies the length of the loopout.
@@ -1472,13 +1482,13 @@ class Loopout(_JSONSerializable):
     @staticmethod
     def is_loopout() -> bool:
         """Indicates if this is a :any:`Loopout` (always true).
-        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
+        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
         return True
 
     @staticmethod
-    def is_substrand() -> bool:
-        """Indicates if this is a :any:`Substrand` (always false)
-        Useful when object could be either :any:`Loopout` or :any:`Substrand`."""
+    def is_domain() -> bool:
+        """Indicates if this is a :any:`Domain` (always false)
+        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
         return False
 
     def __len__(self):
@@ -1504,12 +1514,12 @@ class Loopout(_JSONSerializable):
     def get_seq_start_idx(self) -> int:
         """Starting DNA subsequence index for first base of this :any:`Loopout` on its
         :any:`Strand`'s DNA sequence."""
-        substrands = self._parent_strand.substrands
-        # index of self in parent strand's list of substrands
-        self_substrand_idx = substrands.index(self)
+        domains = self._parent_strand.domains
+        # index of self in parent strand's list of domains
+        self_domain_idx = domains.index(self)
         # index of self's position within the DNA sequence of parent strand
-        self_seq_idx_start = sum(prev_substrand.dna_length()
-                                 for prev_substrand in substrands[:self_substrand_idx])
+        self_seq_idx_start = sum(prev_domain.dna_length()
+                                 for prev_domain in domains[:self_domain_idx])
         return self_seq_idx_start
 
     @staticmethod
@@ -1603,13 +1613,13 @@ class Strand(_JSONSerializable):
     """
     Represents a single strand of DNA.
 
-    Each maximal portion that is continguous on a single :any:`Helix` is a :any:`Substrand`.
+    Each maximal portion that is continguous on a single :any:`Helix` is a :any:`Domain`.
     Crossovers from one :any:`Helix` to another are implicitly from the 3' end of one of this
-    Strand's :any:`Substrand`'s to the 5' end of the next :any:`Substrand`.
+    Strand's :any:`Domain`'s to the 5' end of the next :any:`Domain`.
 
     A portion of the :any:`Strand` not associated to any :any:`Helix` is represented by a :any:`Loopout`.
     Two :any:`Loopout`'s cannot occur consecutively on a :any:`Strand`, nor can a :any:`Strand`
-    contain only a :any:`Loopout` but no :any:`Substrand`.
+    contain only a :any:`Loopout` but no :any:`Domain`.
 
 
     One can set the strand to be a scaffold in the constructor:
@@ -1618,8 +1628,8 @@ class Strand(_JSONSerializable):
 
         import scadnano as sc
 
-        scaffold_substrands = [ ... ]
-        scaffold_strand = sc.Strand(substrands=scaffold_substrands, is_scaffold=True)
+        scaffold_domains = [ ... ]
+        scaffold_strand = sc.Strand(domains=scaffold_domains, is_scaffold=True)
 
     or by calling :py:meth:`Strand.set_scaffold` on the :any:`Strand` object:
 
@@ -1627,8 +1637,8 @@ class Strand(_JSONSerializable):
 
         import scadnano as sc
 
-        scaffold_substrands = [ ... ]
-        scaffold_strand = sc.Strand(substrands=scaffold_substrands)
+        scaffold_domains = [ ... ]
+        scaffold_strand = sc.Strand(domains=scaffold_domains)
         scaffold_strand.set_scaffold()
 
     Both will give the strand the same color that
@@ -1636,9 +1646,9 @@ class Strand(_JSONSerializable):
     uses for the scaffold.
     """
 
-    substrands: List[Union[Substrand, Loopout]]
-    """:any:`Substrand`'s (or :any:`Loopout`'s) composing this Strand. 
-    Each :any:`Substrand` is contiguous on a single :any:`Helix` 
+    domains: List[Union[Domain, Loopout]]
+    """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
+    Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
     whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
 
@@ -1697,8 +1707,8 @@ class Strand(_JSONSerializable):
     So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
     and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
 
-    # not serialized; efficient way to see a list of all substrands on a given helix
-    _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
+    # not serialized; efficient way to see a list of all domains on a given helix
+    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True):
@@ -1709,8 +1719,7 @@ class Strand(_JSONSerializable):
             dct[dna_sequence_key] = self.dna_sequence
         if self.idt is not None:
             dct[idt_key] = self.idt.to_json_serializable(suppress_indent)
-        dct[substrands_key] = [substrand.to_json_serializable(suppress_indent) for substrand in
-                               self.substrands]
+        dct[domains_key] = [domain.to_json_serializable(suppress_indent) for domain in self.domains]
         if hasattr(self, is_scaffold_key) and self.is_scaffold == True:
             dct[is_scaffold_key] = self.is_scaffold
 
@@ -1736,20 +1745,20 @@ class Strand(_JSONSerializable):
             else:
                 self.color = next(color_cycler)
 
-        self._helix_idx_substrand_map = defaultdict(list)
+        self._helix_idx_domain_map = defaultdict(list)
 
-        for substrand in self.substrands:
-            if substrand.is_substrand():
-                self._helix_idx_substrand_map[substrand.helix].append(substrand)
+        for domain in self.domains:
+            if domain.is_domain():
+                self._helix_idx_domain_map[domain.helix].append(domain)
 
-        for substrand in self.substrands:
-            substrand._parent_strand = self
+        for domain in self.domains:
+            domain._parent_strand = self
 
-        if len(self.substrands) == 1:
-            if self.first_substrand().is_loopout():
-                raise StrandError(self, 'strand cannot have a single Loopout as its only substrand')
+        if len(self.domains) == 1:
+            if self.first_domain().is_loopout():
+                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
 
-        for ss1, ss2 in _pairwise(self.substrands):
+        for ss1, ss2 in _pairwise(self.domains):
             if ss1.is_loopout() and ss2.is_loopout():
                 raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
 
@@ -1761,10 +1770,10 @@ class Strand(_JSONSerializable):
     def __eq__(self, other: Strand) -> bool:
         if not isinstance(other, Strand):
             return False
-        return self.substrands == other.substrands
+        return self.domains == other.domains
 
     def __hash__(self):
-        return hash(self.substrands)
+        return hash(self.domains)
 
     def set_scaffold(self, is_scaf: bool = True):
         """Sets this :any:`Strand` as a scaffold. Alters color to default scaffold color.
@@ -1785,10 +1794,10 @@ class Strand(_JSONSerializable):
         if skip_scaffold and self.is_scaffold: return
         self.use_default_idt = use_default_idt
         if use_default_idt:
-            start_helix = self.first_bound_substrand().helix
-            end_helix = self.last_bound_substrand().helix
-            start_offset = self.first_bound_substrand().offset_5p()
-            end_offset = self.last_bound_substrand().offset_3p()
+            start_helix = self.first_bound_domain().helix
+            end_helix = self.last_bound_domain().helix
+            start_offset = self.first_bound_domain().offset_5p()
+            end_offset = self.last_bound_domain().offset_3p()
             self.idt = IDTFields(name=f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]')
         else:
             self.idt = None
@@ -1832,13 +1841,13 @@ class Strand(_JSONSerializable):
         if idx in self.modifications_int:
             del self.modifications_int[idx]
 
-    def first_substrand(self) -> Union[Substrand, Loopout]:
-        """First substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
-        return self.substrands[0]
+    def first_domain(self) -> Union[Domain, Loopout]:
+        """First domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
+        return self.domains[0]
 
-    def last_substrand(self) -> Union[Substrand, Loopout]:
-        """Last substrand (of type either :any:`Substrand` or :any:`Loopout`) on this :any:`Strand`."""
-        return self.substrands[-1]
+    def last_domain(self) -> Union[Domain, Loopout]:
+        """Last domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
+        return self.domains[-1]
 
     def set_dna_sequence(self, sequence: str):
         """Set this :any:`Strand`'s DNA sequence to `seq`
@@ -1857,37 +1866,37 @@ class Strand(_JSONSerializable):
         """
         trimmed_seq = _remove_whitespace_and_uppercase(sequence)
         if len(trimmed_seq) != self.dna_length():
-            ss = self.first_substrand()
+            ss = self.first_domain()
             raise StrandError(self, f"strand starting at helix {ss.helix} offset {ss.offset_5p()} "
                                     f"has length {self.dna_length()}, but you attempted to assign a "
                                     f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
         self.dna_sequence = trimmed_seq
 
     def dna_length(self) -> int:
-        """Return sum of DNA length of :any:`Substrand`'s and :any:`Loopout`'s of this :any:`Strand`."""
+        """Return sum of DNA length of :any:`Domain`'s and :any:`Loopout`'s of this :any:`Strand`."""
         acc = 0
-        for substrand in self.substrands:
-            acc += substrand.dna_length()
+        for domain in self.domains:
+            acc += domain.dna_length()
         return acc
 
-    def bound_substrands(self) -> List[Substrand]:
-        """:any:`Substrand`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
-        return [ss for ss in self.substrands if ss.is_substrand()]
+    def bound_domains(self) -> List[Domain]:
+        """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
+        return [ss for ss in self.domains if ss.is_domain()]
 
     def offset_5p(self) -> int:
         """5' offset of this entire :any:`Strand`, INCLUSIVE."""
-        return self.first_substrand().offset_5p()
+        return self.first_domain().offset_5p()
 
     def offset_3p(self) -> int:
         """3' offset of this entire :any:`Strand`, INCLUSIVE."""
-        return self.last_substrand().offset_3p()
+        return self.last_domain().offset_3p()
 
     def overlaps(self, other: Strand) -> bool:
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
         by `self` has nonempty intersection with those occupied by `other_strand`."""
-        for substrand_self in self.bound_substrands():
-            for substrand_other in other.bound_substrands():
-                if substrand_self.overlaps(substrand_other):
+        for domain_self in self.bound_domains():
+            for domain_other in other.bound_domains():
+                if domain_self.overlaps(domain_other):
                     return True
         return False
 
@@ -1910,67 +1919,67 @@ class Strand(_JSONSerializable):
 
         already_assigned = self.dna_sequence is not None
 
-        # put DNA sequences to assign to substrands in List, one position per substrand
+        # put DNA sequences to assign to domains in List, one position per domain
         strand_complement_builder = []
         if already_assigned:
-            for substrand in self.substrands:
-                strand_complement_builder.append(substrand.dna_sequence())
+            for domain in self.domains:
+                strand_complement_builder.append(domain.dna_sequence())
         else:
-            for substrand in self.substrands:
-                wildcards = DNA_base_wildcard * substrand.dna_length()
+            for domain in self.domains:
+                wildcards = DNA_base_wildcard * domain.dna_length()
                 strand_complement_builder.append(wildcards)
 
-        for (ss_idx, substrand_self) in enumerate(self.substrands):
-            if substrand_self.is_loopout():
-                substrand_self_dna_sequence = DNA_base_wildcard * substrand_self.dna_length()
+        for (ss_idx, domain_self) in enumerate(self.domains):
+            if domain_self.is_loopout():
+                domain_self_dna_sequence = DNA_base_wildcard * domain_self.dna_length()
             else:
-                helix = substrand_self.helix
+                helix = domain_self.helix
 
-                # for helix, substrands_on_helix_self in self._helix_idx_substrand_map.items():
-                substrands_on_helix_other = other._helix_idx_substrand_map[helix]
-                # for substrand_self in substrands_on_helix_self:
+                # for helix, domains_on_helix_self in self._helix_idx_domain_map.items():
+                domains_on_helix_other = other._helix_idx_domain_map[helix]
+                # for domain_self in domains_on_helix_self:
                 overlaps = []
-                for substrand_other in substrands_on_helix_other:
-                    if substrand_self != substrand_other and substrand_self.overlaps(substrand_other):
-                        overlap = substrand_self.compute_overlap(substrand_other)
-                        overlaps.append((overlap, substrand_other))
+                for domain_other in domains_on_helix_other:
+                    if domain_self != domain_other and domain_self.overlaps(domain_other):
+                        overlap = domain_self.compute_overlap(domain_other)
+                        overlaps.append((overlap, domain_other))
 
                 overlaps.sort()
 
-                substrand_complement_builder = []
-                start_idx = substrand_self.start
+                domain_complement_builder = []
+                start_idx = domain_self.start
                 # repeatedly insert wildcards into gaps, then reverse WC complement
-                for ((overlap_left, overlap_right), substrand_other) in overlaps:
+                for ((overlap_left, overlap_right), domain_other) in overlaps:
                     # wildcards = DNA_base_wildcard * (overlap_left - start_idx)
-                    num_wildcard_bases = substrand_self.dna_length_in(start_idx, overlap_left - 1)
+                    num_wildcard_bases = domain_self.dna_length_in(start_idx, overlap_left - 1)
                     wildcards = DNA_base_wildcard * num_wildcard_bases
 
-                    other_seq = substrand_other.dna_sequence_in(overlap_left, overlap_right - 1)
+                    other_seq = domain_other.dna_sequence_in(overlap_left, overlap_right - 1)
                     overlap_complement = wc(other_seq)
-                    substrand_complement_builder.append(wildcards)
-                    substrand_complement_builder.append(overlap_complement)
+                    domain_complement_builder.append(wildcards)
+                    domain_complement_builder.append(overlap_complement)
                     start_idx = overlap_right
 
                 # last wildcard for gap between last overlap and end
-                # last_wildcards = DNA_base_wildcard * (substrand_self.end - start_idx)
-                num_wildcard_bases = substrand_self.dna_length_in(start_idx, substrand_self.end - 1)
+                # last_wildcards = DNA_base_wildcard * (domain_self.end - start_idx)
+                num_wildcard_bases = domain_self.dna_length_in(start_idx, domain_self.end - 1)
                 last_wildcards = DNA_base_wildcard * num_wildcard_bases
 
-                substrand_complement_builder.append(last_wildcards)
+                domain_complement_builder.append(last_wildcards)
 
                 # If pointing left, each individual overlap sequence was reverse orientation in wc(),
                 # but not the list of all of them put together until now.
-                if not substrand_self.forward:
-                    substrand_complement_builder.reverse()
+                if not domain_self.forward:
+                    domain_complement_builder.reverse()
 
-                substrand_self_dna_sequence = ''.join(substrand_complement_builder)
+                domain_self_dna_sequence = ''.join(domain_complement_builder)
 
             # merge with existing pre-assigned sequence
-            existing_substrand_self_dna_sequence = strand_complement_builder[ss_idx]
-            merged_substrand_self_dna_sequence = _string_merge_wildcard(substrand_self_dna_sequence,
-                                                                        existing_substrand_self_dna_sequence,
-                                                                        DNA_base_wildcard)
-            strand_complement_builder[ss_idx] = merged_substrand_self_dna_sequence
+            existing_domain_self_dna_sequence = strand_complement_builder[ss_idx]
+            merged_domain_self_dna_sequence = _string_merge_wildcard(domain_self_dna_sequence,
+                                                                     existing_domain_self_dna_sequence,
+                                                                     DNA_base_wildcard)
+            strand_complement_builder[ss_idx] = merged_domain_self_dna_sequence
 
         strand_complement = ''.join(strand_complement_builder)
         new_dna_sequence = strand_complement
@@ -1979,8 +1988,8 @@ class Strand(_JSONSerializable):
                 new_dna_sequence = _string_merge_wildcard(self.dna_sequence, new_dna_sequence,
                                                           DNA_base_wildcard)
             except ValueError:
-                ss_self = self.first_substrand()
-                ss_other = other.first_substrand()
+                ss_self = self.first_domain()
+                ss_other = other.first_domain()
                 msg = f'strand starting at helix {ss_self.helix}, offset {ss_self.offset_5p()} has ' \
                       f'length ' \
                       f'{self.dna_length()} and already has a partial DNA sequence assignment of length ' \
@@ -1996,51 +2005,51 @@ class Strand(_JSONSerializable):
         self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
-    def _insert_substrand(self, order, substrand):
-        """Only intended to be called by DNADesign.insert_substrand"""
-        self.substrands.insert(order, substrand)
-        substrand._parent_strand = self
-        if substrand.is_substrand():
-            self._helix_idx_substrand_map[substrand.helix].append(substrand)
+    def _insert_domain(self, order, domain):
+        """Only intended to be called by DNADesign.insert_domain"""
+        self.domains.insert(order, domain)
+        domain._parent_strand = self
+        if domain.is_domain():
+            self._helix_idx_domain_map[domain.helix].append(domain)
         if self.use_default_idt:
             self.set_default_idt()
 
-    def _remove_substrand(self, substrand):
-        """Only intended to be called by DNADesign.remove_substrand"""
-        self.substrands.remove(substrand)
-        substrand._parent_strand = None
-        if substrand.is_substrand():
-            self._helix_idx_substrand_map[substrand.helix].remove(substrand)
+    def _remove_domain(self, domain):
+        """Only intended to be called by DNADesign.remove_domain"""
+        self.domains.remove(domain)
+        domain._parent_strand = None
+        if domain.is_domain():
+            self._helix_idx_domain_map[domain.helix].remove(domain)
         if self.use_default_idt:
             self.set_default_idt()
 
     def contains_loopouts(self):
-        for ss in self.substrands:
+        for ss in self.domains:
             if ss.is_loopout():
                 return True
         return False
 
-    def first_bound_substrand(self):
-        """First :any:`Substrand` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
+    def first_bound_domain(self):
+        """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
-        substrand as :py:meth:`Strand.first_substrand`, but in case an initial or final :any:`Loopout` is
+        domain as :py:meth:`Strand.first_domain`, but in case an initial or final :any:`Loopout` is
         supported in the future, this method is provided."""
-        for substrand in self.substrands:
-            if substrand.is_substrand():
-                return substrand
+        for domain in self.domains:
+            if domain.is_domain():
+                return domain
 
-    def last_bound_substrand(self):
-        """Last :any:`Substrand` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
+    def last_bound_domain(self):
+        """Last :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
-        substrand as :py:meth:`Strand.first_substrand`, but in case an initial or final :any:`Loopout` is
+        domain as :py:meth:`Strand.first_domain`, but in case an initial or final :any:`Loopout` is
         supported in the future, this method is provided."""
-        substrands_rev = list(self.substrands)
-        substrands_rev.reverse()
-        for substrand in substrands_rev:
-            if substrand.is_substrand():
-                return substrand
+        domain_rev = list(self.domains)
+        domain_rev.reverse()
+        for domain in domain_rev:
+            if domain.is_domain():
+                return domain
 
     def reverse(self):
         """
@@ -2050,40 +2059,53 @@ class Strand(_JSONSerializable):
         directly. To reverse every :any:`Strand`, called :py:meth:`DNADesign.reverse_all`.
         If the design was legal before, it will be legal after calling that method.
         """
-        self.substrands.reverse()
-        for substrand in self.bound_substrands():
-            substrand.forward = not substrand.forward
+        self.domains.reverse()
+        for domain in self.bound_domains():
+            domain.forward = not domain.forward
 
     @staticmethod
     def from_json(json_map: dict) -> Strand:
-        if substrands_key not in json_map:
-            raise IllegalDNADesignError(
-                f'key "{substrands_key}" is missing from the description of a Strand:'
-                f'\n  {json_map}')
-        substrand_jsons = json_map[substrands_key]
-        if len(substrand_jsons) == 0:
-            raise IllegalDNADesignError(f'substrands list cannot be empty')
+        if domains_key not in json_map:
+            domain_jsons = None
+            for legacy_domain_key in legacy_domains_keys:
+                domain_jsons = json_map[legacy_domain_key]
+            if domain_jsons is None:
+                raise IllegalDNADesignError(
+                    f'key "{domains_key}" (as well as legacy key {",".join(legacy_domains_keys)}) '
+                    f'is missing from the description of a Strand:'
+                    f'\n  {json_map}')
+        else:
+            domain_jsons = json_map[domains_key]
+        if len(domain_jsons) == 0:
+            raise IllegalDNADesignError(f'{domains_key} list cannot be empty')
 
-        substrands = []
-        for substrand_json in substrand_jsons:
-            if loopout_key in substrand_json:
-                substrands.append(Loopout.from_json(substrand_json))
+        domains = []
+        for domain_json in domain_jsons:
+            if loopout_key in domain_json:
+                domains.append(Loopout.from_json(domain_json))
             else:
-                substrands.append(Substrand.from_json(substrand_json))
-        if isinstance(substrands[0], Loopout):
+                domains.append(Domain.from_json(domain_json))
+        if isinstance(domains[0], Loopout):
             raise IllegalDNADesignError('Loopout at beginning of Strand not supported')
-        if isinstance(substrands[-1], Loopout):
+        if isinstance(domains[-1], Loopout):
             raise IllegalDNADesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
+
         dna_sequence = json_map.get(dna_sequence_key)
+        if dna_sequence_key not in json_map:
+            for legacy_dna_sequence_key in legacy_dna_sequence_keys:
+                if legacy_dna_sequence_key in json_map:
+                    dna_sequence = json_map.get(legacy_dna_sequence_key)
+                    break
+
         idt = json_map.get(idt_key)
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         color = Color(hex=color_str)
 
         return Strand(
-            substrands=substrands,
+            domains=domains,
             dna_sequence=dna_sequence,
             color=color,
             idt=idt,
@@ -2176,17 +2198,17 @@ class StrandError(IllegalDNADesignError):
     raised that helps to identify which :any:`Strand` caused the problem."""
 
     def __init__(self, strand: Strand, the_cause: str):
-        first_substrand = strand.first_bound_substrand()
-        last_substrand = strand.last_bound_substrand()
+        first_domain = strand.first_bound_domain()
+        last_domain = strand.last_bound_domain()
 
         msg = (f'{the_cause}\n'
                f'strand length        =  {strand.dna_length()}\n'
                f'DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}\n'
                f'DNA sequence         =  {strand.dna_sequence}'
-               f"strand 5' helix      =  {first_substrand.helix if first_substrand else 'N/A'}\n"
-               f"strand 5' end offset =  {first_substrand.offset_5p() if first_substrand else 'N/A'}\n"
-               f"strand 3' helix      =  {last_substrand.helix if last_substrand else 'N/A'}\n"
-               f"strand 3' end offset =  {last_substrand.offset_3p() if last_substrand else 'N/A'}\n")
+               f"strand 5' helix      =  {first_domain.helix if first_domain else 'N/A'}\n"
+               f"strand 5' end offset =  {first_domain.offset_5p() if first_domain else 'N/A'}\n"
+               f"strand 3' helix      =  {last_domain.helix if last_domain else 'N/A'}\n"
+               f"strand 3' end offset =  {last_domain.offset_3p() if last_domain else 'N/A'}\n")
 
         super().__init__(msg)
         # super(IllegalDNADesignError, self).__init__(msg)
@@ -2302,8 +2324,8 @@ class DNADesign(_JSONSerializable):
     0, 1, ..., num_helices-1, then this can be used as a list of Helices. 
     
     Optional field. If not specified, then the number of helices will be just large enough to store the
-    largest index :py:data:`Substrand.helix` 
-    stored in any :any:`Substrand` 
+    largest index :py:data:`Domain.helix` 
+    stored in any :any:`Domain` 
     in :py:data:`DNADesign.strands`."""
 
     grid: Grid = Grid.square
@@ -2359,7 +2381,7 @@ class DNADesign(_JSONSerializable):
         if self.helices is None:
             if len(self.strands) > 0:
                 max_helix_idx = max(
-                    ss.helix for strand in self.strands for ss in strand.bound_substrands())
+                    ss.helix for strand in self.strands for ss in strand.bound_domains())
                 self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
             else:
                 self.helices = {}
@@ -2391,7 +2413,7 @@ class DNADesign(_JSONSerializable):
         # XXX: exact order of these calls is important
         self._set_helices_idxs()
         self._set_helices_grid_and_svg_positions()
-        self._build_substrands_on_helix_lists()
+        self._build_domains_on_helix_lists()
         self._set_helices_min_max_offsets(update=False)
         self._check_legal_design()
 
@@ -2540,12 +2562,12 @@ class DNADesign(_JSONSerializable):
         return to_return
 
     @staticmethod
-    def _cadnano_v2_import_explore_substrands(vstrands, seen, strand_type: str, strand_5_end_base: int,
-                                              strand_5_end_helix: int):
-        """ Routines finds all substrands of a cadnano v2 strand. """
+    def _cadnano_v2_import_explore_domains(vstrands, seen, strand_type: str, strand_5_end_base: int,
+                                           strand_5_end_helix: int):
+        """Finds all domains of a cadnano v2 strand. """
         curr_helix = strand_5_end_helix
         curr_base = strand_5_end_base
-        substrands = []
+        domains = []
 
         direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
             (strand_type == 'stap' and curr_helix % 2 == 1))
@@ -2569,12 +2591,12 @@ class DNADesign(_JSONSerializable):
                 else:
                     start = old_base
 
-                substrands.append(
-                    Substrand(old_helix, direction_forward, min(start, end), max(start, end) + 1,
-                              deletions=DNADesign._cadnano_v2_import_extract_deletions(
-                                  vstrands[old_helix]['skip'], start, end),
-                              insertions=DNADesign._cadnano_v2_import_extract_insertions(
-                                  vstrands[old_helix]['loop'], start, end)))
+                domains.append(
+                    Domain(old_helix, direction_forward, min(start, end), max(start, end) + 1,
+                           deletions=DNADesign._cadnano_v2_import_extract_deletions(
+                               vstrands[old_helix]['skip'], start, end),
+                           insertions=DNADesign._cadnano_v2_import_extract_insertions(
+                               vstrands[old_helix]['loop'], start, end)))
 
                 direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
                     (strand_type == 'stap' and curr_helix % 2 == 1))
@@ -2584,14 +2606,14 @@ class DNADesign(_JSONSerializable):
                 else:
                     end = curr_base
 
-        return substrands
+        return domains
 
     @staticmethod
     def _cadnano_v2_import_explore_strand(vstrands, num_bases: int, strand_type: str, seen,
                                           helix_num: int,
                                           base_id: int):
         """ Routine that will follow a cadnano v2 strand accross helices and create
-            cadnano substrands and strand accordingly.
+            cadnano domains and strand accordingly.
         """
 
         seen[(helix_num, base_id)] = True
@@ -2609,10 +2631,10 @@ class DNADesign(_JSONSerializable):
         strand_color = DNADesign._cadnano_v2_import_find_strand_color(vstrands, strand_type,
                                                                       strand_5_end_base,
                                                                       strand_5_end_helix)
-        substrands = DNADesign._cadnano_v2_import_explore_substrands(vstrands, seen, strand_type,
-                                                                     strand_5_end_base,
-                                                                     strand_5_end_helix)
-        strand = Strand(substrands=substrands, is_scaffold=(strand_type == 'scaf'), color=strand_color)
+        domains = DNADesign._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
+                                                                  strand_5_end_base,
+                                                                  strand_5_end_helix)
+        strand = Strand(domains=domains, is_scaffold=(strand_type == 'scaf'), color=strand_color)
 
         return strand
 
@@ -2750,7 +2772,7 @@ class DNADesign(_JSONSerializable):
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
             #     del helix_json[min_offset_key]
-            max_offset = max((ss.end for ss in helix._substrands), default=-1)
+            max_offset = max((ss.end for ss in helix._domains), default=-1)
             if max_offset == helix_json[max_offset_key]:
                 del helix_json[max_offset_key]
 
@@ -2761,17 +2783,17 @@ class DNADesign(_JSONSerializable):
         return y if y % x == 0 else y + (x - y % x)
 
     @staticmethod
-    def _cadnano_v2_place_strand_segment(helix_dct, substrand: Substrand,
+    def _cadnano_v2_place_strand_segment(helix_dct, domain: Domain,
                                          strand_type: str = 'scaf') -> None:
         """Converts a strand region with no crossover to cadnano v2.
         """
         # Insertions and deletions
-        for deletion in substrand.deletions:
+        for deletion in domain.deletions:
             helix_dct['skip'][deletion] = -1
-        for loop_where, loop_nb in substrand.insertions:
+        for loop_where, loop_nb in domain.insertions:
             helix_dct['loop'][loop_where] = loop_nb
 
-        start, end, forward = substrand.start, substrand.end, substrand.forward
+        start, end, forward = domain.start, domain.end, domain.forward
         strand_helix = helix_dct['num']
 
         for i_base in range(start, end):
@@ -2798,7 +2820,7 @@ class DNADesign(_JSONSerializable):
 
     @staticmethod
     def _cadnano_v2_place_crossover(helix_from_dct: dict, helix_to_dct: dict,
-                                    substrand_from: Substrand, substrand_to: Substrand,
+                                    domain_from: Domain, domain_to: Domain,
                                     strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
         Returns a conversion table from ids in the structure self.helices to helices ids
@@ -2806,10 +2828,10 @@ class DNADesign(_JSONSerializable):
         """
 
         helix_from = helix_from_dct['num']
-        start_from, end_from, forward_from = substrand_from.start, substrand_from.end, substrand_from.forward
+        start_from, end_from, forward_from = domain_from.start, domain_from.end, domain_from.forward
 
         helix_to = helix_to_dct['num']
-        start_to, end_to = substrand_to.start, substrand_to.end
+        start_to, end_to = domain_to.start, domain_to.end
 
         if forward_from:
             helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, end_to - 1]
@@ -2819,8 +2841,8 @@ class DNADesign(_JSONSerializable):
             helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
 
     @staticmethod
-    def _cadnano_v2_color_of_stap(color: Color, substrand: Substrand) -> List[int]:
-        base_id = substrand.start if substrand.forward else substrand.end - 1
+    def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
+        base_id = domain.start if domain.forward else domain.end - 1
         cadnano_color = color.to_cadnano_v2_int_hex()
         return [base_id, cadnano_color]
 
@@ -2832,21 +2854,21 @@ class DNADesign(_JSONSerializable):
         if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
             strand_type = 'scaf'
 
-        for i, substrand in enumerate(strand.substrands):
-            which_helix_id = helices_ids_reverse[substrand.helix]
+        for i, domain in enumerate(strand.domains):
+            which_helix_id = helices_ids_reverse[domain.helix]
             which_helix = dct['vstrands'][which_helix_id]
 
             if strand_type == 'stap':
-                which_helix['stap_colors'].append(self._cadnano_v2_color_of_stap(strand.color, substrand))
+                which_helix['stap_colors'].append(self._cadnano_v2_color_of_stap(strand.color, domain))
 
-            self._cadnano_v2_place_strand_segment(which_helix, substrand, strand_type)
+            self._cadnano_v2_place_strand_segment(which_helix, domain, strand_type)
 
-            if i != len(strand.substrands) - 1:
-                next_substrand = strand.substrands[i + 1]
-                next_helix_id = helices_ids_reverse[next_substrand.helix]
+            if i != len(strand.domains) - 1:
+                next_domain = strand.domains[i + 1]
+                next_helix_id = helices_ids_reverse[next_domain.helix]
                 next_helix = dct['vstrands'][next_helix_id]
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
-                                                 substrand, next_substrand, strand_type)
+                                                 domain, next_domain, strand_type)
 
     def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int) -> dict:
         """Creates blank cadnanov2 helices in and initialized all their fields.
@@ -2917,14 +2939,14 @@ class DNADesign(_JSONSerializable):
         '''
         for strand in self.strands:
             if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                for substrand in strand.substrands:
-                    if type(substrand) == Loopout:
+                for domain in strand.domains:
+                    if type(domain) == Loopout:
                         raise ValueError(
                             'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                    if substrand.helix % 2 != int(not substrand.forward):
+                    if domain.helix % 2 != int(not domain.forward):
                         raise ValueError('We can only convert designs where even helices have the scaffold \
                                               going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(
-                            substrand))
+                            domain))
 
         '''Filling the helices with blank.
         '''
@@ -2971,15 +2993,15 @@ class DNADesign(_JSONSerializable):
         for helix in self.helices.values():
 
             if update or helix.max_offset is None:
-                max_offset = None if len(helix._substrands) == 0 else helix._substrands[0].end
-                for substrand in helix._substrands:
-                    max_offset = max(max_offset, substrand.end)
+                max_offset = None if len(helix._domains) == 0 else helix._domains[0].end
+                for domain in helix._domains:
+                    max_offset = max(max_offset, domain.end)
                 helix.max_offset = max_offset
 
             if update or helix.min_offset is None:
-                min_offset = None if len(helix._substrands) == 0 else helix._substrands[0].start
-                for substrand in helix._substrands:
-                    min_offset = min(min_offset, substrand.start)
+                min_offset = None if len(helix._domains) == 0 else helix._domains[0].start
+                for domain in helix._domains:
+                    min_offset = min(min_offset, domain.start)
                 if min_offset > 0: min_offset = 0
                 helix.min_offset = min_offset
 
@@ -2995,12 +3017,12 @@ class DNADesign(_JSONSerializable):
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that begin (have their 5' end)
         on the :any:`Helix` with index `helix`."""
-        return [strand for strand in self.strands if strand.substrands[0].helix == helix]
+        return [strand for strand in self.strands if strand.domains[0].helix == helix]
 
     def strands_ending_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that finish (have their 3' end)
         on the :any:`Helix` with index `helix`."""
-        return [strand for strand in self.strands if strand.substrands[-1].helix == helix]
+        return [strand for strand in self.strands if strand.domains[-1].helix == helix]
 
     def _check_legal_design(self):
         # self._check_helix_indices()
@@ -3066,51 +3088,51 @@ class DNADesign(_JSONSerializable):
     #                 err_msg = f"duplicate Helices with helix {helix_idx}"
     #             raise IllegalDNADesignError(err_msg)
 
-    def _check_strands_overlap_legally(self, substrand_to_check: Substrand = None):
-        """If `substrand_to_check` is None, check all.
-        Otherwise only check pairs where one is substrand_to_check."""
+    def _check_strands_overlap_legally(self, domain_to_check: Domain = None):
+        """If `Domain_to_check` is None, check all.
+        Otherwise only check pairs where one is domain_to_check."""
 
-        def err_msg(substrand1, substrand2, h_idx):
-            return f"two substrands overlap on helix {h_idx}: " \
-                   f"\n{substrand1}\n  and\n{substrand2}\n  but have the same direction"
+        def err_msg(domain1, domain2, h_idx):
+            return f"two domains overlap on helix {h_idx}: " \
+                   f"\n{domain1}\n  and\n{domain2}\n  but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
-        for helix_idx, substrands in enumerate(helix._substrands for helix in self.helices.values()):
-            if substrand_to_check is not None and substrand_to_check.helix != helix_idx:
-                # TODO: if necessary, we can be more efficient by only checking this one substrand
+        for helix_idx, domains in enumerate(helix._domains for helix in self.helices.values()):
+            if domain_to_check is not None and domain_to_check.helix != helix_idx:
+                # TODO: if necessary, we can be more efficient by only checking this one domain
                 continue
 
-            if len(substrands) == 0:
+            if len(domains) == 0:
                 continue
 
-            # check all consecutive substrands on the same helix, sorted by start/end indices
+            # check all consecutive domains on the same helix, sorted by start/end indices
             offsets_data = []
-            for substrand in substrands:
-                offsets_data.append((substrand.start, True, substrand))
-                offsets_data.append((substrand.end, False, substrand))
+            for domain in domains:
+                offsets_data.append((domain.start, True, domain))
+                offsets_data.append((domain.end, False, domain))
             offsets_data.sort(key=lambda offset_data: offset_data[0])
 
-            current_substrands: List[Substrand] = []
-            for offset, is_start, substrand in offsets_data:
+            current_domains: List[Domain] = []
+            for offset, is_start, domain in offsets_data:
                 if is_start:
-                    if len(current_substrands) >= 2:
-                        if offset >= current_substrands[1].end:
-                            del current_substrands[1]
-                    if len(current_substrands) >= 1:
-                        if offset >= current_substrands[0].end:
-                            del current_substrands[0]
-                    current_substrands.append(substrand)
-                    if len(current_substrands) > 2:
-                        ss0, ss1, ss2 = current_substrands[0:3]
+                    if len(current_domains) >= 2:
+                        if offset >= current_domains[1].end:
+                            del current_domains[1]
+                    if len(current_domains) >= 1:
+                        if offset >= current_domains[0].end:
+                            del current_domains[0]
+                    current_domains.append(domain)
+                    if len(current_domains) > 2:
+                        ss0, ss1, ss2 = current_domains[0:3]
                         for s_first, s_second in [(ss0, ss1), (ss1, ss2), (ss0, ss2)]:
                             if s_first.forward == s_second.forward:
                                 raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
                         raise AssertionError(
-                            f"since current_substrands = {current_substrands} has at least three substrands, "
-                            f"I expected to find a pair of illegally overlapping substrands")
-                    elif len(current_substrands) == 2:
-                        s_first, s_second = current_substrands
+                            f"since current_domains = {current_domains} has at least three domains, "
+                            f"I expected to find a pair of illegally overlapping domains")
+                    elif len(current_domains) == 2:
+                        s_first, s_second = current_domains
                         if s_first.forward == s_second.forward:
                             raise IllegalDNADesignError(err_msg(s_first, s_second, helix_idx))
 
@@ -3122,19 +3144,19 @@ class DNADesign(_JSONSerializable):
 
     @staticmethod
     def _check_two_consecutive_loopouts(strand):
-        for ss1, ss2 in _pairwise(strand.substrands):
+        for ss1, ss2 in _pairwise(strand.domains):
             if ss1.is_loopout() and ss2.is_loopout():
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     @staticmethod
     def _check_loopout_not_singleton(strand):
-        if len(strand.substrands) == 1:
-            if strand.first_substrand().is_loopout():
-                raise StrandError(strand, 'strand cannot have a single Loopout as its only substrand')
+        if len(strand.domains) == 1:
+            if strand.first_domain().is_loopout():
+                raise StrandError(strand, 'strand cannot have a single Loopout as its only domain')
 
     @staticmethod
     def _check_loopouts_length(strand):
-        for loopout in strand.substrands:
+        for loopout in strand.domains:
             if loopout.is_loopout() and loopout.length <= 0:
                 raise StrandError(strand, f'loopout length must be positive but is {loopout.length}')
 
@@ -3145,30 +3167,30 @@ class DNADesign(_JSONSerializable):
             self._check_strand_has_legal_offsets_in_helices(strand)
 
     def _check_strand_has_legal_offsets_in_helices(self, strand: Strand):
-        for substrand in strand.substrands:
-            if substrand.is_substrand():
-                helix = self.helices[substrand.helix]
-                if substrand.start < helix.min_offset:
-                    err_msg = f"substrand {substrand} has start offset {substrand.start}, " \
+        for domain in strand.domains:
+            if domain.is_domain():
+                helix = self.helices[domain.helix]
+                if domain.start < helix.min_offset:
+                    err_msg = f"domain {domain} has start offset {domain.start}, " \
                               f"beyond the end of " \
-                              f"Helix {substrand.helix} that has min_offset = {helix.min_offset}"
-                    raise StrandError(substrand._parent_strand, err_msg)
-                if substrand.end > helix.max_offset:
-                    err_msg = f"substrand {substrand} has end offset {substrand.end}, " \
+                              f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
+                    raise StrandError(domain._parent_strand, err_msg)
+                if domain.end > helix.max_offset:
+                    err_msg = f"domain {domain} has end offset {domain.end}, " \
                               f"beyond the end of " \
-                              f"Helix {substrand.helix} that has max_offset = {helix.max_offset}"
-                    err = StrandError(substrand._parent_strand, err_msg)
+                              f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
+                    err = StrandError(domain._parent_strand, err_msg)
                     raise err
 
     def _check_strand_references_legal_helices(self, strand: Strand):
-        for substrand in strand.substrands:
-            if substrand.is_substrand() and substrand.helix not in self.helices:
-                err_msg = f"substrand {substrand} refers to nonexistent Helix index {substrand.helix}; " \
+        for domain in strand.domains:
+            if domain.is_domain() and domain.helix not in self.helices:
+                err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
                           f"here are the list of valid helices: {self._helices_to_string()}"
-                raise StrandError(substrand._parent_strand, err_msg)
+                raise StrandError(domain._parent_strand, err_msg)
 
         # ensure helix_idx's are never negative twice in a row
-        for ss1, ss2 in _pairwise(strand.substrands):
+        for ss1, ss2 in _pairwise(strand.domains):
             if ss1.is_loopout() and ss2.is_loopout():
                 err_msg = f"Loopouts {ss1} and {ss2} are consecutive on strand {strand}. " \
                           f"At least one of any consecutive pair must be a Substrand, not a Loopout."
@@ -3182,80 +3204,80 @@ class DNADesign(_JSONSerializable):
         del self.helices[old_idx]
         self.helices[new_idx] = helix
         helix.idx = new_idx
-        for substrand in helix._substrands:
-            substrand.helix = new_idx
+        for domain in helix._domains:
+            domain.helix = new_idx
 
-    def substrand_at(self, helix: int, offset: int, forward: bool):
+    def domain_at(self, helix: int, offset: int, forward: bool):
         """
-        Return :any:`Substrand` that overlaps `offset` on helix with idx `helix` and has
-        :py:data:`Substrand.forward` = ``True``, or ``None`` if there is no such :any:`Substrand`.
+        Return :any:`Domain` that overlaps `offset` on helix with idx `helix` and has
+        :py:data:`Domain.forward` = ``True``, or ``None`` if there is no such :any:`Domain`.
 
         :param helix: TODO
         :param offset: TODO
         :param forward: TODO
         :return: TODO
         """
-        for substrand in self.substrands_at(helix, offset):
-            if substrand.forward == forward:
-                return substrand
+        for domain in self.domains_at(helix, offset):
+            if domain.forward == forward:
+                return domain
         return None
 
-    def substrands_at(self, helix: int, offset: int) -> List[Substrand]:
-        """Return list of :any:`Substrand`'s that overlap `offset` on helix with idx `helix`.
+    def domains_at(self, helix: int, offset: int) -> List[Domain]:
+        """Return list of :any:`Domain`'s that overlap `offset` on helix with idx `helix`.
 
         If constructed properly, this list should have 0, 1, or 2 elements."""
-        substrands_on_helix = self.helices[helix]._substrands
+        domains_on_helix = self.helices[helix]._domains
         # TODO: replace this with a faster algorithm using binary search
-        substrands_on_helix = [substrand for substrand in substrands_on_helix if
-                               substrand.contains_offset(offset)]
-        if len(substrands_on_helix) not in [0, 1, 2]:
-            raise AssertionError(f'There should be at most 2 substrands on helix {helix}, '
-                                 f'but there are {len(substrands_on_helix)}:\n{substrands_on_helix}')
-        return substrands_on_helix
+        domains_on_helix = [domain for domain in domains_on_helix if
+                               domain.contains_offset(offset)]
+        if len(domains_on_helix) not in [0, 1, 2]:
+            raise AssertionError(f'There should be at most 2 domains on helix {helix}, '
+                                 f'but there are {len(domains_on_helix)}:\n{domains_on_helix}')
+        return domains_on_helix
 
-    # TODO: add_strand and insert_substrand should check for existing deletions/insertion parallel strands
+    # TODO: add_strand and insert_domain should check for existing deletions/insertion parallel strands
     def add_strand(self, strand: Strand):
         """Add `strand` to this design."""
         self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
-        for substrand in strand.substrands:
-            if substrand.is_substrand():
-                self.helices[substrand.helix]._substrands.append(substrand)
+        for domain in strand.domains:
+            if domain.is_domain():
+                self.helices[domain.helix]._domains.append(domain)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""
         self.strands.remove(strand)
-        for substrand in strand.substrands:
-            if substrand.is_substrand():
-                self.helices[substrand.helix]._substrands.remove(substrand)
+        for domain in strand.domains:
+            if domain.is_domain():
+                self.helices[domain.helix]._domains.remove(domain)
 
-    def insert_substrand(self, strand: Strand, order: int, substrand: Union[Substrand, Loopout]):
-        """Insert `substrand` into `strand` at index given by `order`. Uses same indexing as Python lists,
-        e.g., ``strand.insert_substrand(ss, 0)`` inserts ``ss`` as the new first :any:`Substrand`."""
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]):
+        """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
+        e.g., ``strand.insert_domain(ss, 0)`` inserts ``ss`` as the new first :any:`Domain`."""
         assert strand in self.strands
-        strand._insert_substrand(order, substrand)
+        strand._insert_domain(order, domain)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
-        if substrand.is_substrand():
-            self.helices[substrand.helix]._substrands.append(substrand)
+        if domain.is_domain():
+            self.helices[domain.helix]._domains.append(domain)
 
-    def remove_substrand(self, strand: Strand, substrand: Union[Substrand, Loopout]):
-        """Remove `substrand` from `strand`."""
+    def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
+        """Remove `Domain` from `strand`."""
         assert strand in self.strands
-        strand._remove_substrand(substrand)
-        if substrand.is_substrand():
-            self.helices[substrand.helix]._substrands.remove(substrand)
+        strand._remove_domain(domain)
+        if domain.is_domain():
+            self.helices[domain.helix]._domains.remove(domain)
 
-    def _build_substrands_on_helix_lists(self):
+    def _build_domains_on_helix_lists(self):
         for helix in self.helices.values():
-            helix._substrands = []
+            helix._domains = []
         for strand in self.strands:
-            for substrand in strand.substrands:
-                if substrand.is_substrand():
-                    if substrand.helix in self.helices:
-                        self.helices[substrand.helix]._substrands.append(substrand)
+            for domain in strand.domains:
+                if domain.is_domain():
+                    if domain.helix in self.helices:
+                        self.helices[domain.helix]._domains.append(domain)
                     else:
-                        msg = f"substrand's helix is {substrand.helix} but no helix has that index; here " \
+                        msg = f"domain's helix is {domain.helix} but no helix has that index; here " \
                               f"are the list of helix indices: {self._helices_to_string()}"
                         raise StrandError(strand=strand, the_cause=msg)
 
@@ -3282,54 +3304,54 @@ class DNADesign(_JSONSerializable):
         return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
-    #  on the helix at that position, as well as updating the end offset of the substrand (and subsequent
-    #  substrands on the same helix)
+    #  on the helix at that position, as well as updating the end offset of the domain (and subsequent
+    #  domains on the same helix)
 
     def add_deletion(self, helix: int, offset: int):
         """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""
-        substrands = self.substrands_at(helix, offset)
-        if len(substrands) == 0:
-            raise IllegalDNADesignError(f"no substrands are at helix {helix} offset {offset}")
-        for substrand in substrands:
-            if substrand.contains_offset(offset):
-                substrand.deletions.append(offset)
+        domains = self.domains_at(helix, offset)
+        if len(domains) == 0:
+            raise IllegalDNADesignError(f"no domains are at helix {helix} offset {offset}")
+        for domain in domains:
+            if domain.contains_offset(offset):
+                domain.deletions.append(offset)
 
     def add_insertion(self, helix: int, offset: int, length: int):
         """Adds an insertion with the given length to every :class:`scadnano.Strand`
         at the given helix and base offset, with the given length."""
-        substrands = self.substrands_at(helix, offset)
-        if len(substrands) == 0:
-            raise IllegalDNADesignError(f"no substrands are at helix {helix} offset {offset}")
-        for substrand in substrands:
-            if substrand.contains_offset(offset):
-                substrand.insertions.append((offset, length))
+        domains = self.domains_at(helix, offset)
+        if len(domains) == 0:
+            raise IllegalDNADesignError(f"no domains are at helix {helix} offset {offset}")
+        for domain in domains:
+            if domain.contains_offset(offset):
+                domain.insertions.append((offset, length))
 
-    def set_start(self, substrand: Substrand, start: int):
-        """Sets ``substrand.start`` to `start`."""
-        assert substrand in (ss for strand in self.strands for ss in strand.substrands)
-        substrand.set_start(start)
-        self._check_strands_overlap_legally(substrand)
+    def set_start(self, domain: Domain, start: int):
+        """Sets ``Domain.start`` to `start`."""
+        assert domain in (ss for strand in self.strands for ss in strand.domains)
+        domain.set_start(start)
+        self._check_strands_overlap_legally(domain)
 
-    def set_end(self, substrand: Substrand, end: int):
-        """Sets ``substrand.end`` to `end`."""
-        assert substrand in (ss for strand in self.strands for ss in strand.substrands)
-        substrand.set_end(end)
-        self._check_strands_overlap_legally(substrand)
+    def set_end(self, domain: Domain, end: int):
+        """Sets ``Domain.end`` to `end`."""
+        assert domain in (ss for strand in self.strands for ss in strand.domains)
+        domain.set_end(end)
+        self._check_strands_overlap_legally(domain)
 
     def move_strand_offsets(self, delta: int):
         """Moves all strands backward (if `delta` < 0) or forward (if `delta` > 0) by `delta`."""
         for strand in self.strands:
-            for substrand in strand.substrands:
-                substrand.start += delta
-                substrand.end += delta
+            for domain in strand.domains:
+                domain.start += delta
+                domain.end += delta
         self._check_strands_overlap_legally()
 
     def move_strands_on_helices(self, delta: int):
         """Moves all strands up (if `delta` < 0) or down (if `delta` > 0) by the number of helices given by
         `delta`."""
         for strand in self.strands:
-            for substrand in strand.substrands:
-                substrand.helix += delta
+            for domain in strand.domains:
+                domain.helix += delta
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str):
@@ -3362,7 +3384,7 @@ class DNADesign(_JSONSerializable):
                 merged_sequence = _string_merge_wildcard(strand.dna_sequence, padded_sequence,
                                                          DNA_base_wildcard)
             except ValueError:
-                first_ss = strand.first_substrand()
+                first_ss = strand.first_domain()
                 msg = f'strand starting at helix {first_ss.helix}, offset {first_ss.offset_5p()} has ' \
                       f'length ' \
                       f'{strand.dna_length()} and already has a DNA sequence assignment of length ' \
@@ -3376,8 +3398,8 @@ class DNADesign(_JSONSerializable):
 
         for other_strand in self.strands:
             # note that possibly strand==other_strand; it might bind to itself at some point and we want to
-            # allow a partial assignment to one substrand to automatically assign the complement to the
-            # bound substrand.
+            # allow a partial assignment to one domain to automatically assign the complement to the
+            # bound domain.
             # However, if there are no wildcards in the assigned sequence we can safely skip strand.
             if strand == other_strand and DNA_base_wildcard not in strand.dna_sequence:
                 continue
@@ -3427,8 +3449,8 @@ class DNADesign(_JSONSerializable):
                 if name in added_strands:
                     existing_strand = added_strands[name]
                     assert existing_strand.idt.name == name
-                    ss = strand.first_substrand()
-                    existing_ss = existing_strand.first_substrand()
+                    ss = strand.first_domain()
+                    existing_ss = existing_strand.first_domain()
                     if strand.dna_sequence != existing_strand.dna_sequence:
                         raise IllegalDNADesignError(
                             f'two strands with same IDT name {name} but different sequences:\n'
@@ -3464,7 +3486,7 @@ class DNADesign(_JSONSerializable):
                     added_strands[name + '_nomods'] = strand.unmodified_version()
             elif warn_on_non_idt_strands and not strand.is_scaffold:
                 print(f"WARNING: strand with 5' end at (helix, offset) "
-                      f"({strand.first_substrand().helix}, {strand.first_substrand().offset_5p()}) "
+                      f"({strand.first_domain().helix}, {strand.first_domain().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
@@ -3665,66 +3687,66 @@ class DNADesign(_JSONSerializable):
         _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool):
-        """Add nick to :any:`Substrand` on :any:`Helix` with index `helix`,
-        in direction given by `forward`, at offset `offset`. The two :any:`Substrand`'s created by this nick
+        """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
+        in direction given by `forward`, at offset `offset`. The two :any:`Domain`'s created by this nick
         will have 5'/3' ends at offsets `offset` and `offset-1`.
 
-        For example, if there is a :any:`Substrand` with
-        :py:data:`Substrand.helix` = ``0``,
-        :py:data:`Substrand.forward` = ``True``,
-        :py:data:`Substrand.start` = ``0``,
-        :py:data:`Substrand.end` = ``10``,
-        then calling ``add_nick(helix=0, offset=5, forward=True)`` will split it into two :any:`Substrand`'s,
-        with one substrands having the fields
-        :py:data:`Substrand.helix` = ``0``,
-        :py:data:`Substrand.forward` = ``True``,
-        :py:data:`Substrand.start` = ``0``,
-        :py:data:`Substrand.end` = ``5``,
-        (recall that :py:data:`Substrand.end` is exclusive, meaning that the largest offset on this
-        substrand is 4 = ``offset-1``)
-        and the other substrand having the fields
-        :py:data:`Substrand.helix` = ``0``,
-        :py:data:`Substrand.forward` = ``True``,
-        :py:data:`Substrand.start` = ``5``,
-        :py:data:`Substrand.end` = ``10``.
+        For example, if there is a :any:`Domain` with
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``10``,
+        then calling ``add_nick(helix=0, offset=5, forward=True)`` will split it into two :any:`Domain`'s,
+        with one domains having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``5``,
+        (recall that :py:data:`Domain.end` is exclusive, meaning that the largest offset on this
+        :any:`Domain` is 4 = ``offset-1``)
+        and the other domain having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``5``,
+        :py:data:`Domain.end` = ``10``.
         """
-        for substrand_to_remove in self.substrands_at(helix, offset):
-            if substrand_to_remove.forward == forward:
+        for domain_to_remove in self.domains_at(helix, offset):
+            if domain_to_remove.forward == forward:
                 break
         else:
-            raise IllegalDNADesignError(f'no substrand at helix {helix} in direction '
+            raise IllegalDNADesignError(f'no domain at helix {helix} in direction '
                                         f'{"forward" if forward else "reverse"} at offset {offset}')
-        strand = substrand_to_remove.strand()
-        substrands = strand.substrands
-        order = substrands.index(substrand_to_remove)
-        substrands_before = substrands[:order]
-        substrands_after = substrands[order + 1:]
-        substrand_left = Substrand(helix, forward, substrand_to_remove.start, offset)
-        substrand_right = Substrand(helix, forward, offset, substrand_to_remove.end)
+        strand = domain_to_remove.strand()
+        domains = strand.domains
+        order = domains.index(domain_to_remove)
+        domains_before = domains[:order]
+        domains_after = domains[order + 1:]
+        domain_left = Domain(helix, forward, domain_to_remove.start, offset)
+        domain_right = Domain(helix, forward, offset, domain_to_remove.end)
 
-        if substrand_to_remove.forward:
-            substrand_to_add_before = substrand_left
-            substrand_to_add_after = substrand_right
+        if domain_to_remove.forward:
+            domain_to_add_before = domain_left
+            domain_to_add_after = domain_right
         else:
-            substrand_to_add_before = substrand_right
-            substrand_to_add_after = substrand_left
+            domain_to_add_before = domain_right
+            domain_to_add_after = domain_left
 
         if strand.dna_sequence:
-            dna_sequence_before = ''.join(ss.dna_sequence() for ss in substrands_before)
-            dna_sequence_after = ''.join(ss.dna_sequence() for ss in substrands_after)
-            dna_sequence_on_substrand_left = substrand_to_remove.dna_sequence_in(
-                substrand_to_remove.start,
+            dna_sequence_before = ''.join(ss.dna_sequence() for ss in domains_before)
+            dna_sequence_after = ''.join(ss.dna_sequence() for ss in domains_after)
+            dna_sequence_on_domain_left = domain_to_remove.dna_sequence_in(
+                domain_to_remove.start,
                 offset - 1)
-            dna_sequence_on_substrand_right = substrand_to_remove.dna_sequence_in(offset,
-                                                                                  substrand_to_remove.end - 1)
-            if substrand_to_remove.forward:
-                dna_sequence_on_substrand_before = dna_sequence_on_substrand_left
-                dna_sequence_on_substrand_after = dna_sequence_on_substrand_right
+            dna_sequence_on_domain_right = domain_to_remove.dna_sequence_in(offset,
+                                                                                  domain_to_remove.end - 1)
+            if domain_to_remove.forward:
+                dna_sequence_on_domain_before = dna_sequence_on_domain_left
+                dna_sequence_on_domain_after = dna_sequence_on_domain_right
             else:
-                dna_sequence_on_substrand_before = dna_sequence_on_substrand_right
-                dna_sequence_on_substrand_after = dna_sequence_on_substrand_left
-            dna_sequence_before_whole = dna_sequence_before + dna_sequence_on_substrand_before
-            dna_sequence_after_whole = dna_sequence_on_substrand_after + dna_sequence_after
+                dna_sequence_on_domain_before = dna_sequence_on_domain_right
+                dna_sequence_on_domain_after = dna_sequence_on_domain_left
+            dna_sequence_before_whole = dna_sequence_before + dna_sequence_on_domain_before
+            dna_sequence_after_whole = dna_sequence_on_domain_after + dna_sequence_after
         else:
             dna_sequence_before_whole = None
             dna_sequence_after_whole = None
@@ -3732,16 +3754,16 @@ class DNADesign(_JSONSerializable):
         self.strands.remove(strand)
 
         idt_present = strand.idt is not None
-        strand_before = Strand(substrands=substrands_before + [substrand_to_add_before],
+        strand_before = Strand(domains=domains_before + [domain_to_add_before],
                                dna_sequence=dna_sequence_before_whole,
                                color=strand.color, idt=strand.idt if idt_present else None)
 
-        strand_after = Strand(substrands=[substrand_to_add_after] + substrands_after,
+        strand_after = Strand(domains=[domain_to_add_after] + domains_after,
                               dna_sequence=dna_sequence_after_whole,
                               automatically_assign_color=True, use_default_idt=idt_present)
 
-        self.helices[helix]._substrands.remove(substrand_to_remove)
-        self.helices[helix]._substrands.extend([substrand_to_add_before, substrand_to_add_after])
+        self.helices[helix]._domains.remove(domain_to_remove)
+        self.helices[helix]._domains.extend([domain_to_add_before, domain_to_add_after])
 
         self.strands.extend([strand_before, strand_after])
 
@@ -3769,16 +3791,16 @@ class DNADesign(_JSONSerializable):
             offset2 = offset1
         if forward2 is None:
             forward2 = not forward1
-        ss1 = self.substrand_at(helix1, offset1, forward1)
-        ss2 = self.substrand_at(helix2, offset2, forward2)
+        ss1 = self.domain_at(helix1, offset1, forward1)
+        ss2 = self.domain_at(helix2, offset2, forward2)
         if ss1 is None:
             raise IllegalDNADesignError(
                 f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
-                f"There is no Substrand there.")
+                f"There is no Domain there.")
         if ss2 is None:
             raise IllegalDNADesignError(
                 f"Cannot add half crossover at (helix={helix2}, offset={offset2}). "
-                f"There is no Substrand there.")
+                f"There is no Domain there.")
         strand1 = ss1.strand()
         strand2 = ss2.strand()
 
@@ -3786,7 +3808,7 @@ class DNADesign(_JSONSerializable):
             raise IllegalDNADesignError(f"Cannot add crossover from "
                                         f"(helix={helix1}, offset={offset1}) to "
                                         f"(helix={helix2}, offset={offset2}) "
-                                        f"because that would join two Substrands "
+                                        f"because that would join two Domains "
                                         f"already on the same Strand! "
                                         f"Currently circular Strands are not supported. "
                                         f"Instead, try adding nicks first, or rearrange the order of "
@@ -3800,11 +3822,11 @@ class DNADesign(_JSONSerializable):
             strand_first = strand2
             strand_last = strand1
         else:
-            raise IllegalDNADesignError("Cannot add half crossover. Must have one substrand have its "
+            raise IllegalDNADesignError("Cannot add half crossover. Must have one domain have its "
                                         "5' end at the given offset and the other with its 3' end at the "
                                         "given offset, but this is not the case.")
 
-        new_substrands = strand_first.substrands + strand_last.substrands
+        new_domains = strand_first.domains + strand_last.domains
         if strand_first.dna_sequence is None and strand_last.dna_sequence is None:
             new_dna = None
         elif strand_first.dna_sequence is not None and strand_last.dna_sequence is not None:
@@ -3813,7 +3835,7 @@ class DNADesign(_JSONSerializable):
             raise IllegalDNADesignError(
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
-        new_strand = Strand(substrands=new_substrands, color=strand_first.color, dna_sequence=new_dna,
+        new_strand = Strand(domains=new_domains, color=strand_first.color, dna_sequence=new_dna,
                             idt=strand_first.idt)
 
         self.strands.remove(strand_first)
@@ -3871,28 +3893,28 @@ class DNADesign(_JSONSerializable):
                                         offset1=crossover.offset1, offset2=crossover.offset2)
 
     def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
-        substrand_right = self.substrand_at(helix, offset, forward)
-        if substrand_right is None:
+        domain_right = self.domain_at(helix, offset, forward)
+        if domain_right is None:
             raise IllegalDNADesignError(f'You tried to create a full crossover at '
                                         f'(helix={helix}, offset={offset}) '
                                         f'but there is no Strand there.')
-        substrand_left = self.substrand_at(helix, offset - 1, forward)
-        if substrand_left is None:
+        domain_left = self.domain_at(helix, offset - 1, forward)
+        if domain_left is None:
             raise IllegalDNADesignError(f'You tried to create a full crossover at '
                                         f'(helix={helix}, offset={offset}) '
                                         f'but there is no Strand at offset {offset - 1}.')
-        if substrand_left == substrand_right:
+        if domain_left == domain_right:
             self.add_nick(helix, offset, forward)
         else:
-            assert substrand_left.end == substrand_right.start
+            assert domain_left.end == domain_right.start
 
     def inline_deletions_insertions(self):
         """
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
-        and their substrands have their lengths altered. Also, major tick marks on the helices will be
+        and their domains have their lengths altered. Also, major tick marks on the helices will be
         shifted to preserve their adjacency to bases already present. For example, if there are major
         tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then
-        the substrand is shortened by 1,
+        the domain is shortened by 1,
         the tick marks become 0, 7, 15, 23,
         and the helix's maximum offset is shrunk by 1.
 
@@ -3903,13 +3925,13 @@ class DNADesign(_JSONSerializable):
         for helix in self.helices.values():
             self._inline_deletions_insertions_on_helix(helix)
 
-    def _inline_deletions_insertions_on_helix(self, helix):
+    def _inline_deletions_insertions_on_helix(self, helix: Helix):
         ###################################################
         # first gather information before changing anything
 
         # gather all mods on helix
-        deletions = [deletion for substrand in helix._substrands for deletion in substrand.deletions]
-        insertions = [insertion for substrand in helix._substrands for insertion in substrand.insertions]
+        deletions = [deletion for domain in helix._domains for deletion in domain.deletions]
+        insertions = [insertion for domain in helix._domains for insertion in domain.insertions]
 
         # change max offset
         delta_length = sum(length for (offset, length) in insertions) - len(deletions)
@@ -3948,15 +3970,15 @@ class DNADesign(_JSONSerializable):
             # TODO: check if regularly spaced and reaching both ends, and if so set helix.major_tick_distance
             helix.major_ticks = major_ticks
 
-        # fix substrand start/end offsets
-        substrands = sorted(helix._substrands, key=lambda substrand: substrand.start)
+        # fix domain start/end offsets
+        domains = sorted(helix._domains, key=lambda domain: domain.start)
         delta_acc = 0
-        for substrand in substrands:
-            substrand.start += delta_acc
-            delta_acc += substrand.dna_length() - substrand.visual_length()
-            substrand.end += delta_acc
-            substrand.deletions = []
-            substrand.insertions = []
+        for domain in domains:
+            domain.start += delta_acc
+            delta_acc += domain.dna_length() - domain.visual_length()
+            domain.end += delta_acc
+            domain.deletions = []
+            domain.insertions = []
 
     def reverse_all(self):
         """
