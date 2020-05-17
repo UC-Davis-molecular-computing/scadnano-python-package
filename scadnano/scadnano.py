@@ -335,9 +335,15 @@ def _rotate_string(string: str, rotation: int):
 
 class M13Variant(enum.Enum):
     """Variants of M13mp18 viral genome. "Standard" variant is p7249. Other variants are longer."""
+
     p7249 = "p7249"
+    """"Standard" variant of M13mp18; 7249 bases long."""
+
     p7560 = "p7560"
+    """Variant of M13mp18 that is 7560 bases long."""
+
     p8064 = "p8064"
+    """Variant of M13mp18 that is 8064 bases long."""
 
 
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
