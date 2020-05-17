@@ -2,5 +2,6 @@
 setup.cfg
 setup.py
 scadnano\__init__.py
+scadnano\modifications.py
 scadnano\origami_rectangle.py
 scadnano\scadnano.py
