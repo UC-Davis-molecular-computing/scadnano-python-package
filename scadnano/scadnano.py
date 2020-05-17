@@ -53,7 +53,7 @@ import xlwt
 #  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
 #  should the complement be automatically assigned?
 
-# TODO: see if :param the_paramter: and :return: can be used with Sphinx
+# TODO: see if :param the_parameter: and :return: can be used with Sphinx
 
 
 def _pairwise(iterable):
@@ -617,8 +617,6 @@ _m13_variants = {
                       "TATGATTGACATGCTAGTTTTACGATTACCGTTCATCGATTCTCTTGTTTGCTCCAGACTCTCA",
 }
 
-
-
 ##################
 # keys
 
@@ -632,7 +630,7 @@ rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
 scaffold_key = 'scaffold'
-helices_view_order_key = "helices_view_order"
+helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
 design_modifications_key = 'modifications_in_design'
 
@@ -646,8 +644,10 @@ position3d_key = 'position'
 
 # Strand keys
 color_key = 'color'
-dna_sequence_key = 'dna_sequence'
-substrands_key = 'substrands'
+dna_sequence_key = 'sequence'
+legacy_dna_sequence_keys = 'dna_sequence'  # support legacy names for these ideas
+substrands_key = 'domains'
+legacy_substrands_keys = ['substrands']  # support legacy names for these ideas
 idt_key = 'idt'
 is_scaffold_key = 'is_scaffold'
 modification_5p_key = '5prime_modification'
@@ -657,6 +657,7 @@ modifications_int_key = 'internal_modifications'
 # Substrand keys
 helix_idx_key = 'helix'
 forward_key = 'forward'
+legacy_forward_keys = 'right'  # support legacy names for these ideas
 start_key = 'start'
 end_key = 'end'
 deletions_key = 'deletions'
@@ -1394,7 +1395,16 @@ class Substrand(_JSONSerializable):
     @staticmethod
     def from_json(json_map):
         helix = json_map[helix_idx_key]
-        forward = json_map[forward_key]
+        if forward_key in json_map:
+            forward = json_map[forward_key]
+        else:
+            forward = None
+            for legacy_forward_key in legacy_dna_sequence_keys:
+                if legacy_forward_key in json_map:
+                    forward = json_map[legacy_forward_key]
+                    break
+            if forward is None:
+                raise IllegalDNADesignError(f'key {forward_key} missing from Substrand description')
         start = json_map[start_key]
         end = json_map[end_key]
         deletions = json_map.get(deletions_key, [])
@@ -2057,10 +2067,16 @@ class Strand(_JSONSerializable):
     @staticmethod
     def from_json(json_map: dict) -> Strand:
         if substrands_key not in json_map:
-            raise IllegalDNADesignError(
-                f'key "{substrands_key}" is missing from the description of a Strand:'
-                f'\n  {json_map}')
-        substrand_jsons = json_map[substrands_key]
+            substrand_jsons = None
+            for legacy_substrands_key in legacy_substrands_keys:
+                substrand_jsons = json_map[legacy_substrands_key]
+            if substrand_jsons is None:
+                raise IllegalDNADesignError(
+                    f'key "{substrands_key}" (as well as legacy key {",".join(legacy_substrands_keys)}) '
+                    f'is missing from the description of a Strand:'
+                    f'\n  {json_map}')
+        else:
+            substrand_jsons = json_map[substrands_key]
         if len(substrand_jsons) == 0:
             raise IllegalDNADesignError(f'substrands list cannot be empty')
 
@@ -2076,7 +2092,14 @@ class Strand(_JSONSerializable):
             raise IllegalDNADesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
+
         dna_sequence = json_map.get(dna_sequence_key)
+        if dna_sequence_key not in json_map:
+            for legacy_dna_sequence_key in legacy_dna_sequence_keys:
+                if legacy_dna_sequence_key in json_map:
+                    dna_sequence = json_map.get(legacy_dna_sequence_key)
+                    break
+
         idt = json_map.get(idt_key)
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
