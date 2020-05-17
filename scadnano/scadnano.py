@@ -47,7 +47,6 @@ from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 import xlwt
-from docutils.nodes import subscript
 
 
 # TODO: make explicit rules about when strands can be added and sequences assigned.
@@ -74,7 +73,7 @@ def _pairwise(iterable):
 class _JSONSerializable(ABC):
 
     @abstractmethod
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         raise NotImplementedError()
 
 
@@ -159,7 +158,7 @@ class Color(_JSONSerializable):
             self.g = int(hex[2:4], 16)
             self.b = int(hex[4:6], 16)
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         # Return object representing this Color that is JSON serializable.
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
@@ -534,7 +533,7 @@ class Modification(_JSONSerializable):
     the former distorts the locations of the modifications and does not as accurately represent their
     positions relative to each other and the rest of the DNA design."""
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         ret = {
             mod_display_text_key: self.display_text,
             mod_id_key: self.id,
@@ -564,7 +563,7 @@ class Modification(_JSONSerializable):
 class Modification5Prime(Modification):
     """5' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "5'"
         return ret
@@ -586,7 +585,7 @@ class Modification5Prime(Modification):
 class Modification3Prime(Modification):
     """3' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "3'"
         return ret
@@ -615,7 +614,7 @@ class ModificationInternal(Modification):
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
     ``['A','C','G','T']``."""
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "internal"
         if self.allowed_bases is not None:
@@ -654,7 +653,7 @@ class Position3D(_JSONSerializable):
     roll: float = 0
     yaw: float = 0
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
         # return NoIndent(dct) if suppress_indent else dct
         return dct
@@ -785,7 +784,7 @@ class Helix(_JSONSerializable):
     # for optimization; list of substrands on that Helix
     _substrands: List['Substrand'] = field(default_factory=list)
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = dict()
 
         if self.min_offset != 0:
@@ -976,7 +975,7 @@ class Substrand(_JSONSerializable):
             raise StrandError(self._parent_strand,
                               f'start = {self.start} must be less than end = {self.end}')
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         dct[helix_idx_key] = self.helix
         dct[forward_key] = self.forward
@@ -1276,7 +1275,7 @@ class Loopout(_JSONSerializable):
     # not serialized; for efficiency
     _parent_strand: Strand = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = {loopout_key: self.length}
         return _NoIndent(dct)
 
@@ -1399,7 +1398,7 @@ class IDTFields(_JSONSerializable):
             raise IllegalDNADesignError(f'IDTFields.well cannot be None if IDTFields.plate is not None\n'
                                         f'IDTFields.plate = {self.plate}')
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
         if self.plate is None:
             del dct['plate']
@@ -1518,7 +1517,7 @@ class Strand(_JSONSerializable):
     _helix_idx_substrand_map: Dict[int, List[Substrand]] = field(
         init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         if self.color is not None:
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
@@ -2434,7 +2433,7 @@ class DNADesign(_JSONSerializable):
         return strand
 
     @staticmethod
-    def from_cadnano_v2(directory=None, filename=None, json_dict=None) -> DNADesign:
+    def from_cadnano_v2(directory: str = None, filename: str = None, json_dict: dict = None) -> DNADesign:
         """ Creates a DNADesign from a cadnano v2 file.
         """
 
@@ -2526,7 +2525,7 @@ class DNADesign(_JSONSerializable):
                 'strand.')
         self.assign_dna(scaffold, m13(rotation))
 
-    def to_json_serializable(self, suppress_indent=True):
+    def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         dct[version_key] = current_version
         if self.grid != default_grid:
@@ -2573,10 +2572,12 @@ class DNADesign(_JSONSerializable):
 
         return dct
 
-    def _get_multiple_of_x_sup_closest_to_y(self, x: int, y: int) -> int:
+    @staticmethod
+    def _get_multiple_of_x_sup_closest_to_y(x: int, y: int) -> int:
         return y if y % x == 0 else y + (x - y % x)
 
-    def _cadnano_v2_place_strand_segment(self, helix_dct, substrand: Substrand,
+    @staticmethod
+    def _cadnano_v2_place_strand_segment(helix_dct, substrand: Substrand,
                                          strand_type: str = 'scaf') -> None:
         """Converts a strand region with no crossover to cadnano v2.
         """
@@ -2611,7 +2612,8 @@ class DNADesign(_JSONSerializable):
                     helix_dct[strand_type][i_base][2:] = [to_helix, to_base]
         return
 
-    def _cadnano_v2_place_crossover(self, helix_from_dct, helix_to_dct,
+    @staticmethod
+    def _cadnano_v2_place_crossover(helix_from_dct: dict, helix_to_dct: dict,
                                     substrand_from: Substrand, substrand_to: Substrand,
                                     strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
@@ -2632,12 +2634,14 @@ class DNADesign(_JSONSerializable):
             helix_from_dct[strand_type][start_from][2:] = [helix_to, start_to]
             helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
 
-    def _cadnano_v2_color_of_stap(self, color, substrand) -> List[int]:
+    @staticmethod
+    def _cadnano_v2_color_of_stap(color: Color, substrand: Substrand) -> List[int]:
         base_id = substrand.start if substrand.forward else substrand.end - 1
         cadnano_color = color.to_cadnano_v2_int_hex()
         return [base_id, cadnano_color]
 
-    def _cadnano_v2_place_strand(self, strand, dct, helices_ids_reverse) -> None:
+    def _cadnano_v2_place_strand(self, strand: Strand, dct: dict,
+                                 helices_ids_reverse: Dict[int, int]) -> None:
         """Place a scadnano strand in cadnano v2.
         """
         strand_type = 'stap'
@@ -2660,7 +2664,7 @@ class DNADesign(_JSONSerializable):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  substrand, next_substrand, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct, num_bases) -> None:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int) -> dict:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
@@ -3074,7 +3078,7 @@ class DNADesign(_JSONSerializable):
     def _helices_to_string(self):
         return ', '.join(map(str, self.helices.keys()))
 
-    def to_json(self, suppress_indent=True) -> str:
+    def to_json(self, suppress_indent: bool = True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
         a JSON file ending in extension .dna"""
         # if isinstance(self, DNAOrigamiDesign):
@@ -3280,7 +3284,7 @@ class DNADesign(_JSONSerializable):
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
-    def write_idt_bulk_input_file(self, directory: str = '.', filename=None, delimiter: str = ',',
+    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
@@ -3311,9 +3315,9 @@ class DNADesign(_JSONSerializable):
                                                  export_non_modified_strand_version)
         _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
 
-    def write_idt_plate_excel_file(self, directory: str = '.', filename=None,
-                                   warn_duplicate_name: bool = False, warn_on_non_idt_strands=False,
-                                   use_default_plates=False, warn_using_default_plates=True,
+    def write_idt_plate_excel_file(self, directory: str = '.', filename: str = None,
+                                   warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
+                                   use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False):
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`DNADesign` with the field
@@ -3385,14 +3389,16 @@ class DNADesign(_JSONSerializable):
 
             workbook.save(filename_plate)
 
-    def _add_new_excel_plate_sheet(self, plate_name: str, workbook: xlwt.Workbook) -> xlwt.Worksheet:
+    @staticmethod
+    def _add_new_excel_plate_sheet(plate_name: str, workbook: xlwt.Workbook) -> xlwt.Worksheet:
         worksheet = workbook.add_sheet(plate_name)
         worksheet.write(0, 0, 'Well Position')
         worksheet.write(0, 1, 'Name')
         worksheet.write(0, 2, 'Sequence')
         return worksheet
 
-    def _setup_excel_file(self, directory, filename):
+    @staticmethod
+    def _setup_excel_file(directory, filename):
         plate_extension = f'xls'
         if filename is None:
             filename_plate = _get_filename_same_name_as_running_python_script(

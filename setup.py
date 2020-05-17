@@ -16,7 +16,7 @@ setup(name='scadnano',
       author="David Doty",
       author_email="doty@ucdavis.edu",
       url="https://github.com/UC-Davis-molecular-computing/scadnano-python-package",
-      download_url = 'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v0.1.0.zip', 
+      download_url = 'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v0.1.0.zip',
       long_description = long_description,
-      long_description_content_type = 'text/markdown',
-    )
+      long_description_content_type = 'text/markdown', requires=['xlwt']
+      )
