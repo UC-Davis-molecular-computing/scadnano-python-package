@@ -17,10 +17,9 @@ First, follow the [installation instructions](../README.md#installation) to inst
 
 
 
+## Note about web interface
 
-
-
-
+The web interface for scadnano is somewhat in flux. As a result, some of the screenshots in this tutorial, and some of the names of menu items, have changed since this tutorial was released. The functionality is all still there, but you may have to search around a bit in the menu to find it. Once the interface has stabilized a bit more, this tutorial will be updated to contain screenshots from the latest version of scadnano.
 
 
 ## Viewing completed design
@@ -37,18 +36,14 @@ Currently only [Chrome](https://www.google.com/chrome/)
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
 
-Press the button next to the word "Load" at the top (in Chrome the button says "Choose file", whereas in other browsers it might say "Browse" or something different):
-
-![](images/load_file_button.png)
-
-Choose the file you downloaded. The design should look similar to the first screenshot in the tutorial.
+Select Load --> Open. Choose the file you downloaded. The design should look similar to the first screenshot in the tutorial.
 
 
 
 
 ## Terminology
 
-Before reading one, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
+Before going further in this tutorial, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
 
 
 
@@ -124,7 +119,7 @@ if __name__ == '__main__':
     design.write_scadnano_file()
 ```
 
-To save space, below we will omit the import statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `main()` function, as well as any other functions it calls as we write them:
+To save space, below we will omit the `import scadnano as sc` statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `main()` function, as well as any other functions it calls as we write them:
 
 ```python
 def main():
