@@ -42,13 +42,13 @@ helices = [sc.Helix(0, 330), sc.Helix(1, 330), sc.Helix(2, 330), sc.Helix(3, 330
 def main():
     helices = [sc.Helix(0, 25), sc.Helix(1, 25)]
 
-    s1_left_ss0 = sc.Substrand(0, sc.reverse, 0, 5)
-    s1_ss1 = sc.Substrand(0, sc.forward, 0, 15)
-    s1_right_ss0 = sc.Substrand(0, sc.reverse, 5, 15)
+    s1_left_ss0 = sc.Domain(0, sc.reverse, 0, 5)
+    s1_ss1 = sc.Domain(0, sc.forward, 0, 15)
+    s1_right_ss0 = sc.Domain(0, sc.reverse, 5, 15)
     s1 = sc.Strand([s1_left_ss0, s1_ss1, s1_right_ss0])
 
-    s2_ss1 = sc.Substrand(0, sc.forward, 10, 20)
-    s2_ss0 = sc.Substrand(0, sc.reverse, 10, 20)
+    s2_ss1 = sc.Domain(0, sc.forward, 10, 20)
+    s2_ss0 = sc.Domain(0, sc.reverse, 10, 20)
     s2 = sc.Strand([s2_ss1, s2_ss0])
 
     strands = [s1, s2]

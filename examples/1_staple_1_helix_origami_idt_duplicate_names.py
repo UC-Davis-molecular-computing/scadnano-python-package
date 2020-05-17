@@ -1,10 +1,10 @@
 import scadnano as sc
 
 def main():
-    ss1_r = sc.Substrand(0, sc.forward, 0, 4)
-    ss2_r = sc.Substrand(0, sc.forward, 4, 8)
-    ss3_r = sc.Substrand(0, sc.forward, 8, 12)
-    ss_l = sc.Substrand(0, sc.reverse, 0, 12)
+    ss1_r = sc.Domain(0, sc.forward, 0, 4)
+    ss2_r = sc.Domain(0, sc.forward, 4, 8)
+    ss3_r = sc.Domain(0, sc.forward, 8, 12)
+    ss_l = sc.Domain(0, sc.reverse, 0, 12)
 
     s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r'))
     s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r'))
