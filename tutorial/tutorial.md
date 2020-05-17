@@ -100,7 +100,7 @@ This is a file format called [JSON format](https://en.wikipedia.org/wiki/JSON). 
 
 ## Add helices
 
-As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `DNADesign` constructor; if they are omitted, then constructor infers which helices are present by inspecting the `Substrand`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
+As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `DNADesign` constructor; if they are omitted, then constructor infers which helices are present by inspecting the `Domain`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
 
 We want 24 helices. We need to ensure each helix has enough offsets for all the bases we will need. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it. Notice that 7249 / 24 &asymp; 302, so length 304 per helix is sufficient.
 
@@ -178,15 +178,15 @@ At this point and periodically throughout the tutorial, reload the file `24_heli
 
 ## Add scaffold "precursor strands"
 
-One can specify a design by explcitly listing every `Strand`, each of which is specified by listing every `Substrand` (and if included, every `Loopout`). The point of a scripting library, however, is to automate tedious tasks by enabling a few loops to iterate over many of the `Strand`'s.
+One can specify a design by explcitly listing every `Strand`, each of which is specified by listing every `Domain` (and if included, every `Loopout`). The point of a scripting library, however, is to automate tedious tasks by enabling a few loops to iterate over many of the `Strand`'s.
 
 However, it can be difficult to see how to write a single loop, or even a small number of loops, to specify a complex design such as this one. An alternate simple way to specify a design is instead to visualize the design as consisting of several long strands, two per helix, which have had nicks and crossovers added. This is how we will design this DNA origami.
 
 We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `DNADesign` object.
 
-The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Substrand`'s, and each `Substrand` is specified primarily by 4 fields: 
+The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
-boolean `forward` (direction of the `Substrand`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
+boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
 integer `start` and `end` offsets.
 
 
@@ -197,7 +197,7 @@ def main():
 
 def precursor_scaffolds() -> sc.DNADesign:
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
-    scaffolds = [sc.Strand([sc.Substrand(helix=helix, forward=(helix % 2 == 0), start=8, end=296)])
+    scaffolds = [sc.Strand([sc.Domain(helix=helix, forward=(helix % 2 == 0), start=8, end=296)])
                  for helix in range(24)]
     return sc.DNADesign(helices=helices, strands=scaffolds, grid=sc.square)
 ```
@@ -208,19 +208,19 @@ Execute the script. The file `24_helix_origami_rectangle_twist_corrected.dna` is
 "strands": [
     {
       "color": "#f74308",
-      "substrands": [
+      "domains": [
         {"helix": 0, "forward": true, "start": 8, "end": 296}
       ]
     },
     {
       "color": "#57bb00",
-      "substrands": [
+      "domains": [
         {"helix": 1, "forward": false, "start": 8, "end": 296}
       ]
     },
     {
       "color": "#888888",
-      "substrands": [
+      "domains": [
         {"helix": 2, "forward": true, "start": 8, "end": 296}
       ]
     },
@@ -349,7 +349,7 @@ def main():
     return design
 
 def add_precursor_staples(design: sc.DNADesign):
-    staples = [sc.Strand([sc.Substrand(helix=helix, forward=helix % 2 == 1, start=8, end=296)])
+    staples = [sc.Strand([sc.Domain(helix=helix, forward=helix % 2 == 1, start=8, end=296)])
                for helix in range(24)]
     for staple in staples:
         design.add_strand(staple)
