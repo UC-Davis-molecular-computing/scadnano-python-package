@@ -36,6 +36,8 @@ to cadnanov2**, to be importable to ``cadnanov2`` a scadnano design need to comp
 * The design cannot feature any :any:`Loopout` as it is not a concept that exists in ``cadnanov2``.
 * Following ``cadnanov2`` conventions, helices with **even** number must have their scaffold going **forward** and helices with **odd** number **backward**.
 
+The ``cadnanov2`` json format does not embed sequences hence, they will be lost after conversion.
+
 Indices and tables
 ==================
 
