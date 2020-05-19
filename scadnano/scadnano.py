@@ -2669,7 +2669,7 @@ class DNADesign(_JSONSerializable):
             col, row = cadnano_helix['col'], cadnano_helix['row']
             num = cadnano_helix['num']
             helix = Helix(idx=num, max_offset=num_bases,
-                          grid_position=(col - min_col, row - min_row, 0))
+                          grid_position=(col, row, 0))
             helices[num] = helix
 
         # We do a DFS on strands
