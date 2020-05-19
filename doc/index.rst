@@ -36,7 +36,8 @@ to cadnanov2**, to be importable to ``cadnanov2`` a scadnano design need to comp
 * The design cannot feature any :any:`Loopout` as it is not a concept that exists in ``cadnanov2``.
 * Following ``cadnanov2`` conventions, helices with **even** number must have their scaffold going **forward** and helices with **odd** number **backward**.
 
-Also note that maximum offsets can be altered in a ``scadnano`` to ``cadnanov2`` conversion as ``cadnanov2`` needs max offsets to be a multiple of 21 in the hex grid and 32 in the rectangular grid.
+Also note that maximum helices offsets can be altered in a ``scadnano`` to ``cadnanov2`` conversion as ``cadnanov2`` needs max offsets to be a multiple of 21 in the hex grid and 32 in the rectangular grid.
+The conversion algorithm will choose the lowest multiple of 21 or 32 which fits the entire design.
 
 The ``cadnanov2`` json format does not embed sequences hence they will be lost after conversion.
 
