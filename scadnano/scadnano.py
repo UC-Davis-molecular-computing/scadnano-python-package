@@ -269,7 +269,11 @@ class Grid(str, enum.Enum):
     Honeycomb lattice. This consists of all the hex lattice positions except where 
     honeycomb lattice disallows grid positions (`h`, `v`) with 
     `v` even and `h` a multiple of 3 or
-    `v` odd and `h` = 1 + a multiple of 3.
+    `v` odd and `h` = 1 + a multiple of 3.  
+    
+    However, we use the same convention as cadnano for encoding hex coordinates see `misc/cadnano-format-specs/v2.txt`.
+    That convention is different from simply excluding coordinates from the hex lattice.
+
     """
 
     none = "none"
@@ -900,7 +904,7 @@ class Helix(_JSONSerializable):
     in the :any:`DNADesign` containing this helix.
     `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
     and incrementing `v` moves down one helix in the grid. 
-    In the case of the hexagonal or honeycomb lattice, 
+    In the case of the hexagonal lattice, 
     The convention is that incrementing `v` moves down and to the right if h is even, 
     and moves down and to the left if `h` is odd.
     This is the "odd-r horizontal layout" coordinate system here: 
@@ -912,7 +916,11 @@ class Helix(_JSONSerializable):
     However, the default y svg_position for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
     
-    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`, `b` = 0."""
+    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`, `b` = 0.
+    
+    In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates see `misc/cadnano-format-specs/v2.txt`.
+    That convention is different from simply excluding coordinates from the hex lattice.
+    """
 
     svg_position: Tuple[float, float] = None
     """`(x,y)` SVG coordinates of base offset 0 of this Helix in the main view. 
@@ -2669,7 +2677,7 @@ class DNADesign(_JSONSerializable):
             col, row = cadnano_helix['col'], cadnano_helix['row']
             num = cadnano_helix['num']
             helix = Helix(idx=num, max_offset=num_bases,
-                          grid_position=(col - min_col, row - min_row, 0))
+                          grid_position=(col, row, 0))
             helices[num] = helix
 
         # We do a DFS on strands

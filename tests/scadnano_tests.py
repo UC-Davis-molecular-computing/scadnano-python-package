@@ -269,7 +269,7 @@ class TestExportCadnanoV2(unittest.TestCase):
     """
     Tests the export feature to cadnano v2 (see misc/cadnano-format-specs/v2.txt).
     """
-    folder = "cadnano_v2_import"
+    folder = "cadnano_v2_export"
     input_path = os.path.join('tests_inputs', folder)
     output_path = os.path.join('tests_outputs', folder)
 
@@ -278,7 +278,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf_part = sc.Domain(helix=0, forward=True, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part], is_scaffold=True)
         design = sc.DNADesign(helices=helices, strands=[scaf], grid=sc.square)
-        design.write_scadnano_file(directory=self.output_path,
+        design.write_scadnano_file(directory=self.input_path,
                                    filename='test_2_stape_2_helix_origami_extremely_simple.dna')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_extremely_simple.json')
@@ -289,7 +289,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf_part2 = sc.Domain(helix=1, forward=False, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part1, scaf_part2], is_scaffold=True)
         design = sc.DNADesign(helices=helices, strands=[scaf], grid=sc.square)
-        design.write_scadnano_file(directory=self.output_path,
+        design.write_scadnano_file(directory=self.input_path,
                                    filename='test_2_stape_2_helix_origami_extremely_simple_2.dna')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
@@ -329,7 +329,7 @@ class TestExportCadnanoV2(unittest.TestCase):
 
         # also assigns complement to strands other than scaf bound to it
         design.assign_dna(scaf, 'AACGT' * 18)
-        design.write_scadnano_file(directory=self.output_path,
+        design.write_scadnano_file(directory=self.input_path,
                                    filename='test_2_stape_2_helix_origami_deletions_insertions.dna')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_deletions_insertions.json')
@@ -337,15 +337,20 @@ class TestExportCadnanoV2(unittest.TestCase):
     def test_6_helix_origami_rectangle(self):
         design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
                              twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=self.output_path,
+        design.write_scadnano_file(directory=self.input_path,
                                    filename='test_6_helix_origami_rectangle.dna')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_6_helix_origami_rectangle.json')
 
+    def test_6_helix_bundle_honeycomb(self):
+        design = sc.DNADesign.from_scadnano_file(os.path.join(self.input_path, 'test_6_helix_bundle_honeycomb.dna'))
+        design.export_cadnano_v2(directory=self.output_path,
+                                 filename='test_6_helix_bundle_honeycomb.json')
+
     def test_16_helix_origami_rectangle_no_twist(self):
         design = rect.create(num_helices=16, num_cols=26, assign_seq=True,
                              twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=self.output_path,
+        design.write_scadnano_file(directory=self.input_path,
                                    filename='test_16_helix_origami_rectangle_no_twist.dna')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_16_helix_origami_rectangle_no_twist.json')
