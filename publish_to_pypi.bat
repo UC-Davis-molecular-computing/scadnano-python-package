@@ -2,4 +2,5 @@ rem https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pyp
 
 rem !!!change setup.py to current version number!!!
 python setup.py sdist
-twine upload dist/*
+rem twine upload dist/*
+twine upload dist/scadnano-x.x.x.tar.gz
