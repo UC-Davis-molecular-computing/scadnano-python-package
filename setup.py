@@ -2,6 +2,8 @@
 
 from distutils.core import setup
 
+import scadnano
+
 # read the contents of your README file
 from os import path
 this_directory = path.abspath(path.dirname(__file__))
@@ -10,7 +12,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(name='scadnano',
       packages=['scadnano'],
-      version='0.4.0',
+      version=scadnano.current_version,
       license='MIT',
       description="Python scripting library for generating designs readable by scadnano.",
       author="David Doty",
