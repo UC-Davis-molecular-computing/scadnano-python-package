@@ -107,9 +107,9 @@ Fields:
                                                    col
 
                 When honeycomb lattice, a "row" is in fact a zigzag pattern:
-                      .   .
-                    .   .   .  or .   .   .
-                                    .   .   .
+                                     
+                .   .   .             .   .
+                  .   .   .   or    .   .   . 
 
                 The first is used when the row is even and the second when the row is odd.
                 
