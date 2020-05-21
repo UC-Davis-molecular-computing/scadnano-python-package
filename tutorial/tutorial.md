@@ -84,7 +84,7 @@ In the same directory, a file named `24_helix_origami_rectangle_twist_corrected.
 
 ```json
 {
-  "version": "0.1.0",
+  "version": "0.5.0",
   "helices": [],
   "strands": []
 }
@@ -132,7 +132,7 @@ Execute this script and inspect the output `24_helix_rectangle_twist_corrected.p
 
 ```json
 {
-  "version": "0.1.0",
+  "version": "0.5.0",
   "helices": [
     {"max_offset": 304, "grid_position": [0, 0]},
     {"max_offset": 304, "grid_position": [0, 1]},

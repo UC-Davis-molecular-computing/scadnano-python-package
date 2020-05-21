@@ -36,6 +36,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
+import dataclasses
 from abc import abstractmethod, ABC
 import json
 import enum
@@ -290,7 +291,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.5.0"
+current_version: str = "0.6.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -701,7 +702,7 @@ class Modification(_JSONSerializable):
     """Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
 
-    id: str
+    id: str = None
     """Short representation as a string; used to write in :any:`Strand` json representation,
     while the full description of the modification is written under a global key in the :any:`DNADesign`."""
 
@@ -725,7 +726,7 @@ class Modification(_JSONSerializable):
     def to_json_serializable(self, suppress_indent: bool = True):
         ret = {
             mod_display_text_key: self.display_text,
-            mod_id_key: self.id,
+            # mod_id_key: self.id,
         }
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
@@ -762,11 +763,11 @@ class Modification5Prime(Modification):
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
         display_connector = json_map.get(mod_display_connector_key, True)
-        id = json_map[mod_id_key]
+        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+        return Modification5Prime(display_text=display_text, idt_text=idt_text, font_size=font_size,
                                   display_connector=display_connector)
 
 
@@ -784,11 +785,11 @@ class Modification3Prime(Modification):
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
         display_connector = json_map.get(mod_display_connector_key, True)
-        id = json_map[mod_id_key]
+        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification3Prime(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+        return Modification3Prime(display_text=display_text, idt_text=idt_text, font_size=font_size,
                                   display_connector=display_connector)
 
 
@@ -816,13 +817,13 @@ class ModificationInternal(Modification):
         display_text = json_map[mod_display_text_key]
         font_size = json_map.get(mod_font_size_key)
         display_connector = json_map.get(mod_display_connector_key, True)
-        id = json_map[mod_id_key]
+        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "internal"
         idt_text = json_map.get(mod_idt_text_key)
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
-        return ModificationInternal(display_text=display_text, id=id, idt_text=idt_text, font_size=font_size,
+        return ModificationInternal(display_text=display_text, idt_text=idt_text, font_size=font_size,
                                     display_connector=display_connector, allowed_bases=allowed_bases)
 
 
@@ -2497,7 +2498,9 @@ class DNADesign(_JSONSerializable):
             all_mods_json = json_map[design_modifications_key]
             all_mods = {}
             for mod_key, mod_json in all_mods_json.items():
-                all_mods[mod_key] = Modification.from_json(mod_json)
+                mod = Modification.from_json(mod_json)
+                mod = dataclasses.replace(mod, id=mod_key)
+                all_mods[mod_key] = mod
             DNADesign.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
         return DNADesign(
