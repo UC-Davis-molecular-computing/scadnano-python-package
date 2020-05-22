@@ -39,6 +39,12 @@ def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
 
+class TestCreateHelix(unittest.TestCase):
+
+    def test_helix_constructor_no_max_offset_with_major_ticks(self):
+        # tests bug where an exception is raised if major ticks is defined but not max_offset
+        helix = sc.Helix(major_ticks=[0,5,10])
+
 
 
 class TestM13(unittest.TestCase):

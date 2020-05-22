@@ -291,7 +291,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.6.6"
+current_version: str = "0.6.7"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -987,6 +987,14 @@ class Helix(_JSONSerializable):
     # for optimization; list of domains on that Helix
     _domains: List['Domain'] = field(default_factory=list)
 
+    def __post_init__(self):
+        if self.major_ticks is not None and self.max_offset is not None and self.min_offset is not None:
+            for major_tick in self.major_ticks:
+                if major_tick > self.max_offset - self.min_offset:
+                    raise IllegalDNADesignError(f'major tick {major_tick} in list {self.major_ticks} is '
+                                                f'outside the range of available offsets since max_offset = '
+                                                f'{self.max_offset}')
+
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = dict()
 
@@ -1027,14 +1035,6 @@ class Helix(_JSONSerializable):
         dct[idx_on_helix_key] = self.idx
 
         return _NoIndent(dct) if suppress_indent else dct
-
-    def __post_init__(self):
-        if self.major_ticks is not None:
-            for major_tick in self.major_ticks:
-                if major_tick > self.max_offset - self.min_offset:
-                    raise IllegalDNADesignError(f'major tick {major_tick} in list {self.major_ticks} is '
-                                                f'outside the range of available offsets since max_offset = '
-                                                f'{self.max_offset}')
 
     def default_svg_position(self):
         return 0, self.idx * distance_between_helices_svg
