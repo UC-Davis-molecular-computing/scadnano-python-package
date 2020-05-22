@@ -358,7 +358,7 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
     By default, starts from cyclic rotation 5587 
     (with 0-based indexing;  commonly this is called rotation 5588, which assumes that indexing begins at 1), 
     as defined in
-    `GenBank <https://www.neb.com/~/media/NebUs/Page%20Images/Tools%20and%20Resources/Interactive%20Tools/DNA%20Sequences%20and%20Maps/Text%20Documents/m13mp18gbk.txt>`_.
+    `GenBank <https://www.ncbi.nlm.nih.gov/nuccore/X02513.1>`_.
     
     By default, returns the "standard" variant of consisting of 7249 bases, sold by companies such as  
     `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
