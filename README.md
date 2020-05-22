@@ -59,7 +59,7 @@ https://scadnano-python-package.readthedocs.io
 
 ## Tutorial
 
-A [tutorial](tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scripting library.
+A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scripting library.
 
 
 

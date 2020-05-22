@@ -39,6 +39,33 @@ def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
 
+class TestCreateHelix(unittest.TestCase):
+
+    def test_helix_constructor_no_max_offset_with_major_ticks(self):
+        # tests bug where an exception is raised if major ticks is defined but not max_offset
+        helix = sc.Helix(major_ticks=[0,5,10])
+
+
+
+class TestM13(unittest.TestCase):
+
+    def test_p7249(self):
+        p7249 = sc.m13()
+        self.assertEqual('TTCCCTTCCTTTCTCG', p7249[:16])
+        self.assertEqual(7249, len(p7249))
+        p7249 = sc.m13(rotation=0)
+        self.assertEqual('AATGCTACTACTATTA', p7249[:16])
+        self.assertEqual(7249, len(p7249))
+
+    def test_p7560(self):
+        p7560 = sc.m13(rotation=0, variant=sc.M13Variant.p7560)
+        self.assertEqual('AGCTTGGCACTGGCCG', p7560[:16])
+        self.assertEqual(7560, len(p7560))
+
+    def test_p8064(self):
+        p8064 = sc.m13(rotation=0, variant=sc.M13Variant.p8064)
+        self.assertEqual('GGCAATGACCTGATAG', p8064[:16])
+        self.assertEqual(8064, len(p8064))
 
 class TestModifications(unittest.TestCase):
 
