@@ -814,14 +814,26 @@ class ModificationInternal(Modification):
 class Position3D(_JSONSerializable):
     """
     Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     """
 
     x: float = 0
+    """x-coordinate of position"""
+
     y: float = 0
+    """y-coordinate of position"""
+
     z: float = 0
+    """z-coordinate of position"""
+
     pitch: float = 0
+    """pitch angle in degrees"""
+
     roll: float = 0
+    """roll angle in degrees"""
+
     yaw: float = 0
+    """yaw angle in degrees"""
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
@@ -2091,6 +2103,10 @@ class Strand(_JSONSerializable):
         idt = json_map.get(idt_key)
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
+        if isinstance(color_str, int):
+            def decimal_int_to_hex(d):
+                return "#" + "{0:#0{1}x}".format(d, 8)[2:]
+            color_str = decimal_int_to_hex(color_str)
         color = Color(hex=color_str)
 
         return Strand(
@@ -2401,13 +2417,23 @@ class DNADesign(_JSONSerializable):
         """
         with open(filename) as f:
             json_str = f.read()
+        return DNADesign.from_scadnano_json_str(json_str)
+
+    @staticmethod
+    def from_scadnano_json_str(json_str: str) -> DNADesign:
+        """
+        Loads a :any:`DNADesign` from the given JSON string.
+
+        :param json_str: JSON description of the :any:`DNADesign`
+        :return: DNADesign described in the file
+        """
         json_map = json.loads(json_str)
         return DNADesign._from_scadnano_json(json_map)
 
     @staticmethod
     def _from_scadnano_json(json_map: dict) -> DNADesign:
         # reads scadnano .dna file format into a DNADesign object
-        version = json_map.get(version_key, initial_version)  # not sure what to do with this
+        # version = json_map.get(version_key, initial_version)  # not sure what to do with this
         grid = json_map.get(grid_key, Grid.square)
         grid_is_none = grid == Grid.none
 
