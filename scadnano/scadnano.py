@@ -715,22 +715,8 @@ class Modification(_JSONSerializable):
     """Short representation as a string; used to write in :any:`Strand` json representation,
     while the full description of the modification is written under a global key in the :any:`DNADesign`."""
 
-    font_size: Optional[int] = None
-    """Font size to use when displaying :py:data:`Modification.display_text`, in units of px.
-    optional; if not specified, default value used in web interface is 8."""
-
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
-
-    display_connector: bool = True
-    """Indicates whether in the web interface to display a fake "connector" between the DNA strand and
-    the visual depiction of the modification. If ``True``, then it will be displayed slight above 
-    (for forward domains) or below (for reverse domains) the DNA strand itself, to keep from blocking
-    the view of the rest of the design. If ``False``, the modification will
-    be displayed at the same veritical height as the DNA strand. The latter option is useful to 
-    visually test where the modifications will appear on the surface of a 2D design, for instance, whereas
-    the former distorts the locations of the modifications and does not as accurately represent their
-    positions relative to each other and the rest of the DNA design."""
 
     def to_json_serializable(self, suppress_indent: bool = True):
         ret = {
@@ -739,9 +725,6 @@ class Modification(_JSONSerializable):
         }
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
-        if self.font_size is not None:
-            ret[mod_font_size_key] = self.font_size
-        if self.display_connector == False:
             ret[mod_display_connector_key] = False
         return ret
 
@@ -770,14 +753,10 @@ class Modification5Prime(Modification):
     @staticmethod
     def from_json(json_map: dict) -> Modification5Prime:
         display_text = json_map[mod_display_text_key]
-        font_size = json_map.get(mod_font_size_key)
-        display_connector = json_map.get(mod_display_connector_key, True)
-        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, idt_text=idt_text, font_size=font_size,
-                                  display_connector=display_connector)
+        return Modification5Prime(display_text=display_text, idt_text=idt_text)
 
 
 @dataclass(frozen=True, eq=True)
@@ -792,14 +771,10 @@ class Modification3Prime(Modification):
     @staticmethod
     def from_json(json_map: dict) -> Modification3Prime:
         display_text = json_map[mod_display_text_key]
-        font_size = json_map.get(mod_font_size_key)
-        display_connector = json_map.get(mod_display_connector_key, True)
-        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification3Prime(display_text=display_text, idt_text=idt_text, font_size=font_size,
-                                  display_connector=display_connector)
+        return Modification3Prime(display_text=display_text, idt_text=idt_text)
 
 
 @dataclass(frozen=True, eq=True)
@@ -824,16 +799,12 @@ class ModificationInternal(Modification):
     @staticmethod
     def from_json(json_map: dict) -> ModificationInternal:
         display_text = json_map[mod_display_text_key]
-        font_size = json_map.get(mod_font_size_key)
-        display_connector = json_map.get(mod_display_connector_key, True)
-        # id = json_map[mod_id_key]
         location = json_map[mod_location_key]
         assert location == "internal"
         idt_text = json_map.get(mod_idt_text_key)
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
-        return ModificationInternal(display_text=display_text, idt_text=idt_text, font_size=font_size,
-                                    display_connector=display_connector, allowed_bases=allowed_bases)
+        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
 
 
 # end modification abstract base classes
