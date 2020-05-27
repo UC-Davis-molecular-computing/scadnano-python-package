@@ -3,8 +3,13 @@
 ![Python package](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/workflows/Python%20package/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/scadnano-python-package/badge/?version=latest)](https://scadnano-python-package.readthedocs.io/en/latest/?badge=latest)
 
-
 The scadnano Python module is a library for describing synthetic DNA nanostructures (e.g., DNA origami).
+
+
+If you find scadnano useful in a scientific project, please cite its associated paper:
+
+- [scadnano paper](https://arxiv.org/abs/2005.11841)
+- [BibTeX](https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib)
 
 This module is used to write Python scripts outputting `.dna` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
 
