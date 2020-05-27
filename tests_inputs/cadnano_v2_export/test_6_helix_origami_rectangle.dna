@@ -1,5 +1,5 @@
 {
-  "version": "0.6.7",
+  "version": "0.6.8",
   "major_tick_distance": 8,
   "helices": [
     {"max_offset": 192, "grid_position": [0, 0]},
