@@ -47,6 +47,7 @@ class TestCreateHelix(unittest.TestCase):
 
 
 
+
 class TestM13(unittest.TestCase):
 
     def test_p7249(self):
@@ -1911,6 +1912,31 @@ class TestSetHelixIdx(unittest.TestCase):
 
 
 class TestJSON(unittest.TestCase):
+
+    def test_json_tristan_example_issue_32(self):
+        import json
+        import scadnano as sc
+
+        json_str = """
+        { 
+          "version": "0.3.0", 
+          "helices": [ 
+            {"grid_position": [0, 0]}, 
+            {"max_offset": 32, "grid_position": [0, 1]} 
+          ], 
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ], 
+              "is_scaffold": true 
+            } 
+          ] 
+        }
+        """
+
+        json_map = json.loads(json_str)
+
+        d = sc.DNADesign._from_scadnano_json(json_map)
 
     def test_to_json__hairpin(self):
         """
