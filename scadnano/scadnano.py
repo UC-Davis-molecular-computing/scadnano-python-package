@@ -302,9 +302,9 @@ def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 
-default_grid: Grid = Grid.square
+default_grid: Grid = Grid.none
 
-default_helix_rotation: float = -90.0
+default_helix_rotation: float = 0.0
 default_helix_rotation_anchor: int = 0
 
 base_width_svg: float = 10.0
