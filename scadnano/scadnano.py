@@ -291,7 +291,7 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-current_version: str = "0.6.8"
+current_version: str = "0.7.0"
 initial_version: str = "0.1.0"
 
 default_idt_scale = "25nm"
@@ -302,9 +302,9 @@ def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 
-default_grid: Grid = Grid.square
+default_grid: Grid = Grid.none
 
-default_helix_rotation: float = -90.0
+default_helix_rotation: float = 0.0
 default_helix_rotation_anchor: int = 0
 
 base_width_svg: float = 10.0
@@ -656,6 +656,15 @@ grid_position_key = 'grid_position'
 svg_position_key = 'svg_position'
 position3d_key = 'position'
 
+# Position3D keys
+position_x_key = 'x'
+position_y_key = 'y'
+position_z_key = 'z'
+position_pitch_key = 'pitch'
+position_roll_key = 'roll'
+position_yaw_key = 'yaw'
+position_origin_key = 'origin'
+
 # Strand keys
 color_key = 'color'
 dna_sequence_key = 'sequence'
@@ -814,19 +823,47 @@ class ModificationInternal(Modification):
 class Position3D(_JSONSerializable):
     """
     Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     """
 
     x: float = 0
+    """x-coordinate of position"""
+
     y: float = 0
+    """y-coordinate of position"""
+
     z: float = 0
+    """z-coordinate of position"""
+
     pitch: float = 0
+    """pitch angle in degrees"""
+
     roll: float = 0
+    """roll angle in degrees"""
+
     yaw: float = 0
+    """yaw angle in degrees"""
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
         # return NoIndent(dct) if suppress_indent else dct
         return dct
+
+    @staticmethod
+    def from_json(json_map: dict) -> Position3D:
+        if position_origin_key in json_map:
+            origin = json_map[position_origin_key]
+            x = origin[position_x_key]
+            y = origin[position_y_key]
+            z = origin[position_z_key]
+        else:
+            x = json_map[position_x_key]
+            y = json_map[position_y_key]
+            z = json_map[position_z_key]
+        pitch = json_map[position_pitch_key]
+        roll = json_map[position_roll_key]
+        yaw = json_map[position_yaw_key]
+        return Position3D(x=x, y=y, z=z, pitch=pitch, roll=roll, yaw=yaw)
 
 
 def in_browser() -> bool:
@@ -1052,8 +1089,10 @@ class Helix(_JSONSerializable):
         max_offset = json_map.get(max_offset_key)
         rotation = json_map.get(rotation_key, default_helix_rotation)
         rotation_anchor = json_map.get(rotation_anchor_key, default_helix_rotation_anchor)
-        position3d = json_map.get(position3d_key)
         idx = json_map.get(idx_on_helix_key)
+
+        position3d_map = json_map.get(position3d_key)
+        position3d = Position3D.from_json(position3d_map) if position3d_map is not None else None
 
         return Helix(
             major_tick_distance=major_tick_distance,
@@ -2091,6 +2130,11 @@ class Strand(_JSONSerializable):
         idt = json_map.get(idt_key)
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
+        if isinstance(color_str, int):
+            def decimal_int_to_hex(d: int) -> str:
+                return "#" + "{0:#08x}".format(d, 8)[2:]
+
+            color_str = decimal_int_to_hex(color_str)
         color = Color(hex=color_str)
 
         return Strand(
@@ -2401,13 +2445,23 @@ class DNADesign(_JSONSerializable):
         """
         with open(filename) as f:
             json_str = f.read()
+        return DNADesign.from_scadnano_json_str(json_str)
+
+    @staticmethod
+    def from_scadnano_json_str(json_str: str) -> DNADesign:
+        """
+        Loads a :any:`DNADesign` from the given JSON string.
+
+        :param json_str: JSON description of the :any:`DNADesign`
+        :return: DNADesign described in the file
+        """
         json_map = json.loads(json_str)
         return DNADesign._from_scadnano_json(json_map)
 
     @staticmethod
     def _from_scadnano_json(json_map: dict) -> DNADesign:
         # reads scadnano .dna file format into a DNADesign object
-        version = json_map.get(version_key, initial_version)  # not sure what to do with this
+        # version = json_map.get(version_key, initial_version)  # not sure what to do with this
         grid = json_map.get(grid_key, Grid.square)
         grid_is_none = grid == Grid.none
 
@@ -2710,8 +2764,8 @@ class DNADesign(_JSONSerializable):
         dct[version_key] = current_version
         if self.grid != default_grid:
             dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
-        if self.major_tick_distance >= 0:  # and (
-            # self.major_tick_distance != default_major_tick_distance(self.grid)):
+        if self.major_tick_distance >= 0 and (
+                self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
 
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in

@@ -1913,10 +1913,50 @@ class TestSetHelixIdx(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
-    def test_json_tristan_example_issue_32(self):
-        import json
-        import scadnano as sc
+    def test_color_specified_with_integer(self):
+        # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/58
+        # 0066cc hex is 26316 decimal
+        json_str = """
+        { 
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        expected_color_hex = '#0066cc'
+        actual_color_hex = d.strands[0].color.to_json_serializable(False)
+        self.assertEqual(expected_color_hex, actual_color_hex)
 
+    def test_position_specified_with_origin_keyword(self):
+        # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/59
+        json_str = """
+        { 
+          "grid": "none",
+          "helices": [{"position": { 
+              "origin": { "x": 1, "y": 2, "z": 3}, 
+              "pitch": 4, 
+              "roll": 5, 
+              "yaw": 6} 
+          }],
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        expected_position = sc.Position3D(1,2,3,4,5,6)
+        actual_position = d.helices[0].position3d
+        self.assertEqual(expected_position, actual_position)
+
+    def test_json_tristan_example_issue_32(self):
         json_str = """
         { 
           "version": "0.3.0", 
@@ -1933,10 +1973,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-
-        json_map = json.loads(json_str)
-
-        d = sc.DNADesign._from_scadnano_json(json_map)
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
 
     def test_to_json__hairpin(self):
         """
