@@ -3005,7 +3005,8 @@ class DNADesign(_JSONSerializable):
                 min_offset = None if len(helix._domains) == 0 else helix._domains[0].start
                 for domain in helix._domains:
                     min_offset = min(min_offset, domain.start)
-                if min_offset > 0: min_offset = 0
+                if min_offset is None or min_offset > 0:
+                    min_offset = 0
                 helix.min_offset = min_offset
 
     def set_default_idt(self, use_default_idt: bool = True):
