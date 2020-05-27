@@ -2133,6 +2133,7 @@ class Strand(_JSONSerializable):
         if isinstance(color_str, int):
             def decimal_int_to_hex(d: int) -> str:
                 return "#" + "{0:#08x}".format(d, 8)[2:]
+
             color_str = decimal_int_to_hex(color_str)
         color = Color(hex=color_str)
 
@@ -2763,8 +2764,8 @@ class DNADesign(_JSONSerializable):
         dct[version_key] = current_version
         if self.grid != default_grid:
             dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
-        if self.major_tick_distance >= 0:  # and (
-            # self.major_tick_distance != default_major_tick_distance(self.grid)):
+        if self.major_tick_distance >= 0 and (
+                self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
 
         dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in
