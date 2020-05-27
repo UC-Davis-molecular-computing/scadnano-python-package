@@ -1936,7 +1936,7 @@ class TestJSON(unittest.TestCase):
         # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/59
         json_str = """
         { 
-        "grid": "none",
+          "grid": "none",
           "helices": [{"position": { 
               "origin": { "x": 1, "y": 2, "z": 3}, 
               "pitch": 4, 
