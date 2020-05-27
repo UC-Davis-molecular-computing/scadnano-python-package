@@ -2131,9 +2131,8 @@ class Strand(_JSONSerializable):
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):
-            def decimal_int_to_hex(d):
-                return "#" + "{0:#0{1}x}".format(d, 8)[2:]
-
+            def decimal_int_to_hex(d: int) -> str:
+                return "#" + "{0:#08x}".format(d, 8)[2:]
             color_str = decimal_int_to_hex(color_str)
         color = Color(hex=color_str)
 
