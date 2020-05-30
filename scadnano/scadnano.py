@@ -2379,7 +2379,7 @@ class DNADesign(_JSONSerializable):
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  strands: List[Strand] = None,
-                 grid: Grid = Grid.square,
+                 grid: Grid = Grid.none,
                  major_tick_distance: int = -1,
                  helices_view_order: List[int] = None):
         self.helices = helices

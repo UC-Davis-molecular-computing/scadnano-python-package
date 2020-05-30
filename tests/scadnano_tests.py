@@ -220,7 +220,7 @@ class TestModifications(unittest.TestCase):
                               modifications_int={1: biotinI_1, 2: biotinI_2})
 
         strands = [strand5, strand3, strandI, strand53, strand53I]
-        design = sc.DNADesign(strands=strands)
+        design = sc.DNADesign(strands=strands, grid=sc.square)
 
         # print(design.to_json())
 
@@ -2501,7 +2501,7 @@ class TestAssignDNA(unittest.TestCase):
         st_top_left = sc.Strand([ss_top_left])
         st_top_right = sc.Strand([ss_top_right])
         st_bot = sc.Strand([ss_bot])
-        design = sc.DNADesign(strands=[st_bot, st_top_left, st_top_right])
+        design = sc.DNADesign(strands=[st_bot, st_top_left, st_top_right], grid=sc.square)
         design.assign_dna(st_top_left, 'CAAA')
         self.assertEqual('TTTG????', st_bot.dna_sequence)
         design.assign_dna(st_top_right, 'AGGG')
