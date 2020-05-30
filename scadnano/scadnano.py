@@ -11,6 +11,13 @@ The purpose of this module is to help automate some of the task of creating DNA 
 as well as making large-scale changes to them that are easier to describe programmatically than
 to do by hand in scadnano.
 
+If you find scadnano useful in a scientific project, please cite its associated paper:
+
+ | scadnano: A browser-based, easily scriptable tool for designing DNA nanostructures.
+ | David Doty, Benjamin L Lee, and Tristan Stérin.
+ | *Technical Report 2005.11841, arXiv*, 2020.
+ | [ `arXiv paper <https://arxiv.org/abs/2005.11841>`_ | `BibTeX <https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib>`_ ]
+
 This library uses typing hints from the Python typing library.
 (https://docs.python.org/3/library/typing.html)
 Each function and method indicate intended types of the parameters.
@@ -130,7 +137,8 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
 @dataclass
 class Color(_JSONSerializable):
     r: int = None
-    """Red component: 0-255.
+    """
+    Red component: 0-255.
     
     Optional if :py:data:`Color.hex` is given."""
 

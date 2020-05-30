@@ -16,7 +16,9 @@ import sphinx.ext.autodoc as auto
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../'))
+import scadnano
+
+sys.path.insert(0, os.path.abspath('../scadnano'))
 # print(sys.path)
 
 # Type "make html" at the command line to generate the documentation.
@@ -29,8 +31,10 @@ copyright = '2019, David Doty'
 author = 'David Doty'
 
 # The full version, including alpha/beta/rc tags
-version = '0.0.1'
-release = '0.0.1'
+# version = '0.7.0'
+# release = '0.7.0'
+version = scadnano.current_version
+release = scadnano.current_version
 
 # -- General configuration ---------------------------------------------------
 
