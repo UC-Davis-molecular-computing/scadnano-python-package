@@ -10,7 +10,7 @@
 
 from setuptools import setup, find_packages
 
-import scadnano
+# import scadnano
 
 # read the contents of your README file
 from os import path
@@ -21,15 +21,15 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(name='scadnano',
       packages=['scadnano'],
-      version=scadnano.current_version,
-      # version='0.7.0',
+      # version=scadnano.current_version,
+      version='0.7.0',
+      # download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v{scadnano.current_version}.zip',
+      download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v0.7.0.zip',
       license='MIT',
       description="Python scripting library for generating designs readable by scadnano.",
       author="David Doty",
       author_email="doty@ucdavis.edu",
       url="https://github.com/UC-Davis-molecular-computing/scadnano-python-package",
-      download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v{scadnano.current_version}.zip',
-      # download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v0.7.0.zip',
       long_description=long_description,
       long_description_content_type='text/markdown; variant=GFM',
       requires=['xlwt']
