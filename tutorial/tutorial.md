@@ -36,7 +36,7 @@ Currently only [Chrome](https://www.google.com/chrome/)
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
 
-Select Load --> Open. Choose the file you downloaded. The design should look similar to the first screenshot in the tutorial.
+Select File --> Open. Choose the file you downloaded. The design should look similar to the first screenshot in the tutorial.
 
 
 
