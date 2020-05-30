@@ -179,12 +179,13 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
     form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
     
-    `use_idt_defaults`, if ``True``, creates an :any:`IDTFields` in each staple strand suitable for 
+    `use_idt_defaults`, if ``True``, creates an :py:class:`IDTFields` in each staple strand suitable for 
     calling :py:meth:`DNADesign.write_idt_file` or :py:meth:`DNADesign.write_idt_plate_excel_file` .
 
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
-    (By default the output file name is the same as the script calling :any:`DNADesign.write_scadnano_file`
+    (By default the output file name is the same as the script calling 
+    :py:meth:`DNADesign.write_scadnano_file`
     but with the extension ``.py`` changed to ``.dna``.)
 
     .. code-block:: Python
