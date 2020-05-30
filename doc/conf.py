@@ -16,7 +16,7 @@ import sphinx.ext.autodoc as auto
 import os
 import sys
 
-# import scadnano
+import scadnano_version
 
 sys.path.insert(0, os.path.abspath('../scadnano'))
 # print(sys.path)
@@ -31,10 +31,10 @@ copyright = '2019, David Doty'
 author = 'David Doty'
 
 # The full version, including alpha/beta/rc tags
-version = '0.7.0'
-release = '0.7.0'
-# version = scadnano.current_version
-# release = scadnano.current_version
+# version = '0.7.0'
+# release = '0.7.0'
+version = scadnano_version.current_version
+release = scadnano_version.current_version
 
 # -- General configuration ---------------------------------------------------
 
