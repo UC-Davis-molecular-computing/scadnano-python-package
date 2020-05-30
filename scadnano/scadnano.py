@@ -1569,7 +1569,7 @@ def wc(seq: str) -> str:
 @dataclass
 class IDTFields(_JSONSerializable):
     """Data required when ordering DNA strands from the synthesis company
-    `IDT DNA Technologies <https://www.idtdna.com/>`_.
+    `IDT (Integrated DNA Technologies) <https://www.idtdna.com/>`_.
     This data is used when automatically generating files used to order DNA from IDT."""
 
     name: str
