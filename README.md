@@ -45,10 +45,11 @@ Once Python is installed, there are two ways you can install the scadnano Python
 
 2. download
 
-    As a simple alternative, you can download and place the following file(s) (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
+    As a simple alternative, you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
     in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
     * *required*: [scadnano.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano.py) 
+    * *required*: [scadnano_version.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano_version.py) 
     * *optional*: [modifications.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
     * *optional*: [origami_rectangle.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
 

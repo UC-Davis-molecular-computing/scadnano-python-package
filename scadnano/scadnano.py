@@ -57,13 +57,6 @@ import os.path
 import xlwt
 
 
-# TODO: make explicit rules about when strands can be added and sequences assigned.
-#  For instance, if we add a strand to overlap one that already has a DNA sequence sequence assigned,
-#  should the complement be automatically assigned?
-
-# TODO: see if :param the_parameter: and :return: can be used with Sphinx
-
-
 def _pairwise(iterable):
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = itertools.tee(iterable)
@@ -299,9 +292,12 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-import scadnano_version
-current_version: str = scadnano_version.current_version
-initial_version: str = scadnano_version.initial_version
+# from . import scadnano_version
+# import scadnano_version
+# current_version: str = scadnano_version.current_version
+# initial_version: str = scadnano_version.initial_version
+current_version: str = "0.7.2"
+initial_version: str = "0.0.1" 
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
