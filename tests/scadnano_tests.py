@@ -621,7 +621,7 @@ class TestDesignFromJson(unittest.TestCase):
         self.design_pre_json = sc.DNADesign(helices=helices, strands=[s1, s2], grid=sc.square)
 
         json_str = self.design_pre_json.to_json()
-        print(json_str)
+
         json_map = json.loads(json_str)
         design = sc.DNADesign._from_scadnano_json(json_map)
 
