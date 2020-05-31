@@ -293,9 +293,11 @@ honeycomb = Grid.honeycomb
 # constants
 
 # from . import scadnano_version
-import scadnano_version
-current_version: str = scadnano_version.current_version
-initial_version: str = scadnano_version.initial_version
+# import scadnano_version
+# current_version: str = scadnano_version.current_version
+# initial_version: str = scadnano_version.initial_version
+current_version: str = "0.7.2"
+initial_version: str = "0.0.1"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
