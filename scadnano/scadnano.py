@@ -296,7 +296,7 @@ honeycomb = Grid.honeycomb
 # import scadnano_version
 # current_version: str = scadnano_version.current_version
 # initial_version: str = scadnano_version.initial_version
-current_version: str = "0.7.3"
+current_version: str = "0.7.4"
 initial_version: str = "0.0.1"
 
 default_idt_scale = "25nm"
@@ -306,8 +306,6 @@ default_idt_purification = "STD"
 def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
-
-default_grid: Grid = Grid.none
 
 default_helix_rotation: float = 0.0
 default_helix_rotation_anchor: int = 0
@@ -2767,8 +2765,8 @@ class DNADesign(_JSONSerializable):
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         dct[version_key] = current_version
-        if self.grid != default_grid:
-            dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+        dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
             dct[major_tick_distance_key] = self.major_tick_distance
