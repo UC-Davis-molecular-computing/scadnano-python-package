@@ -44,13 +44,15 @@ so the user must take care not to set them.
 from __future__ import annotations
 
 import dataclasses
+import inspect
 from abc import abstractmethod, ABC
 import json
 import enum
 import itertools
 import re
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet
+from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type
+import typing
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -671,7 +673,7 @@ position_origin_key = 'origin'
 # Strand keys
 color_key = 'color'
 dna_sequence_key = 'sequence'
-legacy_dna_sequence_keys = 'dna_sequence'  # support legacy names for these ideas
+legacy_dna_sequence_keys = ['dna_sequence']  # support legacy names for these ideas
 domains_key = 'domains'
 legacy_domains_keys = ['substrands']  # support legacy names for these ideas
 idt_key = 'idt'
@@ -683,7 +685,7 @@ modifications_int_key = 'internal_modifications'
 # Domain keys
 helix_idx_key = 'helix'
 forward_key = 'forward'
-legacy_forward_keys = 'right'  # support legacy names for these ideas
+legacy_forward_keys = ['right']  # support legacy names for these ideas
 start_key = 'start'
 end_key = 'end'
 deletions_key = 'deletions'
@@ -1425,19 +1427,10 @@ class Domain(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map):
-        helix = json_map[helix_idx_key]
-        if forward_key in json_map:
-            forward = json_map[forward_key]
-        else:
-            forward = None
-            for legacy_forward_key in legacy_dna_sequence_keys:
-                if legacy_forward_key in json_map:
-                    forward = json_map[legacy_forward_key]
-                    break
-            if forward is None:
-                raise IllegalDNADesignError(f'key {forward_key} missing from Domain description')
-        start = json_map[start_key]
-        end = json_map[end_key]
+        helix = mandatory_field(Domain, json_map, helix_idx_key)
+        forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
+        start = mandatory_field(Domain, json_map, start_key)
+        end = mandatory_field(Domain, json_map, end_key)
         deletions = json_map.get(deletions_key, [])
         insertions = list(map(tuple, json_map.get(insertions_key, [])))
         return Domain(
@@ -1554,10 +1547,11 @@ class Loopout(_JSONSerializable):
         return self_seq_idx_start
 
     @staticmethod
-    def from_json(json_map):
-        if loopout_key not in json_map:
-            raise IllegalDNADesignError(f'no key "{loopout_key}" in JSON map')
-        length = int(json_map[loopout_key])
+    def from_json(json_map) -> Loopout:
+        # XXX: this should never fail since we detect whether to call this from_json by the presence
+        # of a length key in json_map
+        length_str = mandatory_field(Loopout, json_map, loopout_key)
+        length = int(length_str)
         return Loopout(length=length)
 
 
@@ -2096,17 +2090,7 @@ class Strand(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map: dict) -> Strand:
-        if domains_key not in json_map:
-            domain_jsons = None
-            for legacy_domain_key in legacy_domains_keys:
-                domain_jsons = json_map[legacy_domain_key]
-            if domain_jsons is None:
-                raise IllegalDNADesignError(
-                    f'key "{domains_key}" (as well as legacy key {",".join(legacy_domains_keys)}) '
-                    f'is missing from the description of a Strand:'
-                    f'\n  {json_map}')
-        else:
-            domain_jsons = json_map[domains_key]
+        domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
         if len(domain_jsons) == 0:
             raise IllegalDNADesignError(f'{domains_key} list cannot be empty')
 
@@ -2123,12 +2107,7 @@ class Strand(_JSONSerializable):
 
         is_scaffold = json_map.get(is_scaffold_key, False)
 
-        dna_sequence = json_map.get(dna_sequence_key)
-        if dna_sequence_key not in json_map:
-            for legacy_dna_sequence_key in legacy_dna_sequence_keys:
-                if legacy_dna_sequence_key in json_map:
-                    dna_sequence = json_map.get(legacy_dna_sequence_key)
-                    break
+        dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
         idt = json_map.get(idt_key)
         color_str = json_map.get(color_key,
@@ -2328,6 +2307,35 @@ def remove_helix_idxs_if_default(helices: List[Dict]):
             del helix[idx_on_helix_key]
 
 
+def add_quotes(string: str) -> str:
+    # adds quotes around a string
+    return f'"{string}"'
+
+
+def mandatory_field(ret_type: Type, json_map: dict, main_key: str, *legacy_keys: str):
+    # should be called from function whose return type is the type being constructed from JSON, e.g.,
+    # DNADesign or Strand, given by ret_type. This helps give a useful error message
+    for key in (main_key,) + legacy_keys:
+        if key in json_map:
+            return json_map[key]
+    ret_type_name = ret_type.__name__
+    msg_about_keys = f'the key "{main_key}"'
+    if len(legacy_keys) > 0:
+        msg_about_keys += f" (or any of the following legacy keys: {', '.join(map(add_quotes, legacy_keys))})"
+    msg = f'I was looking for {msg_about_keys} in the JSON encoding of a {ret_type_name}, ' \
+          f'but I did not find it.' \
+          f'\n\nThis occurred when reading this JSON object:\n{json_map}'
+    raise IllegalDNADesignError(msg)
+
+
+def optional_field(default_value, json_map: dict, main_key: str, *legacy_keys: str):
+    # like dict.get, except that it checks for multiple keys
+    for key in (main_key,) + legacy_keys:
+        if key in json_map:
+            return json_map[key]
+    return default_value
+
+
 @dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
@@ -2459,13 +2467,19 @@ class DNADesign(_JSONSerializable):
         :return: DNADesign described in the file
         """
         json_map = json.loads(json_str)
-        return DNADesign._from_scadnano_json(json_map)
+        try:
+            design = DNADesign._from_scadnano_json(json_map)
+            return design
+        except KeyError as e:
+            raise IllegalDNADesignError(f'I was expecting a JSON key but did not find it: {e}')
 
     @staticmethod
     def _from_scadnano_json(json_map: dict) -> DNADesign:
         # reads scadnano .dna file format into a DNADesign object
         # version = json_map.get(version_key, initial_version)  # not sure what to do with this
-        grid = json_map.get(grid_key, Grid.square)
+
+        # grid = json_map.get(grid_key, Grid.square)
+        grid = mandatory_field(DNADesign, json_map, grid_key)
         grid_is_none = grid == Grid.none
 
         if (major_tick_distance_key in json_map):
@@ -2508,7 +2522,7 @@ class DNADesign(_JSONSerializable):
 
         # strands
         strands = []
-        strand_jsons = json_map[strands_key]
+        strand_jsons = mandatory_field(DNADesign, json_map, strands_key)
         for strand_json in strand_jsons:
             strand = Strand.from_json(strand_json)
             strands.append(strand)
