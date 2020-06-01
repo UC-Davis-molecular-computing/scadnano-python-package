@@ -1913,16 +1913,171 @@ class TestSetHelixIdx(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
-    def test_color_specified_with_integer(self):
-        # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/58
-        # 0066cc hex is 26316 decimal
+    def test_error_when_grid_missing(self):
         json_str = """
         { 
           "helices": [{"grid_position": [0,0]}],
           "strands": [ 
             { 
               "color": 26316, 
-              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('grid' in msg)
+
+    def test_error_when_domain_helix_missing(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('helix' in msg)
+
+    def test_error_when_domain_forward_and_right_missing(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"helix": 0, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('forward' in msg)
+        self.assertTrue('right' in msg)
+
+    def test_error_when_domain_start_missing(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"helix": 0, "forward": true, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('start' in msg)
+
+    def test_error_when_domain_end_missing(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"helix": 0, "forward": true, "start": 0 } ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('end' in msg)
+
+    def test_error_when_strands_missing(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}]
+        }
+        """
+        with self.assertRaises(sc.IllegalDNADesignError) as ex:
+            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        msg = ex.exception.args[0]
+        self.assertTrue('strands' in msg)
+
+    def test_legacy_right_key(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"helix": 0, "right": true, "start": 0, "end": 5 } ]
+            } 
+          ] 
+        }
+        """
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        self.assertEqual(True, d.strands[0].domains[0].forward)
+
+    def test_legacy_dna_sequence_key(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "dna_sequence": "ACGTA",
+              "domains": [ {"helix": 0, "right": true, "start": 0, "end": 5 } ]
+            } 
+          ] 
+        }
+        """
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        self.assertEqual("ACGTA", d.strands[0].dna_sequence)
+
+    def test_legacy_substrands_key(self):
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 5 } ]
+            } 
+          ] 
+        }
+        """
+        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        self.assertEqual(0, d.strands[0].domains[0].helix)
+        self.assertEqual(True, d.strands[0].domains[0].forward)
+        self.assertEqual(0, d.strands[0].domains[0].start)
+        self.assertEqual(5, d.strands[0].domains[0].end)
+
+    def test_color_specified_with_integer(self):
+        # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/58
+        # 0066cc hex is 26316 decimal
+        json_str = """
+        { 
+          "grid": "square",
+          "helices": [{"grid_position": [0,0]}],
+          "strands": [ 
+            { 
+              "color": 26316, 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
             } 
           ] 
         }
@@ -1946,7 +2101,7 @@ class TestJSON(unittest.TestCase):
           "strands": [ 
             { 
               "color": "#0066cc", 
-              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
             } 
           ] 
         }
@@ -1960,6 +2115,7 @@ class TestJSON(unittest.TestCase):
         json_str = """
         { 
           "version": "0.3.0", 
+          "grid": "square",
           "helices": [ 
             {"grid_position": [0, 0]}, 
             {"max_offset": 32, "grid_position": [0, 1]} 
@@ -1967,7 +2123,7 @@ class TestJSON(unittest.TestCase):
           "strands": [ 
             { 
               "color": "#0066cc", 
-              "substrands": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ], 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ], 
               "is_scaffold": true 
             } 
           ] 
