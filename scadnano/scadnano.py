@@ -298,7 +298,7 @@ honeycomb = Grid.honeycomb
 # import scadnano_version
 # current_version: str = scadnano_version.current_version
 # initial_version: str = scadnano_version.initial_version
-current_version: str = "0.7.4"
+current_version: str = "0.8.0"
 initial_version: str = "0.0.1"
 
 default_idt_scale = "25nm"
@@ -309,8 +309,9 @@ def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 
-default_helix_rotation: float = 0.0
-default_helix_rotation_anchor: int = 0
+default_pitch: float = 0.0
+default_roll: float = 0.0
+default_yaw: float = 0.0
 
 base_width_svg: float = 10.0
 """Width of a single base in the SVG main view of scadnano."""
@@ -318,7 +319,14 @@ base_width_svg: float = 10.0
 base_height_svg: float = 10.0
 """Height of a single base in the SVG main view of scadnano."""
 
-distance_between_helices_svg: float = (base_width_svg * 2.5 / 0.34)
+distance_between_helices_nm: float = 2.5
+"""Distance between centers of helices in nanometers. 
+See :py:data:`distance_between_helices_svg` for explanation of this value."""
+
+base_width_nm: float = 0.34
+"""Width of a single DNA base in nanometers."""
+
+distance_between_helices_svg: float = base_width_svg * distance_between_helices_nm / base_width_nm
 """Distance between tops of two consecutive helices (using default positioning rules).
 
 This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
@@ -644,8 +652,6 @@ version_key = 'version'
 grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
 major_ticks_key = 'major_ticks'
-rotation_key = 'rotation'
-rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
 scaffold_key = 'scaffold'
@@ -660,14 +666,15 @@ min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
 svg_position_key = 'svg_position'
 position3d_key = 'position'
+legacy_position3d_keys = ['origin']
 
 # Position3D keys
 position_x_key = 'x'
 position_y_key = 'y'
 position_z_key = 'z'
-position_pitch_key = 'pitch'
-position_roll_key = 'roll'
-position_yaw_key = 'yaw'
+pitch_key = 'pitch'
+roll_key = 'roll'
+yaw_key = 'yaw'
 position_origin_key = 'origin'
 
 # Strand keys
@@ -840,15 +847,6 @@ class Position3D(_JSONSerializable):
     z: float = 0
     """z-coordinate of position"""
 
-    pitch: float = 0
-    """pitch angle in degrees"""
-
-    roll: float = 0
-    """roll angle in degrees"""
-
-    yaw: float = 0
-    """yaw angle in degrees"""
-
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
         # return NoIndent(dct) if suppress_indent else dct
@@ -865,10 +863,7 @@ class Position3D(_JSONSerializable):
             x = json_map[position_x_key]
             y = json_map[position_y_key]
             z = json_map[position_z_key]
-        pitch = json_map[position_pitch_key]
-        roll = json_map[position_roll_key]
-        yaw = json_map[position_yaw_key]
-        return Position3D(x=x, y=y, z=z, pitch=pitch, roll=roll, yaw=yaw)
+        return Position3D(x=x, y=y, z=z)
 
 
 def in_browser() -> bool:
@@ -954,42 +949,26 @@ class Helix(_JSONSerializable):
     If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
     `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
-    rotation: float = 0
-    """Rotation angle (in degrees) of backbone of the :any:`Domain` on this :any:`Helix` with 
-    :py:data:`Domain.forward` = ``True``. 
-    
-    The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 degrees is defined to
-    be pointing *up* in both the side view and main view.
-    
-    A positive rotation angle rotates *clockwise* in the side view.
-    This violates standard Cartesian coordinate conventions:
-    https://en.wikipedia.org/wiki/Rotation_matrix, 
-    but it is consistent with SVG rotation conventions:
-    https://www.w3.org/TR/SVG11/coords.html#ExampleRotateScale.
-    
-    For example, a rotation of 90 degrees points right in the side view 
-    and out of the screen in the main view.
-    
-    Default is 0 degrees."""
-
-    rotation_anchor: int = 0
-    """Offset on this :any:`Helix` that is the reference point for 0 degrees.
-    The rotation at offset ``o`` is 360 degrees times the remainder of ``o - rotation_anchor`` 
-    when divided by 10.5.
-    
-    For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
-    at offsets of the form :math:`42 + 21k` for integer :math:`k` 
-    (i.e., 42 itself, as well as 21, 0, -21, -42, ..., 63, 84, 105, ...),
-    the rotation angle is also 0 at those offsets since
-    they are integer multiples of 21 (hence also multiples of 10.5) from 42.
-    
-    Default is 0."""
-
     position3d: Position3D = None
-    """Position (x,y,z) and orientation (pitch,roll,yaw) of this :any:`Helix` in 3D space.
+    """Position (x,y,z) of this :any:`Helix` in 3D space.
     
     Optional if :py:data:`Helix.grid_position` is specified. 
-    Default is pitch, roll, yaw are 0, and x,y,z are determined by grid position h, v, b."""
+    Default is x,y,z are determined by grid position h, v, b."""
+
+    pitch: float = 0
+    """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
+    Rotation is clockwise in the main view.
+    Units are degrees."""
+
+    roll: float = 0
+    """Angle around the center of the helix; 0 means pointing straight up in the side view.
+    Rotation is clockwise in the side view.
+    Units are degrees."""
+
+    yaw: float = 0
+    """Third angle for orientation besides :py:data:`Helix.pitch` and :py:data:`Helix.roll`.
+    Not visually displayed in scadnano, but here to support more general 3D applications.
+    Units are degrees."""
 
     idx: int = None
     """Index of this :any:`Helix`.
@@ -1026,12 +1005,12 @@ class Helix(_JSONSerializable):
         else:
             dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
-        # print(f'self.svg_position()    = {self.svg_position}')
-        # print(f'default_svg_position() = {self.default_svg_position()}')
-        default_x, default_y = self.default_svg_position()
-        if not (_is_close(self.svg_position[0], default_x) and _is_close(self.svg_position[1],
-                                                                         default_y)):
-            dct[svg_position_key] = (self.svg_position[0], self.svg_position[1])
+        if not _is_close(self.pitch, default_pitch):
+            dct[pitch_key] = self.pitch
+        if not _is_close(self.roll, default_roll):
+            dct[roll_key] = self.roll
+        if not _is_close(self.yaw, default_yaw):
+            dct[yaw_key] = self.yaw
 
         if self.major_tick_distance is not None and self.major_tick_distance > 0:
             dct[major_tick_distance_key] = self.major_tick_distance
@@ -1039,18 +1018,9 @@ class Helix(_JSONSerializable):
         if self.major_ticks is not None:
             dct[major_ticks_key] = self.major_ticks
 
-        if self.rotation != 0:
-            dct[rotation_key] = self.rotation
-
-        if self.rotation_anchor != 0:
-            dct[rotation_anchor_key] = self.rotation_anchor
-
         dct[idx_on_helix_key] = self.idx
 
         return _NoIndent(dct) if suppress_indent else dct
-
-    def default_svg_position(self):
-        return 0, self.idx * distance_between_helices_svg
 
     def default_grid_position(self):
         return (0, self.idx, 0)
@@ -1080,35 +1050,29 @@ class Helix(_JSONSerializable):
                 gp_list.append(0)
             grid_position = tuple(gp_list)
 
-        svg_position = None
-        if svg_position_key in json_map:
-            sp_list = json_map[grid_position_key]
-            if len(sp_list) != 2:
-                raise IllegalDNADesignError("svg_position must have exactly two integers, "
-                                            f"but instead it has {len(sp_list)}: {sp_list}")
-            svg_position = tuple(sp_list)
-
         major_tick_distance = json_map.get(major_tick_distance_key)
         major_ticks = json_map.get(major_ticks_key)
         min_offset = json_map.get(min_offset_key)
         max_offset = json_map.get(max_offset_key)
-        rotation = json_map.get(rotation_key, default_helix_rotation)
-        rotation_anchor = json_map.get(rotation_anchor_key, default_helix_rotation_anchor)
         idx = json_map.get(idx_on_helix_key)
 
-        position3d_map = json_map.get(position3d_key)
+        position3d_map = optional_field(None, json_map, position3d_key, *legacy_position3d_keys)
         position3d = Position3D.from_json(position3d_map) if position3d_map is not None else None
+
+        pitch = json_map.get(pitch_key, default_pitch)
+        roll = json_map.get(roll_key, default_roll)
+        yaw = json_map.get(yaw_key, default_yaw)
 
         return Helix(
             major_tick_distance=major_tick_distance,
             major_ticks=major_ticks,
             grid_position=grid_position,
-            svg_position=svg_position,
             min_offset=min_offset,
             max_offset=max_offset,
-            rotation=rotation,
-            rotation_anchor=rotation_anchor,
             position3d=position3d,
+            pitch=pitch,
+            roll=roll,
+            yaw=yaw,
             idx=idx,
         )
 
@@ -2439,7 +2403,7 @@ class DNADesign(_JSONSerializable):
     def __post_init__(self):
         # XXX: exact order of these calls is important
         self._set_helices_idxs()
-        self._set_helices_grid_and_svg_positions()
+        self._set_helices_grid_positions()
         self._build_domains_on_helix_lists()
         self._set_helices_min_max_offsets(update=False)
         self._check_legal_design()
@@ -3025,12 +2989,10 @@ class DNADesign(_JSONSerializable):
             if helix.idx is None:
                 helix.idx = idx
 
-    def _set_helices_grid_and_svg_positions(self):
+    def _set_helices_grid_positions(self):
         for idx, helix in self.helices.items():
             if helix.grid_position is None:
                 helix.grid_position = helix.default_grid_position()
-            if helix.svg_position is None:
-                helix.svg_position = helix.default_svg_position()
 
     def _set_helices_min_max_offsets(self, update: bool):
         """update = whether to overwrite existing Helix.max_offset and Helix.min_offset.

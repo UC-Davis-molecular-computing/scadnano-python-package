@@ -2,11 +2,11 @@
   "version": "0.8.0",
   "grid": "square",
   "helices": [
-    {"position": {"x": 3, "y": 2, "z": 1}, "pitch": 90, "major_ticks": [2, 5]}
+    {"grid_position": [0, 0], "roll": 90}
   ],
   "strands": [
     {
-      "color": "#b8056c",
+      "color": "#007200",
       "sequence": "?AGTTAGTT",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 9}
