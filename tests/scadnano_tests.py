@@ -2092,11 +2092,11 @@ class TestJSON(unittest.TestCase):
         json_str = """
         { 
           "grid": "none",
-          "helices": [{"position": { 
-              "origin": { "x": 1, "y": 2, "z": 3}, 
-              "pitch": 4, 
-              "roll": 5, 
-              "yaw": 6} 
+          "helices": [{
+            "origin": {"x": 1, "y": 2, "z": 3}, 
+            "pitch": 4, 
+            "roll": 5, 
+            "yaw": 6 
           }],
           "strands": [ 
             { 
@@ -2107,9 +2107,18 @@ class TestJSON(unittest.TestCase):
         }
         """
         d = sc.DNADesign.from_scadnano_json_str(json_str)
-        expected_position = sc.Position3D(1,2,3,4,5,6)
+        expected_position = sc.Position3D(1,2,3)
+        expected_pitch = 4
+        expected_roll = 5
+        expected_yaw = 6
         actual_position = d.helices[0].position3d
+        actual_pitch = d.helices[0].pitch
+        actual_roll = d.helices[0].roll
+        actual_yaw = d.helices[0].yaw
         self.assertEqual(expected_position, actual_position)
+        self.assertEqual(expected_pitch, actual_pitch)
+        self.assertEqual(expected_roll, actual_roll)
+        self.assertEqual(expected_yaw, actual_yaw)
 
     def test_json_tristan_example_issue_32(self):
         json_str = """
