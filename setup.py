@@ -13,7 +13,9 @@ from setuptools import setup
 # import scadnano.scadnano_version as sv
 
 # from scadnano.scadnano_version import current_version
-from scadnano import current_version
+# this is ugly, but appears to be standard practice:
+# https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package/17626524#17626524
+__version__ = open("scadnano/_version.py").readlines()[-1].split()[-1].strip("\"'")
 
 # read the contents of your README file
 from os import path
@@ -24,9 +26,9 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(name='scadnano',
       packages=['scadnano'],
-      version=current_version,
+      version=__version__,
       # version='0.8.0',
-      download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v{current_version}.zip',
+      download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v{__version__}.zip',
       # download_url=f'https://github.com/UC-Davis-molecular-computing/scadnano-python-package/archive/v0.7.0.zip',
       license='MIT',
       description="Python scripting library for generating designs readable by scadnano.",

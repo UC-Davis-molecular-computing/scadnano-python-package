@@ -1,2 +1,2 @@
 from scadnano.scadnano import *
-current_version = "0.8.1"
+from scadnano._version import __version__
