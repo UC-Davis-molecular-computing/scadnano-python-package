@@ -832,8 +832,7 @@ class ModificationInternal(Modification):
 @dataclass
 class Position3D(_JSONSerializable):
     """
-    Position (x,y,z) and orientation (pitch,roll,yaw) in 3D space.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Position (x,y,z) in 3D space.
     """
 
     x: float = 0
@@ -948,16 +947,19 @@ class Helix(_JSONSerializable):
     pitch: float = 0
     """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
     Rotation is clockwise in the main view.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
     Rotation is clockwise in the side view.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     yaw: float = 0
     """Third angle for orientation besides :py:data:`Helix.pitch` and :py:data:`Helix.roll`.
     Not visually displayed in scadnano, but here to support more general 3D applications.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     idx: int = None
