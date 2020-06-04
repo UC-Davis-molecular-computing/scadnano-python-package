@@ -294,12 +294,8 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-# from . import scadnano_version
-# import scadnano_version
-# current_version: str = scadnano_version.current_version
-# initial_version: str = scadnano_version.initial_version
-current_version: str = "0.8.0"
-initial_version: str = "0.0.1"
+# from scadnano import current_version
+current_version = "0.8.1"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -313,31 +309,34 @@ default_pitch: float = 0.0
 default_roll: float = 0.0
 default_yaw: float = 0.0
 
-base_width_svg: float = 10.0
-"""Width of a single base in the SVG main view of scadnano."""
-
-base_height_svg: float = 10.0
-"""Height of a single base in the SVG main view of scadnano."""
-
-distance_between_helices_nm: float = 2.5
-"""Distance between centers of helices in nanometers. 
-See :py:data:`distance_between_helices_svg` for explanation of this value."""
-
-base_width_nm: float = 0.34
-"""Width of a single DNA base in nanometers."""
-
-distance_between_helices_svg: float = base_width_svg * distance_between_helices_nm / base_width_nm
-"""Distance between tops of two consecutive helices (using default positioning rules).
-
-This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
-to attempt to make the DNA structure appear to scale in 2D drawings:
-The width of one base pair of double-stranded DNA bp is 0.34 nm. In a DNA origami, 
-AFM images let us estimate that the average distance between adjacent double helices is 2.5 nm.
-(A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
-in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
-lattices---is larger than 2 nm.)
-Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
-"""
+# XXX: code below related to SVG positions is not currently needed in the scripting library,
+# but I want to make sure these conventions are documented somewhere, so they are just commented out for now.
+#
+# base_width_svg: float = 10.0
+# """Width of a single base in the SVG main view of scadnano."""
+#
+# base_height_svg: float = 10.0
+# """Height of a single base in the SVG main view of scadnano."""
+#
+# distance_between_helices_nm: float = 2.5
+# """Distance between centers of helices in nanometers.
+# See :py:data:`distance_between_helices_svg` for explanation of this value."""
+#
+# base_width_nm: float = 0.34
+# """Width of a single DNA base in nanometers."""
+#
+# distance_between_helices_svg: float = base_width_svg * distance_between_helices_nm / base_width_nm
+# """Distance between tops of two consecutive helices (using default positioning rules).
+#
+# This is set to (:const:`base_width_svg` * 2.5/0.34) based on the following calculation,
+# to attempt to make the DNA structure appear to scale in 2D drawings:
+# The width of one base pair of double-stranded DNA bp is 0.34 nm. In a DNA origami,
+# AFM images let us estimate that the average distance between adjacent double helices is 2.5 nm.
+# (A DNA double-helix is only 2 nm wide, but the helices electrostatically repel each other so the spacing
+# in a DNA origami or an other DNA nanostructure with many parallel DNA helices---e.g., single-stranded tile
+# lattices---is larger than 2 nm.)
+# Thus the distance between the helices is 2.5/0.34 ~ 7.5 times the width of a single DNA base.
+# """
 
 DNA_base_wildcard: str = '?'
 """Symbol to insert when a DNA sequence has been assigned to a strand through complementarity, but
@@ -664,7 +663,6 @@ idx_on_helix_key = 'idx'
 max_offset_key = 'max_offset'
 min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
-svg_position_key = 'svg_position'
 position3d_key = 'position'
 legacy_position3d_keys = ['origin']
 
@@ -931,23 +929,15 @@ class Helix(_JSONSerializable):
     Incrementing `b` moves the whole helix one base into the screen.
     In the main view, a helix with `b` = 1 would have its base offset 0 line up with base offset 1
     of a helix with `b` = 0.
-    However, the default y svg_position for helices does not otherwise depend on grid_position.
+    However, the default y position in the main view for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
     
     Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`, `b` = 0.
     
-    In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates see `misc/cadnano-format-specs/v2.txt`.
+    In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates,
+    see `misc/cadnano-format-specs/v2.txt`.
     That convention is different from simply excluding coordinates from the hex lattice.
     """
-
-    svg_position: Tuple[float, float] = None
-    """`(x,y)` SVG coordinates of base offset 0 of this Helix in the main view. 
-    
-    If `grid_position` and `position` are both omitted, then the default is 
-    `x` = 0, `y` = [index of helix] * :any:`scadnano.distance_between_helices_svg`.
-    
-    If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
-    `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
     position3d: Position3D = None
     """Position (x,y,z) of this :any:`Helix` in 3D space.

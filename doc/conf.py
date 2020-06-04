@@ -21,7 +21,8 @@ import sys
 sys.path.insert(0, os.path.abspath('../scadnano'))
 # print(sys.path)
 
-import scadnano_version
+# from scadnano import current_version
+current_version = "0.8.1"
 
 # Type "make html" at the command line to generate the documentation.
 
@@ -35,8 +36,8 @@ author = 'David Doty'
 # The full version, including alpha/beta/rc tags
 # version = '0.7.0'
 # release = '0.7.0'
-version = scadnano_version.current_version
-release = scadnano_version.current_version
+version = current_version
+release = current_version
 
 # -- General configuration ---------------------------------------------------
 
