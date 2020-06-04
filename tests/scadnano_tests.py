@@ -2162,8 +2162,8 @@ class TestJSON(unittest.TestCase):
         json = design.to_json()
         # should be no error getting here
 
-    def test_to_json__rotation(self):
-        helix = sc.Helix(rotation=math.pi / 2, rotation_anchor=31)
+    def test_to_json__roll(self):
+        helix = sc.Helix(roll=90)
         ss_f = sc.Domain(helix=0, forward=True, start=0, end=5)
         ss_r = sc.Domain(helix=0, forward=False, start=0, end=5)
         strand_f = sc.Strand([ss_f])

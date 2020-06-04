@@ -309,9 +309,6 @@ def default_major_tick_distance(grid: Grid) -> int:
     return 7 if grid in (Grid.hex, Grid.honeycomb) else 8
 
 
-default_helix_rotation: float = 0.0
-default_helix_rotation_anchor: int = 0
-
 default_pitch: float = 0.0
 default_roll: float = 0.0
 default_yaw: float = 0.0
@@ -655,8 +652,6 @@ version_key = 'version'
 grid_key = 'grid'
 major_tick_distance_key = 'major_tick_distance'
 major_ticks_key = 'major_ticks'
-rotation_key = 'rotation'
-rotation_anchor_key = 'rotation_anchor'
 helices_key = 'helices'
 strands_key = 'strands'
 scaffold_key = 'scaffold'
@@ -954,37 +949,6 @@ class Helix(_JSONSerializable):
     If `grid_position = (h,v,b)` is specified but `position` is omitted, then the default is
     `x` = b * BASE_WIDTH_SVG, `y` = [index of :any:`Helix`] * :any:`scadnano.distance_between_helices_svg`."""
 
-    rotation: float = 0
-    """Rotation angle (in degrees) of backbone of the :any:`Domain` on this :any:`Helix` with 
-    :py:data:`Domain.forward` = ``True``. 
-    
-    The angle is relative to the offset :py:data:`Helix.rotation_anchor`, and 0 degrees is defined to
-    be pointing *up* in both the side view and main view.
-    
-    A positive rotation angle rotates *clockwise* in the side view.
-    This violates standard Cartesian coordinate conventions:
-    https://en.wikipedia.org/wiki/Rotation_matrix, 
-    but it is consistent with SVG rotation conventions:
-    https://www.w3.org/TR/SVG11/coords.html#ExampleRotateScale.
-    
-    For example, a rotation of 90 degrees points right in the side view 
-    and out of the screen in the main view.
-    
-    Default is 0 degrees."""
-
-    rotation_anchor: int = 0
-    """Offset on this :any:`Helix` that is the reference point for 0 degrees.
-    The rotation at offset ``o`` is 360 degrees times the remainder of ``o - rotation_anchor`` 
-    when divided by 10.5.
-    
-    For example, if :py:data:`Helix.rotation` = 0 and :py:data:`Helix.rotation_anchor` = 42, then
-    at offsets of the form :math:`42 + 21k` for integer :math:`k` 
-    (i.e., 42 itself, as well as 21, 0, -21, -42, ..., 63, 84, 105, ...),
-    the rotation angle is also 0 at those offsets since
-    they are integer multiples of 21 (hence also multiples of 10.5) from 42.
-    
-    Default is 0."""
-
     position3d: Position3D = None
     """Position (x,y,z) of this :any:`Helix` in 3D space.
     
@@ -1041,7 +1005,6 @@ class Helix(_JSONSerializable):
         else:
             dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
 
-
         if not _is_close(self.pitch, default_pitch):
             dct[pitch_key] = self.pitch
         if not _is_close(self.roll, default_roll):
@@ -1054,12 +1017,6 @@ class Helix(_JSONSerializable):
 
         if self.major_ticks is not None:
             dct[major_ticks_key] = self.major_ticks
-
-        if self.rotation != 0:
-            dct[rotation_key] = self.rotation
-
-        if self.rotation_anchor != 0:
-            dct[rotation_anchor_key] = self.rotation_anchor
 
         dct[idx_on_helix_key] = self.idx
 
@@ -1097,8 +1054,6 @@ class Helix(_JSONSerializable):
         major_ticks = json_map.get(major_ticks_key)
         min_offset = json_map.get(min_offset_key)
         max_offset = json_map.get(max_offset_key)
-        rotation = json_map.get(rotation_key, default_helix_rotation)
-        rotation_anchor = json_map.get(rotation_anchor_key, default_helix_rotation_anchor)
         idx = json_map.get(idx_on_helix_key)
 
         position3d_map = optional_field(None, json_map, position3d_key, *legacy_position3d_keys)
@@ -1114,8 +1069,6 @@ class Helix(_JSONSerializable):
             grid_position=grid_position,
             min_offset=min_offset,
             max_offset=max_offset,
-            rotation=rotation,
-            rotation_anchor=rotation_anchor,
             position3d=position3d,
             pitch=pitch,
             roll=roll,
