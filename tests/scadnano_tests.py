@@ -39,13 +39,12 @@ def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
 
+
 class TestCreateHelix(unittest.TestCase):
 
     def test_helix_constructor_no_max_offset_with_major_ticks(self):
         # tests bug where an exception is raised if major ticks is defined but not max_offset
-        helix = sc.Helix(major_ticks=[0,5,10])
-
-
+        helix = sc.Helix(major_ticks=[0, 5, 10])
 
 
 class TestM13(unittest.TestCase):
@@ -67,6 +66,7 @@ class TestM13(unittest.TestCase):
         p8064 = sc.m13(rotation=0, variant=sc.M13Variant.p8064)
         self.assertEqual('GGCAATGACCTGATAG', p8064[:16])
         self.assertEqual(8064, len(p8064))
+
 
 class TestModifications(unittest.TestCase):
 
@@ -371,7 +371,8 @@ class TestExportCadnanoV2(unittest.TestCase):
                                  filename='test_6_helix_origami_rectangle.json')
 
     def test_6_helix_bundle_honeycomb(self):
-        design = sc.DNADesign.from_scadnano_file(os.path.join(self.input_path, 'test_6_helix_bundle_honeycomb.dna'))
+        design = sc.DNADesign.from_scadnano_file(
+            os.path.join(self.input_path, 'test_6_helix_bundle_honeycomb.dna'))
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_6_helix_bundle_honeycomb.json')
 
@@ -578,7 +579,6 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertEqual(None, scaf.modification_5p)
         self.assertEqual(None, scaf.modification_3p)
         self.assertDictEqual({}, scaf.modifications_int)
-
 
     def test_from_json__helices_non_default_indices(self):
         h2 = sc.Helix(idx=2)
@@ -1913,6 +1913,23 @@ class TestSetHelixIdx(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
+    def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
+        helices = [sc.Helix(position3d=sc.Position3D(0, 0, 0))]
+        strands = []
+        design = sc.DNADesign(helices=helices, strands=strands)
+        json_map = design.to_json_serializable(suppress_indent=True)
+        helix_json = json_map[sc.helices_key][0]
+        self.assertFalse(isinstance(helix_json, sc.NoIndent))
+        self.assertTrue(isinstance(helix_json[sc.position3d_key], sc.NoIndent))
+
+    def test_NoIndent_on_helix_without_position_or_major_ticks_present(self):
+        helices = [sc.Helix()]
+        strands = []
+        design = sc.DNADesign(helices=helices, strands=strands)
+        json_map = design.to_json_serializable(suppress_indent=True)
+        helix_json = json_map[sc.helices_key][0]
+        self.assertTrue(isinstance(helix_json, sc.NoIndent))
+
     def test_error_when_grid_missing(self):
         json_str = """
         { 
@@ -2107,7 +2124,7 @@ class TestJSON(unittest.TestCase):
         }
         """
         d = sc.DNADesign.from_scadnano_json_str(json_str)
-        expected_position = sc.Position3D(1,2,3)
+        expected_position = sc.Position3D(1, 2, 3)
         expected_pitch = 4
         expected_roll = 5
         expected_yaw = 6

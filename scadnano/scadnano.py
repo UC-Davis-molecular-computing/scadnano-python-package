@@ -86,8 +86,9 @@ def _json_encode(obj: _JSONSerializable, suppress_indent: bool = True) -> str:
     return json.dumps(serializable, cls=encoder, indent=2)
 
 
-class _NoIndent:
-    """ Value wrapper. """
+class NoIndent:
+    #Value wrapper. Placing a value in this will stop it from being indented when converting to JSON
+    # using _SuppressableIndentEncoder
 
     def __init__(self, value):
         self.value = value
@@ -102,7 +103,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
         self._replacement_map = {}
 
     def default(self, obj):
-        if isinstance(obj, _NoIndent):
+        if isinstance(obj, NoIndent):
             # key = uuid.uuid1().hex # this caused problems with Brython.
             key = self.unique_id
             self.unique_id += 1
@@ -811,7 +812,7 @@ class ModificationInternal(Modification):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "internal"
         if self.allowed_bases is not None:
-            ret[mod_allowed_bases_key] = _NoIndent(
+            ret[mod_allowed_bases_key] = NoIndent(
                 list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
         return ret
 
@@ -982,20 +983,24 @@ class Helix(_JSONSerializable):
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = dict()
 
+        # if we have major ticks or position, it's harder to read Helix on one line,
+        # so don't wrap it in NoIndent, but still wrap longer sub-objects in them
+        use_no_indent: bool = not (self.major_ticks is not None or self.position3d is not None)
+
         if self.min_offset != 0:
             dct[min_offset_key] = self.min_offset
 
         dct[max_offset_key] = self.max_offset
 
         if self.position3d is None:
-            if self.grid_position[
-                2] == 0:  # don't bother writing grid position base coordinate if it is 0
-                dct[grid_position_key] = (self.grid_position[0], self.grid_position[1])
+            if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
+                gp = (self.grid_position[0], self.grid_position[1])
             else:
-                dct[grid_position_key] = (
-                    self.grid_position[0], self.grid_position[1], self.grid_position[2])
+                gp = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
+            dct[grid_position_key] = NoIndent(gp) if suppress_indent and not use_no_indent else gp
         else:
-            dct[position3d_key] = self.position3d.to_json_serializable(suppress_indent)
+            pos = self.position3d.to_json_serializable(suppress_indent)
+            dct[position3d_key] = NoIndent(pos) if suppress_indent and not use_no_indent else pos
 
         if not _is_close(self.pitch, default_pitch):
             dct[pitch_key] = self.pitch
@@ -1008,11 +1013,12 @@ class Helix(_JSONSerializable):
             dct[major_tick_distance_key] = self.major_tick_distance
 
         if self.major_ticks is not None:
-            dct[major_ticks_key] = self.major_ticks
+            ticks = self.major_ticks
+            dct[major_ticks_key] = NoIndent(ticks) if suppress_indent and not use_no_indent else ticks
 
         dct[idx_on_helix_key] = self.idx
 
-        return _NoIndent(dct) if suppress_indent else dct
+        return NoIndent(dct) if suppress_indent and use_no_indent else dct
 
     def default_grid_position(self):
         return (0, self.idx, 0)
@@ -1159,7 +1165,7 @@ class Domain(_JSONSerializable):
             dct[deletions_key] = self.deletions
         if len(self.insertions) > 0:
             dct[insertions_key] = self.insertions
-        return _NoIndent(dct) if suppress_indent else dct
+        return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
     def is_loopout() -> bool:
@@ -1451,7 +1457,7 @@ class Loopout(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = {loopout_key: self.length}
-        return _NoIndent(dct)
+        return NoIndent(dct)
 
     def __repr__(self):
         return f'Loopout({self.length})'
@@ -1579,7 +1585,7 @@ class IDTFields(_JSONSerializable):
             del dct['plate']
         if self.well is None:
             del dct['well']
-        return _NoIndent(dct)
+        return NoIndent(dct)
 
 
 def _check_idt_string_not_none_or_empty(value: str, field_name: str):
@@ -1712,7 +1718,7 @@ class Strand(_JSONSerializable):
             mods_dict = {}
             for offset, mod in self.modifications_int.items():
                 mods_dict[f"{offset}"] = mod.id
-            dct[modifications_int_key] = _NoIndent(mods_dict) if suppress_indent else mods_dict
+            dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         return dct
 
@@ -2746,13 +2752,13 @@ class DNADesign(_JSONSerializable):
 
         # remove idx key from list of helices if they have the default index
         unwrapped_helices = dct[helices_key]
-        if len(unwrapped_helices) > 0 and isinstance(unwrapped_helices[0], _NoIndent):
+        if len(unwrapped_helices) > 0 and isinstance(unwrapped_helices[0], NoIndent):
             unwrapped_helices = [wrapped.value for wrapped in unwrapped_helices]
         remove_helix_idxs_if_default(unwrapped_helices)
 
         default_helices_view_order = list(range(0, len(self.helices)))
         if self.helices_view_order != default_helices_view_order:
-            dct[helices_view_order_key] = _NoIndent(self.helices_view_order)
+            dct[helices_view_order_key] = NoIndent(self.helices_view_order)
 
         # modifications
         mods = self._all_modifications()
@@ -2767,8 +2773,8 @@ class DNADesign(_JSONSerializable):
 
         for helix_list_order, helix in enumerate(self.helices.values()):
             helix_json = dct[helices_key][helix_list_order]
-            if suppress_indent:
-                helix_json = helix_json.value  # get past NoIndent surrounding helix
+            if suppress_indent and hasattr(helix_json, 'value'):
+                helix_json = helix_json.value  # get past NoIndent surrounding helix, if it is there
             # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
