@@ -87,7 +87,7 @@ def _json_encode(obj: _JSONSerializable, suppress_indent: bool = True) -> str:
 
 
 class NoIndent:
-    #Value wrapper. Placing a value in this will stop it from being indented when converting to JSON
+    # Value wrapper. Placing a value in this will stop it from being indented when converting to JSON
     # using _SuppressableIndentEncoder
 
     def __init__(self, value):
@@ -296,8 +296,6 @@ honeycomb = Grid.honeycomb
 # constants
 
 from _version import __version__
-
-
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
