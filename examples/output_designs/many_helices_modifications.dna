@@ -1,5 +1,5 @@
 {
-  "version": "0.8.1",
+  "version": "0.8.2",
   "grid": "square",
   "helices": [
     {"grid_position": [0, 0]},
@@ -18,18 +18,18 @@
       "display_connector": false,
       "location": "5'"
     },
-    "/3Cy3Sp/": {
-      "display_text": "Cy3",
-      "idt_text": "/3Cy3Sp/",
-      "display_connector": false,
-      "location": "3'"
-    },
     "/iBiodT/": {
       "display_text": "B",
       "idt_text": "/iBiodT/",
       "display_connector": false,
       "location": "internal",
       "allowed_bases": ["T"]
+    },
+    "/3Cy3Sp/": {
+      "display_text": "Cy3",
+      "idt_text": "/3Cy3Sp/",
+      "display_connector": false,
+      "location": "3'"
     },
     "/iCy3/": {
       "display_text": "Cy3",

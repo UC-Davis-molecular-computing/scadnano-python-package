@@ -295,8 +295,9 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-# from scadnano import current_version
-current_version = "0.8.1"
+from _version import __version__
+
+
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -2740,7 +2741,7 @@ class DNADesign(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
-        dct[version_key] = current_version
+        dct[version_key] = __version__
         dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
 
         if self.major_tick_distance >= 0 and (
