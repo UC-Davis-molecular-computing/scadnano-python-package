@@ -295,7 +295,10 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-from _version import __version__
+# Don't really understand why, but an explicit import solves the issue described here
+# https://stackoverflow.com/a/39131141
+# solves the build problems: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/actions/runs/125490116
+from ._version import __version__
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
