@@ -44,7 +44,6 @@ so the user must take care not to set them.
 from __future__ import annotations
 
 import dataclasses
-import inspect
 from abc import abstractmethod, ABC
 import json
 import enum
@@ -52,11 +51,9 @@ import itertools
 import re
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type
-import typing
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
-import xlwt
 
 
 def _pairwise(iterable):
@@ -298,7 +295,11 @@ honeycomb = Grid.honeycomb
 # Don't really understand why, but an explicit import solves the issue described here
 # https://stackoverflow.com/a/39131141
 # solves the build problems: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/actions/runs/125490116
-from ._version import __version__
+try:
+    from ._version import __version__
+except:
+    # this is so scadnano.py file works without _version.py being present, in case user downloads it
+    __version__ = "0.8.2"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -3604,7 +3605,7 @@ class DNADesign(_JSONSerializable):
             workbook.save(filename_plate)
 
     @staticmethod
-    def _add_new_excel_plate_sheet(plate_name: str, workbook: xlwt.Workbook) -> xlwt.Worksheet:
+    def _add_new_excel_plate_sheet(plate_name: str, workbook):
         worksheet = workbook.add_sheet(plate_name)
         worksheet.write(0, 0, 'Well Position')
         worksheet.write(0, 1, 'Name')
@@ -3613,6 +3614,7 @@ class DNADesign(_JSONSerializable):
 
     @staticmethod
     def _setup_excel_file(directory, filename):
+        import xlwt
         plate_extension = f'xls'
         if filename is None:
             filename_plate = _get_filename_same_name_as_running_python_script(
