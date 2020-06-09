@@ -21,8 +21,12 @@ import sys
 sys.path.insert(0, os.path.abspath('../scadnano'))
 # print(sys.path)
 
-# from scadnano import current_version
-current_version = "0.8.1"
+# current_version = "0.8.1"
+# this is ugly, but appears to be standard practice:
+# https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package/17626524#17626524
+__version__ = open("../scadnano/_version.py").readlines()[-1].split()[-1].strip("\"'")
+
+
 
 # Type "make html" at the command line to generate the documentation.
 
@@ -34,10 +38,9 @@ copyright = '2019, David Doty'
 author = 'David Doty'
 
 # The full version, including alpha/beta/rc tags
-# version = '0.7.0'
 # release = '0.7.0'
-version = current_version
-release = current_version
+version = __version__
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 
