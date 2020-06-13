@@ -1037,6 +1037,8 @@ class Helix(_JSONSerializable):
         grid_position = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
+            if len(gp_list) == 3:
+                gp_list = gp_list[:2]
             if len(gp_list) != 2:
                 raise IllegalDNADesignError("list of grid_position coordinates must be length 2, "
                                             f"but this is the list: {gp_list}")
