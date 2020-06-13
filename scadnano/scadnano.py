@@ -667,10 +667,10 @@ idx_on_helix_key = 'idx'
 max_offset_key = 'max_offset'
 min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
-position3d_key = 'position'
-legacy_position3d_keys = ['origin']
+position_key = 'position'
+legacy_position_keys = ['origin']
 
-# Position3D keys
+# Position keys
 position_x_key = 'x'
 position_y_key = 'y'
 position_z_key = 'z'
@@ -942,11 +942,10 @@ class Helix(_JSONSerializable):
     That convention is different from simply excluding coordinates from the hex lattice.
     """
 
-    position3d: Position3D = None
+    position: Position3D = None
     """Position (x,y,z) of this :any:`Helix` in 3D space.
     
-    Optional if :py:data:`Helix.grid_position` is specified. 
-    Default is x,y,z are determined by grid position h, v, b."""
+    Must be None if :py:data:`Helix.grid_position` is specified."""
 
     pitch: float = 0
     """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
@@ -976,6 +975,9 @@ class Helix(_JSONSerializable):
     _domains: List['Domain'] = field(default_factory=list)
 
     def __post_init__(self):
+        if self.grid_position is not None and self.position is not None:
+            raise IllegalDNADesignError('exactly one of grid_position or position must be specified, '
+                                        'but both are specified')
         if self.major_ticks is not None and self.max_offset is not None and self.min_offset is not None:
             for major_tick in self.major_ticks:
                 if major_tick > self.max_offset - self.min_offset:
@@ -988,19 +990,19 @@ class Helix(_JSONSerializable):
 
         # if we have major ticks or position, it's harder to read Helix on one line,
         # so don't wrap it in NoIndent, but still wrap longer sub-objects in them
-        use_no_indent: bool = not (self.major_ticks is not None or self.position3d is not None)
+        use_no_indent: bool = not (self.major_ticks is not None or self.position is not None)
 
         if self.min_offset != 0:
             dct[min_offset_key] = self.min_offset
 
         dct[max_offset_key] = self.max_offset
 
-        if self.position3d is None:
+        if self.position is None:
             dct[grid_position_key] = NoIndent(
                 self.grid_position) if suppress_indent and not use_no_indent else self.grid_position
         else:
-            pos = self.position3d.to_json_serializable(suppress_indent)
-            dct[position3d_key] = NoIndent(pos) if suppress_indent and not use_no_indent else pos
+            pos = self.position.to_json_serializable(suppress_indent)
+            dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent else pos
 
         if not _is_close(self.pitch, default_pitch):
             dct[pitch_key] = self.pitch
@@ -1054,8 +1056,8 @@ class Helix(_JSONSerializable):
         max_offset = json_map.get(max_offset_key)
         idx = json_map.get(idx_on_helix_key)
 
-        position3d_map = optional_field(None, json_map, position3d_key, *legacy_position3d_keys)
-        position3d = Position3D.from_json(position3d_map) if position3d_map is not None else None
+        position_map = optional_field(None, json_map, position_key, *legacy_position_keys)
+        position = Position3D.from_json(position_map) if position_map is not None else None
 
         pitch = json_map.get(pitch_key, default_pitch)
         roll = json_map.get(roll_key, default_roll)
@@ -1067,7 +1069,7 @@ class Helix(_JSONSerializable):
             grid_position=grid_position,
             min_offset=min_offset,
             max_offset=max_offset,
-            position3d=position3d,
+            position=position,
             pitch=pitch,
             roll=roll,
             yaw=yaw,
@@ -2465,9 +2467,9 @@ class DNADesign(_JSONSerializable):
             if grid_is_none and grid_position_key in helix_json:
                 raise IllegalDNADesignError(
                     f'grid is none, but Helix {idx_default} has grid_position = {helix_json[grid_position_key]}')
-            elif not grid_is_none and position3d_key in helix_json:
+            elif not grid_is_none and position_key in helix_json:
                 raise IllegalDNADesignError(
-                    'grid is not none, but Helix $idx has position = ${helix_json[constants.position3d_key]}')
+                    f'grid is not none, but Helix {idx_default} has position = ${helix_json[position_key]}')
             helices.append(helix)
             idx_default += 1
 
