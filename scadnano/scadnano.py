@@ -840,13 +840,17 @@ class Position3D(_JSONSerializable):
     """
 
     x: float = 0
-    """x-coordinate of position"""
+    """x-coordinate of position. 
+    Increasing `x` moves right in the main view and into the screen in the side view."""
 
     y: float = 0
-    """y-coordinate of position"""
+    """y-coordinate of position.
+    Increasing `y` moves down in the side and main views, i.e., "screen coordinates".
+    (though this can be inverted to Cartesian coordinates, to agree with codenano)"""
 
     z: float = 0
-    """z-coordinate of position"""
+    """z-coordinate of position.
+    Increasing `z` moves right in the side view and out of the screen in the main view."""
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = self.__dict__
