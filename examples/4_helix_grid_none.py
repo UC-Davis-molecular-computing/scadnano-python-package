@@ -4,7 +4,7 @@ import scadnano as sc
 def main():
     length = 10
     helices = [
-        sc.Helix(max_offset=length, position=sc.Position3D(x=0, y=0, z=0), pitch=0, roll=0, yaw=0),
+        sc.Helix(max_offset=length, position=sc.Position3D(x=2.5, y=0, z=0), pitch=0, roll=0, yaw=0),
         sc.Helix(max_offset=length, position=sc.Position3D(x=0, y=3, z=3), pitch=0, roll=0, yaw=0),
         sc.Helix(max_offset=length, position=sc.Position3D(x=0, y=-3, z=8), pitch=0, roll=0, yaw=0),
         sc.Helix(max_offset=length, position=sc.Position3D(x=0, y=1, z=11), pitch=0, roll=0, yaw=0),
