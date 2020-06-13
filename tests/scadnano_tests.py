@@ -490,11 +490,11 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertEqual(0, helix0.idx)
         self.assertEqual(0, helix0.min_offset)
         self.assertEqual(16, helix0.max_offset)
-        self.assertEqual((0, 0, 0), helix0.grid_position)
+        self.assertEqual((0, 0), helix0.grid_position)
         self.assertEqual(1, helix1.idx)
         self.assertEqual(0, helix1.min_offset)
         self.assertEqual(16, helix1.max_offset)
-        self.assertEqual((0, 1, 0), helix1.grid_position)
+        self.assertEqual((0, 1), helix1.grid_position)
 
         self.assertEqual(3, len(design.strands))
         st_l = design.strands[0]
@@ -1914,13 +1914,13 @@ class TestSetHelixIdx(unittest.TestCase):
 class TestJSON(unittest.TestCase):
 
     def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
-        helices = [sc.Helix(position3d=sc.Position3D(0, 0, 0))]
+        helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]
         strands = []
         design = sc.DNADesign(helices=helices, strands=strands)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
         self.assertFalse(isinstance(helix_json, sc.NoIndent))
-        self.assertTrue(isinstance(helix_json[sc.position3d_key], sc.NoIndent))
+        self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
 
     def test_NoIndent_on_helix_without_position_or_major_ticks_present(self):
         helices = [sc.Helix()]
@@ -2128,7 +2128,7 @@ class TestJSON(unittest.TestCase):
         expected_pitch = 4
         expected_roll = 5
         expected_yaw = 6
-        actual_position = d.helices[0].position3d
+        actual_position = d.helices[0].position
         actual_pitch = d.helices[0].pitch
         actual_roll = d.helices[0].roll
         actual_yaw = d.helices[0].yaw
