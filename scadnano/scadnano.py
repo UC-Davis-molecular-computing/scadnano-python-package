@@ -917,8 +917,8 @@ class Helix(_JSONSerializable):
     """If not ``None``, overrides :any:`DNADesign.major_tick_distance` and :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
-    grid_position: Tuple[int, int, int] = None
-    """`(h,v,b)` position of this helix in the side view grid,
+    grid_position: Tuple[int, int] = None
+    """`(h,v)` position of this helix in the side view grid,
     if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`DNADesign` containing this helix.
     `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
@@ -928,14 +928,10 @@ class Helix(_JSONSerializable):
     and moves down and to the left if `h` is odd.
     This is the "odd-r horizontal layout" coordinate system here: 
     https://www.redblobgames.com/grids/hexagons/)
-    `b` goes in and out of the screen in the side view, and it is in units of "bases".
-    Incrementing `b` moves the whole helix one base into the screen.
-    In the main view, a helix with `b` = 1 would have its base offset 0 line up with base offset 1
-    of a helix with `b` = 0.
     However, the default y position in the main view for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
     
-    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`, `b` = 0.
+    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`DNADesign.helices`.
     
     In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates,
     see `misc/cadnano-format-specs/v2.txt`.
@@ -996,11 +992,8 @@ class Helix(_JSONSerializable):
         dct[max_offset_key] = self.max_offset
 
         if self.position3d is None:
-            if self.grid_position[2] == 0:  # don't bother writing grid position base coordinate if it is 0
-                gp = (self.grid_position[0], self.grid_position[1])
-            else:
-                gp = (self.grid_position[0], self.grid_position[1], self.grid_position[2])
-            dct[grid_position_key] = NoIndent(gp) if suppress_indent and not use_no_indent else gp
+            dct[grid_position_key] = NoIndent(
+                self.grid_position) if suppress_indent and not use_no_indent else self.grid_position
         else:
             pos = self.position3d.to_json_serializable(suppress_indent)
             dct[position3d_key] = NoIndent(pos) if suppress_indent and not use_no_indent else pos
@@ -1024,7 +1017,7 @@ class Helix(_JSONSerializable):
         return NoIndent(dct) if suppress_indent and use_no_indent else dct
 
     def default_grid_position(self):
-        return (0, self.idx, 0)
+        return (0, self.idx)
 
     def calculate_major_ticks(self, default_major_tick_distance: int):
         """
@@ -1044,11 +1037,9 @@ class Helix(_JSONSerializable):
         grid_position = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
-            if len(gp_list) not in [2, 3]:
-                raise IllegalDNADesignError("list of grid_position coordinates must be length 2 or 3, "
+            if len(gp_list) != 2:
+                raise IllegalDNADesignError("list of grid_position coordinates must be length 2, "
                                             f"but this is the list: {gp_list}")
-            if len(gp_list) == 2:
-                gp_list.append(0)
             grid_position = tuple(gp_list)
 
         major_tick_distance = json_map.get(major_tick_distance_key)

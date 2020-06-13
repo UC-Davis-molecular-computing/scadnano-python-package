@@ -490,11 +490,11 @@ class TestDesignFromJson(unittest.TestCase):
         self.assertEqual(0, helix0.idx)
         self.assertEqual(0, helix0.min_offset)
         self.assertEqual(16, helix0.max_offset)
-        self.assertEqual((0, 0, 0), helix0.grid_position)
+        self.assertEqual((0, 0), helix0.grid_position)
         self.assertEqual(1, helix1.idx)
         self.assertEqual(0, helix1.min_offset)
         self.assertEqual(16, helix1.max_offset)
-        self.assertEqual((0, 1, 0), helix1.grid_position)
+        self.assertEqual((0, 1), helix1.grid_position)
 
         self.assertEqual(3, len(design.strands))
         st_l = design.strands[0]
