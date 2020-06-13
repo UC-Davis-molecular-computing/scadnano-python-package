@@ -299,7 +299,7 @@ try:
     from ._version import __version__
 except:
     # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.8.3"
+    __version__ = "0.9.0"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
