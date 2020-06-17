@@ -2428,21 +2428,26 @@ class DNADesign(_JSONSerializable):
         Loads a :any:`DNADesign` from the given JSON string.
 
         :param json_str: JSON description of the :any:`DNADesign`
-        :return: DNADesign described in the file
+        :return: DNADesign described in the JSON string
         """
         json_map = json.loads(json_str)
         try:
-            design = DNADesign._from_scadnano_json(json_map)
+            design = DNADesign.from_scadnano_json_map(json_map)
             return design
         except KeyError as e:
             raise IllegalDNADesignError(f'I was expecting a JSON key but did not find it: {e}')
 
     @staticmethod
-    def _from_scadnano_json(json_map: dict) -> DNADesign:
-        # reads scadnano .dna file format into a DNADesign object
+    def from_scadnano_json_map(json_map: dict) -> DNADesign:
+        """
+        Loads a :any:`DNADesign` from the given JSON object (i.e., Python object obtained by calling
+        json.loads(json_str) from a string representing contents of a JSON file.
+
+        :param json_map: JSON map describing the :any:`DNADesign`
+        :return: DNADesign described in the object
+        """
         # version = json_map.get(version_key, initial_version)  # not sure what to do with this
 
-        # grid = json_map.get(grid_key, Grid.square)
         grid = mandatory_field(DNADesign, json_map, grid_key)
         grid_is_none = grid == Grid.none
 
@@ -3033,45 +3038,10 @@ class DNADesign(_JSONSerializable):
         return [strand for strand in self.strands if strand.domains[-1].helix == helix]
 
     def _check_legal_design(self):
-        # self._check_helix_indices()
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
-        self._check_grid_honeycomb_positions_legal()
-
-    def _check_grid_honeycomb_positions_legal(self):
-        # ensures grid positions are legal if honeycomb lattice is used
-        if self.grid == Grid.honeycomb:
-            for helix in self.helices.values():
-                x = helix.grid_position[0]
-                y = helix.grid_position[1]
-
-                # following is for odd-q system: https://www.redblobgames.com/grids/hexagons/
-                # if x % 2 == 1 and y % 2 == 0:
-                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                #                                 'coordinates (x,y,_) if x is odd and y is even, '
-                #                                 f'but helix {helix.idx} has grid position '
-                #                                 f'{helix.grid_position}')
-
-                # following is for even-q system: https://www.redblobgames.com/grids/hexagons/
-                # if x % 2 == 1 and y % 2 == 1:
-                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                #                                 'coordinates (x,y,_) if both x and y are odd, '
-                #                                 f'but helix {helix.idx} has grid position '
-                #                                 f'{helix.grid_position}')
-
-                # following is for odd-r system: https://www.redblobgames.com/grids/hexagons/
-                # if x % 3 == 0 and y % 2 == 0:
-                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                #                                 'coordinates (x,y,_) with y even and x a multiple of 3, '
-                #                                 f'but helix {helix.idx} has grid position '
-                #                                 f'{helix.grid_position}')
-                # if x % 3 == 1 and y % 2 == 1:
-                #     raise IllegalDNADesignError('honeycomb lattice disallows grid positions of first two '
-                #                                 'coordinates (x,y) with y odd and x = 1 + a multiple of 3, '
-                #                                 f'but helix {helix.idx} has grid position '
-                #                                 f'{helix.grid_position}')
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self):
@@ -3084,23 +3054,11 @@ class DNADesign(_JSONSerializable):
                           f'helix.max_offset = {helix.max_offset}'
                 raise IllegalDNADesignError(err_msg)
 
-    # def _check_helix_indices(self):
-    #     # ensure if there are H helices, the list of sorted indices is 0,1,...,H-1
-    #     indices_helices = sorted([(helix.idx, helix) for helix in self.helices],
-    #                              key=lambda x: x[0])
-    #     for (correct_idx, (helix_idx, helix)) in enumerate(indices_helices):
-    #         if correct_idx != helix_idx:
-    #             if correct_idx < helix_idx:
-    #                 err_msg = f"missing Helix with helix {correct_idx}"
-    #             else:
-    #                 err_msg = f"duplicate Helices with helix {helix_idx}"
-    #             raise IllegalDNADesignError(err_msg)
-
     def _check_strands_overlap_legally(self, domain_to_check: Domain = None):
         """If `Domain_to_check` is None, check all.
         Otherwise only check pairs where one is domain_to_check."""
 
-        def err_msg(domain1, domain2, h_idx):
+        def err_msg(domain1: Domain, domain2: Domain, h_idx: int) -> str:
             return f"two domains overlap on helix {h_idx}: " \
                    f"\n{domain1}\n  and\n{domain2}\n  but have the same direction"
 
@@ -3151,19 +3109,18 @@ class DNADesign(_JSONSerializable):
             DNADesign._check_loopouts_length(strand)
 
     @staticmethod
-    def _check_two_consecutive_loopouts(strand):
+    def _check_loopout_not_singleton(strand: Strand):
+        if len(strand.domains) == 1 and strand.first_domain().is_loopout():
+                raise StrandError(strand, 'strand cannot have a single Loopout as its only domain')
+
+    @staticmethod
+    def _check_two_consecutive_loopouts(strand: Strand):
         for domain1, domain2 in _pairwise(strand.domains):
             if domain1.is_loopout() and domain2.is_loopout():
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     @staticmethod
-    def _check_loopout_not_singleton(strand):
-        if len(strand.domains) == 1:
-            if strand.first_domain().is_loopout():
-                raise StrandError(strand, 'strand cannot have a single Loopout as its only domain')
-
-    @staticmethod
-    def _check_loopouts_length(strand):
+    def _check_loopouts_length(strand: Strand):
         for loopout in strand.domains:
             if loopout.is_loopout() and loopout.length <= 0:
                 raise StrandError(strand, f'loopout length must be positive but is {loopout.length}')
@@ -3174,6 +3131,13 @@ class DNADesign(_JSONSerializable):
             self._check_strand_references_legal_helices(strand)
             self._check_strand_has_legal_offsets_in_helices(strand)
 
+    def _check_strand_references_legal_helices(self, strand: Strand):
+        for domain in strand.domains:
+            if domain.is_domain() and domain.helix not in self.helices:
+                err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
+                          f"here is the list of valid helices: {self._helices_to_string()}"
+                raise StrandError(strand, err_msg)
+
     def _check_strand_has_legal_offsets_in_helices(self, strand: Strand):
         for domain in strand.domains:
             if domain.is_domain():
@@ -3182,20 +3146,12 @@ class DNADesign(_JSONSerializable):
                     err_msg = f"domain {domain} has start offset {domain.start}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
-                    raise StrandError(domain._parent_strand, err_msg)
+                    raise StrandError(strand, err_msg)
                 if domain.end > helix.max_offset:
                     err_msg = f"domain {domain} has end offset {domain.end}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
-                    err = StrandError(domain._parent_strand, err_msg)
-                    raise err
-
-    def _check_strand_references_legal_helices(self, strand: Strand):
-        for domain in strand.domains:
-            if domain.is_domain() and domain.helix not in self.helices:
-                err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
-                          f"here are the list of valid helices: {self._helices_to_string()}"
-                raise StrandError(domain._parent_strand, err_msg)
+                    raise StrandError(strand, err_msg)
 
         # ensure helix_idx's are never negative twice in a row
         for domain1, domain2 in _pairwise(strand.domains):
@@ -3286,7 +3242,7 @@ class DNADesign(_JSONSerializable):
                         self.helices[domain.helix]._domains.append(domain)
                     else:
                         msg = f"domain's helix is {domain.helix} but no helix has that index; here " \
-                              f"are the list of helix indices: {self._helices_to_string()}"
+                              f"is the list of helix indices: {self._helices_to_string()}"
                         raise StrandError(strand=strand, the_cause=msg)
 
     def _helices_to_string(self):
