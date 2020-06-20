@@ -20,7 +20,7 @@
   ],
   "strands": [
     {
-      "color": "#f74308",
+      "color": "#32b86c",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 10}
       ]
@@ -29,18 +29,6 @@
       "color": "#0066cc",
       "domains": [
         {"helix": 0, "forward": false, "start": 0, "end": 10}
-      ]
-    },
-    {
-      "color": "#f74308",
-      "domains": [
-        {"helix": 1, "forward": true, "start": 0, "end": 10}
-      ]
-    },
-    {
-      "color": "#0066cc",
-      "domains": [
-        {"helix": 1, "forward": false, "start": 0, "end": 10}
       ]
     }
   ]

@@ -12,6 +12,12 @@
       "display_connector": false,
       "location": "5'"
     },
+    "/3Cy3Sp/": {
+      "display_text": "Cy3",
+      "idt_text": "/3Cy3Sp/",
+      "display_connector": false,
+      "location": "3'"
+    },
     "/iCy3/": {
       "display_text": "Cy3",
       "idt_text": "/iCy3/",
@@ -28,12 +34,6 @@
     "/3Bio/": {
       "display_text": "B",
       "idt_text": "/3Bio/",
-      "display_connector": false,
-      "location": "3'"
-    },
-    "/3Cy3Sp/": {
-      "display_text": "Cy3",
-      "idt_text": "/3Cy3Sp/",
       "display_connector": false,
       "location": "3'"
     },
