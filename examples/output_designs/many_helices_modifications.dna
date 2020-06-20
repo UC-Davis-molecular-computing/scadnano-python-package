@@ -12,23 +12,17 @@
     {"grid_position": [0, 7]}
   ],
   "modifications_in_design": {
-    "/iCy3/": {
-      "display_text": "Cy3",
-      "idt_text": "/iCy3/",
-      "display_connector": false,
-      "location": "internal"
-    },
     "/3Cy3Sp/": {
       "display_text": "Cy3",
       "idt_text": "/3Cy3Sp/",
       "display_connector": false,
       "location": "3'"
     },
-    "/5Biosg/": {
-      "display_text": "B",
-      "idt_text": "/5Biosg/",
+    "/iCy3/": {
+      "display_text": "Cy3",
+      "idt_text": "/iCy3/",
       "display_connector": false,
-      "location": "5'"
+      "location": "internal"
     },
     "/iBiodT/": {
       "display_text": "B",
@@ -36,11 +30,17 @@
       "display_connector": false,
       "location": "internal",
       "allowed_bases": ["T"]
+    },
+    "/5Biosg/": {
+      "display_text": "B",
+      "idt_text": "/5Biosg/",
+      "display_connector": false,
+      "location": "5'"
     }
   },
   "strands": [
     {
-      "color": "#888888",
+      "color": "#7300de",
       "sequence": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 16, "deletions": [11, 12]},
