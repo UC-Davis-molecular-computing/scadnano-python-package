@@ -3741,35 +3741,34 @@ class DNADesign(_JSONSerializable):
 
         self.strands.extend([strand_before, strand_after])
 
-    def add_half_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+    def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Add a half crossover from helix `helix1` at offset `offset1` to `helix2`, on the strand
+        Add a half crossover from helix `helix` at offset `offset` to `helix2`, on the strand
         with :py:data:`Strand.forward` = `forward`.
 
         Unlike :py:meth:`DNADesign.add_full_crossover`, which automatically adds a nick between the two
         half-crossovers, to call this method, there must *already* be nicks adjacent to the given
         offsets on the given helices. (either on the left or right side)
 
-        :param helix1: index of one helix of half crossover
+        :param helix: index of one helix of half crossover
         :param helix2: index of other helix of half crossover
-        :param offset1: offset on `helix1` at which to add half crossover
-        :param forward1: direction of :any:`Strand` on `helix1` to which to add half crossover
+        :param offset: offset on `helix` at which to add half crossover
+        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
         :param offset2: offset on `helix2` at which to add half crossover.
-            If not specified, defaults to `offset1`
+            If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
-            If not specified, defaults to the negation of `forward1`
-
+            If not specified, defaults to the negation of `forward`
         """
         if offset2 is None:
-            offset2 = offset1
+            offset2 = offset
         if forward2 is None:
-            forward2 = not forward1
-        domain1 = self.domain_at(helix1, offset1, forward1)
+            forward2 = not forward
+        domain1 = self.domain_at(helix, offset, forward)
         domain2 = self.domain_at(helix2, offset2, forward2)
         if domain1 is None:
             raise IllegalDNADesignError(
-                f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
+                f"Cannot add half crossover at (helix={helix}, offset={offset}). "
                 f"There is no Domain there.")
         if domain2 is None:
             raise IllegalDNADesignError(
@@ -3780,7 +3779,7 @@ class DNADesign(_JSONSerializable):
 
         if strand1 == strand2:
             raise IllegalDNADesignError(f"Cannot add crossover from "
-                                        f"(helix={helix1}, offset={offset1}) to "
+                                        f"(helix={helix}, offset={offset}) to "
                                         f"(helix={helix2}, offset={offset2}) "
                                         f"because that would join two Domains "
                                         f"already on the same Strand! "
@@ -3789,10 +3788,10 @@ class DNADesign(_JSONSerializable):
                                         f"crossover addition, to ensure that all strands are "
                                         f"non-circular, even in intermediate stages.")
 
-        if domain1.offset_3p() == offset1 and domain2.offset_5p() == offset2:
+        if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
             strand_last = strand2
-        elif domain1.offset_5p() == offset1 and domain2.offset_3p() == offset2:
+        elif domain1.offset_5p() == offset and domain2.offset_3p() == offset2:
             strand_first = strand2
             strand_last = strand1
         else:
@@ -3816,25 +3815,25 @@ class DNADesign(_JSONSerializable):
         self.strands.remove(strand_last)
         self.strands.append(new_strand)
 
-    def add_full_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+    def add_full_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Adds two half-crossovers, one at `offset1` and another at `offset1`-1.
+        Adds two half-crossovers, one at `offset` and another at `offset`-1.
         Other arguments have the same meaning as in :py:meth:`DNADesign.add_half_crossover`.
-        A nick is automatically added on helix `helix1` between
-        `offset1` and `offset1`-1 if one is not already present,
+        A nick is automatically added on helix `helix` between
+        `offset` and `offset`-1 if one is not already present,
         and similarly for `offset2` on helix `helix2`.
         """
         if offset2 is None:
-            offset2 = offset1
+            offset2 = offset
         if forward2 is None:
-            forward2 = not forward1
-        for helix, forward, offset in [(helix1, forward1, offset1), (helix2, forward2, offset2)]:
+            forward2 = not forward
+        for helix, forward, offset in [(helix, forward, offset), (helix2, forward2, offset2)]:
             self._prepare_nicks_for_full_crossover(helix, forward, offset)
-        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1 - 1, offset2=offset2 - 1,
-                                forward1=forward1, forward2=forward2)
-        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1, offset2=offset2,
-                                forward1=forward1, forward2=forward2)
+        self.add_half_crossover(helix=helix, helix2=helix2, offset=offset - 1, offset2=offset2 - 1,
+                                forward=forward, forward2=forward2)
+        self.add_half_crossover(helix=helix, helix2=helix2, offset=offset, offset2=offset2,
+                                forward=forward, forward2=forward2)
 
     def add_crossovers(self, crossovers: List[Crossover]):
         """
@@ -3852,19 +3851,19 @@ class DNADesign(_JSONSerializable):
         """
         for crossover in crossovers:
             if not crossover.half:
-                for helix, forward, offset in [(crossover.helix1, crossover.forward1, crossover.offset1),
+                for helix, forward, offset in [(crossover.helix, crossover.forward, crossover.offset),
                                                (crossover.helix2, crossover.forward2, crossover.offset2)]:
                     self._prepare_nicks_for_full_crossover(helix, forward, offset)
 
         for crossover in crossovers:
             if crossover.half:
-                self.add_half_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
-                                        forward1=crossover.forward1, forward2=crossover.forward2,
-                                        offset1=crossover.offset1, offset2=crossover.offset2)
+                self.add_half_crossover(helix=crossover.helix, helix2=crossover.helix2,
+                                        forward=crossover.forward, forward2=crossover.forward2,
+                                        offset=crossover.offset, offset2=crossover.offset2)
             else:
-                self.add_full_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
-                                        forward1=crossover.forward1, forward2=crossover.forward2,
-                                        offset1=crossover.offset1, offset2=crossover.offset2)
+                self.add_full_crossover(helix=crossover.helix, helix2=crossover.helix2,
+                                        forward=crossover.forward, forward2=crossover.forward2,
+                                        offset=crossover.offset, offset2=crossover.offset2)
 
     def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
         domain_right = self.domain_at(helix, offset, forward)
@@ -4033,27 +4032,28 @@ class Crossover:
     :any:`DNADesign` with circular strands, which are currently unsupported.
     """
 
-    helix1: int
+    helix: int
     """index of one helix of half crossover"""
 
     helix2: int
     """index of other helix of half crossover"""
 
-    offset1: int
-    """offset on `helix1` at which to add half crossover"""
+    offset: int
+    """offset on `helix` at which to add half crossover"""
 
-    forward1: bool
-    """direction of :any:`Strand` on `helix1` to which to add half crossover"""
+    forward: bool
+    """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
     offset2: int = None
     """
-    offset on `helix2` at which to add half crossover. If not specified, defaults to `offset1`
+    offset on `helix2` at which to add half crossover. 
+    If not specified, defaults to `offset`
     """
 
     forward2: bool = None
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
-    If not specified, defaults to the negation of `forward1`
+    If not specified, defaults to the negation of `forward`
     """
 
     half: bool = False
@@ -4064,6 +4064,6 @@ class Crossover:
 
     def __post_init__(self):
         if self.offset2 is None:
-            self.offset2 = self.offset1
+            self.offset2 = self.offset
         if self.forward2 is None:
-            self.forward2 = not self.forward1
+            self.forward2 = not self.forward

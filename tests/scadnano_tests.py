@@ -1335,7 +1335,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------+ +------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=8, forward1=True)
+        self.small_design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
         self.assertEqual(4, len(self.small_design.strands))
         # two new Strands
         self.assertIn(sc.Strand([
@@ -1372,7 +1372,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=8, forward1=False)
+        self.small_design.add_full_crossover(helix=0, helix2=1, offset=8, forward=False)
         self.assertEqual(4, len(self.small_design.strands))
         # two new Strands
         self.assertIn(sc.Strand([
@@ -1411,7 +1411,7 @@ class TestNickAndCrossover(unittest.TestCase):
         """
         self.small_design.add_nick(helix=0, offset=8, forward=False)
         self.small_design.add_nick(helix=1, offset=8, forward=True)
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=8, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=8, forward=False)
         self.assertEqual(5, len(self.small_design.strands))
         # three new Strands
         self.assertIn(sc.Strand([
@@ -1452,7 +1452,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=0, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=0, forward=False)
         self.assertEqual(3, len(self.small_design.strands))
         # one new Strand
         self.assertIn(sc.Strand([
@@ -1483,7 +1483,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=15, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=15, forward=False)
         self.assertEqual(3, len(self.small_design.strands))
         # one new Strand
         self.assertIn(sc.Strand([
@@ -1511,7 +1511,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         """
         with self.assertRaises(sc.IllegalDNADesignError):
-            self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
+            self.small_design.add_half_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal(self):
         """
@@ -1523,7 +1523,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         """
         with self.assertRaises(sc.IllegalDNADesignError):
-            self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
+            self.small_design.add_full_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal_only_one_helix_has_domain(self):
         """
@@ -1541,7 +1541,7 @@ class TestNickAndCrossover(unittest.TestCase):
             sc.Strand([sc.Domain(1, False, 0, 5)]),
         ], grid=sc.square)
         with self.assertRaises(sc.IllegalDNADesignError):
-            design.add_full_crossover(helix1=0, helix2=1, offset1=10, forward1=False)
+            design.add_full_crossover(helix=0, helix2=1, offset=10, forward=False)
 
     r"""
     0        8        16       24       32       40       48       56       64       72       80       88       96
@@ -1625,33 +1625,33 @@ class TestNickAndCrossover(unittest.TestCase):
 
     def add_crossovers_after_nicks(self, design: sc.DNADesign):
         # scaffold seam crossovers
-        design.add_full_crossover(helix1=1, helix2=2, offset1=48, forward1=False)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=48, forward1=False)
+        design.add_full_crossover(helix=1, helix2=2, offset=48, forward=False)
+        design.add_full_crossover(helix=3, helix2=4, offset=48, forward=False)
 
         # staple crossovers
-        design.add_full_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=0, helix2=1, offset1=80, forward1=False)
-        design.add_full_crossover(helix1=1, helix2=2, offset1=32, forward1=True)
-        design.add_full_crossover(helix1=1, helix2=2, offset1=64, forward1=True)
-        design.add_full_crossover(helix1=2, helix2=3, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=2, helix2=3, offset1=80, forward1=False)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=32, forward1=True)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=64, forward1=True)
-        design.add_full_crossover(helix1=4, helix2=5, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=4, helix2=5, offset1=80, forward1=False)
+        design.add_full_crossover(helix=0, helix2=1, offset=16, forward=False)
+        design.add_full_crossover(helix=0, helix2=1, offset=80, forward=False)
+        design.add_full_crossover(helix=1, helix2=2, offset=32, forward=True)
+        design.add_full_crossover(helix=1, helix2=2, offset=64, forward=True)
+        design.add_full_crossover(helix=2, helix2=3, offset=16, forward=False)
+        design.add_full_crossover(helix=2, helix2=3, offset=80, forward=False)
+        design.add_full_crossover(helix=3, helix2=4, offset=32, forward=True)
+        design.add_full_crossover(helix=3, helix2=4, offset=64, forward=True)
+        design.add_full_crossover(helix=4, helix2=5, offset=16, forward=False)
+        design.add_full_crossover(helix=4, helix2=5, offset=80, forward=False)
 
         # The left and right edge crossovers need to be added last to ensure the Strands remain
         # non-circular during all intermediate stages.
 
         # scaffold left crossovers
-        design.add_half_crossover(helix1=0, helix2=1, offset1=0, forward1=True)
-        design.add_half_crossover(helix1=2, helix2=3, offset1=0, forward1=True)
-        design.add_half_crossover(helix1=4, helix2=5, offset1=0, forward1=True)
+        design.add_half_crossover(helix=0, helix2=1, offset=0, forward=True)
+        design.add_half_crossover(helix=2, helix2=3, offset=0, forward=True)
+        design.add_half_crossover(helix=4, helix2=5, offset=0, forward=True)
 
         # scaffold right crossovers
-        design.add_half_crossover(helix1=0, helix2=1, offset1=95, forward1=True)
-        design.add_half_crossover(helix1=2, helix2=3, offset1=95, forward1=True)
-        design.add_half_crossover(helix1=4, helix2=5, offset1=95, forward1=True)
+        design.add_half_crossover(helix=0, helix2=1, offset=95, forward=True)
+        design.add_half_crossover(helix=2, helix2=3, offset=95, forward=True)
+        design.add_half_crossover(helix=4, helix2=5, offset=95, forward=True)
 
     def test_add_nick_then_add_crossovers__6_helix_rectangle(self):
         self.add_nicks(self.design)
@@ -2443,6 +2443,8 @@ class TestAddStrand(unittest.TestCase):
         self.assertEqual(strand, design.strands[0])
         self.assertEqual(ss1, design.domain_at(0, 0, True))
         self.assertEqual(ss2, design.domain_at(1, 0, False))
+
+
 
 
 class TestAssignDNA(unittest.TestCase):

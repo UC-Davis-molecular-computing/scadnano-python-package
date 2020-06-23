@@ -34,8 +34,8 @@ def add_staple_crossovers(design: sc.DNADesign):
         start_offset = 24 if helix % 2 == 0 else 40
         for offset in range(start_offset, 296, 32):
             if offset != 152:  # skip crossover near seam
-                design.add_full_crossover(helix1=helix, helix2=helix + 1, offset1=offset,
-                                          forward1=helix % 2 == 1)
+                design.add_full_crossover(helix=helix, helix2=helix + 1, offset=offset,
+                                          forward=helix % 2 == 1)
 
 
 def add_staple_nicks(design: sc.DNADesign):

@@ -97,22 +97,22 @@ def add_nicks(design: sc.DNADesign):
 def add_crossovers(design: sc.DNADesign):
     # staples interior
     for offset in range(84, 1246, 42):
-        design.add_full_crossover(helix1=0, helix2=1, offset1=offset, forward1=False)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=offset, forward1=True)
+        design.add_full_crossover(helix=0, helix2=1, offset=offset, forward=False)
+        design.add_full_crossover(helix=3, helix2=4, offset=offset, forward=True)
     for offset in range(56, 1246, 42):
-        design.add_full_crossover(helix1=1, helix2=2, offset1=offset, forward1=True)
-        design.add_full_crossover(helix1=4, helix2=5, offset1=offset, forward1=False)
+        design.add_full_crossover(helix=1, helix2=2, offset=offset, forward=True)
+        design.add_full_crossover(helix=4, helix2=5, offset=offset, forward=False)
     for offset in range(70, 1246, 42):
-        design.add_full_crossover(helix1=2, helix2=3, offset1=offset, forward1=False)
-        design.add_full_crossover(helix1=5, helix2=0, offset1=offset, forward1=True)
+        design.add_full_crossover(helix=2, helix2=3, offset=offset, forward=False)
+        design.add_full_crossover(helix=5, helix2=0, offset=offset, forward=True)
     for offset in range(49, 1245, 42):  # extra crossovers 5 - 0 for some reason
-        design.add_full_crossover(helix1=5, helix2=0, offset1=offset, forward1=True)
+        design.add_full_crossover(helix=5, helix2=0, offset=offset, forward=True)
 
     # staples edges
-    design.add_half_crossover(helix1=0, helix2=1, offset1=42, forward1=False)
-    design.add_half_crossover(helix1=3, helix2=4, offset1=42, forward1=True)
-    design.add_half_crossover(helix1=0, helix2=5, offset1=1245, forward1=False)
-    design.add_half_crossover(helix1=2, helix2=3, offset1=1245, forward1=False)
+    design.add_half_crossover(helix=0, helix2=1, offset=42, forward=False)
+    design.add_half_crossover(helix=3, helix2=4, offset=42, forward=True)
+    design.add_half_crossover(helix=0, helix2=5, offset=1245, forward=False)
+    design.add_half_crossover(helix=2, helix2=3, offset=1245, forward=False)
 
     # scaffold interior
     crossovers = []
