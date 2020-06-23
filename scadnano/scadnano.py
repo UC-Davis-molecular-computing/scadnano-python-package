@@ -3859,7 +3859,6 @@ class DNADesign(_JSONSerializable):
             and
             :py:meth:`DNADesign.add_full_crossover`,
             with the extra field `Crossover.half` indicating whether it represents a half or full crossover.
-
         """
         for crossover in crossovers:
             if not crossover.half:
@@ -3898,10 +3897,21 @@ class DNADesign(_JSONSerializable):
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
         and their domains have their lengths altered. Also, major tick marks on the helices will be
         shifted to preserve their adjacency to bases already present. For example, if there are major
-        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then
-        the domain is shortened by 1,
+        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8:
+
+        .. code-block:: none
+
+            0      8         18    24    30
+            |--X---|---------|-----|------
+
+        then the domain is shortened by 1,
         the tick marks become 0, 7, 15, 23,
-        and the helix's maximum offset is shrunk by 1.
+        and the helix's maximum offset is shrunk by 1:
+
+        .. code-block:: none
+
+            0     7         17    23    29
+            |-----|---------|-----|------
 
         We assume that a major tick mark appears just to the LEFT of the offset it encodes,
         so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
