@@ -69,13 +69,13 @@ def add_scaffold_crossovers(design: sc.DNADesign):
 
     # scaffold interior
     for helix in range(1, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=152, forward1=False))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=152, forward=False))
 
     # scaffold edges
     for helix in range(0, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=8, forward1=True, half=True))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=8, forward=True, half=True))
         crossovers.append(
-            sc.Crossover(helix1=helix, helix2=helix + 1, offset1=295, forward1=True, half=True))
+            sc.Crossover(helix=helix, helix2=helix + 1, offset=295, forward=True, half=True))
 
     design.add_crossovers(crossovers)
 

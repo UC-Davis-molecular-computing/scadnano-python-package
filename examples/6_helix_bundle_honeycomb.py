@@ -117,21 +117,21 @@ def add_crossovers(design: sc.DNADesign):
     # scaffold interior
     crossovers = []
     for offset in range(58, 1250, 42):
-        crossovers.append(sc.Crossover(helix1=0, helix2=1, offset1=offset, forward1=True))
+        crossovers.append(sc.Crossover(helix=0, helix2=1, offset=offset, forward=True))
     for offset in range(30, 1250, 42):
-        crossovers.append(sc.Crossover(helix1=1, helix2=2, offset1=offset, forward1=False))
+        crossovers.append(sc.Crossover(helix=1, helix2=2, offset=offset, forward=False))
     for offset in range(54, 1250, 42):
-        crossovers.append(sc.Crossover(helix1=2, helix2=3, offset1=offset, forward1=True))
+        crossovers.append(sc.Crossover(helix=2, helix2=3, offset=offset, forward=True))
     for offset in range(26, 1250, 42):
-        crossovers.append(sc.Crossover(helix1=3, helix2=4, offset1=offset, forward1=False))
+        crossovers.append(sc.Crossover(helix=3, helix2=4, offset=offset, forward=False))
 
     # scaffold edges
-    crossovers.append(sc.Crossover(helix1=0, helix2=1, offset1=16, forward1=True, half=True))
-    crossovers.append(sc.Crossover(helix1=2, helix2=3, offset1=12, forward1=True, half=True))
-    crossovers.append(sc.Crossover(helix1=4, helix2=5, offset1=19, forward1=True, half=True))
-    crossovers.append(sc.Crossover(helix1=0, helix2=1, offset1=1275, forward1=True, half=True))
-    crossovers.append(sc.Crossover(helix1=2, helix2=3, offset1=1271, forward1=True, half=True))
-    crossovers.append(sc.Crossover(helix1=4, helix2=5, offset1=1278, forward1=True, half=True))
+    crossovers.append(sc.Crossover(helix=0, helix2=1, offset=16, forward=True, half=True))
+    crossovers.append(sc.Crossover(helix=2, helix2=3, offset=12, forward=True, half=True))
+    crossovers.append(sc.Crossover(helix=4, helix2=5, offset=19, forward=True, half=True))
+    crossovers.append(sc.Crossover(helix=0, helix2=1, offset=1275, forward=True, half=True))
+    crossovers.append(sc.Crossover(helix=2, helix2=3, offset=1271, forward=True, half=True))
+    crossovers.append(sc.Crossover(helix=4, helix2=5, offset=1278, forward=True, half=True))
 
     design.add_crossovers(crossovers)
 
