@@ -12,18 +12,6 @@ import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
 
 
-# TODO: add tests for mutation methods on DNADesign
-
-# TODO: mutator methods let me create this strand (which should be illegal); add a test for it
-# {
-#   "color": {"r": 51, "g": 51, "b": 51},
-#   "domains": [
-#     {"helix": 2, "forward": false, "start": 40, "end": 48},
-#     {"helix": 2, "forward": false, "start": 32, "end": 48, "deletions": [44]},
-#     {"helix": 3, "forward": true, "start": 32, "end": 40}
-#   ]
-# }
-
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int, end: int):
     """
     Finds strand whose first bound domain matches the given parameters.
@@ -2444,7 +2432,16 @@ class TestAddStrand(unittest.TestCase):
         self.assertEqual(ss1, design.domain_at(0, 0, True))
         self.assertEqual(ss2, design.domain_at(1, 0, False))
 
-
+    def test_add_strand__illegal_overlapping_domains(self):
+        helices = [sc.Helix(max_offset=50)] * 2
+        design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        with self.assertRaises(sc.StrandError):
+            strand = sc.Strand([
+                sc.Domain(0, False, 40, 48),
+                sc.Domain(0, False, 32, 48, deletions=[44]),
+                sc.Domain(1, True, 32, 40),
+            ])
+            design.add_strand(strand)
 
 
 class TestAssignDNA(unittest.TestCase):

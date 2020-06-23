@@ -1764,6 +1764,7 @@ class Strand(_JSONSerializable):
             self.set_default_idt(True)
 
         self._ensure_modifications_legal()
+        self._ensure_domains_nonoverlapping()
 
     def __eq__(self, other: Strand) -> bool:
         if not isinstance(other, Strand):
@@ -2116,6 +2117,14 @@ class Strand(_JSONSerializable):
                                             f"{len(self.dna_sequence)}: "
                                             f"{self.modifications_int}")
 
+
+    def _ensure_domains_nonoverlapping(self):
+        for d1,d2 in itertools.combinations(self.domains, 2):
+            if isinstance(d1, Domain) and isinstance(d2, Domain) and d1.overlaps_illegally(d2):
+                raise StrandError(self, f'two domains on strand overlap:'
+                                        f'\n{d1}'
+                                        f'\n{d2}')
+
     def idt_dna_sequence(self):
         self._ensure_modifications_legal(check_offsets_legal=True)
 
@@ -2144,6 +2153,7 @@ class Strand(_JSONSerializable):
     def unmodified_version(self):
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
+
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
