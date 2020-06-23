@@ -3823,6 +3823,15 @@ class DNADesign(_JSONSerializable):
         A nick is automatically added on helix `helix` between
         `offset` and `offset`-1 if one is not already present,
         and similarly for `offset2` on helix `helix2`.
+
+        :param helix: index of one helix of half crossover
+        :param helix2: index of other helix of half crossover
+        :param offset: offset on `helix` at which to add half crossover
+        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2: offset on `helix2` at which to add half crossover.
+            If not specified, defaults to `offset`
+        :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
+            If not specified, defaults to the negation of `forward`
         """
         if offset2 is None:
             offset2 = offset
@@ -3839,7 +3848,10 @@ class DNADesign(_JSONSerializable):
         """
         Adds a list of :any:`Crossover`'s in batch.
 
-        This helps to avoid problems where adding them one at a time
+        This helps to avoid problems where adding them one at a time using
+        :py:meth:`DNADesign.add_half_crossover`
+        or
+        :py:meth:`DNADesign.add_full_crossover`
         creates an intermediate design with circular strands.
 
         :param crossovers: list of :any:`Crossover`'s to add. Its fields have the same meaning as in
