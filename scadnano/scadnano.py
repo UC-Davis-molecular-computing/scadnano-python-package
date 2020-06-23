@@ -3828,8 +3828,8 @@ class DNADesign(_JSONSerializable):
             offset2 = offset
         if forward2 is None:
             forward2 = not forward
-        for helix, forward, offset in [(helix, forward, offset), (helix2, forward2, offset2)]:
-            self._prepare_nicks_for_full_crossover(helix, forward, offset)
+        for helix_, forward_, offset_ in [(helix, forward, offset), (helix2, forward2, offset2)]:
+            self._prepare_nicks_for_full_crossover(helix_, forward_, offset_)
         self.add_half_crossover(helix=helix, helix2=helix2, offset=offset - 1, offset2=offset2 - 1,
                                 forward=forward, forward2=forward2)
         self.add_half_crossover(helix=helix, helix2=helix2, offset=offset, offset2=offset2,
