@@ -174,19 +174,34 @@ class TestCreateStrandLiterate(unittest.TestCase):
 
     def test_strand__multiple_strands_overlap_no_error(self):
         design = self.design_6helix
-        design.strand(0, 0).to(10).cross(1).to(0)
-        design.strand(0, 10).to(0).cross(1).to(10)
+        design.strand(0, 0).to(10).cross(1).to(0) \
+            .as_scaffold() \
+            .with_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
+        design.strand(0, 10).to(0).cross(1).to(10).with_modification_5p(mod.biotin_5p)
         expected_strand0 = sc.Strand([
             sc.Domain(0, True, 0, 10),
             sc.Domain(1, False, 0, 10),
-        ])
+        ], is_scaffold=True)
         expected_strand1 = sc.Strand([
             sc.Domain(0, False, 0, 10),
             sc.Domain(1, True, 0, 10),
         ])
+
+        expected_strand0.set_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
+        expected_strand1.set_modification_5p(mod.biotin_5p)
+
         self.assertEqual(2, len(design.strands))
+
         self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(None, design.strands[0].modification_5p)
+        self.assertEqual(None, design.strands[0].modification_3p)
+        self.assertDictEqual({5: mod.cy3_int}, design.strands[0].modifications_int)
+
         self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(mod.biotin_5p, design.strands[1].modification_5p)
+        self.assertEqual(None, design.strands[1].modification_3p)
+        self.assertDictEqual({}, design.strands[1].modifications_int)
+
         self.assertEqual(2, len(design.helices[0].domains))
         self.assertEqual(2, len(design.helices[1].domains))
         self.assertEqual(0, len(design.helices[2].domains))

@@ -1622,8 +1622,8 @@ class StrandBuilder:
         self.design = design
         self.current_helix = helix
         self.current_offset = offset
-        self.strand_created_already = False
         self.loopout_length = None
+        self.strand = None
 
     def cross(self, helix: int, offset: int = None) -> StrandBuilder:
         """
@@ -1678,20 +1678,69 @@ class StrandBuilder:
             raise IllegalDNADesignError(f'offset {offset} cannot be equal to current offset')
 
         domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
-        if self.strand_created_already:
-            strand = self.design.strands[-1]
+        if self.strand:
             if self.loopout_length is not None:
-                self.design.append_domain(strand, Loopout(self.loopout_length))
-            self.design.append_domain(strand, domain)
+                self.design.append_domain(self.strand, Loopout(self.loopout_length))
+            self.design.append_domain(self.strand, domain)
             self.loopout_length = None
         else:
             self.strand_created_already = True
-            strand = Strand(domains=[domain])
-            self.design.add_strand(strand)
+            self.strand = Strand(domains=[domain])
+            self.design.add_strand(self.strand)
 
         self.current_offset = offset
 
         return self
+
+    def as_scaffold(self) -> StrandBuilder:
+        """
+        Makes Strand being built a scaffold.
+
+        :return: self
+        """
+        self.strand.set_scaffold(True)
+        return self
+
+    def with_modification_5p(self, mod: Modification5Prime) -> StrandBuilder:
+        """
+        Sets Strand being built to have given 5' modification.
+
+        :param mod: 5' modification
+        :return: self
+        """
+        self.strand.set_modification_5p(mod)
+        return self
+
+    def with_modification_3p(self, mod: Modification3Prime) -> StrandBuilder:
+        """
+        Sets Strand being built to have given 3' modification.
+
+        :param mod: 3' modification
+        :return: self
+        """
+        self.strand.set_modification_3p(mod)
+        return self
+
+    def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool ) -> StrandBuilder:
+        """
+        Sets Strand being built to have given internal modification.
+
+        :param idx: idx along DNA sequence of internal modification
+        :param mod: internal modification
+        :param warn_on_no_dna: whether to print warning to screen if DNA has not been assigned
+        :return: self
+        """
+        self.strand.set_modification_internal(idx, mod, warn_on_no_dna)
+        return self
+
+    def with_color(self, color: Color) -> StrandBuilder:
+
+        """
+        Sets Strand being built to have given color.
+
+        :return: self
+        """
+        self.strand.set_color(color)
 
 
 @dataclass
