@@ -17,7 +17,7 @@
       "is_scaffold": true
     },
     {
-      "color": "#333333",
+      "color": "#f7931e",
       "sequence": "GTTACGTTACGTTACGTTGTTACGTTACGTTAC",
       "domains": [
         {"helix": 1, "forward": true, "start": 0, "end": 16, "deletions": [12], "insertions": [[6, 3]]},
@@ -25,7 +25,7 @@
       ]
     },
     {
-      "color": "#320096",
+      "color": "#f74308",
       "sequence": "ACGTTACGTTACGTTACCGTTACGTTACGTTACGTT",
       "domains": [
         {"helix": 0, "forward": false, "start": 16, "end": 32, "deletions": [24], "insertions": [[18, 2]]},

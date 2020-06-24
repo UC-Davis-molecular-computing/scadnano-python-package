@@ -20,7 +20,7 @@
   ],
   "strands": [
     {
-      "color": "#32b86c",
+      "color": "#03b6a2",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 10}
       ]

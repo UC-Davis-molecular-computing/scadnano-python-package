@@ -1622,11 +1622,13 @@ class StrandBuilder:
     """
 
     def __init__(self, design: DNADesign, helix: int, offset: int):
-        self.design = design
-        self.current_helix = helix
-        self.current_offset = offset
-        self.loopout_length = None
-        self.strand = None
+        self.design: DNADesign = design
+        self.current_helix: int = helix
+        self.current_offset: int = offset
+        self.loopout_length: Optional[int] = None
+        self.strand: Optional[Strand] = None
+        self.just_moved_to_helix: bool = True
+        self.last_domain: Optional[Domain] = None
 
     def cross(self, helix: int, offset: int = None) -> StrandBuilder:
         """
@@ -1637,6 +1639,7 @@ class StrandBuilder:
             (i.e., a "vertical" crossover)
         :return: self
         """
+        self.last_domain = None
         self.current_helix = helix
         if offset is not None:
             self.current_offset = offset
@@ -1653,10 +1656,7 @@ class StrandBuilder:
         :return: self
         """
         self.loopout_length = length
-        self.current_helix = helix
-        if offset is not None:
-            self.current_offset = offset
-        return self
+        return self.cross(helix, offset)
 
     def to(self, offset: int) -> StrandBuilder:
         """
@@ -1667,10 +1667,24 @@ class StrandBuilder:
         and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
         also a new :any:`Loopout`.
 
+        If two instances of :py:meth:`StrandBuilder.to` are chained together, this creates two domains
+        on the same helix. The two offsets must move in the same direction. In other words, if the starting
+        offset is ``s``, and we call ``.to(o1).to(o2)``, then either ``s < o1 < o2`` or ``o2 < o1 < s``
+        must be true.
+
+        To simply change the current offset after calling :py:meth:`StrandBuilder.to`, without creating
+        a new Domain, call :py:meth:`StrandBuilder.update_to`.
+
         :param offset: new offset to extend to. If less than current offset,
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
+        if self.last_domain and ((self.last_domain.forward and offset < self.current_offset) or (
+                not self.last_domain.forward and offset > self.current_offset)):
+            raise IllegalDNADesignError('offsets must be monotonic '
+                                        '(strictly increasing or strictly decreasing) '
+                                        'when calling to() twice in a row')
+
         if offset > self.current_offset:
             forward = True
             start = self.current_offset
@@ -1683,6 +1697,7 @@ class StrandBuilder:
             raise IllegalDNADesignError(f'offset {offset} cannot be equal to current offset')
 
         domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        self.last_domain = domain
         if self.strand:
             if self.loopout_length is not None:
                 self.design.append_domain(self.strand, Loopout(self.loopout_length))
@@ -1691,6 +1706,36 @@ class StrandBuilder:
         else:
             self.strand = Strand(domains=[domain])
             self.design.add_strand(self.strand)
+
+        self.current_offset = offset
+
+        return self
+
+    def update_to(self, offset: int) -> StrandBuilder:
+        """
+        Like :py:meth:`StrandBuilder.to`, but changes the current offset after calling
+        :py:meth:`StrandBuilder.to`, without creating
+        a new Domain, call :py:meth:`StrandBuilder.update_to`.
+
+        If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
+        then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
+
+        :param offset: new offset to extend to. If less than current offset,
+            the new :any:`Domain` is reverse, otherwise it is forward.
+        :return: self
+        """
+        if not self.last_domain:
+            return self.to(offset)
+
+        domain = self.last_domain
+        if (self.last_domain.forward and offset < self.current_offset) or (
+                not self.last_domain.forward and offset > self.current_offset):
+            raise IllegalDNADesignError(f'when calling ')
+
+        if domain.forward:
+            domain.set_end(offset)
+        else:
+            domain.set_start(offset)
 
         self.current_offset = offset
 

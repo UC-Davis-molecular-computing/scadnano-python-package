@@ -216,6 +216,83 @@ class TestCreateStrandLiterate(unittest.TestCase):
             design.strand(0, 2).to(8)
 
 
+    def test_strand__call_to_twice_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+            sc.Domain(1, False, 0, 5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_update_to_twice_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.update_to(5)
+        sb.update_to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_to_then_update_to_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.update_to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_to_twice_increase_decrease_forward(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            sb.to(5)
+
+    def test_strand__call_to_twice_decrease_increase_reverse(self):
+        design = self.design_6helix
+        sb = design.strand(0, 10)
+        sb.to(0)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            sb.to(5)
+
+
+
 class TestCreateHelix(unittest.TestCase):
 
     def test_helix_constructor_no_max_offset_with_major_ticks(self):

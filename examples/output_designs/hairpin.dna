@@ -6,7 +6,7 @@
   ],
   "strands": [
     {
-      "color": "#7300de",
+      "color": "#007200",
       "sequence": "AAAAACCCCCTGCATGGGGGTTTTT",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 10},

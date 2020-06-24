@@ -8,7 +8,7 @@
   ],
   "strands": [
     {
-      "color": "#03b6a2",
+      "color": "#b8056c",
       "sequence": "ACGACGACTTTACGTCGTCGTTTTACGACGACGATTTACTTACGCACGACGATTTTTTTTTTACGTTGCAGGTCGTCGTGACGACGACTGTCGTCGT",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 8},

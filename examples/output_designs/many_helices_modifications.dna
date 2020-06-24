@@ -12,18 +12,18 @@
     {"grid_position": [0, 7]}
   ],
   "modifications_in_design": {
-    "/5Biosg/": {
-      "display_text": "B",
-      "idt_text": "/5Biosg/",
-      "display_connector": false,
-      "location": "5'"
-    },
     "/iBiodT/": {
       "display_text": "B",
       "idt_text": "/iBiodT/",
       "display_connector": false,
       "location": "internal",
       "allowed_bases": ["T"]
+    },
+    "/5Biosg/": {
+      "display_text": "B",
+      "idt_text": "/5Biosg/",
+      "display_connector": false,
+      "location": "5'"
     },
     "/3Cy3Sp/": {
       "display_text": "Cy3",
@@ -40,7 +40,7 @@
   },
   "strands": [
     {
-      "color": "#7300de",
+      "color": "#007200",
       "sequence": "TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 16, "deletions": [11, 12]},

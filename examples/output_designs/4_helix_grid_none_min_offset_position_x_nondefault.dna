@@ -23,25 +23,25 @@
   ],
   "strands": [
     {
-      "color": "#333333",
+      "color": "#7300de",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 16}
       ]
     },
     {
-      "color": "#320096",
+      "color": "#aaaa00",
       "domains": [
         {"helix": 1, "forward": true, "start": 8, "end": 16}
       ]
     },
     {
-      "color": "#03b6a2",
+      "color": "#b8056c",
       "domains": [
         {"helix": 2, "forward": true, "start": 0, "end": 16}
       ]
     },
     {
-      "color": "#7300de",
+      "color": "#007200",
       "domains": [
         {"helix": 3, "forward": true, "start": 8, "end": 16}
       ]
