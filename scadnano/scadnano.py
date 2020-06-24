@@ -215,9 +215,26 @@ class ColorCycler:
         return self
 
     def __next__(self):
-        color = self._colors[self._current_color_idx]
+        color = self.current_color()
         self._current_color_idx = (self._current_color_idx + 1) % len(self._colors)
         return color
+
+    def current_color(self):
+        return self._colors[self._current_color_idx]
+
+    def __hash__(self):
+        return hash(self.current_color())
+
+    def __eq__(self, other):
+        if not isinstance(other, ColorCycler):
+            return False
+        return self._current_color_idx == other._current_color_idx
+
+    def __str__(self):
+        repr(self)
+
+    def __repr__(self):
+        return f'ColorCycler({self.current_color()})'
 
     @property
     def colors(self):
@@ -235,8 +252,6 @@ default_scaffold_color = Color(0, 102, 204)
 
 default_strand_color = Color(0, 0, 0)
 """Default color for non-scaffold strand(s)."""
-
-color_cycler = ColorCycler()
 
 
 #
@@ -1848,12 +1863,6 @@ class Strand(_JSONSerializable):
     a color is assigned by cycling through a list of defaults given by 
     :meth:`ColorCycler.colors`"""
 
-    automatically_assign_color: bool = field(repr=False, default=True)
-    """If `automatically_assign_color` = ``False`` and `color` = ``None``, do not automatically
-    assign a :any:`Color` to this :any:`Strand`. 
-    In this case color will be set to its default of ``None`` and will not be
-    written to the JSON with :py:meth:`DNADesign.write_scadnano_file` or :py:meth:`DNADesign.to_json`."""
-
     idt: Optional[IDTFields] = None
     """Fields used when ordering strands from the synthesis company IDT 
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
@@ -1922,15 +1931,6 @@ class Strand(_JSONSerializable):
         return dct
 
     def __post_init__(self):
-        # if color not specified, pick one by cycling through list of staple colors,
-        # unless caller specified not to
-        global color_cycler
-        if self.color is None and self.automatically_assign_color:
-            if self.is_scaffold:
-                self.color = default_scaffold_color
-            else:
-                self.color = next(color_cycler)
-
         self._helix_idx_domain_map = defaultdict(list)
 
         for domain in self.domains:
@@ -2549,6 +2549,14 @@ class DNADesign(_JSONSerializable):
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
 
+    automatically_assign_color: bool = field(repr=False, default=True)
+    """If `automatically_assign_color` = ``False``, then for any :any:`Strand` such that
+    `Strand.color` = ``None``, do not automatically assign a :any:`Color` to it. 
+    In this case color will be set to its default of ``None`` and will not be
+    written to the JSON with :py:meth:`DNADesign.write_scadnano_file` or :py:meth:`DNADesign.to_json`."""
+
+    color_cycler: ColorCycler = field(default_factory=lambda: ColorCycler(), init=False)
+
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  strands: List[Strand] = None,
@@ -2560,6 +2568,7 @@ class DNADesign(_JSONSerializable):
         self.grid = grid
         self.major_tick_distance = major_tick_distance
         self.helices_view_order = helices_view_order
+        self.color_cycler = ColorCycler()
 
         if self.strands is None:
             self.strands = []
@@ -2590,6 +2599,22 @@ class DNADesign(_JSONSerializable):
         self._check_legal_design()
 
         self._set_and_check_helices_view_order()
+
+        if self.automatically_assign_color:
+            self._assign_colors_to_strands()
+
+    def _assign_colors_to_strands(self):
+        # if color not specified, pick one by cycling through list of staple colors,
+        # unless caller specified not to
+        for strand in self.strands:
+            self._assign_color_to_strand(strand)
+
+    def _assign_color_to_strand(self, strand: Strand):
+        if strand.color is None and self.automatically_assign_color:
+            if strand.is_scaffold:
+                strand.color = default_scaffold_color
+            else:
+                strand.color = next(self.color_cycler)
 
     @staticmethod
     def from_scadnano_file(filename: str) -> DNADesign:
@@ -3468,6 +3493,8 @@ class DNADesign(_JSONSerializable):
             if domain.is_domain():
                 self.helices[domain.helix].domains.append(domain)
                 self._check_strands_overlap_legally(domain_to_check=domain)
+        if self.automatically_assign_color:
+            self._assign_color_to_strand(strand)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""
@@ -4002,7 +4029,7 @@ class DNADesign(_JSONSerializable):
 
         strand_after = Strand(domains=[domain_to_add_after] + domains_after,
                               dna_sequence=dna_sequence_after_whole,
-                              automatically_assign_color=True, use_default_idt=idt_present)
+                              use_default_idt=idt_present)
 
         self.helices[helix].domains.remove(domain_to_remove)
         self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])

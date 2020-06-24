@@ -6,7 +6,7 @@
   ],
   "strands": [
     {
-      "color": "#aaaa00",
+      "color": "#f74308",
       "sequence": "ATTCTCTTGCTTTTTTCA",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 10, "insertions": [[2, 4], [8, 4]]}
