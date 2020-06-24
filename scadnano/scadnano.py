@@ -1615,7 +1615,10 @@ class StrandBuilder:
 
     .. code-block:: Python
 
-        design.strand(0, 0).to(10).cross(1).to(5)
+        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+
+    :any:`StrandBuilder` should generally not be created directly or manipulated in ways other than the kind
+    of method chaining described above, or else errors could result.
     """
 
     def __init__(self, design: DNADesign, helix: int, offset: int):
@@ -1647,8 +1650,8 @@ class StrandBuilder:
         :param length: length of :any:`Loopout` to add
         :return: self
         """
-        self.current_helix = helix
         self.loopout_length = length
+        self.current_helix = helix
         if offset is not None:
             self.current_offset = offset
         return self
