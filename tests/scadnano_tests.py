@@ -215,7 +215,6 @@ class TestCreateStrandLiterate(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             design.strand(0, 2).to(8)
 
-
     def test_strand__call_to_twice_legally(self):
         design = self.design_6helix
         sb = design.strand(0, 0)
@@ -290,7 +289,6 @@ class TestCreateStrandLiterate(unittest.TestCase):
         sb.to(0)
         with self.assertRaises(sc.IllegalDNADesignError):
             sb.to(5)
-
 
 
 class TestCreateHelix(unittest.TestCase):
@@ -2165,6 +2163,31 @@ class TestSetHelixIdx(unittest.TestCase):
 
 
 class TestJSON(unittest.TestCase):
+
+    def test_nondefault_geometry(self):
+        geometry_expected = sc.Geometry(z_step=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
+                               inter_helix_gap=5.0)
+        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        geometry_actual = design_from_json.geometry
+        self.assertAlmostEqual(geometry_expected.z_step, geometry_actual.z_step)
+        self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
+        self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
+        self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
+        self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
+
+    def test_nondefault_geometry_some_default(self):
+        geometry_expected = sc.Geometry(z_step=10.0, minor_groove_angle=10.0, inter_helix_gap=5.0)
+        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        geometry_actual = design_from_json.geometry
+        self.assertAlmostEqual(geometry_expected.z_step, geometry_actual.z_step)
+        self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
+        self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
+        self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
+        self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
 
     def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
         helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]

@@ -175,10 +175,10 @@ class Color(_JSONSerializable):
 
 
 # https://medium.com/@rjurney/kellys-22-colours-of-maximum-contrast-58edb70c90d1
-_kelly_colors = [#'F2F3F4', #almost white so it's no good
-                 '222222', 'F3C300', '875692', 'F38400', 'A1CAF1', 'BE0032', 'C2B280', '848482',
-                 '008856', 'E68FAC', '0067A5', 'F99379', '604E97', 'F6A600', 'B3446C', 'DCD300', '882D17',
-                 '8DB600', '654522', 'E25822', '2B3D26']
+_kelly_colors = [  # 'F2F3F4', #almost white so it's no good
+    '222222', 'F3C300', '875692', 'F38400', 'A1CAF1', 'BE0032', 'C2B280', '848482',
+    '008856', 'E68FAC', '0067A5', 'F99379', '604E97', 'F6A600', 'B3446C', 'DCD300', '882D17',
+    '8DB600', '654522', 'E25822', '2B3D26']
 
 
 class ColorCycler:
@@ -215,7 +215,7 @@ class ColorCycler:
         self._current_color_idx = 0
         # random order
         order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
-        #order = range(len(self._colors))
+        # order = range(len(self._colors))
         colors_shuffled = [None] * len(self._colors)
         for i, color in zip(order, self._colors):
             colors_shuffled[i] = color
@@ -690,6 +690,14 @@ scaffold_key = 'scaffold'
 helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
 design_modifications_key = 'modifications_in_design'
+geometry_key = 'geometry'
+
+# Geometry keys
+z_step_key = 'z_step'
+helix_radius_key = 'helix_radius'
+bases_per_turn_key = 'bases_per_turn'
+minor_groove_angle_key = 'minor_groove_angle'
+inter_helix_gap_key = 'inter_helix_gap'
 
 # Helix keys
 idx_on_helix_key = 'idx'
@@ -2518,6 +2526,64 @@ def optional_field(default_value, json_map: dict, main_key: str, *legacy_keys: s
 
 
 @dataclass
+class Geometry(_JSONSerializable):
+    """Parameters controlling some geometric visualization/physical aspects of Design."""
+
+    z_step: float = 0.332
+    """What is this?"""
+
+    helix_radius: float = 1.0
+    """Redius of a DNA helix in nanometers."""
+
+    bases_per_turn: float = 10.5
+    """Number of DNA base pairs in in full turn of DNA."""
+
+    minor_groove_angle: float = 150.0
+    """Minor groove angle in degrees."""
+
+    inter_helix_gap: float = 0.5
+    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+
+    def is_default(self):
+        return self == _default_geometry
+
+    @staticmethod
+    def from_json(json_map: dict) -> Geometry:
+        geometry = Geometry()
+        geometry.z_step = optional_field(_default_geometry.z_step, json_map, z_step_key)
+        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
+        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
+                                                 bases_per_turn_key)
+        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
+                                                     minor_groove_angle_key)
+        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
+                                                  inter_helix_gap_key)
+        return geometry
+
+    @staticmethod
+    def keys() -> List[str]:
+        return [z_step_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key, inter_helix_gap_key]
+
+    def values(self) -> List[float]:
+        return [self.z_step, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
+                self.inter_helix_gap]
+
+    @staticmethod
+    def default_values() -> List[float]:
+        return _default_geometry.values()
+
+    def to_json_serializable(self, suppress_indent: bool = True):
+        dct = OrderedDict()
+        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
+            if val != val_default:
+                dct[name] = val
+        return dct
+
+
+_default_geometry = Geometry()
+
+
+@dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
 
@@ -2560,6 +2626,9 @@ class DNADesign(_JSONSerializable):
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
 
+    geometry: Geometry = field(default_factory=lambda: Geometry())
+    """Controls some geometric/physical aspects of this :any:`DNADesign`."""
+
     automatically_assign_color: bool = field(repr=False, default=True)
     """If `automatically_assign_color` = ``False``, then for any :any:`Strand` such that
     `Strand.color` = ``None``, do not automatically assign a :any:`Color` to it. 
@@ -2573,13 +2642,15 @@ class DNADesign(_JSONSerializable):
                  strands: List[Strand] = None,
                  grid: Grid = Grid.none,
                  major_tick_distance: int = -1,
-                 helices_view_order: List[int] = None):
+                 helices_view_order: List[int] = None,
+                 geometry: Geometry = None):
         self.helices = helices
         self.strands = strands
         self.grid = grid
         self.major_tick_distance = major_tick_distance
         self.helices_view_order = helices_view_order
         self.color_cycler = ColorCycler()
+        self.geometry = Geometry() if geometry is None else geometry
 
         if self.strands is None:
             self.strands = []
@@ -2723,18 +2794,26 @@ class DNADesign(_JSONSerializable):
                 all_mods[mod_key] = mod
             DNADesign.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
+        geometry = None
+        if geometry_key in json_map:
+            geometry = Geometry.from_json(json_map[geometry_key])
+
         return DNADesign(
             helices=helices,
             strands=strands,
             grid=grid,
             major_tick_distance=major_tick_distance,
             helices_view_order=helices_view_order,
+            geometry=geometry,
         )
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         dct[version_key] = __version__
         dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+
+        if not self.geometry.is_default():
+            dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
 
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
