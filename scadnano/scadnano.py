@@ -1606,6 +1606,94 @@ def _check_idt_string_not_none_or_empty(value: str, field_name: str):
         raise IllegalDNADesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
+class StrandBuilder:
+    """
+    Represents a :any:`Strand` that is being built in an existing :any:`DNADesign`.
+
+    This is an intermediate object created when using "literal" chained method building by calling
+    :py:meth:`DNADesign.strand`, for example
+
+    .. code-block:: Python
+
+        design.strand(0, 0).to(10).cross(1).to(5)
+    """
+
+    def __init__(self, design: DNADesign, helix: int, offset: int):
+        self.design = design
+        self.current_helix = helix
+        self.current_offset = offset
+        self.strand_created_already = False
+        self.loopout_length = None
+
+    def cross(self, helix: int, offset: int = None) -> StrandBuilder:
+        """
+        Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
+
+        :param helix: :any:`Helix` to crossover to
+        :param offset: new offset on `helix`. If not specified, defaults to current offset.
+            (i.e., a "vertical" crossover)
+        :return: self
+        """
+        self.current_helix = helix
+        if offset is not None:
+            self.current_offset = offset
+        return self
+
+    def loopout(self, helix: int, length: int, offset: int = None) -> StrandBuilder:
+        """
+        Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
+
+        :param helix: :any:`Helix` to crossover to
+        :param length: length of :any:`Loopout` to add
+        :return: self
+        """
+        self.current_helix = helix
+        self.loopout_length = length
+        if offset is not None:
+            self.current_offset = offset
+        return self
+
+    def to(self, offset: int) -> StrandBuilder:
+        """
+        Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
+        which adds a new :any:`Domain` to the :any:`Strand` being built.
+
+        This updates the underlying :any:`DNADesign` with a new :any:`Domain`,
+        and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
+        also a new :any:`Loopout`.
+
+        :param offset: new offset to extend to. If less than current offset,
+            the new :any:`Domain` is reverse, otherwise it is forward.
+        :return: self
+        """
+        if offset > self.current_offset:
+            forward = True
+            start = self.current_offset
+            end = offset
+        elif offset < self.current_offset:
+            forward = False
+            start = offset
+            end = self.current_offset
+        else:
+            raise IllegalDNADesignError(f'offset {offset} cannot be equal to current offset')
+
+        domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        if self.strand_created_already:
+            strand = self.design.strands[-1]
+            if self.loopout_length is not None:
+                self.design.append_domain(strand, Loopout(self.loopout_length))
+            self.design.append_domain(strand, domain)
+            self.loopout_length = None
+        else:
+            self.strand_created_already = True
+            strand = Strand(domains=[domain])
+            self.design.add_strand(strand)
+
+        self.current_offset = offset
+
+        return self
+
+
 @dataclass
 class Strand(_JSONSerializable):
     """
@@ -2117,9 +2205,8 @@ class Strand(_JSONSerializable):
                                             f"{len(self.dna_sequence)}: "
                                             f"{self.modifications_int}")
 
-
     def _ensure_domains_nonoverlapping(self):
-        for d1,d2 in itertools.combinations(self.domains, 2):
+        for d1, d2 in itertools.combinations(self.domains, 2):
             if isinstance(d1, Domain) and isinstance(d2, Domain) and d1.overlaps_illegally(d2):
                 raise StrandError(self, f'two domains on strand overlap:'
                                         f'\n{d1}'
@@ -2153,7 +2240,6 @@ class Strand(_JSONSerializable):
     def unmodified_version(self):
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
-
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -2395,6 +2481,8 @@ class DNADesign(_JSONSerializable):
 
     def __post_init__(self):
         # XXX: exact order of these calls is important
+        self._ensure_helices_distinct_objects()
+        self._ensure_strands_distinct_objects()
         self._set_helices_idxs()
         self._set_helices_grid_positions()
         self._build_domains_on_helix_lists()
@@ -2787,6 +2875,59 @@ class DNADesign(_JSONSerializable):
                    strand.modification_3p is not None}
         mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
         return mods_5p | mods_3p | mods_int
+
+    def strand(self, helix: int, offset: int) -> StrandBuilder:
+        """Used for "literal" chained method building by calling
+        :py:meth:`DNADesign.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
+        For example
+
+        .. code-block:: Python
+
+            design.strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
+
+        This creates a :any:`Strand` in this :any:`DNADesign` equivalent to
+
+        .. code-block:: Python
+
+            design.add_strand(Strand([
+                sc.Domain(0, True, 7, 10),
+                sc.Domain(1, False, 5, 10),
+                sc.Domain(2, True, 5, 15),
+            ]))
+
+        Loopouts can also be included:
+
+        .. code-block:: Python
+
+            design.strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
+
+        This creates a :any:`Strand` in this :any:`DNADesign` equivalent to
+
+        .. code-block:: Python
+
+            design.add_strand(Strand([
+                sc.Domain(0, True, 7, 10),
+                sc.Domain(1, False, 5, 10),
+                sc.Loopout(3),
+                sc.Domain(2, True, 5, 15),
+            ]))
+
+        It returns an each call to
+        :py:meth:`DNADesign.strand`,
+        :py:meth:`DNADesign.cross`,
+        :py:meth:`DNADesign.loopout`,
+        :py:meth:`DNADesign.to`
+        returns a :any:`StrandBuilder` object.
+
+        Each call to
+        :py:meth:`DNADesign.to`
+        modifies the :any:`DNADesign` by replacing the Strand with an updated version.
+
+        :param helix: starting :any:`Helix`
+        :param offset: starting offset on `helix`
+        :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
+        """
+        return StrandBuilder(self, helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5588, variant: M13Variant = M13Variant.p7249):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
@@ -3226,6 +3367,7 @@ class DNADesign(_JSONSerializable):
         for domain in strand.domains:
             if domain.is_domain():
                 self.helices[domain.helix].domains.append(domain)
+                self._check_strands_overlap_legally(domain_to_check=domain)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""
@@ -3234,15 +3376,31 @@ class DNADesign(_JSONSerializable):
             if domain.is_domain():
                 self.helices[domain.helix].domains.remove(domain)
 
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
+        """
+        Same as :any:`DNADesign.insert_domain`, but inserts at end.
+
+        :param strand: strand to append `domain` to
+        :param domain: :any:`Domain` or :any:`Loopout` to append to :any:`Strand`
+        """
+        self.insert_domain(strand, len(strand.domains), domain)
+
     def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]):
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
-        e.g., ``strand.insert_domain(domain, 0)`` inserts ``domain`` as the new first :any:`Domain`."""
+        e.g., ``design.insert_domain(strand, domain, 0)``
+        inserts ``domain`` as the new first :any:`Domain`."""
+        if domain.is_domain() and domain.helix not in self.helices:
+            err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
+                      f"here is the list of valid helices: {self._helices_to_string()}"
+            raise StrandError(strand, err_msg)
+
         assert strand in self.strands
         strand.insert_domain(order, domain)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         if domain.is_domain():
             self.helices[domain.helix].domains.append(domain)
+            self._check_strands_overlap_legally(domain_to_check=domain)
 
     def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
         """Remove `Domain` from `strand`."""
@@ -3998,6 +4156,31 @@ class DNADesign(_JSONSerializable):
 
     def set_major_tick_distance(self, major_tick_distance: int):
         self.major_tick_distance = major_tick_distance
+
+    def _ensure_helices_distinct_objects(self):
+        pair = _find_index_pair_same_object(self.helices)
+        if pair:
+            i, j = pair
+            raise IllegalDNADesignError('helices must all be distinct objects, but those at indices '
+                                        f'{i} and {j} are the same object')
+
+    def _ensure_strands_distinct_objects(self):
+        pair = _find_index_pair_same_object(self.strands)
+        if pair:
+            i, j = pair
+            raise IllegalDNADesignError('strands must all be distinct objects, but those at indices '
+                                        f'{i} and {j} are the same object')
+
+
+def _find_index_pair_same_object(elts: Union[List,Dict]) -> Optional[Tuple]:
+    # return pair of indices representing same object in elts, or None if they do not exist
+    # input can be list or dict; if dict, returns pair of keys mapping to same object
+    if isinstance(elts, list):
+        elts = dict(enumerate(elts))
+    for i, j in itertools.combinations(elts.keys(), 2):
+        if elts[i] is elts[j]:
+            return i, j
+    return None
 
 
 def _name_of_this_script() -> str:

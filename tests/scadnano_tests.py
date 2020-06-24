@@ -28,6 +28,179 @@ def remove_whitespace(sequence):
     return sequence
 
 
+class TestCreateStrandLiterate(unittest.TestCase):
+    # tests methods for creating strands using chained "literate" notation as in this issue:
+    # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/85
+
+    def setUp(self):
+        helices = [sc.Helix(max_offset=100) for _ in range(6)]
+        self.design_6helix = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+
+    def test_strand__0_0_to_10_cross_1_to_5(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__0_0_to_10_cross_1_to_5__reverse(self):
+        design = self.design_6helix
+        design.strand(1, 5).to(10).cross(0).to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(1, True, 5, 10),
+            sc.Domain(0, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__h0_off0_to_off10_cross_h1_to_off5_loopout_length3_h2_to_off15(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.loopout(2, 3)
+        sb.to(15)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+            sc.Loopout(3),
+            sc.Domain(2, True, 5, 15),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__two_forward_paranemic_crossovers(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(15).cross(2).to(20)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, True, 10, 15),
+            sc.Domain(2, True, 15, 20),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__two_reverse_paranemic_crossovers(self):
+        design = self.design_6helix
+        design.strand(0, 20).to(10).cross(1).to(5).cross(2).to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, False, 5, 10),
+            sc.Domain(2, False, 0, 5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0)
+        design.strand(0, 20).to(10).cross(1).to(20)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, True, 10, 20),
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_other_order(self):
+        design = self.design_6helix
+        design.strand(0, 20).to(10).cross(1).to(20)
+        design.strand(0, 0).to(10).cross(1).to(0)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, True, 10, 20),
+        ])
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_overlap_no_error(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0)
+        design.strand(0, 10).to(0).cross(1).to(10)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, False, 0, 10),
+            sc.Domain(1, True, 0, 10),
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_overlap_error(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design.strand(0, 2).to(8)
+
+
 class TestCreateHelix(unittest.TestCase):
 
     def test_helix_constructor_no_max_offset_with_major_ticks(self):
@@ -2433,7 +2606,7 @@ class TestAddStrand(unittest.TestCase):
         self.assertEqual(ss2, design.domain_at(1, 0, False))
 
     def test_add_strand__illegal_overlapping_domains(self):
-        helices = [sc.Helix(max_offset=50)] * 2
+        helices = [sc.Helix(max_offset=50), sc.Helix(max_offset=50)]
         design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
         with self.assertRaises(sc.StrandError):
             strand = sc.Strand([
