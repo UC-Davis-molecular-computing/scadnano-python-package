@@ -1734,13 +1734,14 @@ class StrandBuilder:
         return self
 
     def with_color(self, color: Color) -> StrandBuilder:
-
         """
         Sets Strand being built to have given color.
 
+        :param color: color to set for Strand
         :return: self
         """
         self.strand.set_color(color)
+        return self
 
 
 @dataclass
