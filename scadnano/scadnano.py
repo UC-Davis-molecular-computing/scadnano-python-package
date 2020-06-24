@@ -1648,6 +1648,8 @@ class StrandBuilder:
 
         :param helix: :any:`Helix` to crossover to
         :param length: length of :any:`Loopout` to add
+        :param offset: new offset on `helix`. If not specified, defaults to current offset.
+            (i.e., a "vertical" crossover)
         :return: self
         """
         self.loopout_length = length
@@ -1687,7 +1689,6 @@ class StrandBuilder:
             self.design.append_domain(self.strand, domain)
             self.loopout_length = None
         else:
-            self.strand_created_already = True
             self.strand = Strand(domains=[domain])
             self.design.add_strand(self.strand)
 
@@ -1724,7 +1725,8 @@ class StrandBuilder:
         self.strand.set_modification_3p(mod)
         return self
 
-    def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool ) -> StrandBuilder:
+    def with_modification_internal(self, idx: int, mod: ModificationInternal,
+                                   warn_on_no_dna: bool) -> StrandBuilder:
         """
         Sets Strand being built to have given internal modification.
 
@@ -4225,7 +4227,7 @@ class DNADesign(_JSONSerializable):
                                         f'{i} and {j} are the same object')
 
 
-def _find_index_pair_same_object(elts: Union[List,Dict]) -> Optional[Tuple]:
+def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
     # input can be list or dict; if dict, returns pair of keys mapping to same object
     if isinstance(elts, list):
