@@ -174,6 +174,13 @@ class Color(_JSONSerializable):
         return Color(hex_string=hex_str[2:])
 
 
+# https://medium.com/@rjurney/kellys-22-colours-of-maximum-contrast-58edb70c90d1
+_kelly_colors = [#'F2F3F4', #almost white so it's no good
+                 '222222', 'F3C300', '875692', 'F38400', 'A1CAF1', 'BE0032', 'C2B280', '848482',
+                 '008856', 'E68FAC', '0067A5', 'F99379', '604E97', 'F6A600', 'B3446C', 'DCD300', '882D17',
+                 '8DB600', '654522', 'E25822', '2B3D26']
+
+
 class ColorCycler:
     """
     Calling ``next(color_cycler)`` on a ColorCycler named ``color_cycler``
@@ -201,10 +208,14 @@ class ColorCycler:
                Color(136, 136, 136)]
     """List of colors to cycle through."""
 
+    # _colors = [Color(hex_string=kelly_color) for kelly_color in _kelly_colors]
+    # """List of colors to cycle through."""
+
     def __init__(self):
         self._current_color_idx = 0
         # random order
         order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
+        #order = range(len(self._colors))
         colors_shuffled = [None] * len(self._colors)
         for i, color in zip(order, self._colors):
             colors_shuffled[i] = color
