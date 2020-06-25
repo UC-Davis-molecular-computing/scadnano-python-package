@@ -2221,7 +2221,7 @@ class Strand(_JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt()
 
-    def remove_domain(self, domain):
+    def remove_domain(self, domain: Union[Domain, Loopout]):
         # Only intended to be called by DNADesign.remove_domain
         self.domains.remove(domain)
         domain._parent_strand = None
@@ -2230,13 +2230,13 @@ class Strand(_JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt()
 
-    def contains_loopouts(self):
+    def contains_loopouts(self) -> bool:
         for domain in self.domains:
             if domain.is_loopout():
                 return True
         return False
 
-    def first_bound_domain(self):
+    def first_bound_domain(self) -> Domain:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -2246,7 +2246,7 @@ class Strand(_JSONSerializable):
             if domain.is_domain():
                 return domain
 
-    def last_bound_domain(self):
+    def last_bound_domain(self) -> Domain:
         """Last :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -2533,7 +2533,7 @@ class Geometry(_JSONSerializable):
     """What is this?"""
 
     helix_radius: float = 1.0
-    """Redius of a DNA helix in nanometers."""
+    """Radius of a DNA helix in nanometers."""
 
     bases_per_turn: float = 10.5
     """Number of DNA base pairs in in full turn of DNA."""
@@ -3848,7 +3848,8 @@ class DNADesign(_JSONSerializable):
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
-    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, delimiter: str = ',',
+    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, extension: str = None,
+                                  delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
@@ -3858,6 +3859,8 @@ class DNADesign(_JSONSerializable):
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.idt``.
+        If `filename` is not specified but `extension` is, then that extension is used instead of ``idt``.
+        At least one of `filename` or `extension` must be ``None``.
 
         `directory` specifies a directory in which to place the file, either absolute or relative to
         the current working directory. Default is the current working directory.
@@ -3877,7 +3880,9 @@ class DNADesign(_JSONSerializable):
         """
         contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
                                                  export_non_modified_strand_version)
-        _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
+        if extension is None:
+            extension = 'idt'
+        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def write_idt_plate_excel_file(self, directory: str = '.', filename: str = None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
@@ -4007,7 +4012,7 @@ class DNADesign(_JSONSerializable):
 
         workbook.save(filename_plate)
 
-    def write_scadnano_file(self, directory: str = '.', filename=None):
+    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None):
         """Write ``.dna`` file representing this :any:`DNADesign`, suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
         unless `filename` is explicitly specified.
@@ -4018,9 +4023,19 @@ class DNADesign(_JSONSerializable):
         the current working directory. Default is the current working directory.
 
         The string written is that returned by :meth:`DNADesign.to_json`.
+
+        :param directory: directory in which to put file (default: current)
+        :param filename: filename (default: name of script with .py replaced by .dna).
+            Mutually exclusive with `extension`
+        :param extension: extension for filename (default: .dna)
+            Mutually exclusive with `filename`
         """
         contents = self.to_json()
-        _write_file_same_name_as_running_python_script(contents, 'dna', directory, filename)
+        if filename is not None and extension is not None:
+            raise ValueError('at least one of filename or extension must be None')
+        if extension is None:
+            extension = 'dna'
+        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename=None):
         """Write ``.json`` file representing this :any:`DNADesign`, suitable for reading by cadnano v2,
