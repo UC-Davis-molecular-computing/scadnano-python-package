@@ -2164,6 +2164,43 @@ class TestSetHelixIdx(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
+    def test_strand_labels(self):
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], label={
+            'name': 'strand 0',
+            'num_domains': 1,
+        })
+        strand1_expected = sc.Strand([sc.Domain(0, False, 0, 10), sc.Domain(1, True, 0, 10)], label={
+            'name': 'strand 1',
+            'num_domains': 2,
+        })
+        strands = [strand0_expected, strand1_expected]
+        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        strand0 = design_from_json.strands[0]
+        strand1 = design_from_json.strands[1]
+        self.assertDictEqual(strand0_expected.label, strand0.label)
+        self.assertDictEqual(strand1_expected.label, strand1.label)
+
+    def test_domain_labels(self):
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        dom00_expected = sc.Domain(0, True, 0, 10, label='domain 00')
+        dom10_expected = sc.Domain(0, False, 0, 10)
+        dom11_expected = sc.Domain(1, True, 0, 10, label='domain 11')
+        strand0 = sc.Strand([dom00_expected])
+        strand1 = sc.Strand([dom10_expected, dom11_expected])
+        strands = [strand0, strand1]
+        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        dom00 = design_from_json.strands[0].domains[0]
+        dom10 = design_from_json.strands[1].domains[0]
+        dom11 = design_from_json.strands[1].domains[1]
+        self.assertEqual(dom00_expected.label, dom00.label)
+        self.assertIsNone(dom10.label)
+        self.assertEqual(dom11_expected.label, dom11.label)
+
     def test_nondefault_geometry(self):
         geometry_expected = sc.Geometry(z_step=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
                                inter_helix_gap=5.0)
