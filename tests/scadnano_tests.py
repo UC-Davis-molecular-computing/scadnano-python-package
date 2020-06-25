@@ -2738,6 +2738,78 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
 
+class TestInsertRemoveDomains(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        self.design.strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
+        self.strand = self.design.strands[0]
+
+    def test_3_helix_before_design(self):
+        expected_strand_before = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand_before, self.strand)
+
+    def test_insert_domain_with_sequence(self):
+        design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        design.strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
+        strand = design.strands[0]
+
+        expected_strand_before = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(3, True, 0, 3),
+        ]) #, dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand_before, design.strands[0])
+
+        domain = sc.Domain(2, True, 0, 3)
+        design.insert_domain(strand, 2, domain)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+            sc.Domain(3, True, 0, 3),
+        ], dna_sequence='ACA TCT ??? GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_append_domain_with_sequence(self):
+        domain = sc.Domain(3, False, 0, 3)
+        self.design.append_domain(self.strand, domain)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+            sc.Domain(3, False, 0, 3),
+        ], dna_sequence='ACA TCT GTG ???'.replace(' ',''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_first_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[0])
+        expected_strand = sc.Strand([
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='    TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_middle_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[1])
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='ACA     GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_last_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[2])
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+        ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
 
 class TestAddStrand(unittest.TestCase):
 
@@ -3346,43 +3418,259 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_top2, 'GGA')
         self.assertEqual('AGGTCCGAA', strand_bot.dna_sequence)
 
-    def test_assign_dna__wildcards_multiple_overlaps(self):
+
+class TestAssignDNAToDomains(unittest.TestCase):
+
+    def setUp(self) -> None:
         """
-         012   345   678   901   234   567
+         012   345   678   901   234   567   890
               +---------------+
               |               |
-              |         +-----|-------+
-              |         |     |       |
-        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG>
-        <TGC---AAG---CCT---TTG---ACG---AAC---???-
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
          098   765   432   109   876   543   210
         """
-        ss_bot = sc.Domain(helix=0, forward=False, start=0, end=21)
-        ss_top0 = sc.Domain(helix=0, forward=True, start=0, end=3)
-        ss_top3 = sc.Domain(helix=0, forward=True, start=3, end=6)
-        ss_top6 = sc.Domain(helix=0, forward=True, start=6, end=9)
-        ss_top9 = sc.Domain(helix=0, forward=True, start=9, end=12)
-        ss_top12 = sc.Domain(helix=0, forward=True, start=12, end=15)
-        ss_top15 = sc.Domain(helix=0, forward=True, start=15, end=18)
-        strand_bot = sc.Strand(domains=[ss_bot])
-        strand_top_small0 = sc.Strand(domains=[ss_top0])
-        strand_top_small12 = sc.Strand(domains=[ss_top12])
-        strand_top_big9 = sc.Strand(domains=[ss_top9, ss_top3])
-        strand_top_big6 = sc.Strand(domains=[ss_top6, ss_top15])
-        strands = [strand_bot, strand_top_small0, strand_top_small12, strand_top_big9, strand_top_big6]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        self.dom_bot = sc.Domain(helix=0, forward=False, start=0, end=21)
+        self.dom_top0 = sc.Domain(helix=0, forward=True, start=0, end=3)
+        self.dom_top3 = sc.Domain(helix=0, forward=True, start=3, end=6)
+        self.dom_top6 = sc.Domain(helix=0, forward=True, start=6, end=9)
+        self.dom_top9 = sc.Domain(helix=0, forward=True, start=9, end=12)
+        self.dom_top12 = sc.Domain(helix=0, forward=True, start=12, end=15)
+        self.dom_top15 = sc.Domain(helix=0, forward=True, start=15, end=18)
+        self.dom_top18 = sc.Domain(helix=0, forward=True, start=18, end=21)
+        self.strand_bot = sc.Strand(domains=[self.dom_bot])
+        self.strand_top_small0 = sc.Strand(domains=[self.dom_top0])
+        self.strand_top_small12 = sc.Strand(domains=[self.dom_top12])
+        self.strand_top_big9 = sc.Strand(domains=[self.dom_top9, self.dom_top3])
+        self.strand_top_big6 = sc.Strand(domains=[self.dom_top6, self.dom_top15, self.dom_top18])
+        strands = [self.strand_bot, self.strand_top_small0, self.strand_top_small12,
+                   self.strand_top_big9, self.strand_top_big6]
+        self.design = sc.DNADesign(grid=sc.square, strands=strands)
 
-        design.assign_dna(strand_top_big9, 'AACTTC')
-        self.assertEqual('?????????GTT???GAA???', strand_bot.dna_sequence)
+    def test_assign_dna__wildcards_multiple_overlaps(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'AACTTC')
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_small12, 'TGC')
-        self.assertEqual('??????GCAGTT???GAA???', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_small12, 'TGC')
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_small0, 'ACG')
-        self.assertEqual('??????GCAGTT???GAACGT', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_small0, 'ACG')
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_big6, 'GGATTG')
-        self.assertEqual('???CAAGCAGTTTCCGAACGT', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_big6, 'GGATTGGCA')
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+    def test_assign_dna__domain_sequence_too_long_error(self):
+        with self.assertRaises(sc.IllegalDNADesignError):
+            self.design.assign_dna(self.strand_top_big9, 'AACTTC', domain=self.dom_top9)
+
+    def test_assign_dna__to_individual_domains__wildcards_multiple_overlaps(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +???> -???+ -AAC+ -???> +???+ +???>
+        <???---???---???---TTG---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'AAC', domain=self.dom_top9)
+        self.assertEqual('AAC ???'.replace(' ',''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? ??? ???'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +TTC> -???+ -AAC+ -???> +???+ +???>
+        <???---AAG---???---TTG---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'TTC', domain=self.dom_top3)
+        self.assertEqual('AAC TTC'.replace(' ',''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +TTC> -???+ -AAC+ -TGC> +???+ +???>
+        <???---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_small12, 'TGC')
+        self.assertEqual('TGC', self.strand_top_small12.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +???+ +???>
+        <TGC---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_small0, 'ACG')
+        self.assertEqual('ACG', self.strand_top_small0.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +TTG+ +???>
+        <TGC---AAG---???---TTG---ACG---AAC---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'TTG', domain=self.dom_top15)
+        self.assertEqual('??? TTG ???'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('??? CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---???---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'GCA', domain=self.dom_top18)
+        self.assertEqual('??? TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'GGA', domain=self.dom_top6)
+        self.assertEqual('GGA TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+    def test_method_chaining_with_domain_sequence(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        design = sc.DNADesign(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+
+        """
+         012   345   678   901   234   567   890
+        
+        <???---???---???---???---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 21).to(0)
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(21, design.strands[0].domains[0].dna_length())
+
+        """
+         012   345   678   901   234   567   890
+        
+                                -TGC>
+        <???---???---???---???---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 12).to(15).with_sequence('TGC')
+        self.assertEqual('TGC'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+        
+        -ACG>                   -TGC>
+        <???---???---???---???---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 0).to(3).with_sequence('ACG', assign_complement=False)
+        self.assertEqual('ACG'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |               |
+              |               |
+        -ACG> +TTC>       -AAC+ -TGC>
+        <???---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        sb = design.strand(0, 9).to(12)
+        sb.with_domain_sequence('AAC')
+        sb.cross(0, offset=3)
+        sb.to(6)
+        sb.with_domain_sequence('TTC')
+        self.assertEqual('AAC TTC'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <???---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 6).to(9)\
+            .with_domain_sequence('GGA')\
+            .cross(0, offset=15)\
+            .to(18)\
+            .with_domain_sequence('TTG')\
+            .to(21)\
+            .with_domain_sequence('GCA')
+        self.assertEqual('GGA TTG GCA'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+
 
 
 TEST_OFFSETS_AT_DELETION_INSERTIONS = False

@@ -49,6 +49,7 @@ import json
 import enum
 import itertools
 import re
+import copy
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type, TypeVar, Generic
 from collections import defaultdict, OrderedDict, Counter
@@ -196,19 +197,19 @@ class ColorCycler:
     # These are copied from cadnano:
     # https://github.com/sdouglas/cadnano2/blob/master/views/styles.py#L97
     _colors: List[Color] = [Color(50, 184, 108),
-               Color(204, 0, 0),
-               Color(247, 67, 8),
-               Color(247, 147, 30),
-               Color(170, 170, 0),
-               Color(87, 187, 0),
-               Color(0, 114, 0),
-               Color(3, 182, 162),
-               # Color(23, 0, 222), # don't like this because it looks too much like scaffold
-               Color(50, 0, 150),  # this one is better contrast with scaffold
-               Color(184, 5, 108),
-               Color(51, 51, 51),
-               Color(115, 0, 222),
-               Color(136, 136, 136)]
+                            Color(204, 0, 0),
+                            Color(247, 67, 8),
+                            Color(247, 147, 30),
+                            Color(170, 170, 0),
+                            Color(87, 187, 0),
+                            Color(0, 114, 0),
+                            Color(3, 182, 162),
+                            # Color(23, 0, 222), # don't like this because it looks too much like scaffold
+                            Color(50, 0, 150),  # this one is better contrast with scaffold
+                            Color(184, 5, 108),
+                            Color(51, 51, 51),
+                            Color(115, 0, 222),
+                            Color(136, 136, 136)]
     """List of colors to cycle through."""
 
     # _colors = [Color(hex_string=kelly_color) for kelly_color in _kelly_colors]
@@ -1845,6 +1846,44 @@ class StrandBuilder:
         self.strand.set_color(color)
         return self
 
+    def with_sequence(self, sequence: str, assign_complement: bool = True) -> StrandBuilder:
+        """
+        Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
+        This should be done after the :any:`Strand`'s structure is done being built, e.g.,
+
+        .. code-block:: Python
+
+        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+
+        :param sequence: the DNA sequence to assign
+        :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
+            bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
+            :py:meth:`DNADesign.assign_dna`.
+        :return: self
+        """
+        self.design.assign_dna(strand=self.strand, sequence=sequence, assign_complement=assign_complement)
+        return self
+
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) -> StrandBuilder:
+        """
+        Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
+        This should be done after the :any:`Strand`'s structure is done being built, e.g.,
+
+        .. code-block:: Python
+
+        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+
+        :param sequence: the DNA sequence to assign
+        :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
+            bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
+            :py:meth:`DNADesign.assign_dna`.
+        :return: self
+        """
+        last_domain = self.strand.domains[-1]
+        self.design.assign_dna(strand=self.strand, sequence=sequence, domain=last_domain,
+                               assign_complement=assign_complement)
+        return self
+
 
 @dataclass
 class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
@@ -2253,14 +2292,48 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if self.use_default_idt:
             self.set_default_idt()
 
+        # add wildcard symbols to DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            start_idx = self.dna_index_start_domain(domain)
+            end_idx = start_idx + domain.dna_length()
+            prefix = self.dna_sequence[:start_idx]
+            suffix = self.dna_sequence[start_idx:]
+            new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
+            self.dna_sequence = prefix + new_wildcards + suffix
+
     def remove_domain(self, domain: Union[Domain[DomainLabel], Loopout]):
         # Only intended to be called by DNADesign.remove_domain
+
+        # remove relevant portion of DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            start_idx = self.dna_index_start_domain(domain)
+            end_idx = start_idx + domain.dna_length()
+            prefix = self.dna_sequence[:start_idx]
+            suffix = self.dna_sequence[end_idx:]
+            self.dna_sequence = prefix + suffix
+
         self.domains.remove(domain)
         domain._parent_strand = None
         if domain.is_domain():
             self._helix_idx_domain_map[domain.helix].remove(domain)
         if self.use_default_idt:
             self.set_default_idt()
+
+    def dna_index_start_domain(self, domain: Domain[DomainLabel]):
+        """
+        Returns index in DNA sequence of domain, e.g., if there are five domains
+
+        012 3 45 678 9
+        AAA-C-GG-TTT-ACGT
+
+        Then their indices, respectively in order, are 0, 3, 4, 6, 9.
+
+        :param domain: :any: to find the start DNA index of
+        :return: index (within DNA sequence string) of substring of DNA starting with given :any:`Domain`
+        """
+        domain_order = self.domains.index(domain)
+        idx = sum(self.domains[i].dna_length() for i in range(domain_order))
+        return idx
 
     def contains_loopouts(self) -> bool:
         for domain in self.domains:
@@ -2394,6 +2467,44 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def unmodified_version(self):
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
+
+
+def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0):
+    sequence = _remove_whitespace_and_uppercase(sequence)
+    padded_sequence = _pad_dna(sequence, strand.dna_length(), start)
+    return padded_sequence
+
+
+def _remove_whitespace_and_uppercase(sequence):
+    sequence = re.sub(r'\s*', '', sequence)
+    sequence = sequence.upper()
+    return sequence
+
+
+def _pad_dna(sequence: str, length: int, start: int = 0) -> str:
+    """Return `sequence` modified to have length `length`.
+
+    If len(sequence) < length, pad with  :py:data:`DNA_base_wildcard`.
+
+    If len(sequence) > length, remove extra symbols, from 0 up to `start`, and at the end.
+
+    :param sequence: sequence to pad
+    :param length: final length of padded sequence
+    :param start: index at which to start padding. If not specified, defaults to 0
+    :return: padded sequence
+    """
+    if start < 0:
+        raise ValueError(f'cannot pad DNA with negative start, but start = {start}')
+    elif start >= length:
+        raise ValueError(f'cannot pad DNA with start >= length, but start = {start} and '
+                         f'length = {length}')
+    if len(sequence) > length:
+        sequence = sequence[start:start + length]
+    elif len(sequence) < length:
+        prefix = DNA_base_wildcard * start
+        suffix = DNA_base_wildcard * (length - len(sequence) - start)
+        sequence = prefix + sequence + suffix
+    return sequence
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -2675,10 +2786,35 @@ class DNADesign(_JSONSerializable):
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  strands: List[Strand] = None,
+                 helix_template: Optional[Helix] = None,
+                 num_helices: Optional[int] = None,
                  grid: Grid = Grid.none,
                  major_tick_distance: int = -1,
                  helices_view_order: List[int] = None,
                  geometry: Geometry = None):
+        """
+        :param helices: List of :any:`Helix`'s; if missing, set based on either `helix_template` and
+            `num_helices`, or based on `strands`.
+            Mutually exlusive with  `helix_template` and `num_helices`
+        :param strands: List of :any:`Strand`'s. If missing, will be empty.
+        :param helix_template: If specified, `num_helices` must be specified.
+            That many helices will be created,
+            modeled after this Helix. This Helix will not be any of them, so modifications to it will not
+            affect the :any:`DNADesign` after it is created. The ``idx`` field of `helix_template` will be
+            ignored, and the ``idx`` fields of the created helices will be 0 through `num_helices` - 1.
+            Mutually exclusive with `helices`.
+        :param num_helices: Number of :any:`Helix`'s to create, each of which is copied from `helix_template`.
+            If specified, `helix_template` must be specified
+            Mutually exclusive with `helices`.
+        :param grid: :any:`Grid` to use.
+        :param major_tick_distance: regularly spaced major ticks between all helices.
+            :any:`Helix.major_tick_distance` overrides this value for any :any:`Helix` in which it is
+            specified.
+        :param helices_view_order: order in which to view helices from top to bottom in web interface
+            main view
+        :param geometry: geometric physical parameters for visualization.
+            If not specified, a default set of parameters from the literature are used.
+        """
         self.helices = helices
         self.strands = strands
         self.grid = grid
@@ -2693,8 +2829,20 @@ class DNADesign(_JSONSerializable):
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
+        if (self.helices is not None and (helix_template is not None or num_helices is not None)):
+            raise IllegalDNADesignError('helices is mutually exclusive with helix_template and num_helices; '
+                                        'you must specified the first, or the latter two')
+
+        if (helix_template is not None and num_helices is None) or (
+                helix_template is None and num_helices is not None):
+            raise IllegalDNADesignError('helix type must be specified if and only if num_helices is')
+
         if self.helices is None:
-            if len(self.strands) > 0:
+            if helix_template is not None and num_helices is not None:
+                self.helices = {idx: copy.deepcopy(helix_template) for idx in range(num_helices)}
+                for idx, helix in self.helices.items():
+                    replace(helix, idx=idx)
+            elif len(self.strands) > 0:
                 max_helix_idx = max(
                     domain.helix for strand in self.strands for domain in strand.bound_domains())
                 self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
@@ -3747,7 +3895,8 @@ class DNADesign(_JSONSerializable):
                 domain.helix += delta
         self._check_strands_reference_helices_legally()
 
-    def assign_dna(self, strand: Strand, sequence: str):
+    def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
+                   domain: Union[Domain, Loopout] = None):
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -3763,8 +3912,30 @@ class DNADesign(_JSONSerializable):
 
         All whitespace in `sequence` is removed, and lowercase bases
         'a', 'c', 'g', 't' are converted to uppercase.
+
+        :param strand: :any:`Strand` to assign DNA sequence to
+        :param sequence: string of DNA bases to assign
+        :param assign_complement: whether to assign the complement DNA sequence to any :any:`Strand` that
+            is bound to this one (default True)
+        :param domain: :any:`Domain` on `strand` to assign. If ``None``, then the whole :any:`Strand` is
+            given a DNA sequence. Otherwise, only `domain` is assigned, and the rest of the :any:`Domain`'s
+            on `strand` are left alone (either keeping their DNA sequence, or being assigned
+            :py:const:`DNA_case_wildcard` if no DNA sequence was previously assigned.)
+            If `domain` is specified, then ``len(sequence)`` must be least than or equal to the number
+            of bases on `domain`. (i.e., ``domain.dna_length()``)
         """
-        padded_sequence = _pad_and_remove_whitespace(sequence, strand)
+        start = 0
+        if domain is not None:
+            pos = strand.domains.index(domain)
+            start = sum(prev_dom.dna_length() for prev_dom in strand.domains[:pos])
+            if domain.dna_length() < len(sequence):
+                raise IllegalDNADesignError(f'cannot assign sequence {sequence} to strand domain '
+                                            f'\n{domain}\n'
+                                            f'The number of bases on the domain is {domain.dna_length()} '
+                                            f'but the length of the sequence is {len(sequence)}. The '
+                                            f'length of the sequence must be at most the numebr of bases '
+                                            f'on the domain.')
+        padded_sequence = _pad_and_remove_whitespace_and_uppercase(sequence, strand, start)
         if strand is None:
             raise IllegalDNADesignError('strand cannot be None to assign DNA to it')
         if strand not in self.strands:
@@ -3788,6 +3959,9 @@ class DNADesign(_JSONSerializable):
                 raise IllegalDNADesignError(msg)
 
         strand.set_dna_sequence(merged_sequence)
+
+        if not assign_complement:
+            return
 
         for other_strand in self.strands:
             # note that possibly strand==other_strand; it might bind to itself at some point and we want to
@@ -4476,30 +4650,6 @@ def _create_directory_and_set_filename(directory, filename):
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
     return relative_filename
-
-
-def _remove_whitespace_and_uppercase(sequence):
-    sequence = re.sub(r'\s*', '', sequence)
-    sequence = sequence.upper()
-    return sequence
-
-
-def _pad_and_remove_whitespace(sequence, strand):
-    sequence = _remove_whitespace_and_uppercase(sequence)
-    padded_sequence = _pad_dna(sequence, strand.dna_length())
-    return padded_sequence
-
-
-def _pad_dna(sequence: str, length: int) -> str:
-    """Return `sequence` modified to have length `length`.
-
-    If len(sequence) < length, pad with  :py:data:`DNA_base_wildcard`.
-    If len(sequence) > length, remove extra symbols."""
-    if len(sequence) > length:
-        sequence = sequence[:length]
-    elif len(sequence) < length:
-        sequence += DNA_base_wildcard * (length - len(sequence))
-    return sequence
 
 
 @dataclass
