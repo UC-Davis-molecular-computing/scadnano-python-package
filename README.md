@@ -20,9 +20,57 @@ This module is used to write Python scripts outputting `.dna` files readable by 
 
 Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. However, when a breaking change is made, this will increment the minor or major version numbers in both libraries (version numbers are major.minor.patch, i.e., version 0.9.2 has minor version number 9).
 
+
+
+
+
 ## Reporting issues
 
 Please report issues in the web interface at the [scadnano web interface GitHub repository](https://github.com/UC-Davis-molecular-computing/scadnano/issues), and report issues in the Python scripting library at the [scadnano Python package GitHub repository](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues).
+
+
+
+
+
+
+## Installation
+
+The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it.
+
+Once Python is installed, there are two ways you can install the scadnano Python package:
+
+
+1. pip 
+
+    Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
+    ```console
+    pip install scadnano
+    ```
+
+    If your Python installation does not already have pip installed, you may have to install it. 
+    Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
+    see also 
+    https://docs.python.org/3/installing/index.html 
+    or 
+    https://www.liquidweb.com/kb/install-pip-windows/.
+
+2. download
+
+    As a simple alternative, you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
+    in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
+
+    * *required*: [scadnano.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano.py) 
+    * *optional*: [modifications.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
+    * *optional*: [origami_rectangle.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
+    * *optional*: [_version.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
+    
+    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so in order to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences, xlwt must be installed. To install, type `pip install xlwt` at the command line.
+
+
+
+
+
+
 
 ## Example
 
@@ -101,42 +149,9 @@ design.strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p)
 design.strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
 ```
 
+Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.DNADesign.strand).
+
 The code for adding insertions, deletions, and assigning DNA would be the same as in the original script.
-
-
-
-## Installation
-
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it.
-
-Once Python is installed, there are two ways you can install the scadnano Python package:
-
-
-1. pip 
-
-    Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
-    ```console
-    pip install scadnano
-    ```
-
-    If your Python installation does not already have pip installed, you may have to install it. 
-    Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
-    see also 
-    https://docs.python.org/3/installing/index.html 
-    or 
-    https://www.liquidweb.com/kb/install-pip-windows/.
-
-2. download
-
-    As a simple alternative, you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
-    in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
-
-    * *required*: [scadnano.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano.py) 
-    * *optional*: [modifications.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
-    * *optional*: [origami_rectangle.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
-    * *optional*: [_version.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
-    
-    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so in order to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences, xlwt must be installed. To install, type `pip install xlwt` at the command line.
 
 
 
