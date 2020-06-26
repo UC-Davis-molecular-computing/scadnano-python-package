@@ -174,7 +174,7 @@ A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-pac
 
 
 
-## Examples
+## Other examples
 
 Several example scripts are located in the 
 [examples/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples) subfolder. 
