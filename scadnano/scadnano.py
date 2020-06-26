@@ -390,13 +390,26 @@ class M13Variant(enum.Enum):
     """Variants of M13mp18 viral genome. "Standard" variant is p7249. Other variants are longer."""
 
     p7249 = "p7249"
-    """"Standard" variant of M13mp18; 7249 bases long."""
+    """"Standard" variant of M13mp18; 7249 bases long, available from, for example
+    
+    https://www.neb.com/products/n4040-m13mp18-single-stranded-dna
+    
+    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7249
+    """
 
     p7560 = "p7560"
-    """Variant of M13mp18 that is 7560 bases long."""
+    """Variant of M13mp18 that is 7560 bases long. Available from, for example
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7560
+    """
 
     p8064 = "p8064"
-    """Variant of M13mp18 that is 8064 bases long."""
+    """Variant of M13mp18 that is 8064 bases long. Available from, for example
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p8064
+    """
 
 
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
@@ -1853,9 +1866,9 @@ class StrandBuilder:
 
         .. code-block:: Python
 
-        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+            design.strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
 
-        :param sequence: the DNA sequence to assign
+        :param sequence: the DNA sequence to assign to the :any:`Strand`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
             bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
             :py:meth:`DNADesign.assign_dna`.
@@ -1866,14 +1879,22 @@ class StrandBuilder:
 
     def with_domain_sequence(self, sequence: str, assign_complement: bool = True) -> StrandBuilder:
         """
-        Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
-        This should be done after the :any:`Strand`'s structure is done being built, e.g.,
+        Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
+        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
+        via a call to
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
+        or
+        :py:meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+            design.strand(0, 5).to(8).with_domain_sequence('AAA')\
+                .cross(1).to(5).with_domain_sequence('TTT')\
+                .loopout(2, 4).with_domain_sequence('CCCC')\
+                .to(10).with_domain_sequence('GGGGG')
 
-        :param sequence: the DNA sequence to assign
+        :param sequence: the DNA sequence to assign to the :any:`Domain`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
             bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
             :py:meth:`DNADesign.assign_dna`.
@@ -3310,7 +3331,7 @@ class DNADesign(_JSONSerializable):
                 sc.Domain(2, True, 5, 15),
             ]))
 
-        It returns an each call to
+        Each call to
         :py:meth:`DNADesign.strand`,
         :py:meth:`DNADesign.cross`,
         :py:meth:`DNADesign.loopout`,
@@ -3318,8 +3339,13 @@ class DNADesign(_JSONSerializable):
         returns a :any:`StrandBuilder` object.
 
         Each call to
-        :py:meth:`DNADesign.to`
+        :py:meth:`DNADesign.to`,
+        :py:meth:`DNADesign.update_to`,
+        or
+        :py:meth:`DNADesign.loopout`
         modifies the :any:`DNADesign` by replacing the Strand with an updated version.
+
+        See the documentation for :any:`StrandBuilder` for the methods available to call in this way.
 
         :param helix: starting :any:`Helix`
         :param offset: starting offset on `helix`
