@@ -1739,7 +1739,7 @@ class StrandBuilder:
         must be true.
 
         To simply change the current offset after calling :py:meth:`StrandBuilder.to`, without creating
-        a new Domain, call :py:meth:`StrandBuilder.update_to`.
+        a new Domain, call :py:meth:`StrandBuilder.update_to` instead.
 
         :param offset: new offset to extend to. If less than current offset,
             the new :any:`Domain` is reverse, otherwise it is forward.
@@ -1779,14 +1779,15 @@ class StrandBuilder:
 
     def update_to(self, offset: int) -> StrandBuilder:
         """
-        Like :py:meth:`StrandBuilder.to`, but changes the current offset after calling
-        :py:meth:`StrandBuilder.to`, without creating
-        a new Domain, call :py:meth:`StrandBuilder.update_to`.
+        Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
+        a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
+        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call.
 
         If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
         then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
 
-        :param offset: new offset to extend to. If less than current offset,
+        :param offset: new offset to extend to. If less than offset of the last call to
+            :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
