@@ -2,3 +2,5 @@ This is a new file.
 This is a change to that file.
 Removed some bugs
 Added some performance improvements.
+
+Add unit test, set up new features
