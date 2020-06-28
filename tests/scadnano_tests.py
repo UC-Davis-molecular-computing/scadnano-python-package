@@ -2202,7 +2202,7 @@ class TestJSON(unittest.TestCase):
         self.assertEqual(dom11_expected.label, dom11.label)
 
     def test_nondefault_geometry(self):
-        geometry_expected = sc.Geometry(z_step=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
+        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
                                inter_helix_gap=5.0)
         design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
         json_str = design.to_json()
@@ -2215,7 +2215,7 @@ class TestJSON(unittest.TestCase):
         self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
 
     def test_nondefault_geometry_some_default(self):
-        geometry_expected = sc.Geometry(z_step=10.0, minor_groove_angle=10.0, inter_helix_gap=5.0)
+        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, minor_groove_angle=10.0, inter_helix_gap=5.0)
         design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
         json_str = design.to_json()
         design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
