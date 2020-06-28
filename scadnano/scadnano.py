@@ -56,6 +56,15 @@ from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 
+# Don't really understand why, but an explicit import solves the issue described here
+# https://stackoverflow.com/a/39131141
+# solves the build problems: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/actions/runs/125490116
+try:
+    from ._version import __version__
+except ImportError:
+    # this is so scadnano.py file works without _version.py being present, in case user downloads it
+    __version__ = "0.9.3"
+
 StrandLabel = TypeVar('StrandLabel')
 DomainLabel = TypeVar('DomainLabel')
 
@@ -323,15 +332,6 @@ honeycomb = Grid.honeycomb
 
 ##########################################################################
 # constants
-
-# Don't really understand why, but an explicit import solves the issue described here
-# https://stackoverflow.com/a/39131141
-# solves the build problems: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/actions/runs/125490116
-try:
-    from ._version import __version__
-except ImportError:
-    # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.9.2"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
