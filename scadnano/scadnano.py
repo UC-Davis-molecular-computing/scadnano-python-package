@@ -710,7 +710,8 @@ design_modifications_key = 'modifications_in_design'
 geometry_key = 'geometry'
 
 # Geometry keys
-z_step_key = 'z_step'
+rise_per_base_pair_key = 'rise_per_base_pair'
+legacy_rise_per_base_pair_keys = ['z_step']
 helix_radius_key = 'helix_radius'
 bases_per_turn_key = 'bases_per_turn'
 minor_groove_angle_key = 'minor_groove_angle'
@@ -2697,14 +2698,14 @@ def optional_field(default_value, json_map: dict, main_key: str, *legacy_keys: s
 class Geometry(_JSONSerializable):
     """Parameters controlling some geometric visualization/physical aspects of Design."""
 
-    z_step: float = 0.332
-    """What is this?"""
+    rise_per_base_pair: float = 0.332
+    """The distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
 
     helix_radius: float = 1.0
     """Radius of a DNA helix in nanometers."""
 
     bases_per_turn: float = 10.5
-    """Number of DNA base pairs in in full turn of DNA."""
+    """Number of DNA base pairs in a full turn of DNA."""
 
     minor_groove_angle: float = 150.0
     """Minor groove angle in degrees."""
@@ -2718,7 +2719,8 @@ class Geometry(_JSONSerializable):
     @staticmethod
     def from_json(json_map: dict) -> Geometry:
         geometry = Geometry()
-        geometry.z_step = optional_field(_default_geometry.z_step, json_map, z_step_key)
+        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
+                                                     rise_per_base_pair_key, *legacy_rise_per_base_pair_keys)
         geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
         geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
                                                  bases_per_turn_key)
@@ -2730,10 +2732,11 @@ class Geometry(_JSONSerializable):
 
     @staticmethod
     def keys() -> List[str]:
-        return [z_step_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key, inter_helix_gap_key]
+        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
+                inter_helix_gap_key]
 
     def values(self) -> List[float]:
-        return [self.z_step, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
+        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
                 self.inter_helix_gap]
 
     @staticmethod

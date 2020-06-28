@@ -2208,7 +2208,7 @@ class TestJSON(unittest.TestCase):
         json_str = design.to_json()
         design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
         geometry_actual = design_from_json.geometry
-        self.assertAlmostEqual(geometry_expected.z_step, geometry_actual.z_step)
+        self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
         self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
         self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
         self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
@@ -2220,7 +2220,7 @@ class TestJSON(unittest.TestCase):
         json_str = design.to_json()
         design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
         geometry_actual = design_from_json.geometry
-        self.assertAlmostEqual(geometry_expected.z_step, geometry_actual.z_step)
+        self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
         self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
         self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
         self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
