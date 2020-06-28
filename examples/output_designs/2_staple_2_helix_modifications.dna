@@ -6,17 +6,17 @@
     {"grid_position": [0, 1]}
   ],
   "modifications_in_design": {
-    "/iCy5/": {
-      "display_text": "Cy5",
-      "idt_text": "/iCy5/",
-      "display_connector": false,
-      "location": "internal"
-    },
     "/5Cy5/": {
       "display_text": "Cy5",
       "idt_text": "/5Cy5/",
       "display_connector": false,
       "location": "5'"
+    },
+    "/3Bio/": {
+      "display_text": "B",
+      "idt_text": "/3Bio/",
+      "display_connector": false,
+      "location": "3'"
     },
     "/iBiodT/": {
       "display_text": "B",
@@ -25,11 +25,11 @@
       "location": "internal",
       "allowed_bases": ["T"]
     },
-    "/3Cy3Sp/": {
-      "display_text": "Cy3",
-      "idt_text": "/3Cy3Sp/",
+    "/iCy5/": {
+      "display_text": "Cy5",
+      "idt_text": "/iCy5/",
       "display_connector": false,
-      "location": "3'"
+      "location": "internal"
     },
     "/5Biosg/": {
       "display_text": "B",
@@ -43,9 +43,9 @@
       "display_connector": false,
       "location": "internal"
     },
-    "/3Bio/": {
-      "display_text": "B",
-      "idt_text": "/3Bio/",
+    "/3Cy3Sp/": {
+      "display_text": "Cy3",
+      "idt_text": "/3Cy3Sp/",
       "display_connector": false,
       "location": "3'"
     }
@@ -58,7 +58,10 @@
         {"helix": 1, "forward": false, "start": 0, "end": 16, "deletions": [12], "insertions": [[2, 1]]},
         {"helix": 0, "forward": true, "start": 0, "end": 32, "deletions": [11, 12, 24], "insertions": [[29, 1]]},
         {"helix": 1, "forward": false, "start": 16, "end": 32, "deletions": [24]}
-      ]
+      ],
+      "5prime_modification": "/5Biosg/",
+      "3prime_modification": "/3Cy3Sp/",
+      "internal_modifications": {"5": "/iCy5/", "32": "/iCy3/"}
     },
     {
       "color": "#f74308",
