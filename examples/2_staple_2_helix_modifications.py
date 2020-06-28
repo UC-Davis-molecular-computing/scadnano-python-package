@@ -40,6 +40,11 @@ def main():
     stap_right.set_modification_internal(5, mod.cy3_int)
     stap_right.set_modification_3p(mod.biotin_3p)
 
+    scaf.set_modification_5p(mod.biotin_5p)
+    scaf.set_modification_3p(mod.cy3_3p)
+    scaf.set_modification_internal(5, mod.cy5_int)
+    scaf.set_modification_internal(32, mod.cy3_int)
+
     return design
 
 

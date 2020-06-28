@@ -49,11 +49,15 @@ import json
 import enum
 import itertools
 import re
+import copy
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type
+from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type, TypeVar, Generic
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
+
+StrandLabel = TypeVar('StrandLabel')
+DomainLabel = TypeVar('DomainLabel')
 
 
 def _pairwise(iterable):
@@ -174,6 +178,13 @@ class Color(_JSONSerializable):
         return Color(hex_string=hex_str[2:])
 
 
+# https://medium.com/@rjurney/kellys-22-colours-of-maximum-contrast-58edb70c90d1
+_kelly_colors = [  # 'F2F3F4', #almost white so it's no good
+    '222222', 'F3C300', '875692', 'F38400', 'A1CAF1', 'BE0032', 'C2B280', '848482',
+    '008856', 'E68FAC', '0067A5', 'F99379', '604E97', 'F6A600', 'B3446C', 'DCD300', '882D17',
+    '8DB600', '654522', 'E25822', '2B3D26']
+
+
 class ColorCycler:
     """
     Calling ``next(color_cycler)`` on a ColorCycler named ``color_cycler``
@@ -185,39 +196,60 @@ class ColorCycler:
 
     # These are copied from cadnano:
     # https://github.com/sdouglas/cadnano2/blob/master/views/styles.py#L97
-    _colors = [Color(50, 184, 108),
-               Color(204, 0, 0),
-               Color(247, 67, 8),
-               Color(247, 147, 30),
-               Color(170, 170, 0),
-               Color(87, 187, 0),
-               Color(0, 114, 0),
-               Color(3, 182, 162),
-               # Color(23, 0, 222), # don't like this because it looks too much like scaffold
-               Color(50, 0, 150),  # this one is better contrast with scaffold
-               Color(184, 5, 108),
-               Color(51, 51, 51),
-               Color(115, 0, 222),
-               Color(136, 136, 136)]
+    _colors: List[Color] = [Color(50, 184, 108),
+                            Color(204, 0, 0),
+                            Color(247, 67, 8),
+                            Color(247, 147, 30),
+                            Color(170, 170, 0),
+                            Color(87, 187, 0),
+                            Color(0, 114, 0),
+                            Color(3, 182, 162),
+                            # Color(23, 0, 222), # don't like this because it looks too much like scaffold
+                            Color(50, 0, 150),  # this one is better contrast with scaffold
+                            Color(184, 5, 108),
+                            Color(51, 51, 51),
+                            Color(115, 0, 222),
+                            Color(136, 136, 136)]
     """List of colors to cycle through."""
+
+    # _colors = [Color(hex_string=kelly_color) for kelly_color in _kelly_colors]
+    # """List of colors to cycle through."""
 
     def __init__(self):
         self._current_color_idx = 0
         # random order
         order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
-        colors_shuffled = [None] * len(self._colors)
+        # order = range(len(self._colors))
+        colors_shuffled: List[Color] = [None] * len(self._colors)
         for i, color in zip(order, self._colors):
             colors_shuffled[i] = color
-        self._colors = colors_shuffled
+        self._colors: List[Color] = colors_shuffled
 
     def __iter__(self):
         # need to make ColorCycler an iterator
         return self
 
     def __next__(self):
-        color = self._colors[self._current_color_idx]
+        color = self.current_color()
         self._current_color_idx = (self._current_color_idx + 1) % len(self._colors)
         return color
+
+    def current_color(self) -> Color:
+        return self._colors[self._current_color_idx]
+
+    def __hash__(self):
+        return hash(self.current_color())
+
+    def __eq__(self, other):
+        if not isinstance(other, ColorCycler):
+            return False
+        return self._current_color_idx == other._current_color_idx
+
+    def __str__(self):
+        repr(self)
+
+    def __repr__(self):
+        return f'ColorCycler({self.current_color()})'
 
     @property
     def colors(self):
@@ -235,8 +267,6 @@ default_scaffold_color = Color(0, 102, 204)
 
 default_strand_color = Color(0, 0, 0)
 """Default color for non-scaffold strand(s)."""
-
-color_cycler = ColorCycler()
 
 
 #
@@ -301,7 +331,7 @@ try:
     from ._version import __version__
 except ImportError:
     # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.9.1"
+    __version__ = "0.9.2"
 
 default_idt_scale = "25nm"
 default_idt_purification = "STD"
@@ -360,13 +390,26 @@ class M13Variant(enum.Enum):
     """Variants of M13mp18 viral genome. "Standard" variant is p7249. Other variants are longer."""
 
     p7249 = "p7249"
-    """"Standard" variant of M13mp18; 7249 bases long."""
+    """"Standard" variant of M13mp18; 7249 bases long, available from, for example
+    
+    https://www.neb.com/products/n4040-m13mp18-single-stranded-dna
+    
+    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7249
+    """
 
     p7560 = "p7560"
-    """Variant of M13mp18 that is 7560 bases long."""
+    """Variant of M13mp18 that is 7560 bases long. Available from, for example
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7560
+    """
 
     p8064 = "p8064"
-    """Variant of M13mp18 that is 8064 bases long."""
+    """Variant of M13mp18 that is 8064 bases long. Available from, for example
+    
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p8064
+    """
 
 
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
@@ -664,6 +707,15 @@ scaffold_key = 'scaffold'
 helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
 design_modifications_key = 'modifications_in_design'
+geometry_key = 'geometry'
+
+# Geometry keys
+rise_per_base_pair_key = 'rise_per_base_pair'
+legacy_rise_per_base_pair_keys = ['z_step']
+helix_radius_key = 'helix_radius'
+bases_per_turn_key = 'bases_per_turn'
+minor_groove_angle_key = 'minor_groove_angle'
+inter_helix_gap_key = 'inter_helix_gap'
 
 # Helix keys
 idx_on_helix_key = 'idx'
@@ -693,6 +745,7 @@ is_scaffold_key = 'is_scaffold'
 modification_5p_key = '5prime_modification'
 modification_3p_key = '3prime_modification'
 modifications_int_key = 'internal_modifications'
+strand_label_key = 'label'
 
 # Domain keys
 helix_idx_key = 'helix'
@@ -702,6 +755,7 @@ start_key = 'start'
 end_key = 'end'
 deletions_key = 'deletions'
 insertions_key = 'insertions'
+domain_label_key = 'label'
 
 # Loopout keys
 loopout_key = 'loopout'
@@ -1092,7 +1146,7 @@ def _is_close(x1: float, x2: float):
 
 
 @dataclass
-class Domain(_JSONSerializable):
+class Domain(_JSONSerializable, Generic[DomainLabel]):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
@@ -1139,6 +1193,15 @@ class Domain(_JSONSerializable):
     This is the number of *extra* bases in addition to the base already at this position. 
     The total number of bases at this offset is num_insertions+1."""
 
+    label: DomainLabel = None
+    """Generic "label" object to associate to this :any:`Domain`.
+
+    Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
+    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
+    having to specify a custom encoder.)
+    """
+
     # not serialized; for efficiency
     _parent_strand: Strand = field(init=False, repr=False, compare=False, default=None)
 
@@ -1176,6 +1239,8 @@ class Domain(_JSONSerializable):
             dct[deletions_key] = self.deletions
         if len(self.insertions) > 0:
             dct[insertions_key] = self.insertions
+        if self.label is not None:
+            dct[domain_label_key] = self.label
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
@@ -1355,7 +1420,7 @@ class Domain(_JSONSerializable):
 
     # The type hint 'Domain' must be in quotes since Domain is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
-    def overlaps(self, other: Domain) -> bool:
+    def overlaps(self, other: Domain[DomainLabel]) -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -1369,7 +1434,7 @@ class Domain(_JSONSerializable):
                 self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    def overlaps_illegally(self, other: Domain):
+    def overlaps_illegally(self, other: Domain[DomainLabel]):
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -1383,7 +1448,7 @@ class Domain(_JSONSerializable):
                 self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    def compute_overlap(self, other: Domain) -> Tuple[int, int]:
+    def compute_overlap(self, other: Domain[DomainLabel]) -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Domain and `other`.
 
         Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
@@ -1406,6 +1471,7 @@ class Domain(_JSONSerializable):
         end = mandatory_field(Domain, json_map, end_key)
         deletions = json_map.get(deletions_key, [])
         insertions = list(map(tuple, json_map.get(insertions_key, [])))
+        label = json_map.get(domain_label_key)
         return Domain(
             helix=helix,
             forward=forward,
@@ -1413,6 +1479,7 @@ class Domain(_JSONSerializable):
             end=end,
             deletions=deletions,
             insertions=insertions,
+            label=label,
         )
 
 
@@ -1606,8 +1673,243 @@ def _check_idt_string_not_none_or_empty(value: str, field_name: str):
         raise IllegalDNADesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
+class StrandBuilder:
+    """
+    Represents a :any:`Strand` that is being built in an existing :any:`DNADesign`.
+
+    This is an intermediate object created when using "literal" chained method building by calling
+    :py:meth:`DNADesign.strand`, for example
+
+    .. code-block:: Python
+
+        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+
+    :any:`StrandBuilder` should generally not be created directly or manipulated in ways other than the kind
+    of method chaining described above, or else errors could result.
+    """
+
+    def __init__(self, design: DNADesign, helix: int, offset: int):
+        self.design: DNADesign = design
+        self.current_helix: int = helix
+        self.current_offset: int = offset
+        self.loopout_length: Optional[int] = None
+        self.strand: Optional[Strand] = None
+        self.just_moved_to_helix: bool = True
+        self.last_domain: Optional[Domain[DomainLabel]] = None
+
+    def cross(self, helix: int, offset: int = None) -> StrandBuilder:
+        """
+        Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
+
+        :param helix: :any:`Helix` to crossover to
+        :param offset: new offset on `helix`. If not specified, defaults to current offset.
+            (i.e., a "vertical" crossover)
+        :return: self
+        """
+        self.last_domain = None
+        self.current_helix = helix
+        if offset is not None:
+            self.current_offset = offset
+        return self
+
+    def loopout(self, helix: int, length: int, offset: int = None) -> StrandBuilder:
+        """
+        Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
+
+        :param helix: :any:`Helix` to crossover to
+        :param length: length of :any:`Loopout` to add
+        :param offset: new offset on `helix`. If not specified, defaults to current offset.
+            (i.e., a "vertical" crossover)
+        :return: self
+        """
+        self.loopout_length = length
+        return self.cross(helix, offset)
+
+    def to(self, offset: int) -> StrandBuilder:
+        """
+        Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
+        which adds a new :any:`Domain` to the :any:`Strand` being built.
+
+        This updates the underlying :any:`DNADesign` with a new :any:`Domain`,
+        and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
+        also a new :any:`Loopout`.
+
+        If two instances of :py:meth:`StrandBuilder.to` are chained together, this creates two domains
+        on the same helix. The two offsets must move in the same direction. In other words, if the starting
+        offset is ``s``, and we call ``.to(o1).to(o2)``, then either ``s < o1 < o2`` or ``o2 < o1 < s``
+        must be true.
+
+        To simply change the current offset after calling :py:meth:`StrandBuilder.to`, without creating
+        a new Domain, call :py:meth:`StrandBuilder.update_to` instead.
+
+        :param offset: new offset to extend to. If less than current offset,
+            the new :any:`Domain` is reverse, otherwise it is forward.
+        :return: self
+        """
+        if self.last_domain and ((self.last_domain.forward and offset < self.current_offset) or (
+                not self.last_domain.forward and offset > self.current_offset)):
+            raise IllegalDNADesignError('offsets must be monotonic '
+                                        '(strictly increasing or strictly decreasing) '
+                                        'when calling to() twice in a row')
+
+        if offset > self.current_offset:
+            forward = True
+            start = self.current_offset
+            end = offset
+        elif offset < self.current_offset:
+            forward = False
+            start = offset
+            end = self.current_offset
+        else:
+            raise IllegalDNADesignError(f'offset {offset} cannot be equal to current offset')
+
+        domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        self.last_domain = domain
+        if self.strand:
+            if self.loopout_length is not None:
+                self.design.append_domain(self.strand, Loopout(self.loopout_length))
+            self.design.append_domain(self.strand, domain)
+            self.loopout_length = None
+        else:
+            self.strand = Strand(domains=[domain])
+            self.design.add_strand(self.strand)
+
+        self.current_offset = offset
+
+        return self
+
+    def update_to(self, offset: int) -> StrandBuilder:
+        """
+        Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
+        a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
+        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call.
+
+        If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
+        then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
+
+        :param offset: new offset to extend to. If less than offset of the last call to
+            :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
+            the new :any:`Domain` is reverse, otherwise it is forward.
+        :return: self
+        """
+        if not self.last_domain:
+            return self.to(offset)
+
+        domain = self.last_domain
+        if (self.last_domain.forward and offset < self.current_offset) or (
+                not self.last_domain.forward and offset > self.current_offset):
+            raise IllegalDNADesignError(f'when calling ')
+
+        if domain.forward:
+            domain.set_end(offset)
+        else:
+            domain.set_start(offset)
+
+        self.current_offset = offset
+
+        return self
+
+    def as_scaffold(self) -> StrandBuilder:
+        """
+        Makes Strand being built a scaffold.
+
+        :return: self
+        """
+        self.strand.set_scaffold(True)
+        return self
+
+    def with_modification_5p(self, mod: Modification5Prime) -> StrandBuilder:
+        """
+        Sets Strand being built to have given 5' modification.
+
+        :param mod: 5' modification
+        :return: self
+        """
+        self.strand.set_modification_5p(mod)
+        return self
+
+    def with_modification_3p(self, mod: Modification3Prime) -> StrandBuilder:
+        """
+        Sets Strand being built to have given 3' modification.
+
+        :param mod: 3' modification
+        :return: self
+        """
+        self.strand.set_modification_3p(mod)
+        return self
+
+    def with_modification_internal(self, idx: int, mod: ModificationInternal,
+                                   warn_on_no_dna: bool) -> StrandBuilder:
+        """
+        Sets Strand being built to have given internal modification.
+
+        :param idx: idx along DNA sequence of internal modification
+        :param mod: internal modification
+        :param warn_on_no_dna: whether to print warning to screen if DNA has not been assigned
+        :return: self
+        """
+        self.strand.set_modification_internal(idx, mod, warn_on_no_dna)
+        return self
+
+    def with_color(self, color: Color) -> StrandBuilder:
+        """
+        Sets Strand being built to have given color.
+
+        :param color: color to set for Strand
+        :return: self
+        """
+        self.strand.set_color(color)
+        return self
+
+    def with_sequence(self, sequence: str, assign_complement: bool = True) -> StrandBuilder:
+        """
+        Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
+        This should be done after the :any:`Strand`'s structure is done being built, e.g.,
+
+        .. code-block:: Python
+
+            design.strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
+
+        :param sequence: the DNA sequence to assign to the :any:`Strand`
+        :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
+            bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
+            :py:meth:`DNADesign.assign_dna`.
+        :return: self
+        """
+        self.design.assign_dna(strand=self.strand, sequence=sequence, assign_complement=assign_complement)
+        return self
+
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) -> StrandBuilder:
+        """
+        Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
+        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
+        via a call to
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
+        or
+        :py:meth:`StrandBuilder.loopout`, e.g.,
+
+        .. code-block:: Python
+
+            design.strand(0, 5).to(8).with_domain_sequence('AAA')\
+                .cross(1).to(5).with_domain_sequence('TTT')\
+                .loopout(2, 4).with_domain_sequence('CCCC')\
+                .to(10).with_domain_sequence('GGGGG')
+
+        :param sequence: the DNA sequence to assign to the :any:`Domain`
+        :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
+            bound to this :any:`Strand`. This has the same meaning as the parameter `assign_complement` in
+            :py:meth:`DNADesign.assign_dna`.
+        :return: self
+        """
+        last_domain = self.strand.domains[-1]
+        self.design.assign_dna(strand=self.strand, sequence=sequence, domain=last_domain,
+                               assign_complement=assign_complement)
+        return self
+
+
 @dataclass
-class Strand(_JSONSerializable):
+class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
     Represents a single strand of DNA.
 
@@ -1644,7 +1946,7 @@ class Strand(_JSONSerializable):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain, Loopout]]
+    domains: List[Union[Domain[DomainLabel], Loopout]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -1659,12 +1961,6 @@ class Strand(_JSONSerializable):
     """Color to show this strand in the main view. If not specified in the constructor,
     a color is assigned by cycling through a list of defaults given by 
     :meth:`ColorCycler.colors`"""
-
-    automatically_assign_color: bool = field(repr=False, default=True)
-    """If `automatically_assign_color` = ``False`` and `color` = ``None``, do not automatically
-    assign a :any:`Color` to this :any:`Strand`. 
-    In this case color will be set to its default of ``None`` and will not be
-    written to the JSON with :py:meth:`DNADesign.write_scadnano_file` or :py:meth:`DNADesign.to_json`."""
 
     idt: Optional[IDTFields] = None
     """Fields used when ordering strands from the synthesis company IDT 
@@ -1705,8 +2001,17 @@ class Strand(_JSONSerializable):
     So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
     and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
 
+    label: StrandLabel = None
+    """Generic "label" object to associate to this :any:`Strand`.
+    
+    Useful for associating extra information with the Strand that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
+    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
+    having to specify a custom encoder.)
+    """
+
     # not serialized; efficient way to see a list of all domains on a given helix
-    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
+    _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
         init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True):
@@ -1731,18 +2036,12 @@ class Strand(_JSONSerializable):
                 mods_dict[f"{offset}"] = mod.id
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
+        if self.label is not None:
+            dct[strand_label_key] = self.label
+
         return dct
 
     def __post_init__(self):
-        # if color not specified, pick one by cycling through list of staple colors,
-        # unless caller specified not to
-        global color_cycler
-        if self.color is None and self.automatically_assign_color:
-            if self.is_scaffold:
-                self.color = default_scaffold_color
-            else:
-                self.color = next(color_cycler)
-
         self._helix_idx_domain_map = defaultdict(list)
 
         for domain in self.domains:
@@ -1764,6 +2063,7 @@ class Strand(_JSONSerializable):
             self.set_default_idt(True)
 
         self._ensure_modifications_legal()
+        self._ensure_domains_nonoverlapping()
 
     def __eq__(self, other: Strand) -> bool:
         if not isinstance(other, Strand):
@@ -1781,14 +2081,16 @@ class Strand(_JSONSerializable):
         if is_scaf:
             self.color = default_scaffold_color
 
+    def set_label(self, label: StrandLabel):
+        """Sets label of this :any:`Strand`."""
+        self.label = label
+
     def set_color(self, color: Color):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
     def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True):
-        """Sets idt field to be the default given the Domain data of this :any:`Strand`.
-
-        """
+        """Sets idt field to be the default given the Domain data of this :any:`Strand`."""
         if skip_scaffold and self.is_scaffold:
             return
         self.use_default_idt = use_default_idt
@@ -1840,11 +2142,11 @@ class Strand(_JSONSerializable):
         if idx in self.modifications_int:
             del self.modifications_int[idx]
 
-    def first_domain(self) -> Union[Domain, Loopout]:
+    def first_domain(self) -> Union[Domain[DomainLabel], Loopout]:
         """First domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
         return self.domains[0]
 
-    def last_domain(self) -> Union[Domain, Loopout]:
+    def last_domain(self) -> Union[Domain[DomainLabel], Loopout]:
         """Last domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
         return self.domains[-1]
 
@@ -1878,7 +2180,7 @@ class Strand(_JSONSerializable):
             acc += domain.dna_length()
         return acc
 
-    def bound_domains(self) -> List[Domain]:
+    def bound_domains(self) -> List[Domain[DomainLabel]]:
         """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
         return [domain for domain in self.domains if domain.is_domain()]
 
@@ -2013,8 +2315,26 @@ class Strand(_JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt()
 
-    def remove_domain(self, domain):
+        # add wildcard symbols to DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            start_idx = self.dna_index_start_domain(domain)
+            end_idx = start_idx + domain.dna_length()
+            prefix = self.dna_sequence[:start_idx]
+            suffix = self.dna_sequence[start_idx:]
+            new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
+            self.dna_sequence = prefix + new_wildcards + suffix
+
+    def remove_domain(self, domain: Union[Domain[DomainLabel], Loopout]):
         # Only intended to be called by DNADesign.remove_domain
+
+        # remove relevant portion of DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            start_idx = self.dna_index_start_domain(domain)
+            end_idx = start_idx + domain.dna_length()
+            prefix = self.dna_sequence[:start_idx]
+            suffix = self.dna_sequence[end_idx:]
+            self.dna_sequence = prefix + suffix
+
         self.domains.remove(domain)
         domain._parent_strand = None
         if domain.is_domain():
@@ -2022,13 +2342,29 @@ class Strand(_JSONSerializable):
         if self.use_default_idt:
             self.set_default_idt()
 
-    def contains_loopouts(self):
+    def dna_index_start_domain(self, domain: Domain[DomainLabel]):
+        """
+        Returns index in DNA sequence of domain, e.g., if there are five domains
+
+        012 3 45 678 9
+        AAA-C-GG-TTT-ACGT
+
+        Then their indices, respectively in order, are 0, 3, 4, 6, 9.
+
+        :param domain: :any: to find the start DNA index of
+        :return: index (within DNA sequence string) of substring of DNA starting with given :any:`Domain`
+        """
+        domain_order = self.domains.index(domain)
+        idx = sum(self.domains[i].dna_length() for i in range(domain_order))
+        return idx
+
+    def contains_loopouts(self) -> bool:
         for domain in self.domains:
             if domain.is_loopout():
                 return True
         return False
 
-    def first_bound_domain(self):
+    def first_bound_domain(self) -> Domain[DomainLabel]:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -2038,7 +2374,7 @@ class Strand(_JSONSerializable):
             if domain.is_domain():
                 return domain
 
-    def last_bound_domain(self):
+    def last_bound_domain(self) -> Domain[DomainLabel]:
         """Last :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -2093,12 +2429,15 @@ class Strand(_JSONSerializable):
             color_str = decimal_int_to_hex(color_str)
         color = Color(hex_string=color_str)
 
+        label = json_map.get(strand_label_key)
+
         return Strand(
             domains=domains,
             dna_sequence=dna_sequence,
             color=color,
             idt=idt,
             is_scaffold=is_scaffold,
+            label=label,
         )
 
     def _ensure_modifications_legal(self, check_offsets_legal=False):
@@ -2115,6 +2454,13 @@ class Strand(_JSONSerializable):
                 raise IllegalDNADesignError(f"largeest offset is {max_offset} but must be at most "
                                             f"{len(self.dna_sequence)}: "
                                             f"{self.modifications_int}")
+
+    def _ensure_domains_nonoverlapping(self):
+        for d1, d2 in itertools.combinations(self.domains, 2):
+            if isinstance(d1, Domain) and isinstance(d2, Domain) and d1.overlaps_illegally(d2):
+                raise StrandError(self, f'two domains on strand overlap:'
+                                        f'\n{d1}'
+                                        f'\n{d2}')
 
     def idt_dna_sequence(self):
         self._ensure_modifications_legal(check_offsets_legal=True)
@@ -2144,6 +2490,44 @@ class Strand(_JSONSerializable):
     def unmodified_version(self):
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
+
+
+def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0):
+    sequence = _remove_whitespace_and_uppercase(sequence)
+    padded_sequence = _pad_dna(sequence, strand.dna_length(), start)
+    return padded_sequence
+
+
+def _remove_whitespace_and_uppercase(sequence):
+    sequence = re.sub(r'\s*', '', sequence)
+    sequence = sequence.upper()
+    return sequence
+
+
+def _pad_dna(sequence: str, length: int, start: int = 0) -> str:
+    """Return `sequence` modified to have length `length`.
+
+    If len(sequence) < length, pad with  :py:data:`DNA_base_wildcard`.
+
+    If len(sequence) > length, remove extra symbols, from 0 up to `start`, and at the end.
+
+    :param sequence: sequence to pad
+    :param length: final length of padded sequence
+    :param start: index at which to start padding. If not specified, defaults to 0
+    :return: padded sequence
+    """
+    if start < 0:
+        raise ValueError(f'cannot pad DNA with negative start, but start = {start}')
+    elif start >= length:
+        raise ValueError(f'cannot pad DNA with start >= length, but start = {start} and '
+                         f'length = {length}')
+    if len(sequence) > length:
+        sequence = sequence[start:start + length]
+    elif len(sequence) < length:
+        prefix = DNA_base_wildcard * start
+        suffix = DNA_base_wildcard * (length - len(sequence) - start)
+        sequence = prefix + sequence + suffix
+    return sequence
 
 
 def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
@@ -2311,6 +2695,66 @@ def optional_field(default_value, json_map: dict, main_key: str, *legacy_keys: s
 
 
 @dataclass
+class Geometry(_JSONSerializable):
+    """Parameters controlling some geometric visualization/physical aspects of Design."""
+
+    rise_per_base_pair: float = 0.332
+    """The distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
+
+    helix_radius: float = 1.0
+    """Radius of a DNA helix in nanometers."""
+
+    bases_per_turn: float = 10.5
+    """Number of DNA base pairs in a full turn of DNA."""
+
+    minor_groove_angle: float = 150.0
+    """Minor groove angle in degrees."""
+
+    inter_helix_gap: float = 0.5
+    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+
+    def is_default(self):
+        return self == _default_geometry
+
+    @staticmethod
+    def from_json(json_map: dict) -> Geometry:
+        geometry = Geometry()
+        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
+                                                     rise_per_base_pair_key, *legacy_rise_per_base_pair_keys)
+        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
+        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
+                                                 bases_per_turn_key)
+        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
+                                                     minor_groove_angle_key)
+        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
+                                                  inter_helix_gap_key)
+        return geometry
+
+    @staticmethod
+    def keys() -> List[str]:
+        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
+                inter_helix_gap_key]
+
+    def values(self) -> List[float]:
+        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
+                self.inter_helix_gap]
+
+    @staticmethod
+    def default_values() -> List[float]:
+        return _default_geometry.values()
+
+    def to_json_serializable(self, suppress_indent: bool = True):
+        dct = OrderedDict()
+        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
+            if val != val_default:
+                dct[name] = val
+        return dct
+
+
+_default_geometry = Geometry()
+
+
+@dataclass
 class DNADesign(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
 
@@ -2353,17 +2797,56 @@ class DNADesign(_JSONSerializable):
     Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
     """
 
+    geometry: Geometry = field(default_factory=lambda: Geometry())
+    """Controls some geometric/physical aspects of this :any:`DNADesign`."""
+
+    automatically_assign_color: bool = field(repr=False, default=True)
+    """If `automatically_assign_color` = ``False``, then for any :any:`Strand` such that
+    `Strand.color` = ``None``, do not automatically assign a :any:`Color` to it. 
+    In this case color will be set to its default of ``None`` and will not be
+    written to the JSON with :py:meth:`DNADesign.write_scadnano_file` or :py:meth:`DNADesign.to_json`."""
+
+    color_cycler: ColorCycler = field(default_factory=lambda: ColorCycler(), init=False)
+
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  strands: List[Strand] = None,
+                 helix_template: Optional[Helix] = None,
+                 num_helices: Optional[int] = None,
                  grid: Grid = Grid.none,
                  major_tick_distance: int = -1,
-                 helices_view_order: List[int] = None):
+                 helices_view_order: List[int] = None,
+                 geometry: Geometry = None):
+        """
+        :param helices: List of :any:`Helix`'s; if missing, set based on either `helix_template` and
+            `num_helices`, or based on `strands`.
+            Mutually exlusive with  `helix_template` and `num_helices`
+        :param strands: List of :any:`Strand`'s. If missing, will be empty.
+        :param helix_template: If specified, `num_helices` must be specified.
+            That many helices will be created,
+            modeled after this Helix. This Helix will not be any of them, so modifications to it will not
+            affect the :any:`DNADesign` after it is created. The ``idx`` field of `helix_template` will be
+            ignored, and the ``idx`` fields of the created helices will be 0 through `num_helices` - 1.
+            Mutually exclusive with `helices`.
+        :param num_helices: Number of :any:`Helix`'s to create, each of which is copied from `helix_template`.
+            If specified, `helix_template` must be specified
+            Mutually exclusive with `helices`.
+        :param grid: :any:`Grid` to use.
+        :param major_tick_distance: regularly spaced major ticks between all helices.
+            :any:`Helix.major_tick_distance` overrides this value for any :any:`Helix` in which it is
+            specified.
+        :param helices_view_order: order in which to view helices from top to bottom in web interface
+            main view
+        :param geometry: geometric physical parameters for visualization.
+            If not specified, a default set of parameters from the literature are used.
+        """
         self.helices = helices
         self.strands = strands
         self.grid = grid
         self.major_tick_distance = major_tick_distance
         self.helices_view_order = helices_view_order
+        self.color_cycler = ColorCycler()
+        self.geometry = Geometry() if geometry is None else geometry
 
         if self.strands is None:
             self.strands = []
@@ -2371,8 +2854,20 @@ class DNADesign(_JSONSerializable):
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
+        if (self.helices is not None and (helix_template is not None or num_helices is not None)):
+            raise IllegalDNADesignError('helices is mutually exclusive with helix_template and num_helices; '
+                                        'you must specified the first, or the latter two')
+
+        if (helix_template is not None and num_helices is None) or (
+                helix_template is None and num_helices is not None):
+            raise IllegalDNADesignError('helix type must be specified if and only if num_helices is')
+
         if self.helices is None:
-            if len(self.strands) > 0:
+            if helix_template is not None and num_helices is not None:
+                self.helices = {idx: copy.deepcopy(helix_template) for idx in range(num_helices)}
+                for idx, helix in self.helices.items():
+                    replace(helix, idx=idx)
+            elif len(self.strands) > 0:
                 max_helix_idx = max(
                     domain.helix for strand in self.strands for domain in strand.bound_domains())
                 self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
@@ -2385,6 +2880,8 @@ class DNADesign(_JSONSerializable):
 
     def __post_init__(self):
         # XXX: exact order of these calls is important
+        self._ensure_helices_distinct_objects()
+        self._ensure_strands_distinct_objects()
         self._set_helices_idxs()
         self._set_helices_grid_positions()
         self._build_domains_on_helix_lists()
@@ -2392,6 +2889,22 @@ class DNADesign(_JSONSerializable):
         self._check_legal_design()
 
         self._set_and_check_helices_view_order()
+
+        if self.automatically_assign_color:
+            self._assign_colors_to_strands()
+
+    def _assign_colors_to_strands(self):
+        # if color not specified, pick one by cycling through list of staple colors,
+        # unless caller specified not to
+        for strand in self.strands:
+            self._assign_color_to_strand(strand)
+
+    def _assign_color_to_strand(self, strand: Strand):
+        if strand.color is None and self.automatically_assign_color:
+            if strand.is_scaffold:
+                strand.color = default_scaffold_color
+            else:
+                strand.color = next(self.color_cycler)
 
     @staticmethod
     def from_scadnano_file(filename: str) -> DNADesign:
@@ -2489,18 +3002,26 @@ class DNADesign(_JSONSerializable):
                 all_mods[mod_key] = mod
             DNADesign.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
+        geometry = None
+        if geometry_key in json_map:
+            geometry = Geometry.from_json(json_map[geometry_key])
+
         return DNADesign(
             helices=helices,
             strands=strands,
             grid=grid,
             major_tick_distance=major_tick_distance,
             helices_view_order=helices_view_order,
+            geometry=geometry,
         )
 
     def to_json_serializable(self, suppress_indent: bool = True):
         dct = OrderedDict()
         dct[version_key] = __version__
         dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+
+        if not self.geometry.is_default():
+            dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
 
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
@@ -2777,6 +3298,64 @@ class DNADesign(_JSONSerializable):
                    strand.modification_3p is not None}
         mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
         return mods_5p | mods_3p | mods_int
+
+    def strand(self, helix: int, offset: int) -> StrandBuilder:
+        """Used for "literal" chained method building by calling
+        :py:meth:`DNADesign.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
+        For example
+
+        .. code-block:: Python
+
+            design.strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
+
+        This creates a :any:`Strand` in this :any:`DNADesign` equivalent to
+
+        .. code-block:: Python
+
+            design.add_strand(Strand([
+                sc.Domain(0, True, 7, 10),
+                sc.Domain(1, False, 5, 10),
+                sc.Domain(2, True, 5, 15),
+            ]))
+
+        Loopouts can also be included:
+
+        .. code-block:: Python
+
+            design.strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
+
+        This creates a :any:`Strand` in this :any:`DNADesign` equivalent to
+
+        .. code-block:: Python
+
+            design.add_strand(Strand([
+                sc.Domain(0, True, 7, 10),
+                sc.Domain(1, False, 5, 10),
+                sc.Loopout(3),
+                sc.Domain(2, True, 5, 15),
+            ]))
+
+        Each call to
+        :py:meth:`DNADesign.strand`,
+        :py:meth:`DNADesign.cross`,
+        :py:meth:`DNADesign.loopout`,
+        :py:meth:`DNADesign.to`
+        returns a :any:`StrandBuilder` object.
+
+        Each call to
+        :py:meth:`DNADesign.to`,
+        :py:meth:`DNADesign.update_to`,
+        or
+        :py:meth:`DNADesign.loopout`
+        modifies the :any:`DNADesign` by replacing the Strand with an updated version.
+
+        See the documentation for :any:`StrandBuilder` for the methods available to call in this way.
+
+        :param helix: starting :any:`Helix`
+        :param offset: starting offset on `helix`
+        :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
+        """
+        return StrandBuilder(self, helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5588, variant: M13Variant = M13Variant.p7249):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
@@ -3063,11 +3642,11 @@ class DNADesign(_JSONSerializable):
                           f'helix.max_offset = {helix.max_offset}'
                 raise IllegalDNADesignError(err_msg)
 
-    def _check_strands_overlap_legally(self, domain_to_check: Domain = None):
+    def _check_strands_overlap_legally(self, domain_to_check: Domain[DomainLabel] = None):
         """If `Domain_to_check` is None, check all.
         Otherwise only check pairs where one is domain_to_check."""
 
-        def err_msg(d1: Domain, d2: Domain, h_idx: int) -> str:
+        def err_msg(d1: Domain[DomainLabel], d2: Domain[DomainLabel], h_idx: int) -> str:
             return f"two domains overlap on helix {h_idx}: " \
                    f"\n{d1}\n  and\n{d2}\n  but have the same direction"
 
@@ -3088,7 +3667,7 @@ class DNADesign(_JSONSerializable):
                 offsets_data.append((domain.end, False, domain))
             offsets_data.sort(key=lambda offset_data: offset_data[0])
 
-            current_domains: List[Domain] = []
+            current_domains: List[Domain[DomainLabel]] = []
             for offset, is_start, domain in offsets_data:
                 if is_start:
                     if len(current_domains) >= 2:
@@ -3195,7 +3774,7 @@ class DNADesign(_JSONSerializable):
                 return domain
         return None
 
-    def domains_at(self, helix: int, offset: int) -> List[Domain]:
+    def domains_at(self, helix: int, offset: int) -> List[Domain[DomainLabel]]:
         """Return list of :any:`Domain`'s that overlap `offset` on helix with idx `helix`.
 
         If constructed properly, this list should have 0, 1, or 2 elements."""
@@ -3216,6 +3795,9 @@ class DNADesign(_JSONSerializable):
         for domain in strand.domains:
             if domain.is_domain():
                 self.helices[domain.helix].domains.append(domain)
+                self._check_strands_overlap_legally(domain_to_check=domain)
+        if self.automatically_assign_color:
+            self._assign_color_to_strand(strand)
 
     def remove_strand(self, strand: Strand):
         """Remove `strand` from this design."""
@@ -3224,17 +3806,33 @@ class DNADesign(_JSONSerializable):
             if domain.is_domain():
                 self.helices[domain.helix].domains.remove(domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]):
+    def append_domain(self, strand: Strand, domain: Union[Domain[DomainLabel], Loopout]):
+        """
+        Same as :any:`DNADesign.insert_domain`, but inserts at end.
+
+        :param strand: strand to append `domain` to
+        :param domain: :any:`Domain` or :any:`Loopout` to append to :any:`Strand`
+        """
+        self.insert_domain(strand, len(strand.domains), domain)
+
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain[DomainLabel], Loopout]):
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
-        e.g., ``strand.insert_domain(domain, 0)`` inserts ``domain`` as the new first :any:`Domain`."""
+        e.g., ``design.insert_domain(strand, domain, 0)``
+        inserts ``domain`` as the new first :any:`Domain`."""
+        if domain.is_domain() and domain.helix not in self.helices:
+            err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
+                      f"here is the list of valid helices: {self._helices_to_string()}"
+            raise StrandError(strand, err_msg)
+
         assert strand in self.strands
         strand.insert_domain(order, domain)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         if domain.is_domain():
             self.helices[domain.helix].domains.append(domain)
+            self._check_strands_overlap_legally(domain_to_check=domain)
 
-    def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
+    def remove_domain(self, strand: Strand, domain: Union[Domain[DomainLabel], Loopout]):
         """Remove `Domain` from `strand`."""
         assert strand in self.strands
         strand.remove_domain(domain)
@@ -3299,13 +3897,13 @@ class DNADesign(_JSONSerializable):
             if domain.contains_offset(offset):
                 domain.insertions.append((offset, length))
 
-    def set_start(self, domain: Domain, start: int):
+    def set_start(self, domain: Domain[DomainLabel], start: int):
         """Sets ``Domain.start`` to `start`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_start(start)
         self._check_strands_overlap_legally(domain)
 
-    def set_end(self, domain: Domain, end: int):
+    def set_end(self, domain: Domain[DomainLabel], end: int):
         """Sets ``Domain.end`` to `end`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_end(end)
@@ -3327,7 +3925,8 @@ class DNADesign(_JSONSerializable):
                 domain.helix += delta
         self._check_strands_reference_helices_legally()
 
-    def assign_dna(self, strand: Strand, sequence: str):
+    def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
+                   domain: Union[Domain, Loopout] = None):
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -3343,8 +3942,30 @@ class DNADesign(_JSONSerializable):
 
         All whitespace in `sequence` is removed, and lowercase bases
         'a', 'c', 'g', 't' are converted to uppercase.
+
+        :param strand: :any:`Strand` to assign DNA sequence to
+        :param sequence: string of DNA bases to assign
+        :param assign_complement: whether to assign the complement DNA sequence to any :any:`Strand` that
+            is bound to this one (default True)
+        :param domain: :any:`Domain` on `strand` to assign. If ``None``, then the whole :any:`Strand` is
+            given a DNA sequence. Otherwise, only `domain` is assigned, and the rest of the :any:`Domain`'s
+            on `strand` are left alone (either keeping their DNA sequence, or being assigned
+            :py:const:`DNA_case_wildcard` if no DNA sequence was previously assigned.)
+            If `domain` is specified, then ``len(sequence)`` must be least than or equal to the number
+            of bases on `domain`. (i.e., ``domain.dna_length()``)
         """
-        padded_sequence = _pad_and_remove_whitespace(sequence, strand)
+        start = 0
+        if domain is not None:
+            pos = strand.domains.index(domain)
+            start = sum(prev_dom.dna_length() for prev_dom in strand.domains[:pos])
+            if domain.dna_length() < len(sequence):
+                raise IllegalDNADesignError(f'cannot assign sequence {sequence} to strand domain '
+                                            f'\n{domain}\n'
+                                            f'The number of bases on the domain is {domain.dna_length()} '
+                                            f'but the length of the sequence is {len(sequence)}. The '
+                                            f'length of the sequence must be at most the numebr of bases '
+                                            f'on the domain.')
+        padded_sequence = _pad_and_remove_whitespace_and_uppercase(sequence, strand, start)
         if strand is None:
             raise IllegalDNADesignError('strand cannot be None to assign DNA to it')
         if strand not in self.strands:
@@ -3368,6 +3989,9 @@ class DNADesign(_JSONSerializable):
                 raise IllegalDNADesignError(msg)
 
         strand.set_dna_sequence(merged_sequence)
+
+        if not assign_complement:
+            return
 
         for other_strand in self.strands:
             # note that possibly strand==other_strand; it might bind to itself at some point and we want to
@@ -3463,7 +4087,8 @@ class DNADesign(_JSONSerializable):
                       f"does not have a field idt, so will not be part of IDT output.")
         return added_strands
 
-    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, delimiter: str = ',',
+    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, extension: str = None,
+                                  delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False):
         """Write ``.idt`` text file encoding the strands of this :any:`DNADesign` with the field
@@ -3473,6 +4098,8 @@ class DNADesign(_JSONSerializable):
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.idt``.
+        If `filename` is not specified but `extension` is, then that extension is used instead of ``idt``.
+        At least one of `filename` or `extension` must be ``None``.
 
         `directory` specifies a directory in which to place the file, either absolute or relative to
         the current working directory. Default is the current working directory.
@@ -3492,7 +4119,9 @@ class DNADesign(_JSONSerializable):
         """
         contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
                                                  export_non_modified_strand_version)
-        _write_file_same_name_as_running_python_script(contents, 'idt', directory, filename)
+        if extension is None:
+            extension = 'idt'
+        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def write_idt_plate_excel_file(self, directory: str = '.', filename: str = None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
@@ -3622,20 +4251,32 @@ class DNADesign(_JSONSerializable):
 
         workbook.save(filename_plate)
 
-    def write_scadnano_file(self, directory: str = '.', filename=None):
+    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None):
         """Write ``.dna`` file representing this :any:`DNADesign`, suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
         then the design will be written to ``my_origami.dna``.
+        If `extension` is specified (but `filename` is not), then the design will be written to
+        ``my_origami.<extension>``
 
         `directory` specifies a directory in which to place the file, either absolute or relative to
         the current working directory. Default is the current working directory.
 
         The string written is that returned by :meth:`DNADesign.to_json`.
+
+        :param directory: directory in which to put file (default: current)
+        :param filename: filename (default: name of script with .py replaced by .dna).
+            Mutually exclusive with `extension`
+        :param extension: extension for filename (default: .dna)
+            Mutually exclusive with `filename`
         """
         contents = self.to_json()
-        _write_file_same_name_as_running_python_script(contents, 'dna', directory, filename)
+        if filename is not None and extension is not None:
+            raise ValueError('at least one of filename or extension must be None')
+        if extension is None:
+            extension = 'dna'
+        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename=None):
         """Write ``.json`` file representing this :any:`DNADesign`, suitable for reading by cadnano v2,
@@ -3734,42 +4375,41 @@ class DNADesign(_JSONSerializable):
 
         strand_after = Strand(domains=[domain_to_add_after] + domains_after,
                               dna_sequence=dna_sequence_after_whole,
-                              automatically_assign_color=True, use_default_idt=idt_present)
+                              use_default_idt=idt_present)
 
         self.helices[helix].domains.remove(domain_to_remove)
         self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
 
         self.strands.extend([strand_before, strand_after])
 
-    def add_half_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+    def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Add a half crossover from helix `helix1` at offset `offset1` to `helix2`, on the strand
+        Add a half crossover from helix `helix` at offset `offset` to `helix2`, on the strand
         with :py:data:`Strand.forward` = `forward`.
 
         Unlike :py:meth:`DNADesign.add_full_crossover`, which automatically adds a nick between the two
         half-crossovers, to call this method, there must *already* be nicks adjacent to the given
         offsets on the given helices. (either on the left or right side)
 
-        :param helix1: index of one helix of half crossover
+        :param helix: index of one helix of half crossover
         :param helix2: index of other helix of half crossover
-        :param offset1: offset on `helix1` at which to add half crossover
-        :param forward1: direction of :any:`Strand` on `helix1` to which to add half crossover
+        :param offset: offset on `helix` at which to add half crossover
+        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
         :param offset2: offset on `helix2` at which to add half crossover.
-            If not specified, defaults to `offset1`
+            If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
-            If not specified, defaults to the negation of `forward1`
-
+            If not specified, defaults to the negation of `forward`
         """
         if offset2 is None:
-            offset2 = offset1
+            offset2 = offset
         if forward2 is None:
-            forward2 = not forward1
-        domain1 = self.domain_at(helix1, offset1, forward1)
+            forward2 = not forward
+        domain1 = self.domain_at(helix, offset, forward)
         domain2 = self.domain_at(helix2, offset2, forward2)
         if domain1 is None:
             raise IllegalDNADesignError(
-                f"Cannot add half crossover at (helix={helix1}, offset={offset1}). "
+                f"Cannot add half crossover at (helix={helix}, offset={offset}). "
                 f"There is no Domain there.")
         if domain2 is None:
             raise IllegalDNADesignError(
@@ -3780,7 +4420,7 @@ class DNADesign(_JSONSerializable):
 
         if strand1 == strand2:
             raise IllegalDNADesignError(f"Cannot add crossover from "
-                                        f"(helix={helix1}, offset={offset1}) to "
+                                        f"(helix={helix}, offset={offset}) to "
                                         f"(helix={helix2}, offset={offset2}) "
                                         f"because that would join two Domains "
                                         f"already on the same Strand! "
@@ -3789,10 +4429,10 @@ class DNADesign(_JSONSerializable):
                                         f"crossover addition, to ensure that all strands are "
                                         f"non-circular, even in intermediate stages.")
 
-        if domain1.offset_3p() == offset1 and domain2.offset_5p() == offset2:
+        if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
             strand_last = strand2
-        elif domain1.offset_5p() == offset1 and domain2.offset_3p() == offset2:
+        elif domain1.offset_5p() == offset and domain2.offset_3p() == offset2:
             strand_first = strand2
             strand_last = strand1
         else:
@@ -3816,31 +4456,43 @@ class DNADesign(_JSONSerializable):
         self.strands.remove(strand_last)
         self.strands.append(new_strand)
 
-    def add_full_crossover(self, helix1: int, helix2: int, offset1: int, forward1: bool,
+    def add_full_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None):
         """
-        Adds two half-crossovers, one at `offset1` and another at `offset1`-1.
+        Adds two half-crossovers, one at `offset` and another at `offset`-1.
         Other arguments have the same meaning as in :py:meth:`DNADesign.add_half_crossover`.
-        A nick is automatically added on helix `helix1` between
-        `offset1` and `offset1`-1 if one is not already present,
+        A nick is automatically added on helix `helix` between
+        `offset` and `offset`-1 if one is not already present,
         and similarly for `offset2` on helix `helix2`.
+
+        :param helix: index of one helix of half crossover
+        :param helix2: index of other helix of half crossover
+        :param offset: offset on `helix` at which to add half crossover
+        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2: offset on `helix2` at which to add half crossover.
+            If not specified, defaults to `offset`
+        :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
+            If not specified, defaults to the negation of `forward`
         """
         if offset2 is None:
-            offset2 = offset1
+            offset2 = offset
         if forward2 is None:
-            forward2 = not forward1
-        for helix, forward, offset in [(helix1, forward1, offset1), (helix2, forward2, offset2)]:
-            self._prepare_nicks_for_full_crossover(helix, forward, offset)
-        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1 - 1, offset2=offset2 - 1,
-                                forward1=forward1, forward2=forward2)
-        self.add_half_crossover(helix1=helix1, helix2=helix2, offset1=offset1, offset2=offset2,
-                                forward1=forward1, forward2=forward2)
+            forward2 = not forward
+        for helix_, forward_, offset_ in [(helix, forward, offset), (helix2, forward2, offset2)]:
+            self._prepare_nicks_for_full_crossover(helix_, forward_, offset_)
+        self.add_half_crossover(helix=helix, helix2=helix2, offset=offset - 1, offset2=offset2 - 1,
+                                forward=forward, forward2=forward2)
+        self.add_half_crossover(helix=helix, helix2=helix2, offset=offset, offset2=offset2,
+                                forward=forward, forward2=forward2)
 
     def add_crossovers(self, crossovers: List[Crossover]):
         """
         Adds a list of :any:`Crossover`'s in batch.
 
-        This helps to avoid problems where adding them one at a time
+        This helps to avoid problems where adding them one at a time using
+        :py:meth:`DNADesign.add_half_crossover`
+        or
+        :py:meth:`DNADesign.add_full_crossover`
         creates an intermediate design with circular strands.
 
         :param crossovers: list of :any:`Crossover`'s to add. Its fields have the same meaning as in
@@ -3848,23 +4500,22 @@ class DNADesign(_JSONSerializable):
             and
             :py:meth:`DNADesign.add_full_crossover`,
             with the extra field `Crossover.half` indicating whether it represents a half or full crossover.
-
         """
         for crossover in crossovers:
             if not crossover.half:
-                for helix, forward, offset in [(crossover.helix1, crossover.forward1, crossover.offset1),
+                for helix, forward, offset in [(crossover.helix, crossover.forward, crossover.offset),
                                                (crossover.helix2, crossover.forward2, crossover.offset2)]:
                     self._prepare_nicks_for_full_crossover(helix, forward, offset)
 
         for crossover in crossovers:
             if crossover.half:
-                self.add_half_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
-                                        forward1=crossover.forward1, forward2=crossover.forward2,
-                                        offset1=crossover.offset1, offset2=crossover.offset2)
+                self.add_half_crossover(helix=crossover.helix, helix2=crossover.helix2,
+                                        forward=crossover.forward, forward2=crossover.forward2,
+                                        offset=crossover.offset, offset2=crossover.offset2)
             else:
-                self.add_full_crossover(helix1=crossover.helix1, helix2=crossover.helix2,
-                                        forward1=crossover.forward1, forward2=crossover.forward2,
-                                        offset1=crossover.offset1, offset2=crossover.offset2)
+                self.add_full_crossover(helix=crossover.helix, helix2=crossover.helix2,
+                                        forward=crossover.forward, forward2=crossover.forward2,
+                                        offset=crossover.offset, offset2=crossover.offset2)
 
     def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
         domain_right = self.domain_at(helix, offset, forward)
@@ -3887,10 +4538,21 @@ class DNADesign(_JSONSerializable):
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
         and their domains have their lengths altered. Also, major tick marks on the helices will be
         shifted to preserve their adjacency to bases already present. For example, if there are major
-        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8, then
-        the domain is shortened by 1,
+        tick marks at 0, 8, 18, 24, and a deletion between 0 and 8:
+
+        .. code-block:: none
+
+            0      8         18    24    30
+            |--X---|---------|-----|------
+
+        then the domain is shortened by 1,
         the tick marks become 0, 7, 15, 23,
-        and the helix's maximum offset is shrunk by 1.
+        and the helix's maximum offset is shrunk by 1:
+
+        .. code-block:: none
+
+            0     7         17    23    29
+            |-----|---------|-----|------
 
         We assume that a major tick mark appears just to the LEFT of the offset it encodes,
         so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
@@ -3968,6 +4630,31 @@ class DNADesign(_JSONSerializable):
     def set_major_tick_distance(self, major_tick_distance: int):
         self.major_tick_distance = major_tick_distance
 
+    def _ensure_helices_distinct_objects(self):
+        pair = _find_index_pair_same_object(self.helices)
+        if pair:
+            i, j = pair
+            raise IllegalDNADesignError('helices must all be distinct objects, but those at indices '
+                                        f'{i} and {j} are the same object')
+
+    def _ensure_strands_distinct_objects(self):
+        pair = _find_index_pair_same_object(self.strands)
+        if pair:
+            i, j = pair
+            raise IllegalDNADesignError('strands must all be distinct objects, but those at indices '
+                                        f'{i} and {j} are the same object')
+
+
+def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
+    # return pair of indices representing same object in elts, or None if they do not exist
+    # input can be list or dict; if dict, returns pair of keys mapping to same object
+    if isinstance(elts, list):
+        elts = dict(enumerate(elts))
+    for i, j in itertools.combinations(elts.keys(), 2):
+        if elts[i] is elts[j]:
+            return i, j
+    return None
+
 
 def _name_of_this_script() -> str:
     """Return name of the currently running script, WITHOUT the .py extension."""
@@ -3995,30 +4682,6 @@ def _create_directory_and_set_filename(directory, filename):
     return relative_filename
 
 
-def _remove_whitespace_and_uppercase(sequence):
-    sequence = re.sub(r'\s*', '', sequence)
-    sequence = sequence.upper()
-    return sequence
-
-
-def _pad_and_remove_whitespace(sequence, strand):
-    sequence = _remove_whitespace_and_uppercase(sequence)
-    padded_sequence = _pad_dna(sequence, strand.dna_length())
-    return padded_sequence
-
-
-def _pad_dna(sequence: str, length: int) -> str:
-    """Return `sequence` modified to have length `length`.
-
-    If len(sequence) < length, pad with  :py:data:`DNA_base_wildcard`.
-    If len(sequence) > length, remove extra symbols."""
-    if len(sequence) > length:
-        sequence = sequence[:length]
-    elif len(sequence) < length:
-        sequence += DNA_base_wildcard * (length - len(sequence))
-    return sequence
-
-
 @dataclass
 class Crossover:
     """
@@ -4033,27 +4696,28 @@ class Crossover:
     :any:`DNADesign` with circular strands, which are currently unsupported.
     """
 
-    helix1: int
+    helix: int
     """index of one helix of half crossover"""
 
     helix2: int
     """index of other helix of half crossover"""
 
-    offset1: int
-    """offset on `helix1` at which to add half crossover"""
+    offset: int
+    """offset on `helix` at which to add half crossover"""
 
-    forward1: bool
-    """direction of :any:`Strand` on `helix1` to which to add half crossover"""
+    forward: bool
+    """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
     offset2: int = None
     """
-    offset on `helix2` at which to add half crossover. If not specified, defaults to `offset1`
+    offset on `helix2` at which to add half crossover. 
+    If not specified, defaults to `offset`
     """
 
     forward2: bool = None
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
-    If not specified, defaults to the negation of `forward1`
+    If not specified, defaults to the negation of `forward`
     """
 
     half: bool = False
@@ -4064,6 +4728,6 @@ class Crossover:
 
     def __post_init__(self):
         if self.offset2 is None:
-            self.offset2 = self.offset1
+            self.offset2 = self.offset
         if self.forward2 is None:
-            self.forward2 = not self.forward1
+            self.forward2 = not self.forward

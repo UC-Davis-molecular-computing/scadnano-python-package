@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
+  "version": "0.9.1",
   "grid": "none",
   "helices": [
     {
@@ -23,25 +23,25 @@
   ],
   "strands": [
     {
-      "color": "#333333",
+      "color": "#f74308",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 16}
       ]
     },
     {
-      "color": "#320096",
+      "color": "#57bb00",
       "domains": [
         {"helix": 1, "forward": true, "start": 8, "end": 16}
       ]
     },
     {
-      "color": "#03b6a2",
+      "color": "#888888",
       "domains": [
         {"helix": 2, "forward": true, "start": 0, "end": 16}
       ]
     },
     {
-      "color": "#7300de",
+      "color": "#32b86c",
       "domains": [
         {"helix": 3, "forward": true, "start": 8, "end": 16}
       ]

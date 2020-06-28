@@ -1,5 +1,5 @@
 {
-  "version": "0.9.0",
+  "version": "0.9.1",
   "grid": "none",
   "helices": [
     {
@@ -20,7 +20,7 @@
   ],
   "strands": [
     {
-      "color": "#32b86c",
+      "color": "#f74308",
       "domains": [
         {"helix": 0, "forward": true, "start": 0, "end": 10}
       ]

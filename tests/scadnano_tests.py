@@ -12,18 +12,6 @@ import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
 
 
-# TODO: add tests for mutation methods on DNADesign
-
-# TODO: mutator methods let me create this strand (which should be illegal); add a test for it
-# {
-#   "color": {"r": 51, "g": 51, "b": 51},
-#   "domains": [
-#     {"helix": 2, "forward": false, "start": 40, "end": 48},
-#     {"helix": 2, "forward": false, "start": 32, "end": 48, "deletions": [44]},
-#     {"helix": 3, "forward": true, "start": 32, "end": 40}
-#   ]
-# }
-
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int, end: int):
     """
     Finds strand whose first bound domain matches the given parameters.
@@ -38,6 +26,269 @@ def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, sta
 def remove_whitespace(sequence):
     sequence = re.sub(r'\s*', '', sequence)
     return sequence
+
+
+class TestCreateStrandLiterate(unittest.TestCase):
+    # tests methods for creating strands using chained "literate" notation as in this issue:
+    # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/85
+
+    def setUp(self):
+        helices = [sc.Helix(max_offset=100) for _ in range(6)]
+        self.design_6helix = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+
+    def test_strand__0_0_to_10_cross_1_to_5(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__0_0_to_10_cross_1_to_5__reverse(self):
+        design = self.design_6helix
+        design.strand(1, 5).to(10).cross(0).to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(1, True, 5, 10),
+            sc.Domain(0, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__h0_off0_to_off10_cross_h1_to_off5_loopout_length3_h2_to_off15(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.loopout(2, 3)
+        sb.to(15)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+            sc.Loopout(3),
+            sc.Domain(2, True, 5, 15),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__two_forward_paranemic_crossovers(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(15).cross(2).to(20)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, True, 10, 15),
+            sc.Domain(2, True, 15, 20),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__two_reverse_paranemic_crossovers(self):
+        design = self.design_6helix
+        design.strand(0, 20).to(10).cross(1).to(5).cross(2).to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, False, 5, 10),
+            sc.Domain(2, False, 0, 5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(1, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0)
+        design.strand(0, 20).to(10).cross(1).to(20)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, True, 10, 20),
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_other_order(self):
+        design = self.design_6helix
+        design.strand(0, 20).to(10).cross(1).to(20)
+        design.strand(0, 0).to(10).cross(1).to(0)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, False, 10, 20),
+            sc.Domain(1, True, 10, 20),
+        ])
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_overlap_no_error(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0) \
+            .as_scaffold() \
+            .with_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
+        design.strand(0, 10).to(0).cross(1).to(10).with_modification_5p(mod.biotin_5p)
+        expected_strand0 = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ], is_scaffold=True)
+        expected_strand1 = sc.Strand([
+            sc.Domain(0, False, 0, 10),
+            sc.Domain(1, True, 0, 10),
+        ])
+
+        expected_strand0.set_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
+        expected_strand1.set_modification_5p(mod.biotin_5p)
+
+        self.assertEqual(2, len(design.strands))
+
+        self.assertEqual(expected_strand0, design.strands[0])
+        self.assertEqual(None, design.strands[0].modification_5p)
+        self.assertEqual(None, design.strands[0].modification_3p)
+        self.assertDictEqual({5: mod.cy3_int}, design.strands[0].modifications_int)
+
+        self.assertEqual(expected_strand1, design.strands[1])
+        self.assertEqual(mod.biotin_5p, design.strands[1].modification_5p)
+        self.assertEqual(None, design.strands[1].modification_3p)
+        self.assertDictEqual({}, design.strands[1].modifications_int)
+
+        self.assertEqual(2, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__multiple_strands_overlap_error(self):
+        design = self.design_6helix
+        design.strand(0, 0).to(10).cross(1).to(0)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            design.strand(0, 2).to(8)
+
+    def test_strand__call_to_twice_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 5, 10),
+            sc.Domain(1, False, 0, 5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(2, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_update_to_twice_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.update_to(5)
+        sb.update_to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_to_then_update_to_legally(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.update_to(0)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Domain(1, False, 0, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+        self.assertEqual(1, len(design.helices[0].domains))
+        self.assertEqual(1, len(design.helices[1].domains))
+        self.assertEqual(0, len(design.helices[2].domains))
+        self.assertEqual(0, len(design.helices[3].domains))
+        self.assertEqual(0, len(design.helices[4].domains))
+        self.assertEqual(0, len(design.helices[5].domains))
+
+    def test_strand__call_to_twice_increase_decrease_forward(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            sb.to(5)
+
+    def test_strand__call_to_twice_decrease_increase_reverse(self):
+        design = self.design_6helix
+        sb = design.strand(0, 10)
+        sb.to(0)
+        with self.assertRaises(sc.IllegalDNADesignError):
+            sb.to(5)
 
 
 class TestCreateHelix(unittest.TestCase):
@@ -1335,7 +1586,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------+ +------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=8, forward1=True)
+        self.small_design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
         self.assertEqual(4, len(self.small_design.strands))
         # two new Strands
         self.assertIn(sc.Strand([
@@ -1372,7 +1623,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=8, forward1=False)
+        self.small_design.add_full_crossover(helix=0, helix2=1, offset=8, forward=False)
         self.assertEqual(4, len(self.small_design.strands))
         # two new Strands
         self.assertIn(sc.Strand([
@@ -1411,7 +1662,7 @@ class TestNickAndCrossover(unittest.TestCase):
         """
         self.small_design.add_nick(helix=0, offset=8, forward=False)
         self.small_design.add_nick(helix=1, offset=8, forward=True)
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=8, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=8, forward=False)
         self.assertEqual(5, len(self.small_design.strands))
         # three new Strands
         self.assertIn(sc.Strand([
@@ -1452,7 +1703,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=0, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=0, forward=False)
         self.assertEqual(3, len(self.small_design.strands))
         # one new Strand
         self.assertIn(sc.Strand([
@@ -1483,7 +1734,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         TTTGGGCC AAACCCGG
         """
-        self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=15, forward1=False)
+        self.small_design.add_half_crossover(helix=0, helix2=1, offset=15, forward=False)
         self.assertEqual(3, len(self.small_design.strands))
         # one new Strand
         self.assertIn(sc.Strand([
@@ -1511,7 +1762,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         """
         with self.assertRaises(sc.IllegalDNADesignError):
-            self.small_design.add_half_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
+            self.small_design.add_half_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal(self):
         """
@@ -1523,7 +1774,7 @@ class TestNickAndCrossover(unittest.TestCase):
         <------- -------]
         """
         with self.assertRaises(sc.IllegalDNADesignError):
-            self.small_design.add_full_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
+            self.small_design.add_full_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal_only_one_helix_has_domain(self):
         """
@@ -1541,7 +1792,7 @@ class TestNickAndCrossover(unittest.TestCase):
             sc.Strand([sc.Domain(1, False, 0, 5)]),
         ], grid=sc.square)
         with self.assertRaises(sc.IllegalDNADesignError):
-            design.add_full_crossover(helix1=0, helix2=1, offset1=10, forward1=False)
+            design.add_full_crossover(helix=0, helix2=1, offset=10, forward=False)
 
     r"""
     0        8        16       24       32       40       48       56       64       72       80       88       96
@@ -1625,33 +1876,33 @@ class TestNickAndCrossover(unittest.TestCase):
 
     def add_crossovers_after_nicks(self, design: sc.DNADesign):
         # scaffold seam crossovers
-        design.add_full_crossover(helix1=1, helix2=2, offset1=48, forward1=False)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=48, forward1=False)
+        design.add_full_crossover(helix=1, helix2=2, offset=48, forward=False)
+        design.add_full_crossover(helix=3, helix2=4, offset=48, forward=False)
 
         # staple crossovers
-        design.add_full_crossover(helix1=0, helix2=1, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=0, helix2=1, offset1=80, forward1=False)
-        design.add_full_crossover(helix1=1, helix2=2, offset1=32, forward1=True)
-        design.add_full_crossover(helix1=1, helix2=2, offset1=64, forward1=True)
-        design.add_full_crossover(helix1=2, helix2=3, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=2, helix2=3, offset1=80, forward1=False)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=32, forward1=True)
-        design.add_full_crossover(helix1=3, helix2=4, offset1=64, forward1=True)
-        design.add_full_crossover(helix1=4, helix2=5, offset1=16, forward1=False)
-        design.add_full_crossover(helix1=4, helix2=5, offset1=80, forward1=False)
+        design.add_full_crossover(helix=0, helix2=1, offset=16, forward=False)
+        design.add_full_crossover(helix=0, helix2=1, offset=80, forward=False)
+        design.add_full_crossover(helix=1, helix2=2, offset=32, forward=True)
+        design.add_full_crossover(helix=1, helix2=2, offset=64, forward=True)
+        design.add_full_crossover(helix=2, helix2=3, offset=16, forward=False)
+        design.add_full_crossover(helix=2, helix2=3, offset=80, forward=False)
+        design.add_full_crossover(helix=3, helix2=4, offset=32, forward=True)
+        design.add_full_crossover(helix=3, helix2=4, offset=64, forward=True)
+        design.add_full_crossover(helix=4, helix2=5, offset=16, forward=False)
+        design.add_full_crossover(helix=4, helix2=5, offset=80, forward=False)
 
         # The left and right edge crossovers need to be added last to ensure the Strands remain
         # non-circular during all intermediate stages.
 
         # scaffold left crossovers
-        design.add_half_crossover(helix1=0, helix2=1, offset1=0, forward1=True)
-        design.add_half_crossover(helix1=2, helix2=3, offset1=0, forward1=True)
-        design.add_half_crossover(helix1=4, helix2=5, offset1=0, forward1=True)
+        design.add_half_crossover(helix=0, helix2=1, offset=0, forward=True)
+        design.add_half_crossover(helix=2, helix2=3, offset=0, forward=True)
+        design.add_half_crossover(helix=4, helix2=5, offset=0, forward=True)
 
         # scaffold right crossovers
-        design.add_half_crossover(helix1=0, helix2=1, offset1=95, forward1=True)
-        design.add_half_crossover(helix1=2, helix2=3, offset1=95, forward1=True)
-        design.add_half_crossover(helix1=4, helix2=5, offset1=95, forward1=True)
+        design.add_half_crossover(helix=0, helix2=1, offset=95, forward=True)
+        design.add_half_crossover(helix=2, helix2=3, offset=95, forward=True)
+        design.add_half_crossover(helix=4, helix2=5, offset=95, forward=True)
 
     def test_add_nick_then_add_crossovers__6_helix_rectangle(self):
         self.add_nicks(self.design)
@@ -1912,6 +2163,68 @@ class TestSetHelixIdx(unittest.TestCase):
 
 
 class TestJSON(unittest.TestCase):
+
+    def test_strand_labels(self):
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], label={
+            'name': 'strand 0',
+            'num_domains': 1,
+        })
+        strand1_expected = sc.Strand([sc.Domain(0, False, 0, 10), sc.Domain(1, True, 0, 10)], label={
+            'name': 'strand 1',
+            'num_domains': 2,
+        })
+        strands = [strand0_expected, strand1_expected]
+        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        strand0 = design_from_json.strands[0]
+        strand1 = design_from_json.strands[1]
+        self.assertDictEqual(strand0_expected.label, strand0.label)
+        self.assertDictEqual(strand1_expected.label, strand1.label)
+
+    def test_domain_labels(self):
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        dom00_expected = sc.Domain(0, True, 0, 10, label='domain 00')
+        dom10_expected = sc.Domain(0, False, 0, 10)
+        dom11_expected = sc.Domain(1, True, 0, 10, label='domain 11')
+        strand0 = sc.Strand([dom00_expected])
+        strand1 = sc.Strand([dom10_expected, dom11_expected])
+        strands = [strand0, strand1]
+        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        dom00 = design_from_json.strands[0].domains[0]
+        dom10 = design_from_json.strands[1].domains[0]
+        dom11 = design_from_json.strands[1].domains[1]
+        self.assertEqual(dom00_expected.label, dom00.label)
+        self.assertIsNone(dom10.label)
+        self.assertEqual(dom11_expected.label, dom11.label)
+
+    def test_nondefault_geometry(self):
+        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
+                               inter_helix_gap=5.0)
+        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        geometry_actual = design_from_json.geometry
+        self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
+        self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
+        self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
+        self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
+        self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
+
+    def test_nondefault_geometry_some_default(self):
+        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, minor_groove_angle=10.0, inter_helix_gap=5.0)
+        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        json_str = design.to_json()
+        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        geometry_actual = design_from_json.geometry
+        self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
+        self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
+        self.assertAlmostEqual(geometry_expected.bases_per_turn, geometry_actual.bases_per_turn)
+        self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
+        self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
 
     def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
         helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]
@@ -2425,6 +2738,78 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
 
+class TestInsertRemoveDomains(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        self.design.strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
+        self.strand = self.design.strands[0]
+
+    def test_3_helix_before_design(self):
+        expected_strand_before = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand_before, self.strand)
+
+    def test_insert_domain_with_sequence(self):
+        design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        design.strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
+        strand = design.strands[0]
+
+        expected_strand_before = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(3, True, 0, 3),
+        ]) #, dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand_before, design.strands[0])
+
+        domain = sc.Domain(2, True, 0, 3)
+        design.insert_domain(strand, 2, domain)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+            sc.Domain(3, True, 0, 3),
+        ], dna_sequence='ACA TCT ??? GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_append_domain_with_sequence(self):
+        domain = sc.Domain(3, False, 0, 3)
+        self.design.append_domain(self.strand, domain)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+            sc.Domain(3, False, 0, 3),
+        ], dna_sequence='ACA TCT GTG ???'.replace(' ',''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_first_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[0])
+        expected_strand = sc.Strand([
+            sc.Domain(1, False, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='    TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_middle_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[1])
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(2, True, 0, 3),
+        ], dna_sequence='ACA     GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
+    def test_remove_last_domain_with_sequence(self):
+        self.design.remove_domain(self.strand, self.strand.domains[2])
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 3),
+            sc.Domain(1, False, 0, 3),
+        ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        self.assertEqual(expected_strand, self.strand)
+
 
 class TestAddStrand(unittest.TestCase):
 
@@ -2443,6 +2828,17 @@ class TestAddStrand(unittest.TestCase):
         self.assertEqual(strand, design.strands[0])
         self.assertEqual(ss1, design.domain_at(0, 0, True))
         self.assertEqual(ss2, design.domain_at(1, 0, False))
+
+    def test_add_strand__illegal_overlapping_domains(self):
+        helices = [sc.Helix(max_offset=50), sc.Helix(max_offset=50)]
+        design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        with self.assertRaises(sc.StrandError):
+            strand = sc.Strand([
+                sc.Domain(0, False, 40, 48),
+                sc.Domain(0, False, 32, 48, deletions=[44]),
+                sc.Domain(1, True, 32, 40),
+            ])
+            design.add_strand(strand)
 
 
 class TestAssignDNA(unittest.TestCase):
@@ -3022,43 +3418,259 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_top2, 'GGA')
         self.assertEqual('AGGTCCGAA', strand_bot.dna_sequence)
 
-    def test_assign_dna__wildcards_multiple_overlaps(self):
+
+class TestAssignDNAToDomains(unittest.TestCase):
+
+    def setUp(self) -> None:
         """
-         012   345   678   901   234   567
+         012   345   678   901   234   567   890
               +---------------+
               |               |
-              |         +-----|-------+
-              |         |     |       |
-        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG>
-        <TGC---AAG---CCT---TTG---ACG---AAC---???-
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
          098   765   432   109   876   543   210
         """
-        ss_bot = sc.Domain(helix=0, forward=False, start=0, end=21)
-        ss_top0 = sc.Domain(helix=0, forward=True, start=0, end=3)
-        ss_top3 = sc.Domain(helix=0, forward=True, start=3, end=6)
-        ss_top6 = sc.Domain(helix=0, forward=True, start=6, end=9)
-        ss_top9 = sc.Domain(helix=0, forward=True, start=9, end=12)
-        ss_top12 = sc.Domain(helix=0, forward=True, start=12, end=15)
-        ss_top15 = sc.Domain(helix=0, forward=True, start=15, end=18)
-        strand_bot = sc.Strand(domains=[ss_bot])
-        strand_top_small0 = sc.Strand(domains=[ss_top0])
-        strand_top_small12 = sc.Strand(domains=[ss_top12])
-        strand_top_big9 = sc.Strand(domains=[ss_top9, ss_top3])
-        strand_top_big6 = sc.Strand(domains=[ss_top6, ss_top15])
-        strands = [strand_bot, strand_top_small0, strand_top_small12, strand_top_big9, strand_top_big6]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        self.dom_bot = sc.Domain(helix=0, forward=False, start=0, end=21)
+        self.dom_top0 = sc.Domain(helix=0, forward=True, start=0, end=3)
+        self.dom_top3 = sc.Domain(helix=0, forward=True, start=3, end=6)
+        self.dom_top6 = sc.Domain(helix=0, forward=True, start=6, end=9)
+        self.dom_top9 = sc.Domain(helix=0, forward=True, start=9, end=12)
+        self.dom_top12 = sc.Domain(helix=0, forward=True, start=12, end=15)
+        self.dom_top15 = sc.Domain(helix=0, forward=True, start=15, end=18)
+        self.dom_top18 = sc.Domain(helix=0, forward=True, start=18, end=21)
+        self.strand_bot = sc.Strand(domains=[self.dom_bot])
+        self.strand_top_small0 = sc.Strand(domains=[self.dom_top0])
+        self.strand_top_small12 = sc.Strand(domains=[self.dom_top12])
+        self.strand_top_big9 = sc.Strand(domains=[self.dom_top9, self.dom_top3])
+        self.strand_top_big6 = sc.Strand(domains=[self.dom_top6, self.dom_top15, self.dom_top18])
+        strands = [self.strand_bot, self.strand_top_small0, self.strand_top_small12,
+                   self.strand_top_big9, self.strand_top_big6]
+        self.design = sc.DNADesign(grid=sc.square, strands=strands)
 
-        design.assign_dna(strand_top_big9, 'AACTTC')
-        self.assertEqual('?????????GTT???GAA???', strand_bot.dna_sequence)
+    def test_assign_dna__wildcards_multiple_overlaps(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'AACTTC')
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_small12, 'TGC')
-        self.assertEqual('??????GCAGTT???GAA???', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_small12, 'TGC')
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_small0, 'ACG')
-        self.assertEqual('??????GCAGTT???GAACGT', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_small0, 'ACG')
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
 
-        design.assign_dna(strand_top_big6, 'GGATTG')
-        self.assertEqual('???CAAGCAGTTTCCGAACGT', strand_bot.dna_sequence)
+        self.design.assign_dna(self.strand_top_big6, 'GGATTGGCA')
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+    def test_assign_dna__domain_sequence_too_long_error(self):
+        with self.assertRaises(sc.IllegalDNADesignError):
+            self.design.assign_dna(self.strand_top_big9, 'AACTTC', domain=self.dom_top9)
+
+    def test_assign_dna__to_individual_domains__wildcards_multiple_overlaps(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +???> -???+ -AAC+ -???> +???+ +???>
+        <???---???---???---TTG---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'AAC', domain=self.dom_top9)
+        self.assertEqual('AAC ???'.replace(' ',''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? ??? ???'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +TTC> -???+ -AAC+ -???> +???+ +???>
+        <???---AAG---???---TTG---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big9, 'TTC', domain=self.dom_top3)
+        self.assertEqual('AAC TTC'.replace(' ',''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -???> +TTC> -???+ -AAC+ -TGC> +???+ +???>
+        <???---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_small12, 'TGC')
+        self.assertEqual('TGC', self.strand_top_small12.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +???+ +???>
+        <TGC---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_small0, 'ACG')
+        self.assertEqual('ACG', self.strand_top_small0.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +TTG+ +???>
+        <TGC---AAG---???---TTG---ACG---AAC---???-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'TTG', domain=self.dom_top15)
+        self.assertEqual('??? TTG ???'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('??? CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -???+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---???---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'GCA', domain=self.dom_top18)
+        self.assertEqual('??? TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        self.design.assign_dna(self.strand_top_big6, 'GGA', domain=self.dom_top6)
+        self.assertEqual('GGA TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+
+    def test_method_chaining_with_domain_sequence(self):
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        design = sc.DNADesign(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+
+        """
+         012   345   678   901   234   567   890
+        
+        <???---???---???---???---???---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 21).to(0)
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(21, design.strands[0].domains[0].dna_length())
+
+        """
+         012   345   678   901   234   567   890
+        
+                                -TGC>
+        <???---???---???---???---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 12).to(15).with_sequence('TGC')
+        self.assertEqual('TGC'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+        
+        -ACG>                   -TGC>
+        <???---???---???---???---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 0).to(3).with_sequence('ACG', assign_complement=False)
+        self.assertEqual('ACG'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |               |
+              |               |
+        -ACG> +TTC>       -AAC+ -TGC>
+        <???---AAG---???---TTG---ACG---???---???-
+         098   765   432   109   876   543   210
+        """
+        sb = design.strand(0, 9).to(12)
+        sb.with_domain_sequence('AAC')
+        sb.cross(0, offset=3)
+        sb.to(6)
+        sb.with_domain_sequence('TTC')
+        self.assertEqual('AAC TTC'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+
+        """
+         012   345   678   901   234   567   890
+              +---------------+
+              |               |
+              |         +-----|-------+   +-+
+              |         |     |       |   | |
+        -ACG> +TTC> -GGA+ -AAC+ -TGC> +TTG+ +GCA>
+        <???---AAG---CCT---TTG---ACG---AAC---CGT-
+         098   765   432   109   876   543   210
+        """
+        design.strand(0, 6).to(9)\
+            .with_domain_sequence('GGA')\
+            .cross(0, offset=15)\
+            .to(18)\
+            .with_domain_sequence('TTG')\
+            .to(21)\
+            .with_domain_sequence('GCA')
+        self.assertEqual('GGA TTG GCA'.replace(' ', ''), design.strands[-1].dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
+
+
 
 
 TEST_OFFSETS_AT_DELETION_INSERTIONS = False

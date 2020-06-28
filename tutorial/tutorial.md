@@ -17,11 +17,6 @@ First, follow the [installation instructions](../README.md#installation) to inst
 
 
 
-## Note about web interface
-
-The web interface for scadnano is somewhat in flux. As a result, some of the screenshots in this tutorial, and some of the names of menu items, have changed since this tutorial was released. The functionality is all still there, but you may have to search around a bit in the menu to find it. Once the interface has stabilized a bit more, this tutorial will be updated to contain screenshots from the latest version of scadnano.
-
-
 ## Viewing completed design
 
 The design will look like this when we are done:
@@ -417,7 +412,7 @@ def add_staple_crossovers(design: sc.DNADesign):
         start_offset = 24 if helix % 2 == 0 else 40
         for offset in range(start_offset, 296, 32):
             if offset != 152: # skip crossover near seam
-                design.add_full_crossover(helix1=helix, helix2=helix+1, offset1=offset, forward1=helix%2==1)
+                design.add_full_crossover(helix=helix, helix2=helix+1, offset=offset, forward=helix%2==1)
 ```
 
 The design is now mostly complete:
@@ -576,8 +571,8 @@ def add_staple_crossovers(design: sc.DNADesign):
         start_offset = 24 if helix % 2 == 0 else 40
         for offset in range(start_offset, 296, 32):
             if offset != 152:  # skip crossover near seam
-                design.add_full_crossover(helix1=helix, helix2=helix + 1, offset1=offset,
-                                          forward1=helix % 2 == 1)
+                design.add_full_crossover(helix=helix, helix2=helix + 1, offset=offset,
+                                          forward=helix % 2 == 1)
 
 
 def add_staple_nicks(design: sc.DNADesign):
