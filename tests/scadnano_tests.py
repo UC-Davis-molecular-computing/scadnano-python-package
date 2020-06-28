@@ -2202,8 +2202,9 @@ class TestJSON(unittest.TestCase):
         self.assertEqual(dom11_expected.label, dom11.label)
 
     def test_nondefault_geometry(self):
-        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, helix_radius=4.0, bases_per_turn=11.0, minor_groove_angle=10.0,
-                               inter_helix_gap=5.0)
+        geometry_expected = sc.Geometry(rise_per_base_pair=10.0, helix_radius=4.0, bases_per_turn=11.0,
+                                        minor_groove_angle=10.0,
+                                        inter_helix_gap=5.0)
         design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
         json_str = design.to_json()
         design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
@@ -2738,6 +2739,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDNADesignError):
             sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
 
+
 class TestInsertRemoveDomains(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -2762,7 +2764,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
             sc.Domain(0, True, 0, 3),
             sc.Domain(1, False, 0, 3),
             sc.Domain(3, True, 0, 3),
-        ]) #, dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        ])  # , dna_sequence='ACA TCT GTG'.replace(' ', ''))
         self.assertEqual(expected_strand_before, design.strands[0])
 
         domain = sc.Domain(2, True, 0, 3)
@@ -2783,7 +2785,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
             sc.Domain(1, False, 0, 3),
             sc.Domain(2, True, 0, 3),
             sc.Domain(3, False, 0, 3),
-        ], dna_sequence='ACA TCT GTG ???'.replace(' ',''))
+        ], dna_sequence='ACA TCT GTG ???'.replace(' ', ''))
         self.assertEqual(expected_strand, self.strand)
 
     def test_remove_first_domain_with_sequence(self):
@@ -2809,6 +2811,69 @@ class TestInsertRemoveDomains(unittest.TestCase):
             sc.Domain(1, False, 0, 3),
         ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
         self.assertEqual(expected_strand, self.strand)
+
+
+class TestLabels(unittest.TestCase):
+
+    def setUp(self) -> None:
+        helices = [sc.Helix(max_offset=100) for _ in range(10)]
+        self.design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+
+    def test_with_label__str(self):
+        label = 'abc'
+        self.design.strand(0, 0).to(5).cross(1).to(0).with_label(label)
+        actual_strand = self.design.strands[0]
+        expected_strand = sc.Strand(domains=[
+            sc.Domain(0, True, 0, 5),
+            sc.Domain(0, False, 0, 5),
+        ], label=label)
+
+        self.assertEqual(expected_strand.label, actual_strand.label)
+
+    def test_with_label__dict(self):
+        label = {'name': 'abc', 'type': 3}
+        self.design.strand(0, 0).to(5).cross(1).to(0).with_label(label)
+        actual_strand = self.design.strands[0]
+        expected_strand = sc.Strand(domains=[
+            sc.Domain(0, True, 0, 5),
+            sc.Domain(0, False, 0, 5),
+        ], label=label)
+
+        self.assertDictEqual(expected_strand.label, actual_strand.label)
+
+    def test_with_domain_label(self):
+        label0 = 'abc'
+        label1 = {'name': 'abc', 'type': 3}
+        self.design.strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1)
+        actual_strand = self.design.strands[0]
+        expected_strand = sc.Strand(domains=[
+            sc.Domain(0, True, 0, 5, label=label0),
+            sc.Domain(0, False, 0, 5, label=label1),
+        ])
+
+        self.assertEqual(expected_strand.domains[0].label, actual_strand.domains[0].label)
+        self.assertDictEqual(expected_strand.domains[1].label, actual_strand.domains[1].label)
+
+    def test_with_domain_label__and__with_label(self):
+        strand_label = 'xyz'
+        label0 = 'abc'
+        label1 = {'name': 'abc', 'type': 3}
+        self.design.strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1) \
+            .with_label(strand_label)
+        actual_strand = self.design.strands[0]
+        expected_strand = sc.Strand(domains=[
+            sc.Domain(0, True, 0, 5, label=label0),
+            sc.Domain(0, False, 0, 5, label=label1),
+        ], label=strand_label)
+
+        self.assertEqual(expected_strand.label, actual_strand.label)
+        self.assertEqual(expected_strand.domains[0].label, actual_strand.domains[0].label)
+        self.assertDictEqual(expected_strand.domains[1].label, actual_strand.domains[1].label)
+
+
+def set_colors_black(*strands):
+    for strand in strands:
+        strand.set_color(sc.Color(r=0, g=0, b=0))
 
 
 class TestAddStrand(unittest.TestCase):
@@ -3461,16 +3526,16 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big9, 'AACTTC')
-        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         self.design.assign_dna(self.strand_top_small12, 'TGC')
-        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         self.design.assign_dna(self.strand_top_small0, 'ACG')
-        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         self.design.assign_dna(self.strand_top_big6, 'GGATTGGCA')
-        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
     def test_assign_dna__domain_sequence_too_long_error(self):
         with self.assertRaises(sc.IllegalDNADesignError):
@@ -3499,8 +3564,8 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big9, 'AAC', domain=self.dom_top9)
-        self.assertEqual('AAC ???'.replace(' ',''), self.strand_top_big9.dna_sequence)
-        self.assertEqual('??? ??? ??? GTT ??? ??? ???'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('AAC ???'.replace(' ', ''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? ??? ???'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         """
          012   345   678   901   234   567   890
@@ -3513,8 +3578,8 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big9, 'TTC', domain=self.dom_top3)
-        self.assertEqual('AAC TTC'.replace(' ',''), self.strand_top_big9.dna_sequence)
-        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('AAC TTC'.replace(' ', ''), self.strand_top_big9.dna_sequence)
+        self.assertEqual('??? ??? ??? GTT ??? GAA ???'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         """
          012   345   678   901   234   567   890
@@ -3542,7 +3607,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         """
         self.design.assign_dna(self.strand_top_small0, 'ACG')
         self.assertEqual('ACG', self.strand_top_small0.dna_sequence)
-        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? ??? GCA GTT ??? GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         """
          012   345   678   901   234   567   890
@@ -3555,8 +3620,8 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big6, 'TTG', domain=self.dom_top15)
-        self.assertEqual('??? TTG ???'.replace(' ',''), self.strand_top_big6.dna_sequence)
-        self.assertEqual('??? CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? TTG ???'.replace(' ', ''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('??? CAA GCA GTT ??? GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         """
          012   345   678   901   234   567   890
@@ -3569,8 +3634,8 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big6, 'GCA', domain=self.dom_top18)
-        self.assertEqual('??? TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
-        self.assertEqual('TGC CAA GCA GTT ??? GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('??? TTG GCA'.replace(' ', ''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT ??? GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
         """
          012   345   678   901   234   567   890
@@ -3583,8 +3648,8 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         self.design.assign_dna(self.strand_top_big6, 'GGA', domain=self.dom_top6)
-        self.assertEqual('GGA TTG GCA'.replace(' ',''), self.strand_top_big6.dna_sequence)
-        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ',''), self.strand_bot.dna_sequence)
+        self.assertEqual('GGA TTG GCA'.replace(' ', ''), self.strand_top_big6.dna_sequence)
+        self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
     def test_method_chaining_with_domain_sequence(self):
         """
@@ -3649,7 +3714,6 @@ class TestAssignDNAToDomains(unittest.TestCase):
         self.assertEqual('AAC TTC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
-
         """
          012   345   678   901   234   567   890
               +---------------+
@@ -3660,17 +3724,15 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---AAG---CCT---TTG---ACG---AAC---CGT-
          098   765   432   109   876   543   210
         """
-        design.strand(0, 6).to(9)\
-            .with_domain_sequence('GGA')\
-            .cross(0, offset=15)\
-            .to(18)\
-            .with_domain_sequence('TTG')\
-            .to(21)\
+        design.strand(0, 6).to(9) \
+            .with_domain_sequence('GGA') \
+            .cross(0, offset=15) \
+            .to(18) \
+            .with_domain_sequence('TTG') \
+            .to(21) \
             .with_domain_sequence('GCA')
         self.assertEqual('GGA TTG GCA'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('TGC CAA GCA GTT TCC GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
-
-
 
 
 TEST_OFFSETS_AT_DELETION_INSERTIONS = False

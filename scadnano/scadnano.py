@@ -1224,6 +1224,10 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     def strand(self) -> Strand:
         return self._parent_strand
 
+    def set_label(self, label: StrandLabel):
+        """Sets label of this :any:`Domain`."""
+        self.label = label
+
     def _check_start_end(self):
         if self.start >= self.end:
             raise StrandError(self._parent_strand,
@@ -1905,6 +1909,44 @@ class StrandBuilder:
         last_domain = self.strand.domains[-1]
         self.design.assign_dna(strand=self.strand, sequence=sequence, domain=last_domain,
                                assign_complement=assign_complement)
+        return self
+
+    def with_label(self, label: StrandLabel) -> StrandBuilder:
+        """
+        Assigns `label` as label of the :any:`Strand` being built.
+
+        .. code-block:: Python
+
+            design.strand(0, 0).to(10).cross(1).to(5).with_label('scaffold')
+
+        :param label: label to assign to the :any:`Strand`
+        :return: self
+        """
+        self.strand.set_label(label)
+        return self
+
+    def with_domain_label(self, label: DomainLabel) -> StrandBuilder:
+        """
+        Assigns `label` as DNA sequence of the most recently created :any:`Domain` in
+        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
+        via a call to
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
+        or
+        :py:meth:`StrandBuilder.loopout`, e.g.,
+
+        .. code-block:: Python
+
+            design.strand(0, 5).to(8).with_domain_label('domain 1')\
+                .cross(1).to(5).with_domain_label('domain 2')\
+                .loopout(2, 4).with_domain_label('domain 3')\
+                .to(10).with_domain_label('domain 4')
+
+        :param label: label to assign to the :any:`Domain`
+        :return: self
+        """
+        last_domain = self.strand.domains[-1]
+        last_domain.set_label(label)
         return self
 
 
