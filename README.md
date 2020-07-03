@@ -18,7 +18,9 @@ If you find scadnano useful in a scientific project, please cite its associated 
 
 This module is used to write Python scripts outputting `.dna` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
 
-Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. However, when a breaking change is made, this will increment the minor or major version numbers in both libraries (version numbers are major.minor.patch, i.e., version 0.9.2 has minor version number 9).
+Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. 
+
+Following [semantic versioning](https://semver.org/), version numbers are major.minor.patch, i.e., version 0.9.2 has minor version number 9. Prior to version 1.0.0, when a breaking change is made, this will increment the minor version (for example, going from 0.9.4 to 0.10.0). After version 1.0.0, breaking changes will increment the major version.
 
 
 
@@ -40,7 +42,7 @@ The scadnano Python package requires Python version 3.7 or later. If you do not 
 Once Python is installed, there are two ways you can install the scadnano Python package:
 
 
-1. pip 
+1. pip (recommended)
 
     Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
     ```console
@@ -56,7 +58,7 @@ Once Python is installed, there are two ways you can install the scadnano Python
 
 2. download
 
-    As a simple alternative, you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
+    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder)
     in your PYTHONPATH (e.g., in the same directory as the scripts you are running):
 
     * *required*: [scadnano.py](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano-python-package/master/scadnano/scadnano.py) 
@@ -76,7 +78,7 @@ Once Python is installed, there are two ways you can install the scadnano Python
 
 Consider the following design:
 
-![](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/doc-images/screenshot-initial.png)
+![](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano/master/doc-images/screenshot-initial.png)
 
 The following Python script produces this design.
 
@@ -130,28 +132,48 @@ Running the code above produces the `.dna` JSON file shown in the [web interface
 
 
 ## abbreviated syntax with chained methods
-Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the DNADesign. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end.
+Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the DNADesign. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above script using these chained methods
 
 ```python
-# helices
-helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
+import scadnano as sc
+import modifications as mod
 
-# whole design
-design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
 
-# left staple
-design.strand(1, 8).to(24).cross(0).to(8)
+def main():
+    # helices
+    helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
-# right staple
-design.strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p)
+    # whole design
+    design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
 
-# scaffold
-design.strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
+    # left staple
+    design.strand(1, 8).to(24).cross(0).to(8)
+
+    # right staple
+    design.strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p)
+
+    # scaffold
+    design.strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
+
+    # deletions and insertions added to design are added to both strands on a helix
+    design.add_deletion(helix=1, offset=20)
+    design.add_insertion(helix=0, offset=14, length=1)
+    design.add_insertion(helix=0, offset=26, length=2)
+
+    # also assigns complement to strands other than scaf bound to it
+    design.assign_dna(scaf, 'AACGT' * 18)
+
+    return design
+
+
+if __name__ == '__main__':
+    design = main()
+    design.write_scadnano_file(directory='output_designs')
 ```
 
 Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.DNADesign.strand).
 
-The code for adding insertions, deletions, and assigning DNA would be the same as in the original script.
+
 
 
 
