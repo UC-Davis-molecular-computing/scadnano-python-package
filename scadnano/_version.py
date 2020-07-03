@@ -3,4 +3,4 @@
 
 # The following line *must* be the last in the module, exactly as formatted:
 # XXX: REMEMBER TO CHANGE VERSION IN scadnano.py also, for users who do not install from PyPI
-__version__ = "0.9.3"
+__version__ = "0.9.4"
