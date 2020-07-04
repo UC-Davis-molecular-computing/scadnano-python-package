@@ -2741,7 +2741,7 @@ class Geometry(_JSONSerializable):
     """Parameters controlling some geometric visualization/physical aspects of Design."""
 
     rise_per_base_pair: float = 0.332
-    """The distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
+    """Distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
 
     helix_radius: float = 1.0
     """Radius of a DNA helix in nanometers."""
