@@ -161,7 +161,7 @@ def main():
     design.add_insertion(helix=0, offset=26, length=2)
 
     # also assigns complement to strands other than scaf bound to it
-    design.assign_dna(scaf, 'AACGT' * 18)
+    design.assign_dna(design.scaffold, 'AACGT' * 18)
 
     return design
 
