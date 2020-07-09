@@ -216,6 +216,8 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
               f'greater than the 7249 available in standard M13.')
     if seam_left_column < 0:
         seam_left_column = num_cols // 2 - 1
+        if seam_left_column % 2 == 1:
+            seam_left_column += 1
     if seam_left_column % 2 == 1:
         raise ValueError(f'seam_left_column must be even but is {seam_left_column}')
 
