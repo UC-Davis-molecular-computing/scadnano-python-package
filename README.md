@@ -43,7 +43,7 @@ The scadnano Python package requires Python version 3.7 or later. If you do not 
 python --version
 ```
 
-If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package that give the required features.
+If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package providing the required features.
 The Python 3.7 module that is not present in 3.6 is the 
 [dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
 You can install a backported library for it: 
