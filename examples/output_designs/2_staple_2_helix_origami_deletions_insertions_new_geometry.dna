@@ -1,8 +1,8 @@
 {
-  "version": "0.9.1",
+  "version": "0.9.9",
   "grid": "square",
   "geometry": {
-    "z_step": 0.2,
+    "rise_per_base_pair": 0.2,
     "helix_radius": 1.2,
     "inter_helix_gap": 1.0
   },
