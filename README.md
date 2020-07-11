@@ -8,7 +8,7 @@ The scadnano Python module is a library for describing synthetic DNA nanostructu
 
 If you find scadnano useful in a scientific project, please cite its associated paper:
 
-> <ins>scadnano: A browser-based, scriptable tool for designing DNA nanostructures</ins>.  
+> scadnano: A browser-based, scriptable tool for designing DNA nanostructures.  
   David Doty, Benjamin L Lee, and Tristan Stérin.  
   DNA 2020: *Proceedings of the 26th International Conference on DNA Computing and Molecular Programming*  
   [ [paper](https://arxiv.org/abs/2005.11841) | [BibTeX](https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib) ]
@@ -37,9 +37,17 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it.
+The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. 
 
-Once Python is installed, there are two ways you can install the scadnano Python package:
+If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package that give the required features.
+The Python 3.7 module that is not present in 3.6 is the 
+[dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
+You can install a backported library for it: 
+[dataclasses backport](https://pypi.org/project/dataclasses/) (this library appears to require at least Python version 3.6)
+
+Furthermore, the [typing](https://docs.python.org/3/library/typing.html) module was present in Python 3.5, but scadnano requires at least version Python 3.6.2.
+
+Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
 
 1. pip (recommended)
@@ -58,7 +66,9 @@ Once Python is installed, there are two ways you can install the scadnano Python
 
 2. download
 
-    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...)
+    *Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
+
+    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...". 
 
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 

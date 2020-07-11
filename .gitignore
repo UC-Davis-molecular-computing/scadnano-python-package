@@ -22,3 +22,4 @@ __pycache__/
 tests_outputs/
 .vscode/
 dist/
+.mypy_cache/
