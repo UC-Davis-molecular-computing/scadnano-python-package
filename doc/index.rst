@@ -7,13 +7,18 @@ scadnano documentation
 ====================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :caption: Contents:
 
-scadnano 
+scadnano.Strand
 =====================
-.. automodule:: scadnano
+.. autoclass:: scadnano.Strand
    :members:
+
+scadnano.DNADesign
+=====================
+.. autoclass:: scadnano.DNADesign
+    :members:
 
 origami_rectangle 
 =====================
