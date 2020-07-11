@@ -37,7 +37,11 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. 
+The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. To check your current version of Python, open a command line and type
+
+```
+python --version
+```
 
 If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package that give the required features.
 The Python 3.7 module that is not present in 3.6 is the 
@@ -64,6 +68,27 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     or 
     https://www.liquidweb.com/kb/install-pip-windows/.
 
+    First, check your version of `pip` by typing 
+    ```
+    pip --version
+    ```
+    It should say something like 
+    ```
+    pip 19.3.1 from ...lib\site-packages\pip (python 3.8)
+    ```
+    If the version of Python at the end is Python 3.7 or higher, you are good. If it is version 2.7 or lower, type
+    ```
+    pip3 --version
+    ```
+    If that works and shows Python 3.7 or higher, you are good, but you should type `pip3` in the subsequent instructions instead of `pip`.
+    
+    If it shows Python 3.6, install the [dataclasses backport module](https://pypi.org/project/dataclasses/) via
+    ```
+    pip install dataclasses
+    ```
+    If it shows Python 3.5 or lower, then you will need to upgrade your Python version (recommended Python 3.7 or higher).
+
+    
 2. download
 
     *Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
