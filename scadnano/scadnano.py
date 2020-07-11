@@ -142,18 +142,18 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
 
 @dataclass
 class Color(_JSONSerializable):
-    r: int = None
+    r: Optional[int] = None
     """
     Red component: 0-255.
     
     Optional if :py:data:`Color.hex` is given."""
 
-    g: int = None
+    g: Optional[int] = None
     """Green component: 0-255.
     
     Optional if :py:data:`Color.hex` is given."""
 
-    b: int = None
+    b: Optional[int] = None
     """Blue component: 0-255.
     
     Optional if :py:data:`Color.hex` is given."""
@@ -229,7 +229,7 @@ class ColorCycler:
         # random order
         order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
         # order = range(len(self._colors))
-        colors_shuffled: List[Color] = [None] * len(self._colors)
+        colors_shuffled: List[Color] = list(self._colors)
         for i, color in zip(order, self._colors):
             colors_shuffled[i] = color
         self._colors: List[Color] = colors_shuffled
@@ -791,7 +791,7 @@ class Modification(_JSONSerializable):
     """Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
 
-    id: str = None
+    id: str = "WARNING: no id assigned to modification"
     """Short representation as a string; used to write in :any:`Strand` json representation,
     while the full description of the modification is written under a global key in the :any:`DNADesign`."""
 
@@ -802,7 +802,7 @@ class Modification(_JSONSerializable):
         ret = {mod_display_text_key: self.display_text}
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
-            ret[mod_display_connector_key] = False
+            ret[mod_display_connector_key] = False  # type: ignore
         return ret
 
     @staticmethod
@@ -931,7 +931,7 @@ def in_browser() -> bool:
     Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
     running in the browser."""
     try:
-        import pyodide
+        import pyodide  # type: ignore
         return True
     except ImportError:
         return False
@@ -957,7 +957,7 @@ class Helix(_JSONSerializable):
     associated to the :any:`Helix` via the integer index :any:`Domain.helix`.
     """
 
-    max_offset: int = None
+    max_offset: int = None  # type: ignore
     """Maximum offset (exclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
     If unspecified, it is calculated when the :any:`DNADesign` is instantiated as 
     the largest :any:`Domain.end` offset of any :any:`Domain` in the design.
@@ -971,11 +971,11 @@ class Helix(_JSONSerializable):
     major_tick_distance: int = -1
     """If positive, overrides :any:`DNADesign.major_tick_distance`."""
 
-    major_ticks: List[int] = None
+    major_ticks: List[int] = None  # type: ignore
     """If not ``None``, overrides :any:`DNADesign.major_tick_distance` and :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
-    grid_position: Tuple[int, int] = None
+    grid_position: Tuple[int, int] = None  # type: ignore
     """`(h,v)` position of this helix in the side view grid,
     if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`DNADesign` containing this helix.
@@ -996,7 +996,7 @@ class Helix(_JSONSerializable):
     That convention is different from simply excluding coordinates from the hex lattice.
     """
 
-    position: Position3D = None
+    position: Position3D = None  # type: ignore
     """Position (x,y,z) of this :any:`Helix` in 3D space.
     
     Must be None if :py:data:`Helix.grid_position` is specified."""
@@ -1019,7 +1019,7 @@ class Helix(_JSONSerializable):
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
-    idx: int = None
+    idx: int = None  # type: ignore
     """Index of this :any:`Helix`.
     
     Optional if no other :any:`Helix` specifies a value for *idx*.
@@ -2896,7 +2896,7 @@ class DNADesign(_JSONSerializable):
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
-        if (self.helices is not None and (helix_template is not None or num_helices is not None)):
+        if self.helices is not None and (helix_template is not None or num_helices is not None):
             raise IllegalDNADesignError('helices is mutually exclusive with helix_template and num_helices; '
                                         'you must specified the first, or the latter two')
 

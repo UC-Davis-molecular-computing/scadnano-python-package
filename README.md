@@ -37,9 +37,17 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it.
+The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. 
 
-Once Python is installed, there are two ways you can install the scadnano Python package:
+If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package that give the required features.
+The Python 3.7 module that is not present in 3.6 is the 
+[dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
+You can install a backported library for it: 
+[dataclasses backport](https://pypi.org/project/dataclasses/) (this library appears to require at least Python version 3.6)
+
+Furthermore, the [typing](https://docs.python.org/3/library/typing.html) module was present in Python 3.5, but scadnano requires at least version Python 3.6.2.
+
+Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
 
 1. pip (recommended)
