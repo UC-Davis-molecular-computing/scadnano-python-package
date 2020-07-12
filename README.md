@@ -43,13 +43,11 @@ The scadnano Python package requires Python version 3.7 or later. If you do not 
 python --version
 ```
 
-If you are using Python 3.6 and do not wish to upgrade, with some effort you can install a package providing the required features.
-The Python 3.7 module that is not present in 3.6 is the 
+If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features.
+There is a Python 3.7 module used by scadnano, which is not present in 3.6: the
 [dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
-You can install a backported library for it: 
-[dataclasses backport](https://pypi.org/project/dataclasses/) (this library appears to require at least Python version 3.6)
-
-Furthermore, the [typing](https://docs.python.org/3/library/typing.html) module was present in Python 3.5, but scadnano requires at least version Python 3.6.2.
+If you have at least Python version 3.6, you can install a backported library providing this module: 
+[dataclasses backport](https://pypi.org/project/dataclasses/)
 
 Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
@@ -100,7 +98,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
     * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
     
-    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so in order to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences, xlwt must be installed. To install, type `pip install xlwt` at the command line.
+    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
 
 
 
