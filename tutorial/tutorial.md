@@ -54,12 +54,12 @@ Create an empty text file named `24_helix_rectangle_twist_corrected.py`, and pas
 ```python
 import scadnano as sc
 
-def main():
+def create_design():
     design = sc.DNADesign(helices=[], strands=[], grid=sc.square)
     return design
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file()
 ```
 
@@ -99,25 +99,25 @@ As you can see, the simple script we wrote generates a design with no helices an
 
 We want 24 helices. We need to ensure each helix has enough offsets for all the bases we will need. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it. Notice that 7249 / 24 &asymp; 302, so length 304 per helix is sufficient.
 
-Change the Python file as follows. We marked the changed lines in `main()` with `###`:
+Change the Python file as follows. We marked the changed lines in `create_design()` with `###`:
 
 ```python
 import scadnano as sc
 
-def main():
+def create_design():
     helices = [sc.Helix(max_offset=304) for _ in range(24)]            ###
     design = sc.DNADesign(helices=helices, strands=[], grid=sc.square) ###
     return design
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file()
 ```
 
-To save space, below we will omit the `import scadnano as sc` statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `main()` function, as well as any other functions it calls as we write them:
+To save space, below we will omit the `import scadnano as sc` statement and `if __name__ == '__main__'` block at the bottom, and we will write only the `create_design()` function, as well as any other functions it calls as we write them:
 
 ```python
-def main():
+def create_design():
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
     design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
     return design
@@ -186,7 +186,7 @@ integer `start` and `end` offsets.
 
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds() ###
     return design
 
@@ -255,7 +255,7 @@ Currently, neither the [Python scripting library](https://github.com/UC-Davis-mo
 For the scaffold, we want nicks all along the "seam" (the offsets near the middle, other than the topmost helix). Since we are done writing the function `precursor_scaffolds()`, we will omit its definition from the code below:
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
 
     add_scaffold_nicks(design) ###
@@ -291,7 +291,7 @@ We add full crossovers at the seam and half crossovers at the left and right edg
 Also, at this point the scaffold is a single strand, so we can call `scaffold.set_scaffold()` to set it as the scaffold . 
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
 
@@ -332,7 +332,7 @@ Now the design should look like this:
 To add staples, we call `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -363,7 +363,7 @@ The design should now look like this:
 The nicks are spacedly regularly between staples:
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -394,7 +394,7 @@ The design should now look like this:
 Since staples are now less connected than the scaffold was at this stage, we don't need to be as careful to avoid creating a circular strand, so we can add crossovers one at a time.
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -427,7 +427,7 @@ The design is now mostly complete:
 To achieve "twist correction" (See [this paper](https://www.nature.com/articles/nchem.1070) for an explanation of twist correction in 2D DNA origami), we add deletions every 3rd "column" of staples:
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -462,7 +462,7 @@ Finally, we complete the design by assigning a DNA sequence to the scaffold, whi
 If you have a particular strand and sequence you would like to assign, you can call `design.assign_dna(strand, sequence)`. However, in the common case that your design has one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method:
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -500,7 +500,7 @@ Or you could use Python's I/O library to write them to a file in a format of you
 scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). To use either, each strand must have a field called `idt` set specifying the information that IDT expects, but we can call `strand.set_default_idt(use_default_idt=True)` to choose a reasonable default:
 
 ```python
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -538,7 +538,7 @@ The complete script is here:
 import scadnano as sc
 
 
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -618,6 +618,6 @@ def add_scaffold_crossovers(design: sc.DNADesign):
 
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file()
 ```
