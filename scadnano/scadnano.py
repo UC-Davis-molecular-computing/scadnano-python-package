@@ -64,7 +64,7 @@ try:
     from ._version import __version__
 except ImportError:
     # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.9.9"
+    __version__ = "0.9.10"
 
 StrandLabel = TypeVar('StrandLabel')
 DomainLabel = TypeVar('DomainLabel')
