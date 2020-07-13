@@ -119,7 +119,7 @@ import scadnano as sc
 import modifications as mod
 
 
-def main():
+def create_design():
     # helices
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
@@ -156,7 +156,7 @@ def main():
 
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file(directory='output_designs')
 ```
 
@@ -171,7 +171,7 @@ import scadnano as sc
 import modifications as mod
 
 
-def main():
+def create_design():
     # helices
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
@@ -199,7 +199,7 @@ def main():
 
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file(directory='output_designs')
 ```
 
