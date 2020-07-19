@@ -34,7 +34,7 @@ class TestCreateStrandLiterate(unittest.TestCase):
 
     def setUp(self):
         helices = [sc.Helix(max_offset=100) for _ in range(6)]
-        self.design_6helix = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        self.design_6helix = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     def test_strand__0_0_to_10_cross_1_to_5(self):
         design = self.design_6helix
@@ -212,7 +212,7 @@ class TestCreateStrandLiterate(unittest.TestCase):
     def test_strand__multiple_strands_overlap_error(self):
         design = self.design_6helix
         design.strand(0, 0).to(10).cross(1).to(0)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             design.strand(0, 2).to(8)
 
     def test_strand__call_to_twice_legally(self):
@@ -280,14 +280,14 @@ class TestCreateStrandLiterate(unittest.TestCase):
         design = self.design_6helix
         sb = design.strand(0, 0)
         sb.to(10)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             sb.to(5)
 
     def test_strand__call_to_twice_decrease_increase_reverse(self):
         design = self.design_6helix
         sb = design.strand(0, 10)
         sb.to(0)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             sb.to(5)
 
 
@@ -324,41 +324,41 @@ class TestModifications(unittest.TestCase):
     def test_mod_illegal_exceptions_raised(self):
         strand = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='AATGC')
         strand.set_modification_internal(2, mod.biotin_int)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             strand.set_modification_internal(1, mod.biotin_int)
 
         # biotin3_1 = mod.Biotin(location=sc.ModLocation.prime3)
         # biotin3_2 = mod.Biotin(location=sc.ModLocation.prime3)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotin3_1, biotin3_2])
         #
         # biotinI_1 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
         # biotinI_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotinI_1, biotinI_2])
         #
         # biotinI_small = mod.Biotin(location=sc.ModLocation.internal, offset=-1)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotinI_small])
         #     seq = strand.idt_dna_sequence()
         #
         # biotinI_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotinI_small])
         #     seq = strand.idt_dna_sequence()
         #
         # biotinI_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotinI_offset_not_T])
         #     seq = strand.idt_dna_sequence()
         #
         # cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
-        # with self.assertRaises(sc.IllegalDNADesignError):
+        # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[cy3I_offset_off_end])
         #     seq = strand.idt_dna_sequence()
@@ -471,7 +471,7 @@ class TestModifications(unittest.TestCase):
                               modifications_int={1: biotinI_1, 2: biotinI_2})
 
         strands = [strand5, strand3, strandI, strand53, strand53I]
-        design = sc.DNADesign(strands=strands, grid=sc.square)
+        design = sc.Design(strands=strands, grid=sc.square)
 
         # print(design.to_json())
 
@@ -512,36 +512,36 @@ class TestImportCadnanoV2(unittest.TestCase):
     output_path = os.path.join('tests_outputs', folder)
 
     def test_32_helix_rectangle(self):
-        design = sc.DNADesign.from_cadnano_v2(directory=self.input_path,
-                                              filename='test_32_helix_rectangle.json')
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename='test_32_helix_rectangle.json')
         design.write_scadnano_file(directory=self.output_path,
-                                   filename='test_32_helix_rectangle.dna')
+                                   filename=f'test_32_helix_rectangle.{sc.default_scadnano_file_extension}')
 
     def test_helices_order(self):
-        design = sc.DNADesign.from_cadnano_v2(directory=self.input_path,
-                                              filename='test_helices_order.json')
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename='test_helices_order.json')
         design.write_scadnano_file(directory=self.output_path,
-                                   filename='test_helices_order.dna')
+                                   filename=f'test_helices_order.{sc.default_scadnano_file_extension}')
 
     def test_huge_hex(self):
-        design = sc.DNADesign.from_cadnano_v2(directory=self.input_path,
-                                              filename='test_huge_hex.json')
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename='test_huge_hex.json')
         design.write_scadnano_file(directory=self.output_path,
-                                   filename='test_huge_hex.dna')
+                                   filename=f'test_huge_hex.{sc.default_scadnano_file_extension}')
 
     def test_Science09_prot120_98_v3(self):
         file_name = "test_Science09_prot120_98_v3"
-        design = sc.DNADesign.from_cadnano_v2(directory=self.input_path,
-                                              filename=file_name + ".json")
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
         design.write_scadnano_file(directory=self.output_path,
-                                   filename=file_name + ".dna")
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_Nature09_monolith(self):
         file_name = "test_Nature09_monolith"
-        design = sc.DNADesign.from_cadnano_v2(directory=self.input_path,
-                                              filename=file_name + ".json")
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
         design.write_scadnano_file(directory=self.output_path,
-                                   filename=file_name + ".dna")
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
 
 class TestExportCadnanoV2(unittest.TestCase):
@@ -551,14 +551,15 @@ class TestExportCadnanoV2(unittest.TestCase):
     folder = "cadnano_v2_export"
     input_path = os.path.join('tests_inputs', folder)
     output_path = os.path.join('tests_outputs', folder)
+    ext = sc.default_scadnano_file_extension
 
     def test_2_staple_2_helix_origami_extremely_simple(self):
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Domain(helix=0, forward=True, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part], is_scaffold=True)
-        design = sc.DNADesign(helices=helices, strands=[scaf], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
         design.write_scadnano_file(directory=self.input_path,
-                                   filename='test_2_stape_2_helix_origami_extremely_simple.dna')
+                                   filename=f'test_2_stape_2_helix_origami_extremely_simple.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_extremely_simple.json')
 
@@ -567,9 +568,9 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf_part1 = sc.Domain(helix=0, forward=True, start=0, end=32)
         scaf_part2 = sc.Domain(helix=1, forward=False, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part1, scaf_part2], is_scaffold=True)
-        design = sc.DNADesign(helices=helices, strands=[scaf], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
         design.write_scadnano_file(directory=self.input_path,
-                                   filename='test_2_stape_2_helix_origami_extremely_simple_2.dna')
+                                   filename=f'test_2_stape_2_helix_origami_extremely_simple_2.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
 
@@ -592,7 +593,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf = sc.Strand(domains=[scaf_ss1_left, scaf_ss0, scaf_ss1_right], is_scaffold=True)
 
         # whole design
-        design = sc.DNADesign(strands=[scaf, stap_left, stap_right], grid=sc.square)
+        design = sc.Design(strands=[scaf, stap_left, stap_right], grid=sc.square)
 
         # deletions and insertions added to design so they can be added to both strands on a helix
         design.add_deletion(helix=0, offset=11)
@@ -609,7 +610,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         # also assigns complement to strands other than scaf bound to it
         design.assign_dna(scaf, 'AACGT' * 18)
         design.write_scadnano_file(directory=self.input_path,
-                                   filename='test_2_stape_2_helix_origami_deletions_insertions.dna')
+                                   filename=f'test_2_stape_2_helix_origami_deletions_insertions.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_2_stape_2_helix_origami_deletions_insertions.json')
 
@@ -617,13 +618,14 @@ class TestExportCadnanoV2(unittest.TestCase):
         design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
                              twist_correction_deletion_spacing=3)
         design.write_scadnano_file(directory=self.input_path,
-                                   filename='test_6_helix_origami_rectangle.dna')
+                                   filename=f'test_6_helix_origami_rectangle.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_6_helix_origami_rectangle.json')
 
+    @unittest.skip('DD: I cannot find where this file is. Is it supposed to be generated by some code?')
     def test_6_helix_bundle_honeycomb(self):
-        design = sc.DNADesign.from_scadnano_file(
-            os.path.join(self.input_path, 'test_6_helix_bundle_honeycomb.dna'))
+        design = sc.Design.from_scadnano_file(
+            os.path.join(self.input_path, f'test_6_helix_bundle_honeycomb.{self.ext}'))
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_6_helix_bundle_honeycomb.json')
 
@@ -631,7 +633,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         design = rect.create(num_helices=16, num_cols=26, assign_seq=True,
                              twist_correction_deletion_spacing=3)
         design.write_scadnano_file(directory=self.input_path,
-                                   filename='test_16_helix_origami_rectangle_no_twist.dna')
+                                   filename=f'test_16_helix_origami_rectangle_no_twist.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_16_helix_origami_rectangle_no_twist.json')
 
@@ -644,7 +646,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Domain(helix=1, forward=True, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part], is_scaffold=True)
-        design = sc.DNADesign(helices=helices, strands=[scaf], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
 
         with self.assertRaises(ValueError) as context:
             design.export_cadnano_v2(directory=self.output_path,
@@ -672,7 +674,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf = sc.Strand(domains=[scaf_ss1_left, scaf_ss0, loopout, scaf_ss1_right], is_scaffold=True)
 
         # whole design
-        design = sc.DNADesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
 
         # deletions and insertions added to design are added to both strands on a helix
         design.add_deletion(helix=1, offset=20)
@@ -717,21 +719,21 @@ class TestDesignFromJson(unittest.TestCase):
             sc.Domain(1, False, 8, 16, deletions=[]),
         ], is_scaffold=True)
 
-        self.design_pre_json = sc.DNADesign(strands=[st_l, st_r, scaf], grid=sc.square)
+        self.design_pre_json = sc.Design(strands=[st_l, st_r, scaf], grid=sc.square)
         self.design_pre_json.assign_dna(scaf, 'A' * 36)
 
     def test_from_json__from_and_to_file_contents(self):
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_scadnano_json_map(json_map)
+        design = sc.Design.from_scadnano_json_map(json_map)
         design.to_json_serializable()
 
     def test_from_json__three_strands(self):
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_scadnano_json_map(json_map)
+        design = sc.Design.from_scadnano_json_map(json_map)
 
-        self.assertTrue(isinstance(design, sc.DNADesign))
+        self.assertTrue(isinstance(design, sc.Design))
 
         self.assertEqual(sc.Grid.square, design.grid)
 
@@ -844,11 +846,11 @@ class TestDesignFromJson(unittest.TestCase):
             sc.Domain(3, True, 4, 8),
             sc.Domain(5, False, 4, 8),
         ])
-        self.design_pre_json = sc.DNADesign(helices=helices, strands=[s1, s2], grid=sc.square)
+        self.design_pre_json = sc.Design(helices=helices, strands=[s1, s2], grid=sc.square)
 
         json_str = self.design_pre_json.to_json()
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_scadnano_json_map(json_map)
+        design = sc.Design.from_scadnano_json_map(json_map)
 
         self.assertEqual(3, len(design.helices))
 
@@ -869,12 +871,12 @@ class TestDesignFromJson(unittest.TestCase):
             sc.Domain(1, True, 4, 8),
             sc.Domain(5, False, 4, 8),
         ])
-        self.design_pre_json = sc.DNADesign(helices=helices, strands=[s1, s2], grid=sc.square)
+        self.design_pre_json = sc.Design(helices=helices, strands=[s1, s2], grid=sc.square)
 
         json_str = self.design_pre_json.to_json()
 
         json_map = json.loads(json_str)
-        design = sc.DNADesign.from_scadnano_json_map(json_map)
+        design = sc.Design.from_scadnano_json_map(json_map)
 
         self.assertEqual(3, len(design.helices))
 
@@ -887,15 +889,15 @@ class TestDesignFromJson(unittest.TestCase):
         h3 = sc.Helix(idx=3)
         h3_2 = sc.Helix(idx=3)
         helices = [h2, h3, h3_2]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            self.design_pre_json = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            self.design_pre_json = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     def test_from_json__helices_non_default_error_if_some_have_idx_not_others_mixed_default(self):
         h0 = sc.Helix()
         h0_2 = sc.Helix(idx=0)
         helices = [h0, h0_2]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            self.design_pre_json = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            self.design_pre_json = sc.Design(helices=helices, strands=[], grid=sc.square)
 
 
 class TestStrandReversePolarity(unittest.TestCase):
@@ -913,7 +915,7 @@ class TestStrandReversePolarity(unittest.TestCase):
         after
     0   <---X--]
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4])])],
             grid=sc.square)
         design.reverse_all()
@@ -948,7 +950,7 @@ class TestStrandReversePolarity(unittest.TestCase):
        \<---2--++------]/
     1   +---2-->[------+
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             strands=[
                 sc.Strand([
                     sc.Domain(1, True, 0, 8, insertions=[(4, 2)]),
@@ -1059,7 +1061,7 @@ class TestInlineInsDel(unittest.TestCase):
         |      |       |       |
     0   [----->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4])])],
             grid=sc.square)
@@ -1090,7 +1092,7 @@ class TestInlineInsDel(unittest.TestCase):
         |     |       |       |
     0   [---->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[2, 4])])],
             grid=sc.square)
@@ -1109,7 +1111,7 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(4, 1)])])],
             grid=sc.square)
@@ -1128,7 +1130,7 @@ class TestInlineInsDel(unittest.TestCase):
         |           |       |       |
     0   [---------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(2, 3), (4, 1)])])],
             grid=sc.square)
@@ -1147,7 +1149,7 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [-------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4], insertions=[(2, 3)])])],
             grid=sc.square)
@@ -1166,7 +1168,7 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[9])])],
             grid=sc.square)
@@ -1186,7 +1188,7 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . | . . . . . . | . . . . . . . |
          [ - - - - - - - - - >
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[8])])],
             grid=sc.square)
@@ -1205,7 +1207,7 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[7])])],
             grid=sc.square)
@@ -1224,7 +1226,7 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(9, 1)])])],
             grid=sc.square)
@@ -1243,7 +1245,7 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(8, 1)])])],
             grid=sc.square)
@@ -1262,7 +1264,7 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [----------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(7, 1)])])],
             grid=sc.square)
@@ -1281,7 +1283,7 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [------------------------->
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[sc.Strand([sc.Domain(0, True, 0, 24, deletions=[19], insertions=[(5, 2), (11, 1)])])],
             grid=sc.square)
@@ -1301,7 +1303,7 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . . | . . . . . . . . | . . . . . . |
          [ - - - - - - - - - - - - - - > [ - - - - - - - >
         """
-        design = sc.DNADesign(
+        design = sc.Design(
             helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
             strands=[
                 sc.Strand([sc.Domain(0, True, 0, 14, deletions=[2], insertions=[(5, 2), (10, 1)])]),
@@ -1328,7 +1330,7 @@ class TestInlineInsDel(unittest.TestCase):
 
 class TestNickAndCrossover(unittest.TestCase):
     """
-    Tests add_nick() and add_*_crossover() methods on DNADesign as an easier way of specifying an origami.
+    Tests add_nick() and add_*_crossover() methods on Design as an easier way of specifying an origami.
     """
 
     r"""
@@ -1373,7 +1375,7 @@ class TestNickAndCrossover(unittest.TestCase):
             sc.Strand([sc.Domain(1, True, 0, 16)]),
             sc.Strand([sc.Domain(1, False, 0, 16)]),
         ]
-        self.small_design = sc.DNADesign(strands=strands_small_design, grid=sc.square)
+        self.small_design = sc.Design(strands=strands_small_design, grid=sc.square)
         self.small_design.assign_dna(strands_small_design[0], "ACGTACGA AACCGGTA")
         self.small_design.assign_dna(strands_small_design[2], "AAACCCGG TTTGGGCC")
 
@@ -1387,7 +1389,7 @@ class TestNickAndCrossover(unittest.TestCase):
             stap = sc.Strand([stap_ss])
             scafs.append(scaf)
             staps.append(stap)
-        self.design: sc.DNADesign = sc.DNADesign(strands=scafs + staps, grid=sc.square)
+        self.design: sc.Design = sc.Design(strands=scafs + staps, grid=sc.square)
 
     def test_add_nick__twice_on_same_domain(self):
         """
@@ -1399,7 +1401,7 @@ class TestNickAndCrossover(unittest.TestCase):
         0        8        16       24
     0   [------> [------> [------>
         """
-        design = sc.DNADesign(strands=[
+        design = sc.Design(strands=[
             sc.Strand([sc.Domain(0, True, 0, 24)]),
         ], grid=sc.square)
         design.add_nick(helix=0, offset=8, forward=True)
@@ -1761,7 +1763,7 @@ class TestNickAndCrossover(unittest.TestCase):
     1   [------- -------- ?
         <------- -------]
         """
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             self.small_design.add_half_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal(self):
@@ -1773,7 +1775,7 @@ class TestNickAndCrossover(unittest.TestCase):
     1   [------- -------+ ?
         <------- -------]
         """
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             self.small_design.add_full_crossover(helix=0, helix2=1, offset=16, forward=False)
 
     def test_add_full_crossover__small_design_illegal_only_one_helix_has_domain(self):
@@ -1785,13 +1787,13 @@ class TestNickAndCrossover(unittest.TestCase):
     1   [--->  ? ?
         <---]
         """
-        design = sc.DNADesign(strands=[
+        design = sc.Design(strands=[
             sc.Strand([sc.Domain(0, True, 0, 16)]),
             sc.Strand([sc.Domain(0, False, 0, 16)]),
             sc.Strand([sc.Domain(1, True, 0, 5)]),
             sc.Strand([sc.Domain(1, False, 0, 5)]),
         ], grid=sc.square)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             design.add_full_crossover(helix=0, helix2=1, offset=10, forward=False)
 
     r"""
@@ -1815,7 +1817,7 @@ class TestNickAndCrossover(unittest.TestCase):
     <------- -------- -------- -------- -------- -------] <------- -------- -------- -------- -------- -------]
     """
 
-    def add_nicks(self, design: sc.DNADesign):
+    def add_nicks(self, design: sc.Design):
         design.add_nick(helix=5, offset=48, forward=False)
         design.add_nick(helix=0, offset=40, forward=False)
         design.add_nick(helix=0, offset=72, forward=False)
@@ -1874,7 +1876,7 @@ class TestNickAndCrossover(unittest.TestCase):
 
     """
 
-    def add_crossovers_after_nicks(self, design: sc.DNADesign):
+    def add_crossovers_after_nicks(self, design: sc.Design):
         # scaffold seam crossovers
         design.add_full_crossover(helix=1, helix2=2, offset=48, forward=False)
         design.add_full_crossover(helix=3, helix2=4, offset=48, forward=False)
@@ -2089,15 +2091,15 @@ class TestAutocalculatedData(unittest.TestCase):
 
     def test_helix_min_max_offsets_illegal_explicitly_specified(self):
         helices = [sc.Helix(min_offset=5, max_offset=5)]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     def test_helix_min_max_offsets_illegal_autocalculated(self):
         helices = [sc.Helix(min_offset=5)]
         ss = sc.Domain(0, True, 0, 4)
         strand = sc.Strand([ss])
-        with self.assertRaises(sc.IllegalDNADesignError):
-            design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_helix_min_max_offsets(self):
         helices = [sc.Helix(), sc.Helix(min_offset=-5), sc.Helix(max_offset=5),
@@ -2107,7 +2109,7 @@ class TestAutocalculatedData(unittest.TestCase):
         ss_2 = sc.Domain(helix=2, forward=True, start=0, end=5)
         ss_3 = sc.Domain(helix=3, forward=False, start=5, end=10)
         strand = sc.Strand([ss_0, ss_1, ss_2, ss_3])
-        design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
         self.assertEqual(0, design.helices[0].min_offset)
         self.assertEqual(25, design.helices[0].max_offset)
         self.assertEqual(-5, design.helices[1].min_offset)
@@ -2123,7 +2125,7 @@ class TestAutocalculatedData(unittest.TestCase):
         ss_1 = sc.Domain(helix=1, forward=False, start=2, end=6)
         ss_2 = sc.Domain(helix=2, forward=True, start=0, end=5)
         strand = sc.Strand([ss_0, ss_1, ss_2])
-        design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
         self.assertEqual(10, design.helices[0].max_offset)
         self.assertEqual(8, design.helices[1].max_offset)
         self.assertEqual(5, design.helices[2].max_offset)
@@ -2136,7 +2138,7 @@ class TestSetHelixIdx(unittest.TestCase):
         ss_1 = sc.Domain(helix=1, forward=True, start=0, end=7)
         ss_2 = sc.Domain(helix=2, forward=True, start=0, end=8)
         strand = sc.Strand([ss_0, ss_1, ss_2])
-        design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
         design.set_helix_idx(2, 5)
         design.set_helix_idx(1, 3)
         design.set_helix_idx(0, 2)
@@ -2175,9 +2177,9 @@ class TestJSON(unittest.TestCase):
             'num_domains': 2,
         })
         strands = [strand0_expected, strand1_expected]
-        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         json_str = design.to_json()
-        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
         strand0 = design_from_json.strands[0]
         strand1 = design_from_json.strands[1]
         self.assertDictEqual(strand0_expected.label, strand0.label)
@@ -2191,9 +2193,9 @@ class TestJSON(unittest.TestCase):
         strand0 = sc.Strand([dom00_expected])
         strand1 = sc.Strand([dom10_expected, dom11_expected])
         strands = [strand0, strand1]
-        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         json_str = design.to_json()
-        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
         dom00 = design_from_json.strands[0].domains[0]
         dom10 = design_from_json.strands[1].domains[0]
         dom11 = design_from_json.strands[1].domains[1]
@@ -2205,9 +2207,9 @@ class TestJSON(unittest.TestCase):
         geometry_expected = sc.Geometry(rise_per_base_pair=10.0, helix_radius=4.0, bases_per_turn=11.0,
                                         minor_groove_angle=10.0,
                                         inter_helix_gap=5.0)
-        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        design = sc.Design(helices=[], strands=[], geometry=geometry_expected)
         json_str = design.to_json()
-        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
         geometry_actual = design_from_json.geometry
         self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
         self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
@@ -2217,9 +2219,9 @@ class TestJSON(unittest.TestCase):
 
     def test_nondefault_geometry_some_default(self):
         geometry_expected = sc.Geometry(rise_per_base_pair=10.0, minor_groove_angle=10.0, inter_helix_gap=5.0)
-        design = sc.DNADesign(helices=[], strands=[], geometry=geometry_expected)
+        design = sc.Design(helices=[], strands=[], geometry=geometry_expected)
         json_str = design.to_json()
-        design_from_json = sc.DNADesign.from_scadnano_json_str(json_str)
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
         geometry_actual = design_from_json.geometry
         self.assertAlmostEqual(geometry_expected.rise_per_base_pair, geometry_actual.rise_per_base_pair)
         self.assertAlmostEqual(geometry_expected.helix_radius, geometry_actual.helix_radius)
@@ -2230,7 +2232,7 @@ class TestJSON(unittest.TestCase):
     def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
         helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]
         strands = []
-        design = sc.DNADesign(helices=helices, strands=strands)
+        design = sc.Design(helices=helices, strands=strands)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
         self.assertFalse(isinstance(helix_json, sc.NoIndent))
@@ -2239,7 +2241,7 @@ class TestJSON(unittest.TestCase):
     def test_NoIndent_on_helix_without_position_or_major_ticks_present(self):
         helices = [sc.Helix()]
         strands = []
-        design = sc.DNADesign(helices=helices, strands=strands)
+        design = sc.Design(helices=helices, strands=strands)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
         self.assertTrue(isinstance(helix_json, sc.NoIndent))
@@ -2256,8 +2258,8 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('grid' in msg)
 
@@ -2274,8 +2276,8 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('helix' in msg)
 
@@ -2292,8 +2294,8 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('forward' in msg)
         self.assertTrue('right' in msg)
@@ -2311,8 +2313,8 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('start' in msg)
 
@@ -2329,8 +2331,8 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('end' in msg)
 
@@ -2341,8 +2343,8 @@ class TestJSON(unittest.TestCase):
           "helices": [{"grid_position": [0,0]}]
         }
         """
-        with self.assertRaises(sc.IllegalDNADesignError) as ex:
-            d = sc.DNADesign.from_scadnano_json_str(json_str)
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            d = sc.Design.from_scadnano_json_str(json_str)
         msg = ex.exception.args[0]
         self.assertTrue('strands' in msg)
 
@@ -2359,7 +2361,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
         self.assertEqual(True, d.strands[0].domains[0].forward)
 
     def test_legacy_dna_sequence_key(self):
@@ -2376,7 +2378,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
         self.assertEqual("ACGTA", d.strands[0].dna_sequence)
 
     def test_legacy_substrands_key(self):
@@ -2392,7 +2394,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
         self.assertEqual(0, d.strands[0].domains[0].helix)
         self.assertEqual(True, d.strands[0].domains[0].forward)
         self.assertEqual(0, d.strands[0].domains[0].start)
@@ -2413,7 +2415,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
         expected_color_hex = '#0066cc'
         actual_color_hex = d.strands[0].color.to_json_serializable(False)
         self.assertEqual(expected_color_hex, actual_color_hex)
@@ -2437,7 +2439,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
         expected_position = sc.Position3D(1, 2, 3)
         expected_pitch = 4
         expected_roll = 5
@@ -2469,7 +2471,7 @@ class TestJSON(unittest.TestCase):
           ] 
         }
         """
-        d = sc.DNADesign.from_scadnano_json_str(json_str)
+        d = sc.Design.from_scadnano_json_str(json_str)
 
     def test_to_json__hairpin(self):
         """
@@ -2488,7 +2490,7 @@ class TestJSON(unittest.TestCase):
         loop = sc.Loopout(length=5)
         ss_r = sc.Domain(helix=0, forward=False, start=0, end=5)
         strand_forward = sc.Strand([ss_f, loop, ss_r])
-        design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
+        design = sc.Design(strands=[strand_forward], grid=sc.square)
         design.assign_dna(strand_forward, 'AAACC TGCAC')
         json = design.to_json()
         # should be no error getting here
@@ -2499,7 +2501,7 @@ class TestJSON(unittest.TestCase):
         ss_r = sc.Domain(helix=0, forward=False, start=0, end=5)
         strand_f = sc.Strand([ss_f])
         strand_r = sc.Strand([ss_r])
-        design = sc.DNADesign(helices=[helix], strands=[strand_f, strand_r], grid=sc.square)
+        design = sc.Design(helices=[helix], strands=[strand_f, strand_r], grid=sc.square)
         json = design.to_json()
         # should be no error getting here
 
@@ -2525,21 +2527,21 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
     #     ])
     #     design_pre_json = sc.DNAOrigamiDesign(strands=[st_l, st_r, scaf], grid=sc.square)
     #
-    #     with self.assertRaises(sc.IllegalDNADesignError):
+    #     with self.assertRaises(sc.IllegalDesignError):
     #         design_pre_json.to_json()
 
-    def test_strands_not_specified_in_DNADesign_constructor(self):
-        design = sc.DNADesign(helices=[])
+    def test_strands_not_specified_in_Design_constructor(self):
+        design = sc.Design(helices=[])
         self.assertEqual(0, len(design.helices))
         self.assertEqual(0, len(design.strands))
 
-    def test_helices_not_specified_in_DNADesign_constructor(self):
-        design = sc.DNADesign(strands=[])
+    def test_helices_not_specified_in_Design_constructor(self):
+        design = sc.Design(strands=[])
         self.assertEqual(0, len(design.helices))
         self.assertEqual(0, len(design.strands))
 
-    def test_strands_and_helices_not_specified_in_DNADesign_constructor(self):
-        design = sc.DNADesign()
+    def test_strands_and_helices_not_specified_in_Design_constructor(self):
+        design = sc.Design()
         self.assertEqual(0, len(design.helices))
         self.assertEqual(0, len(design.strands))
 
@@ -2548,31 +2550,31 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         ss1 = sc.Domain(0, True, 0, 3)
         ss2 = sc.Loopout(4)
         ss3 = sc.Loopout(4)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             strand = sc.Strand([ss1, ss2, ss3])
 
         strand = sc.Strand([ss1, ss2])
         strand.domains.append(ss3)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_singleton_loopout(self):
         helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Loopout(4)
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             strand = sc.Strand([ss1])
 
         strand = sc.Strand([])
         strand.domains.append(ss1)
-        with self.assertRaises(sc.IllegalDNADesignError):
-            design = sc.DNADesign(helices=helices, strands=[strand], grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            design = sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_strand_offset_beyond_maxbases(self):
         helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Domain(0, True, 0, 20)
         strands = [sc.Strand([ss1])]
         with self.assertRaises(sc.StrandError):
-            design = sc.DNADesign(helices=helices, strands=strands)
+            design = sc.Design(helices=helices, strands=strands)
 
     def test_to_idt_bulk_input_format__duplicate_names_same_sequence(self):
         length = 8
@@ -2587,7 +2589,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         strands = [s1_r, s2_r, s_l]
 
-        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
         design.assign_dna(s_l, 'AGTT')
         design.assign_dna(s2_r, 'AACT')
@@ -2606,12 +2608,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         strands = [s1_r, s2_r, s_l]
 
-        design = sc.DNADesign(strands=strands, grid=sc.square)
+        design = sc.Design(strands=strands, grid=sc.square)
 
         design.assign_dna(s_l, 'AGTT')
         design.assign_dna(s2_r, 'GGGG')
 
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             idt_str = design.to_idt_bulk_input_format()
 
     def test_to_idt_bulk_input_format__duplicate_names_different_scales(self):
@@ -2625,12 +2627,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         strands = [s1_r, s2_r, s_l]
 
-        design = sc.DNADesign(strands=strands, grid=sc.square)
+        design = sc.Design(strands=strands, grid=sc.square)
 
         design.assign_dna(s_l, 'AGTT')
         design.assign_dna(s2_r, 'AACT')
 
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             idt_str = design.to_idt_bulk_input_format()
 
     def test_to_idt_bulk_input_format__duplicate_names_different_purifications(self):
@@ -2645,12 +2647,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         strands = [s1_r, s2_r, s_l]
 
-        design = sc.DNADesign(strands=strands, grid=sc.square)
+        design = sc.Design(strands=strands, grid=sc.square)
 
         design.assign_dna(s_l, 'AGTT')
         design.assign_dna(s2_r, 'AACT')
 
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             idt_str = design.to_idt_bulk_input_format()
 
     def test_assign_dna__conflicting_sequences_directly_assigned(self):
@@ -2658,9 +2660,9 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         ss_left = sc.Domain(0, False, 0, 5)
         strand_right = sc.Strand([ss_right])
         strand_left = sc.Strand([ss_left])
-        design = sc.DNADesign(strands=[strand_left, strand_right])
+        design = sc.Design(strands=[strand_left, strand_right])
         design.assign_dna(strand_right, 'ACGTT')
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             design.assign_dna(strand_right, 'TTTTT')
 
     def test_assign_dna__conflicting_sequences_indirectly_assigned(self):
@@ -2668,9 +2670,9 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         ss_left = sc.Domain(0, False, 0, 5)
         strand_right = sc.Strand([ss_right])
         strand_left = sc.Strand([ss_left])
-        design = sc.DNADesign(strands=[strand_left, strand_right])
+        design = sc.Design(strands=[strand_left, strand_right])
         design.assign_dna(strand_right, 'ACGTT')
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             design.assign_dna(strand_left, 'GGGGG')
 
     def test_overlapping_caught_in_strange_counterexample(self):
@@ -2686,11 +2688,11 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
         strands = [s1, s2]
 
-        with self.assertRaises(sc.IllegalDNADesignError):
-            design = sc.DNADesign(strands=strands, grid=sc.square)
+        with self.assertRaises(sc.IllegalDesignError):
+            design = sc.Design(strands=strands, grid=sc.square)
 
     def test_major_tick_outside_range(self):
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             helix = sc.Helix(max_offset=9, major_ticks=[2, 5, 10])
 
     def test_major_tick_just_inside_range(self):
@@ -2702,8 +2704,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         strand_bot = sc.Strand(domains=[ss_bot])
         strand_top = sc.Strand(domains=[ss_top])
         strands = [strand_bot, strand_top]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            sc.DNADesign(grid=sc.square, strands=strands)
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Design(grid=sc.square, strands=strands)
 
     def test_two_nonconsecutive_illegally_overlapping_strands(self):
         ss_top1 = sc.Domain(helix=0, forward=False, start=0, end=5)
@@ -2713,8 +2715,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         strand_top1 = sc.Strand(domains=[ss_top1])
         strand_top2 = sc.Strand(domains=[ss_top2])
         strands = [strand_bot, strand_top1, strand_top2]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            sc.DNADesign(grid=sc.square, strands=strands)
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Design(grid=sc.square, strands=strands)
 
     def test_four_legally_leapfrogging_strands(self):
         ss_top1 = sc.Domain(helix=0, forward=False, start=0, end=20)
@@ -2726,7 +2728,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         strand_top1 = sc.Strand(domains=[ss_top1])
         strand_top2 = sc.Strand(domains=[ss_top2])
         strands = [strand_bot1, strand_bot2, strand_top1, strand_top2]
-        sc.DNADesign(grid=sc.square, strands=strands)
+        sc.Design(grid=sc.square, strands=strands)
 
     def test_strand_references_nonexistent_helix(self):
         h1 = sc.Helix(max_offset=9)
@@ -2736,14 +2738,14 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         strand_bot = sc.Strand(domains=[ss_bot])
         strand_top = sc.Strand(domains=[ss_top])
         strands = [strand_bot, strand_top]
-        with self.assertRaises(sc.IllegalDNADesignError):
-            sc.DNADesign(grid=sc.square, helices=[h1, h2], strands=strands)
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Design(grid=sc.square, helices=[h1, h2], strands=strands)
 
 
 class TestInsertRemoveDomains(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        self.design = sc.Design(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
         self.design.strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
         self.strand = self.design.strands[0]
 
@@ -2756,7 +2758,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
         self.assertEqual(expected_strand_before, self.strand)
 
     def test_insert_domain_with_sequence(self):
-        design = sc.DNADesign(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        design = sc.Design(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
         design.strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
         strand = design.strands[0]
 
@@ -2817,7 +2819,7 @@ class TestLabels(unittest.TestCase):
 
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=100) for _ in range(10)]
-        self.design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        self.design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     def test_with_label__str(self):
         label = 'abc'
@@ -2880,7 +2882,7 @@ class TestAddStrand(unittest.TestCase):
 
     def test_add_strand__with_loopout(self):
         helices = [sc.Helix(max_offset=10), sc.Helix(max_offset=10)]
-        design = sc.DNADesign(helices=helices, strands=[])
+        design = sc.Design(helices=helices, strands=[])
 
         ss1 = sc.Domain(0, True, 0, 10)
         loop = sc.Loopout(4)
@@ -2896,7 +2898,7 @@ class TestAddStrand(unittest.TestCase):
 
     def test_add_strand__illegal_overlapping_domains(self):
         helices = [sc.Helix(max_offset=50), sc.Helix(max_offset=50)]
-        design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+        design = sc.Design(helices=helices, strands=[], grid=sc.square)
         with self.assertRaises(sc.StrandError):
             strand = sc.Strand([
                 sc.Domain(0, False, 40, 48),
@@ -2925,7 +2927,7 @@ class TestAssignDNA(unittest.TestCase):
         loop = sc.Loopout(length=5)
         ss_r = sc.Domain(helix=0, forward=False, start=0, end=5)
         strand_forward = sc.Strand([ss_f, loop, ss_r])
-        design = sc.DNADesign(strands=[strand_forward], grid=sc.square)
+        design = sc.Design(strands=[strand_forward], grid=sc.square)
         design.assign_dna(strand_forward, 'AAACC TGCAC')
         self.assertEqual('AAACC TGCAC GGTTT'.replace(' ', ''), strand_forward.dna_sequence)
 
@@ -2955,7 +2957,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_single1 = sc.Domain(helix=1, forward=True, start=0, end=5)
         strand_single1 = sc.Strand([ss_single1])
 
-        design = sc.DNADesign(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
+        design = sc.Design(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
 
         design.assign_dna(strand_multi, 'AAACC TGCAC ATTCG')
 
@@ -2989,7 +2991,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_single1 = sc.Domain(helix=1, forward=True, start=0, end=5)
         strand_single1 = sc.Strand([ss_single1])
 
-        design = sc.DNADesign(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
+        design = sc.Design(strands=[strand_multi, strand_single0, strand_single1], grid=sc.square)
 
         design.assign_dna(strand_single0, 'GGTTT')
 
@@ -3018,7 +3020,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_single = sc.Domain(helix=0, forward=False, start=0, end=8)
         strand_single = sc.Strand([ss_single])
 
-        design = sc.DNADesign(strands=[strand_multi, strand_single], grid=sc.square)
+        design = sc.Design(strands=[strand_multi, strand_single], grid=sc.square)
 
         design.assign_dna(strand_multi, 'CTGT ATGA TTCG AAAC')
 
@@ -3041,7 +3043,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_single = sc.Domain(helix=0, forward=False, start=0, end=8)
         strand_single = sc.Strand([ss_single])
 
-        design = sc.DNADesign(strands=[strand_multi, strand_single], grid=sc.square)
+        design = sc.Design(strands=[strand_multi, strand_single], grid=sc.square)
 
         design.assign_dna(strand_single, 'ACAG GTTT')
 
@@ -3060,7 +3062,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_l = sc.Domain(helix=0, forward=False, start=0, end=4)
         strand_r = sc.Strand(domains=[ss_r])
         strand_l = sc.Strand(domains=[ss_l])
-        design = sc.DNADesign(grid=sc.square, strands=[strand_r, strand_l])
+        design = sc.Design(grid=sc.square, strands=[strand_r, strand_l])
         design.assign_dna(strand_r, 'CAAAGTCG')
         design.assign_dna(strand_l, 'TTTG')
         # should not have an error by this point
@@ -3077,7 +3079,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_l = sc.Domain(helix=0, forward=False, start=2, end=6)
         strand_r = sc.Strand(domains=[ss_r])
         strand_l = sc.Strand(domains=[ss_l])
-        design = sc.DNADesign(grid=sc.square, strands=[strand_r, strand_l])
+        design = sc.Design(grid=sc.square, strands=[strand_r, strand_l])
         design.assign_dna(strand_r, 'CAAAGTCG')
         design.assign_dna(strand_l, 'ACTT')
         # should not have an error by this point
@@ -3094,7 +3096,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_l = sc.Domain(helix=0, forward=False, start=2, end=6)
         strand_r = sc.Strand(domains=[ss_r])
         strand_l = sc.Strand(domains=[ss_l])
-        design = sc.DNADesign(grid=sc.square, strands=[strand_r, strand_l])
+        design = sc.Design(grid=sc.square, strands=[strand_r, strand_l])
         design.assign_dna(strand_l, 'ACTT')
         design.assign_dna(strand_r, 'CAAAGTCG')
         # should not have an error by this point
@@ -3111,7 +3113,7 @@ class TestAssignDNA(unittest.TestCase):
         ss_l = sc.Domain(helix=0, forward=False, start=0, end=5)
         strand_r = sc.Strand(domains=[ss_r])
         strand_l = sc.Strand(domains=[ss_l])
-        design = sc.DNADesign(grid=sc.square, strands=[strand_r, strand_l])
+        design = sc.Design(grid=sc.square, strands=[strand_r, strand_l])
         design.assign_dna(strand_l, 'AAAAC')
         self.assertEqual('GTTTT', strand_r.dna_sequence)
 
@@ -3128,7 +3130,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_bot = sc.Strand(domains=[ss_bot])
         strand_top = sc.Strand(domains=[ss_top])
         strands = [strand_bot, strand_top]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_top, 'AA??C')
         self.assertEqual('G??TT', strand_bot.dna_sequence)
 
@@ -3144,7 +3146,7 @@ class TestAssignDNA(unittest.TestCase):
         st_top_left = sc.Strand([ss_top_left])
         st_top_right = sc.Strand([ss_top_right])
         st_bot = sc.Strand([ss_bot])
-        design = sc.DNADesign(strands=[st_bot, st_top_left, st_top_right], grid=sc.square)
+        design = sc.Design(strands=[st_bot, st_top_left, st_top_right], grid=sc.square)
         design.assign_dna(st_top_left, 'CAAA')
         self.assertEqual('TTTG????', st_bot.dna_sequence)
         design.assign_dna(st_top_right, 'AGGG')
@@ -3176,7 +3178,7 @@ class TestAssignDNA(unittest.TestCase):
         tile0 = sc.Strand([tile0_ss])
         tile1 = sc.Strand([tile1_ss])
 
-        design = sc.DNADesign(strands=[scaf, adap, tile0, tile1])
+        design = sc.Design(strands=[scaf, adap, tile0, tile1])
 
         design.assign_dna(tile0, 'AA AATG')
         self.assertEqual('???? CATT ???? ????'.replace(' ', ''), adap.dna_sequence)
@@ -3215,7 +3217,7 @@ class TestAssignDNA(unittest.TestCase):
         tile0 = sc.Strand([tile0_ss])
         tile1 = sc.Strand([tile1_ss])
 
-        design = sc.DNADesign(strands=[scaf, adap, tile0, tile1])
+        design = sc.Design(strands=[scaf, adap, tile0, tile1])
         design.add_deletion(0, 3)
         design.add_deletion(0, 8)
         design.add_deletion(1, 8)
@@ -3257,7 +3259,7 @@ class TestAssignDNA(unittest.TestCase):
         tile0 = sc.Strand([tile0_ss])
         tile1 = sc.Strand([tile1_ss])
 
-        design = sc.DNADesign(strands=[scaf, adap, tile0, tile1])
+        design = sc.Design(strands=[scaf, adap, tile0, tile1])
         design.add_insertion(0, 8, 1)
         design.add_insertion(1, 8, 1)
 
@@ -3282,7 +3284,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(domains=[ss_long])
         strand_short = sc.Strand(domains=[ss_short])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('GTTTT?????', strand_long.dna_sequence)
 
@@ -3298,7 +3300,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(domains=[ss_long])
         strand_short = sc.Strand(domains=[ss_short])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('?????GTTTT', strand_long.dna_sequence)
 
@@ -3318,7 +3320,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(domains=[ss_long, ss_long_h1])
         strand_short = sc.Strand(domains=[ss_short])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('GTTTT????????', strand_long.dna_sequence)
 
@@ -3339,7 +3341,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_long = sc.Strand(domains=[ss_long_h0, ss_long_h1])
         strand_short = sc.Strand(domains=[ss_short_h0])
         strands = [strand_long, strand_short]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('?????GTTTT???', strand_long.dna_sequence)
 
@@ -3359,7 +3361,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_top2 = sc.Strand(domains=[ss_top2])
         strand_top3 = sc.Strand(domains=[ss_top3])
         strands = [strand_bot, strand_top1, strand_top2, strand_top3]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(strand_bot, 'AAACCCGGG')
         self.assertEqual('CCC', strand_top1.dna_sequence)
         self.assertEqual('GGG', strand_top2.dna_sequence)
@@ -3389,7 +3391,7 @@ class TestAssignDNA(unittest.TestCase):
         second_stap = sc.Strand(domains=[second_stap1_right_ss, second_stap0_ss, second_stap1_left_ss])
 
         strands = [scaf, first_stap, second_stap]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
         design.assign_dna(scaf, 'ACC TAA GAA AAC ACT CAT GAA ATC'.replace(' ', ''))
         self.assertEqual('GGT GAT TTC TTA'.replace(' ', ''), first_stap.dna_sequence)
         self.assertEqual('AGT GTT TTC ATG'.replace(' ', ''), second_stap.dna_sequence)
@@ -3409,7 +3411,7 @@ class TestAssignDNA(unittest.TestCase):
         scaf = sc.Strand(domains=[scaf1_ss, scaf0_ss])
         stap = sc.Strand(domains=[stap1_ss, stap0_ss])
         strands = [scaf, stap]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
 
         seq_m13_upper_left = 'AAGATGAGTGTTTTAGTGTATTCTTTTGCCTC'
         design.assign_dna(scaf, seq_m13_upper_left)
@@ -3446,7 +3448,7 @@ class TestAssignDNA(unittest.TestCase):
         stap_right = sc.Strand([stap_right_ss0, stap_right_ss1])
         scaf = sc.Strand([scaf_ss1_left, scaf_ss0, scaf_ss1_right], color=sc.default_scaffold_color)
         strands = [stap_left, stap_right, scaf]
-        design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         design.add_deletion(helix=0, offset=1)
         design.add_deletion(helix=0, offset=4)
         design.add_deletion(helix=1, offset=1)
@@ -3472,7 +3474,7 @@ class TestAssignDNA(unittest.TestCase):
         strand_top2 = sc.Strand(domains=[ss_top2])
         strand_top3 = sc.Strand(domains=[ss_top3])
         strands = [strand_bot, strand_top1, strand_top2, strand_top3]
-        design = sc.DNADesign(grid=sc.square, strands=strands)
+        design = sc.Design(grid=sc.square, strands=strands)
 
         design.assign_dna(strand_top1, 'TTC')
         self.assertEqual('??????GAA', strand_bot.dna_sequence)
@@ -3512,7 +3514,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         self.strand_top_big6 = sc.Strand(domains=[self.dom_top6, self.dom_top15, self.dom_top18])
         strands = [self.strand_bot, self.strand_top_small0, self.strand_top_small12,
                    self.strand_top_big9, self.strand_top_big6]
-        self.design = sc.DNADesign(grid=sc.square, strands=strands)
+        self.design = sc.Design(grid=sc.square, strands=strands)
 
     def test_assign_dna__wildcards_multiple_overlaps(self):
         """
@@ -3538,7 +3540,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         self.assertEqual('TGC CAA GCA GTT TCC GAA CGT'.replace(' ', ''), self.strand_bot.dna_sequence)
 
     def test_assign_dna__domain_sequence_too_long_error(self):
-        with self.assertRaises(sc.IllegalDNADesignError):
+        with self.assertRaises(sc.IllegalDesignError):
             self.design.assign_dna(self.strand_top_big9, 'AACTTC', domain=self.dom_top9)
 
     def test_assign_dna__to_individual_domains__wildcards_multiple_overlaps(self):
@@ -3662,7 +3664,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <TGC---AAG---CCT---TTG---ACG---AAC---CGT-
          098   765   432   109   876   543   210
         """
-        design = sc.DNADesign(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+        design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
 
         """
          012   345   678   901   234   567   890

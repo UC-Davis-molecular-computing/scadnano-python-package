@@ -34,7 +34,7 @@ helices = [sc.Helix(0, 330), sc.Helix(1, 330), sc.Helix(2, 330), sc.Helix(3, 330
     s2 = sc.Strand([s2_ss1, s2_ss0])
 
     strands = [s1, s2]
-    design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
     return design
 """
@@ -52,7 +52,7 @@ def main():
     s2 = sc.Strand([s2_ss1, s2_ss0])
 
     strands = [s1, s2]
-    design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
     return design
 

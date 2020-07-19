@@ -1,6 +1,6 @@
 import scadnano as sc
 
-def main():
+def create_design():
     ss1_r = sc.Domain(0, True, 0, 4)
     ss2_r = sc.Domain(0, True, 4, 8)
     ss3_r = sc.Domain(0, True, 8, 12)
@@ -13,12 +13,12 @@ def main():
 
     strands = [s1_r, s2_r, s3_r, s_l]
 
-    design = sc.DNADesign(strands=strands, grid=sc.square)
+    design = sc.Design(strands=strands, grid=sc.square)
 
     design.assign_dna(s_l, 'AGTT'*3)
 
     return design
 
 if not sc.in_browser() and __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_idt_bulk_input_file(directory='idt')
