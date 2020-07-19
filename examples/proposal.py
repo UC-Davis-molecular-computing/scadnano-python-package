@@ -5,7 +5,7 @@ import scadnano as sc
 import modifications as mod
 
 
-def main() -> sc.DNADesign:
+def create_design() -> sc.DNADesign:
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2, edge_staples=False,
                          scaffold_nick_offset=102)
@@ -239,10 +239,11 @@ def add_biotins(design: sc.DNADesign, word: str):
 
 if not sc.in_browser() and __name__ == '__main__':
     for word in ['beth', 'yim', 'will', 'you', 'marry', 'me', 'yes']:
-        the_design = main()
+        the_design = create_design()
         add_biotins(the_design, word)
 
-        the_design.write_scadnano_file(directory='proposal', filename=f"{word}.dna")
+        ext = sc.default_scadnano_file_extension
+        the_design.write_scadnano_file(directory='proposal', filename=f"{word}.{ext}")
         the_design.write_idt_bulk_input_file(directory='proposal', filename=f"{word}.idt")
         the_design.write_idt_plate_excel_file(directory='proposal', filename=f"{word}.xls",
                                               # export_non_modified_strand_version=True,

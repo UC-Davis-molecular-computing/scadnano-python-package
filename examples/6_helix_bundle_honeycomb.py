@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def main():
+def create_design():
     m13_rotation = 6702
     m13_variant = sc.M13Variant.p7560
     # print(sc.m13(m13_rotation, m13_variant))
@@ -22,12 +22,12 @@ def initial_design():
 
         # below uses cadnano honeycomb coordinates
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/misc/cadnano-format-specs/v2.txt
-        sc.Helix(grid_position=(1, 1, 0), max_offset=max_offset),
-        sc.Helix(grid_position=(0, 1, 0), max_offset=max_offset),
-        sc.Helix(grid_position=(0, 2, 0), max_offset=max_offset),
-        sc.Helix(grid_position=(1, 2, 0), max_offset=max_offset),
-        sc.Helix(grid_position=(2, 2, 0), max_offset=max_offset),
-        sc.Helix(grid_position=(2, 1, 0), max_offset=max_offset),
+        sc.Helix(grid_position=(1, 1), max_offset=max_offset),
+        sc.Helix(grid_position=(0, 1), max_offset=max_offset),
+        sc.Helix(grid_position=(0, 2), max_offset=max_offset),
+        sc.Helix(grid_position=(1, 2), max_offset=max_offset),
+        sc.Helix(grid_position=(2, 2), max_offset=max_offset),
+        sc.Helix(grid_position=(2, 1), max_offset=max_offset),
 
         # below uses original mistaken convention from mistaken cadnano specs
         # sc.Helix(grid_position=(1, 0, 0), max_offset=max_offset),
@@ -137,5 +137,5 @@ def add_crossovers(design: sc.DNADesign):
 
 
 if not sc.in_browser() and __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file(directory='output_designs')

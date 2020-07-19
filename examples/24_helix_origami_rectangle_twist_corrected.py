@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def main():
+def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
@@ -81,5 +81,5 @@ def add_scaffold_crossovers(design: sc.DNADesign):
 
 
 if __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file()

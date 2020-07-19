@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def main():
+def create_design():
     ss_f = sc.Domain(helix=0, forward=True, start=0, end=10)
     loop = sc.Loopout(length=5)
     ss_r = sc.Domain(helix=0, forward=False, start=0, end=10)
@@ -14,5 +14,5 @@ def main():
 
 
 if not sc.in_browser() and __name__ == '__main__':
-    the_design = main()
+    the_design = create_design()
     the_design.write_scadnano_file(directory='output_designs')

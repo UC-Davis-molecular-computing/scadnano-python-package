@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def main():
+def create_design():
     stap_left_ss1 = sc.Domain(1, True, 0, 16)
     stap_left_ss0 = sc.Domain(0, False, 0, 16)
     stap_right_ss0 = sc.Domain(0, False, 16, 32)
@@ -25,5 +25,5 @@ def main():
 
 
 if not sc.in_browser() and __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file(directory='output_designs')

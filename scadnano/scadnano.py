@@ -4,9 +4,9 @@ The :mod:`scadnano` Python module is a library for describing synthetic DNA nano
 Installation instructions are at the
 `GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_.
 
-This module is used to write Python scripts outputting ``*.dna`` files readable
+This module is used to write Python scripts creating files readable
 by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_, a web application useful for displaying
-and manually editing these structures.
+and manually editing synthetic DNA nanostructures.
 The purpose of this module is to help automate some of the task of creating DNA designs,
 as well as making large-scale changes to them that are easier to describe programmatically than
 to do by hand in scadnano.
@@ -66,6 +66,8 @@ except ImportError:
     # this is so scadnano.py file works without _version.py being present, in case user downloads it
     __version__ = "0.9.10"
 
+default_scadnano_file_extension = 'sc'
+
 StrandLabel = TypeVar('StrandLabel')
 DomainLabel = TypeVar('DomainLabel')
 
@@ -75,6 +77,16 @@ def _pairwise(iterable):
     a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+# for putting evaluated expressions in docstrings
+# https://stackoverflow.com/questions/10307696/how-to-put-a-variable-into-python-docstring
+def _docstring_parameter(*sub, **kwargs):
+    def dec(obj):
+        obj.__doc__ = obj.__doc__.format(*sub, **kwargs)
+        return obj
+
+    return dec
 
 
 ##############################################################################
@@ -3920,9 +3932,10 @@ class DNADesign(_JSONSerializable):
     def _helices_to_string(self):
         return ', '.join(map(str, self.helices.keys()))
 
+    @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def to_json(self, suppress_indent: bool = True) -> str:
         """Return string representing this DNADesign, suitable for reading by scadnano if written to
-        a JSON file ending in extension .dna"""
+        a JSON file ending in extension .{default_extension}"""
         # if isinstance(self, DNAOrigamiDesign):
         #     scaf = None
         #     for strand in self.strands:
@@ -4235,7 +4248,7 @@ class DNADesign(_JSONSerializable):
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
-    def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: str,
+    def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: Optional[str],
                                                        idt_strands: List[Strand]):
         plates = list({strand.idt.plate for strand in idt_strands if strand.idt is not None if
                        strand.idt.plate is not None})
@@ -4271,7 +4284,7 @@ class DNADesign(_JSONSerializable):
         return worksheet
 
     @staticmethod
-    def _setup_excel_file(directory, filename):
+    def _setup_excel_file(directory: str, filename: Optional[str]):
         import xlwt
         plate_extension = f'xls'
         if filename is None:
@@ -4282,7 +4295,7 @@ class DNADesign(_JSONSerializable):
         workbook = xlwt.Workbook()
         return filename_plate, workbook
 
-    def _write_plates_default(self, directory: str, filename: str, idt_strands: List[Strand],
+    def _write_plates_default(self, directory: str, filename: Optional[str], idt_strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True):
         plate_coord = _PlateCoordinate(plate_type=plate_type)
@@ -4316,12 +4329,15 @@ class DNADesign(_JSONSerializable):
 
         workbook.save(filename_plate)
 
+    @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None):
-        """Write ``.dna`` file representing this :any:`DNADesign`, suitable for reading by scadnano,
-        with the output file having the same name as the running script but with ``.py`` changed to ``.dna``,
+        """Write ``.{default_extension}`` file representing this :any:`DNADesign`,
+        suitable for reading by scadnano,
+        with the output file having the same name as the running script but with ``.py`` changed to
+        ``.{default_extension}``,
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.dna``.
+        then the design will be written to ``my_origami.{default_extension}``.
         If `extension` is specified (but `filename` is not), then the design will be written to
         ``my_origami.<extension>``
 
@@ -4330,17 +4346,18 @@ class DNADesign(_JSONSerializable):
 
         The string written is that returned by :meth:`DNADesign.to_json`.
 
-        :param directory: directory in which to put file (default: current)
-        :param filename: filename (default: name of script with .py replaced by .dna).
+        :param directory: directory in which to put file (default: current working directory)
+        :param filename: filename (default: name of script with ``.py`` replaced by
+            ``.{default_extension}``).
             Mutually exclusive with `extension`
-        :param extension: extension for filename (default: .dna)
+        :param extension: extension for filename (default: ``.{default_extension}``)
             Mutually exclusive with `filename`
         """
         contents = self.to_json()
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
         if extension is None:
-            extension = 'dna'
+            extension = default_scadnano_file_extension
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename=None):

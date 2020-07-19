@@ -2,10 +2,10 @@ import origami_rectangle as rect
 import scadnano as sc
 
 
-def main():
+def create_design():
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2, num_flanking_helices=2, edge_staples=False,
-                         scaffold_nick_offset=102)
+                         scaffold_nick_offset=102, use_idt_defaults=True)
 
     # # need this to match original design, but doesn't leave room for left-side adapters
     # design.move_strand_offsets(8)
@@ -116,36 +116,36 @@ tile_dna_seqs = [''.join(line.split(',')[1]) for line_no, line in enumerate(seq_
 # print(tile_dna_seqs)
 
 
-def add_tiles_and_assign_dna(design):
-    # left tiles
-    left_left = 11
-    left_right = 32
-    for col, seq in zip(range(2, 18, 2), tile_dna_seqs):
-        bot_helix = top_helix + 1
-        ss_top = sc.Domain(helix=top_helix, forward=True,
-                           start=left_left, end=left_right)
-        ss_bot = sc.Domain(helix=bot_helix, forward=False,
-                           start=left_left, end=left_right)
-        tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0))
-        design.add_strand(tile)
-        design.assign_dna(tile, seq)
-
-    # right tiles
-    right_left = 480
-    right_right = 501
-    for top_helix, seq in zip(range(2, 18, 2), tile_dna_seqs):
-        bot_helix = top_helix + 1
-        ss_top = sc.Domain(helix=top_helix, forward=True,
-                           start=right_left, end=right_right)
-        ss_bot = sc.Domain(helix=bot_helix, forward=False,
-                           start=right_left, end=right_right)
-        tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0))
-        design.add_strand(tile)
-        design.assign_dna(tile, seq)
+# def add_tiles_and_assign_dna(design):
+#     # left tiles
+#     left_left = 11
+#     left_right = 32
+#     for col, seq in zip(range(2, 18, 2), tile_dna_seqs):
+#         bot_helix = top_helix + 1
+#         ss_top = sc.Domain(helix=top_helix, forward=True,
+#                            start=left_left, end=left_right)
+#         ss_bot = sc.Domain(helix=bot_helix, forward=False,
+#                            start=left_left, end=left_right)
+#         tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0))
+#         design.add_strand(tile)
+#         design.assign_dna(tile, seq)
+#
+#     # right tiles
+#     right_left = 480
+#     right_right = 501
+#     for top_helix, seq in zip(range(2, 18, 2), tile_dna_seqs):
+#         bot_helix = top_helix + 1
+#         ss_top = sc.Domain(helix=top_helix, forward=True,
+#                            start=right_left, end=right_right)
+#         ss_bot = sc.Domain(helix=bot_helix, forward=False,
+#                            start=right_left, end=right_right)
+#         tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0))
+#         design.add_strand(tile)
+#         design.assign_dna(tile, seq)
 
 
 if not sc.in_browser() and __name__ == '__main__':
-    design = main()
+    design = create_design()
     design.write_scadnano_file(directory='output_designs')
     design.write_idt_bulk_input_file(directory='idt')
-    design.write_idt_plate_excel_file(directory='idt')
+    design.write_idt_plate_excel_file(directory='idt', use_default_plates=True)
