@@ -14,7 +14,7 @@ def create_design():
     stap = sc.Strand([stap_ss])
     scaf = sc.Strand([scaf_ss], color=sc.default_scaffold_color)
     strands = [stap, scaf]
-    design = sc.DNADesign(helices=helices, strands=strands, grid=sc.Grid.none)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.Grid.none)
 
     return design
 

@@ -13,7 +13,7 @@ def create_design():
 
     strands = [s1_r, s2_r, s3_r, s_l]
 
-    design = sc.DNADesign(strands=strands, grid=sc.square)
+    design = sc.Design(strands=strands, grid=sc.square)
 
     design.assign_dna(s_l, 'AGTT'*3)
 

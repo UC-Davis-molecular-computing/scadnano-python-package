@@ -6,7 +6,7 @@ def create_design():
     loop = sc.Loopout(length=5)
     ss_r = sc.Domain(helix=0, forward=False, start=0, end=10)
     hairpin = sc.Strand([ss_f, loop, ss_r])
-    design = sc.DNADesign(strands=[hairpin], grid=sc.square)
+    design = sc.Design(strands=[hairpin], grid=sc.square)
 
     design.assign_dna(hairpin, 'AAAAACCCCCTGCAT')
 

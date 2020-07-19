@@ -69,7 +69,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
            twist_correction_deletion_offset=-1,
            num_flanking_columns: int = 1, num_flanking_helices=0,
            custom_scaffold: str = None, edge_staples: bool = True,
-           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.DNADesign:
+           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.Design:
     """
     Creates a DNA origami rectangle with a given number of helices and "columns" 
     (16-base-wide region in each helix). 
@@ -181,12 +181,12 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
     
     `use_idt_defaults`, if ``True``, creates an :py:class:`IDTFields` in each staple strand suitable for 
-    calling :py:meth:`DNADesign.write_idt_file` or :py:meth:`DNADesign.write_idt_plate_excel_file` .
+    calling :py:meth:`Design.write_idt_file` or :py:meth:`Design.write_idt_plate_excel_file` .
 
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
     (By default the output file name is the same as the script calling 
-    :py:meth:`DNADesign.write_scadnano_file`
+    :py:meth:`Design.write_scadnano_file`
     but with the extension ``.py`` changed to ``.dna``.)
 
     .. code-block:: Python
@@ -236,7 +236,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                               num_cols, nick_pattern, edge_staples, use_idt_defaults)
 
-    design = sc.DNADesign(helices=helices, strands=[scaffold] + staples, grid=sc.square)
+    design = sc.Design(helices=helices, strands=[scaffold] + staples, grid=sc.square)
 
     if twist_correction_deletion_spacing > 0:
         add_twist_correction_deletions(design=design,
@@ -434,7 +434,7 @@ def _create_inner_staples(offset_start: int, offset_end: int, offset_mid: int, n
     return staples
 
 
-def add_deletion_in_range(design: sc.DNADesign, helix: int, start: int, end: int, deletion_offset: int):
+def add_deletion_in_range(design: sc.Design, helix: int, start: int, end: int, deletion_offset: int):
     #Inserts deletion somewhere in given range.
 
     #`offset` is the relative offset within a column at which to put the deletions.
@@ -455,10 +455,10 @@ def add_deletion_in_range(design: sc.DNADesign, helix: int, start: int, end: int
     design.add_deletion(helix, deletion_absolute_offset)
 
 
-def valid_deletion_offset(design: sc.DNADesign, helix: int, offset: int):
+def valid_deletion_offset(design: sc.Design, helix: int, offset: int):
     domains_at_offset = design.domains_at(helix, offset)
     if len(domains_at_offset) > 2:
-        raise ValueError(f'Invalid DNADesign; more than two Substrands found at '
+        raise ValueError(f'Invalid Design; more than two Substrands found at '
                          f'helix {helix} and offset {offset}: '
                          f'{domains_at_offset}')
     elif len(domains_at_offset) != 2:
@@ -475,7 +475,7 @@ def valid_deletion_offset(design: sc.DNADesign, helix: int, offset: int):
     return True
 
 
-def add_twist_correction_deletions(design: sc.DNADesign,
+def add_twist_correction_deletions(design: sc.Design,
                                    offset_start: int,
                                    deletion_spacing: int,
                                    deletion_start_col: int,

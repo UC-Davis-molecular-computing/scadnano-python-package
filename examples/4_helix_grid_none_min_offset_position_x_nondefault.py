@@ -13,7 +13,7 @@ def create_design():
         sc.Helix(major_tick_distance=4, max_offset=length, position=sc.Position3D(x=2.5, y=1, z=11),
                  min_offset=8),
     ]
-    design = sc.DNADesign(helices=helices, strands=[
+    design = sc.Design(helices=helices, strands=[
         sc.Strand([sc.Domain(0, True, 0, length)]),
         sc.Strand([sc.Domain(1, True, 8, length)]),
         sc.Strand([sc.Domain(2, True, 0, length)]),

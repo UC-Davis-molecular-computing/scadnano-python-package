@@ -22,7 +22,7 @@ def create_design():
     scaf = sc.Strand(domains=[scaf_ss1_left, scaf_ss0, loopout, scaf_ss1_right], is_scaffold=True)
 
     # whole design
-    design = sc.DNADesign(strands=[scaf, stap_left, stap_right], grid=sc.square)
+    design = sc.Design(strands=[scaf, stap_left, stap_right], grid=sc.square)
 
     # deletions and insertions added to design so they can be added to both strands on a helix
     design.add_deletion(helix=0, offset=11)

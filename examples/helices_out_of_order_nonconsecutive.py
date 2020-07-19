@@ -10,7 +10,7 @@ def create_design():
         sc.Helix(idx=7, max_offset=20),
         sc.Helix(idx=11, max_offset=20),
     ]
-    design = sc.DNADesign(helices=helices, strands=[])
+    design = sc.Design(helices=helices, strands=[])
     # design.set_helices_view_order([5, 2, 11, 3, 7])
     return design
 

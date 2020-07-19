@@ -55,7 +55,7 @@ Create an empty text file named `24_helix_rectangle_twist_corrected.py`, and pas
 import scadnano as sc
 
 def create_design():
-    design = sc.DNADesign(helices=[], strands=[], grid=sc.square)
+    design = sc.Design(helices=[], strands=[], grid=sc.square)
     return design
 
 if __name__ == '__main__':
@@ -95,7 +95,7 @@ This is a file format called [JSON format](https://en.wikipedia.org/wiki/JSON). 
 
 ## Add helices
 
-As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `DNADesign` constructor; if they are omitted, then constructor infers which helices are present by inspecting the `Domain`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
+As you can see, the simple script we wrote generates a design with no helices and no strands. It is not necessary to specify helices specifically in the `Design` constructor; if they are omitted, then constructor infers which helices are present by inspecting the `Domain`'s of the `strands` parameter. But we will specify them explicitly in order to see how to customize their properties.
 
 We want 24 helices. We need to ensure each helix has enough offsets for all the bases we will need. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it. Notice that 7249 / 24 &asymp; 302, so length 304 per helix is sufficient.
 
@@ -106,7 +106,7 @@ import scadnano as sc
 
 def create_design():
     helices = [sc.Helix(max_offset=304) for _ in range(24)]            ###
-    design = sc.DNADesign(helices=helices, strands=[], grid=sc.square) ###
+    design = sc.Design(helices=helices, strands=[], grid=sc.square) ###
     return design
 
 if __name__ == '__main__':
@@ -119,7 +119,7 @@ To save space, below we will omit the `import scadnano as sc` statement and `if 
 ```python
 def create_design():
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
-    design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+    design = sc.Design(helices=helices, strands=[], grid=sc.square)
     return design
 ```
 
@@ -177,7 +177,7 @@ One can specify a design by explcitly listing every `Strand`, each of which is s
 
 However, it can be difficult to see how to write a single loop, or even a small number of loops, to specify a complex design such as this one. An alternate simple way to specify a design is instead to visualize the design as consisting of several long strands, two per helix, which have had nicks and crossovers added. This is how we will design this DNA origami.
 
-We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `DNADesign` object.
+We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `Design` object.
 
 The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
@@ -190,11 +190,11 @@ def create_design():
     design = precursor_scaffolds() ###
     return design
 
-def precursor_scaffolds() -> sc.DNADesign:
+def precursor_scaffolds() -> sc.Design:
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
     scaffolds = [sc.Strand([sc.Domain(helix=helix, forward=(helix % 2 == 0), start=8, end=296)])
                  for helix in range(24)]
-    return sc.DNADesign(helices=helices, strands=scaffolds, grid=sc.square)
+    return sc.Design(helices=helices, strands=scaffolds, grid=sc.square)
 ```
 
 Execute the script. The file `24_helix_origami_rectangle_twist_corrected.dna` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
@@ -262,7 +262,7 @@ def create_design():
     
     return design
 
-def add_scaffold_nicks(design: sc.DNADesign):
+def add_scaffold_nicks(design: sc.Design):
     for helix in range(1, 24):
         design.add_nick(helix=helix, offset=152, forward=helix % 2 == 0)
 ```
@@ -301,7 +301,7 @@ def create_design():
 
     return design
 
-def add_scaffold_crossovers(design: sc.DNADesign):
+def add_scaffold_crossovers(design: sc.Design):
     crossovers = []
 
     # scaffold interior: full crossovers
@@ -316,7 +316,7 @@ def add_scaffold_crossovers(design: sc.DNADesign):
     design.add_crossovers(crossovers)
 ```
 
-There is a method `DNADesign.add_crossover`, but we use the batch method `DNADesign.add_crossovers`. This allows us to build up a list of `Crossover`'s first before adding them, which helps to avoid creating circular `Strand`'s in the intermediate stages.
+There is a method `Design.add_crossover`, but we use the batch method `Design.add_crossovers`. This allows us to build up a list of `Crossover`'s first before adding them, which helps to avoid creating circular `Strand`'s in the intermediate stages.
 
 Now the design should look like this:
 
@@ -343,7 +343,7 @@ def create_design():
 
     return design
 
-def add_precursor_staples(design: sc.DNADesign):
+def add_precursor_staples(design: sc.Design):
     staples = [sc.Strand([sc.Domain(helix=helix, forward=helix % 2 == 1, start=8, end=296)])
                for helix in range(24)]
     for staple in staples:
@@ -376,7 +376,7 @@ def create_design():
     return design
 
 
-def add_staple_nicks(design: sc.DNADesign):
+def add_staple_nicks(design: sc.Design):
     for helix in range(24):
         start_offset = 32 if helix % 2 == 0 else 48
         for offset in range(start_offset, 280, 32):
@@ -407,7 +407,7 @@ def create_design():
 
     return design
 
-def add_staple_crossovers(design: sc.DNADesign):
+def add_staple_crossovers(design: sc.Design):
     for helix in range(23):
         start_offset = 24 if helix % 2 == 0 else 40
         for offset in range(start_offset, 296, 32):
@@ -442,7 +442,7 @@ def create_design():
     return design
 
 
-def add_deletions(design: sc.DNADesign):
+def add_deletions(design: sc.Design):
     for helix in range(24):
         for offset in range(27, 294, 48):
             design.add_deletion(helix, offset)
@@ -517,7 +517,7 @@ def create_design():
     return design
 
 
-def export_idt_plate_file(design: sc.DNADesign):
+def export_idt_plate_file(design: sc.Design):
     for strand in design.strands:
         if strand != design.scaffold:
             strand.set_default_idt(use_default_idt=True)
@@ -526,7 +526,7 @@ def export_idt_plate_file(design: sc.DNADesign):
 
 This will write an Excel file named `24_helix_origami_rectangle_twist_corrected.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
 
-There are many options to customize how the strands are exported and what information goes into the `idt` field (e.g., purification, synthesis scale); see the [API documentation](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.DNADesign.write_idt_plate_excel_file).
+There are many options to customize how the strands are exported and what information goes into the `idt` field (e.g., purification, synthesis scale); see the [API documentation](https://scadnano-python-package.readthedocs.io/#scadnano.scadnano.Design.write_idt_plate_excel_file).
 
 
 
@@ -553,20 +553,20 @@ def create_design():
     return design
 
 
-def export_idt_plate_file(design: sc.DNADesign):
+def export_idt_plate_file(design: sc.Design):
     for strand in design.strands:
         if strand != design.scaffold:
             strand.set_default_idt(use_default_idt=True)
     design.write_idt_plate_excel_file(use_default_plates=True)
 
 
-def add_deletions(design: sc.DNADesign):
+def add_deletions(design: sc.Design):
     for helix in range(24):
         for offset in range(27, 294, 48):
             design.add_deletion(helix, offset)
 
 
-def add_staple_crossovers(design: sc.DNADesign):
+def add_staple_crossovers(design: sc.Design):
     for helix in range(23):
         start_offset = 24 if helix % 2 == 0 else 40
         for offset in range(start_offset, 296, 32):
@@ -575,33 +575,33 @@ def add_staple_crossovers(design: sc.DNADesign):
                                           forward=helix % 2 == 1)
 
 
-def add_staple_nicks(design: sc.DNADesign):
+def add_staple_nicks(design: sc.Design):
     for helix in range(24):
         start_offset = 32 if helix % 2 == 0 else 48
         for offset in range(start_offset, 280, 32):
             design.add_nick(helix, offset, forward=helix % 2 == 1)
 
 
-def add_precursor_staples(design: sc.DNADesign):
+def add_precursor_staples(design: sc.Design):
     staples = [sc.Strand([sc.Domain(helix=helix, forward=helix % 2 == 1, start=8, end=296)])
                for helix in range(24)]
     for staple in staples:
         design.add_strand(staple)
 
 
-def precursor_scaffolds() -> sc.DNADesign:
+def precursor_scaffolds() -> sc.Design:
     helices = [sc.Helix(max_offset=304) for _ in range(24)]
     scaffolds = [sc.Strand([sc.Domain(helix=helix, forward=helix % 2 == 0, start=8, end=296)])
                  for helix in range(24)]
-    return sc.DNADesign(helices=helices, strands=scaffolds, grid=sc.square)
+    return sc.Design(helices=helices, strands=scaffolds, grid=sc.square)
 
 
-def add_scaffold_nicks(design: sc.DNADesign):
+def add_scaffold_nicks(design: sc.Design):
     for helix in range(1, 24):
         design.add_nick(helix=helix, offset=152, forward=helix % 2 == 0)
 
 
-def add_scaffold_crossovers(design: sc.DNADesign):
+def add_scaffold_crossovers(design: sc.Design):
     crossovers = []
 
     # scaffold interior

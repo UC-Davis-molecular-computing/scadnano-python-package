@@ -24,7 +24,7 @@ def create_design():
         strands.append(stap_mid)
         strands.append(stap_right)
 
-    design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
     return design
 

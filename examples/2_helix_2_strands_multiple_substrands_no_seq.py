@@ -15,7 +15,7 @@ def create_design():
     strand_single = sc.Strand(domains=[ss0_single])
 
     # whole design
-    design = sc.DNADesign(strands=[strand_multi, strand_single], grid=sc.square)
+    design = sc.Design(strands=[strand_multi, strand_single], grid=sc.square)
 
     return design
 

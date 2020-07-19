@@ -20,7 +20,7 @@ def create_design():
         [ss_f0, hairpin0, ss_r0, crossover_like_loopout, ss_f1, long_range_loopout, ss_r2, hairpin2, ss_f2,
          hairpin2_2, ss_r2_2])
 
-    design = sc.DNADesign(strands=[strand], grid=sc.square)
+    design = sc.Design(strands=[strand], grid=sc.square)
     t5 = 'TTTAC'
     t10 = 'TTTACTTACG'
     t20 = 'TTTTTTTTTTACGTTGCAGG'

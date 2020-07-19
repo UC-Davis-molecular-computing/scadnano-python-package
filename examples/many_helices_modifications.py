@@ -7,7 +7,7 @@ def create_design():
     WIDTH = 16
     doms = [sc.Domain(h, h%2==0, 0,WIDTH) for h in range(NUM_HELICES)]
     strand = sc.Strand(doms)
-    design = sc.DNADesign(strands=[strand], grid=sc.square)
+    design = sc.Design(strands=[strand], grid=sc.square)
     design.add_deletion(helix=0, offset=11)
     design.add_deletion(helix=0, offset=12)
     design.add_deletion(helix=1, offset=12)

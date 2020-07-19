@@ -78,10 +78,10 @@ def initial_design():
         sc.Strand([sc.Domain(helix=5, forward=True, start=42, end=1246)]),
     ]
     strands = scafs + staps
-    return sc.DNADesign(helices=helices, strands=strands, grid=sc.honeycomb)
+    return sc.Design(helices=helices, strands=strands, grid=sc.honeycomb)
 
 
-def add_nicks(design: sc.DNADesign):
+def add_nicks(design: sc.Design):
     design.add_nick(helix=5, offset=399, forward=False)  # scaffold
     for offset in range(56, 1246, 42):
         design.add_nick(helix=0, offset=offset, forward=False)
@@ -94,7 +94,7 @@ def add_nicks(design: sc.DNADesign):
         design.add_nick(helix=5, offset=offset, forward=True)
 
 
-def add_crossovers(design: sc.DNADesign):
+def add_crossovers(design: sc.Design):
     # staples interior
     for offset in range(84, 1246, 42):
         design.add_full_crossover(helix=0, helix2=1, offset=offset, forward=False)

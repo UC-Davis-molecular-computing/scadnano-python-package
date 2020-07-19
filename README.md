@@ -100,7 +100,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
     * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
     
-    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`DNADesign.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.DNADesign.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
+    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`Design.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.Design.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
 
 
 
@@ -144,7 +144,7 @@ def create_design():
     scaf = sc.Strand(domains=[scaf_domain1_left, scaf_domain0, loopout, scaf_domain1_right], is_scaffold=True)
 
     # whole design
-    design = sc.DNADesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
+    design = sc.Design(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)
@@ -166,7 +166,7 @@ Running the code above produces the `.dna` JSON file shown in the [web interface
 
 
 ## abbreviated syntax with chained methods
-Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the DNADesign. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above script using these chained methods
+Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the Design. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above script using these chained methods
 
 ```python
 import scadnano as sc
@@ -178,7 +178,7 @@ def create_design():
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
     # whole design
-    design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+    design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     # left staple
     design.strand(1, 8).to(24).cross(0).to(8)
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.DNADesign.strand).
+Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand).
 
 
 

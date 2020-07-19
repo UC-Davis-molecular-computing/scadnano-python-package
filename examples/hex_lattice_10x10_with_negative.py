@@ -5,7 +5,7 @@ def create_design():
     length = 16
     helices = [sc.Helix(max_offset=length, grid_position=(h, v))
                for v in range(-4, 6) for h in range(-4, 6)]
-    design = sc.DNADesign(helices=helices, strands=[], grid=sc.hexagonal)
+    design = sc.Design(helices=helices, strands=[], grid=sc.hexagonal)
 
     return design
 

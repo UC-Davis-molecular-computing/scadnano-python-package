@@ -34,7 +34,7 @@ def create_design():
     scaffold = sc.Strand([sc.Domain(helix=0, forward=False, start=0, end=start),
                           sc.Domain(helix=1, forward=True, start=0, end=start)], is_scaffold=True)
     strands.append(scaffold)
-    design = sc.DNADesign(strands=strands, grid=sc.square)
+    design = sc.Design(strands=strands, grid=sc.square)
     design.assign_m13_to_scaffold()
 
     return design

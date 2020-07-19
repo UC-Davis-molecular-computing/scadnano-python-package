@@ -26,8 +26,8 @@ def create_design():
     geometry = sc.Geometry(rise_per_base_pair=0.2, helix_radius=1.2, inter_helix_gap=1.0)
 
     # whole design
-    design = sc.DNADesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
-                          geometry=geometry)
+    design = sc.Design(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square,
+                       geometry=geometry)
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)

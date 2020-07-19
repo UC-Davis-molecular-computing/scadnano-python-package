@@ -29,8 +29,8 @@ def create_design():
             strand = sc.Strand([ss1, ss2], color=color)
             strands.append(strand)
 
-    # design = sc.DNADesign(helices=helices, strands=strands, grid=sc.square)
-    design = sc.DNADesign(major_tick_distance=10, strands=strands, grid=sc.square)
+    # design = sc.Design(helices=helices, strands=strands, grid=sc.square)
+    design = sc.Design(major_tick_distance=10, strands=strands, grid=sc.square)
 
     return design
 

@@ -6,7 +6,7 @@ def create_design():
     num_helices, max_bases = 30, 2000
     for _ in range(num_helices):
         helices.append(sc.Helix(max_bases))
-    design = sc.DNADesign(helices=helices, strands=[], grid=sc.square)
+    design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
     return design
 

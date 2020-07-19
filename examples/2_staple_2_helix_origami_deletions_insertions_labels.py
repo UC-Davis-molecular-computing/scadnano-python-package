@@ -26,7 +26,7 @@ def create_design():
                      label='scaffold label')
 
     # whole design
-    design = sc.DNADesign(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
+    design = sc.Design(helices=helices, strands=[scaf, stap_left, stap_right], grid=sc.square)
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)

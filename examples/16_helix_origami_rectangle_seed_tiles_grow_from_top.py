@@ -41,7 +41,7 @@ def set_helix_major_ticks(design):
         helix.major_ticks = ticks
 
 
-def add_twist_correct_deletions(design: sc.DNADesign):
+def add_twist_correct_deletions(design: sc.Design):
     # I choose between 3 and 4 offset arbitrarily for twist-correction deletions for some reason,
     # so they have to be hard-coded.
     for col, offset in zip(range(4, 29, 3), [4, 3, 3, 4, 3, 3, 3, 3, 3]):
@@ -49,7 +49,7 @@ def add_twist_correct_deletions(design: sc.DNADesign):
             design.add_deletion(helix, 16 * col + offset)
 
 
-def move_top_and_bottom_staples_within_column_boundaries(design: sc.DNADesign):
+def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design):
     top_staples = design.strands_starting_on_helix(2)
     bot_staples = design.strands_starting_on_helix(17)
     bot_staples.remove(design.scaffold)
