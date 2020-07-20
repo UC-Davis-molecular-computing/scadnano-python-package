@@ -26,7 +26,7 @@ It is actually unnecessary for you to install scadnano via pip, so you can skip 
 
 I suggest using a powerful IDE such as [PyCharm](https://www.jetbrains.com/pycharm/download/download-thanks.html). [Visual Studio Code](https://code.visualstudio.com/) is also good with the right plugins. The scadnano Python package uses type hints, and these tools are very helpful in giving static analysis warnings about the code that may represent errors that will manifest at run time.
 
-### Keeping the scadnano simple for users to install
+### Keeping the scadnano package simple for users to install
 
 One goal is to make the package as easy to install as possible, even for users who have trouble installing scadnano via pip. For this reason, we have two self-imposed constraints:
 
