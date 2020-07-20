@@ -236,3 +236,8 @@ Several example scripts are located in the
 [examples/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples) subfolder. 
 Their output is contained in the 
 [examples/output_designs/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples/output_designs) subfolder.
+
+
+
+# Contributing
+If you wish to contribute to scadnano, please see the [CONTRIBUTING document](CONTRIBUTING.md) to contribute to the scadnano Python package. There is also a [CONTRIBUTING document](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/CONTRIBUTING.md) for the web interface.
