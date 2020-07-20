@@ -239,5 +239,5 @@ Their output is contained in the
 
 
 
-# Contributing
+## Contributing
 If you wish to contribute to scadnano, please see the [CONTRIBUTING document](CONTRIBUTING.md) to contribute to the scadnano Python package. There is also a [CONTRIBUTING document](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/CONTRIBUTING.md) for the web interface.
