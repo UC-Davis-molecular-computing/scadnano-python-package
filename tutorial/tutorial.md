@@ -23,7 +23,7 @@ The design will look like this when we are done:
 
 ![](images/complete_design_no_DNA.png)
 
-The completed design is available as a [`.dna` file](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano/master/web/examples/output_designs/24_helix_origami_rectangle_twist_corrected.dna) readable by scadnano. Download it and save it somewhere on your local file system.
+The completed design is available as a [`.sc` file](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano/master/web/examples/output_designs/24_helix_origami_rectangle_twist_corrected.sc) readable by scadnano. Download it and save it somewhere on your local file system.
 
 To view it, first open scadnano in your browser: 
 https://scadnano.org.
@@ -75,11 +75,11 @@ Depending on your installation, you may have to type `python3` instead of `pytho
 python3 24_helix_rectangle_twist_corrected.py
 ```
 
-In the same directory, a file named `24_helix_origami_rectangle_twist_corrected.dna` should appear. Open it in a text editor. The contents of the file should be something similar to this:
+In the same directory, a file named `24_helix_origami_rectangle_twist_corrected.sc` should appear. Open it in a text editor. The contents of the file should be something similar to this:
 
 ```json
 {
-  "version": "0.5.0",
+  "version": "0.10.0",
   "helices": [],
   "strands": []
 }
@@ -197,7 +197,7 @@ def precursor_scaffolds() -> sc.Design:
     return sc.Design(helices=helices, strands=scaffolds, grid=sc.square)
 ```
 
-Execute the script. The file `24_helix_origami_rectangle_twist_corrected.dna` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
+Execute the script. The file `24_helix_origami_rectangle_twist_corrected.sc` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
 
 ```json
 "strands": [

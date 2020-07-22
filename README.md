@@ -18,7 +18,7 @@ If you find scadnano useful in a scientific project, please cite its associated 
 
 ## Overview
 
-This module is used to write Python scripts outputting `.dna` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
+This module is used to write Python scripts outputting `.sc` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
 
 Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. 
 
@@ -98,7 +98,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
-    * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
+    * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.sc` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
 
     To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
     ![](images/download_raw_screenshot.png)
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Running the code above produces the `.dna` JSON file shown in the [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology). That section explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
+Running the code above produces the `.sc` JSON file shown in the [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology). That section explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
 
 
 ## abbreviated syntax with chained methods
