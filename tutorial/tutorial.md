@@ -333,7 +333,9 @@ Now the design should look like this:
 
 ## Add staple precursors
 
-To add staples, we call `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
+We added the scaffold precursor strands by giving them in the constructor for `Design`, but now the `Design` is created, so we cannot call the constructor again.
+
+To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
 
 ```python
 def create_design():

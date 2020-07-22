@@ -3434,7 +3434,7 @@ class Design(_JSONSerializable):
         """
         return StrandBuilder(self, helix, offset)
 
-    def assign_m13_to_scaffold(self, rotation: int = 5588, variant: M13Variant = M13Variant.p7249):
+    def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
