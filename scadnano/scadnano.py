@@ -3414,16 +3414,17 @@ class Design(_JSONSerializable):
 
         Each call to
         :py:meth:`Design.strand`,
-        :py:meth:`Design.cross`,
-        :py:meth:`Design.loopout`,
-        :py:meth:`Design.to`
+        :py:meth:`StrandBuilder.cross`,
+        :py:meth:`StrandBuilder.loopout`,
+        :py:meth:`StrandBuilder.to`
+        :py:meth:`StrandBuilder.update_to`,
         returns a :any:`StrandBuilder` object.
 
         Each call to
-        :py:meth:`Design.to`,
-        :py:meth:`Design.update_to`,
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`Design.loopout`
+        :py:meth:`StrandBuilder.loopout`
         modifies the :any:`Design` by replacing the Strand with an updated version.
 
         See the documentation for :any:`StrandBuilder` for the methods available to call in this way.
