@@ -158,7 +158,7 @@ Execute this script and inspect the output `24_helix_rectangle_twist_corrected.s
 }
 ```
 
-At this point and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.)
+At this point, and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Recall that this can be done either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.) Unfortunately, since it is a browser-based application, there's no way to have it automatically reload whenever your local `24_helix_rectangle_twist_corrected.sc` file changes, for the same reason you wouldn't want arbitrary websites to start reading files on your computer without you explicitly uploading them.
 
 At this point, the design should look like this:
 
