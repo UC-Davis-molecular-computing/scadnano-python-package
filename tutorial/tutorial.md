@@ -31,7 +31,7 @@ Currently only [Chrome](https://www.google.com/chrome/)
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
 
-Select File&rarr;Open. Choose the file you downloaded. (Alternatively, you can drag the file from your file browser onto the open scadnano page in your web browser.) The design should look similar to the first screenshot in the tutorial.
+Select File&rarr;Open. Choose the file you downloaded. Alternatively, you can drag the file from your computer's file browser onto the open scadnano page in your web browser. The design should look similar to the first screenshot in the tutorial.
 
 
 
@@ -123,7 +123,7 @@ def create_design():
     return design
 ```
 
-Execute this script and inspect the output `24_helix_rectangle_twist_corrected.py` file:
+Execute this script and inspect the output `24_helix_rectangle_twist_corrected.sc` file:
 
 ```json
 {
@@ -158,7 +158,9 @@ Execute this script and inspect the output `24_helix_rectangle_twist_corrected.p
 }
 ```
 
-At this point and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.py` in the scadnano web interface, to verify that it resembles the design you expect. At this point, the design should look like this:
+At this point and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.)
+
+At this point, the design should look like this:
 
 ![](images/design_with_helices_no_strands.png)
 
@@ -179,7 +181,9 @@ However, it can be difficult to see how to write a single loop, or even a small 
 
 We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `Design` object.
 
-The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
+The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying these strands with nicks and crossovers, eventually joining them into one long strand.
+
+Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
 boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
 integer `start` and `end` offsets.
