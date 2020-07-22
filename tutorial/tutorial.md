@@ -105,7 +105,7 @@ Change the Python file as follows. We marked the changed lines in `create_design
 import scadnano as sc
 
 def create_design():
-    helices = [sc.Helix(max_offset=304) for _ in range(24)]            ###
+    helices = [sc.Helix(max_offset=304) for _ in range(24)]         ###
     design = sc.Design(helices=helices, strands=[], grid=sc.square) ###
     return design
 
