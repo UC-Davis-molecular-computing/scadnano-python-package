@@ -292,7 +292,7 @@ This contrasts a so-called *half crossover*, depicted here:
 
 We add full crossovers at the seam and half crossovers at the left and right edges of the helices. Note that the offset specified for a full crossover is that of the half crossover on the right side.
 
-Also, at this point the scaffold is a single strand, so we can call `set_scaffold()` to set it as the scaffold . 
+Also, at this point the scaffold is a single strand, so we can call `set_scaffold()` to set it as the scaffold.
 
 ```python
 def create_design():
@@ -394,7 +394,7 @@ The design should now look like this:
 
 ## Add crossovers to staples
 
-Since staples are now less connected than the scaffold was at this stage, we don't need to be as careful to avoid creating a circular strand, so we can add crossovers one at a time.
+Since staples are now less connected than the scaffold was at this stage, we don't need to be as careful to avoid creating a circular strand, so we can add crossovers one at a time using repeated calls to the method `add_full_crossover`.
 
 ```python
 def create_design():
@@ -416,6 +416,8 @@ def add_staple_crossovers(design: sc.Design):
             if offset != 152: # skip crossover near seam
                 design.add_full_crossover(helix=helix, helix2=helix+1, offset=offset, forward=helix%2==1)
 ```
+
+If you inspect carefully, you'll see that we are adding crossovers at offsets where nicks, i.e., 5'/3' ends of strands, do not exist already; the nicks are automatically created when calling `add_full_crossover`. This only works for `add_full_crossover`; the method `add_half_crossover` can only be given offsets corresponding to 5'/3' ends of strands.
 
 The design is now mostly complete:
 
@@ -497,7 +499,7 @@ for strand in design.strands:
 
 Or you could use Python's I/O library to write them to a file in a format of your choosing.
 
-scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). To use either, each strand must have a field called `idt` set specifying the information that IDT expects, but we can call `strand.set_default_idt(use_default_idt=True)` to choose a reasonable default:
+scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). To use either method, each strand must have a field called `idt` set specifying the information that IDT expects, but we can call `strand.set_default_idt(use_default_idt=True)` to choose a reasonable default:
 
 ```python
 def create_design():
