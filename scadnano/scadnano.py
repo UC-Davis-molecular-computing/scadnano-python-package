@@ -1702,7 +1702,7 @@ class StrandBuilder:
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
-    This is an intermediate object created when using "literal" chained method building by calling
+    This is an intermediate object created when using chained method building by calling
     :py:meth:`Design.strand`, for example
 
     .. code-block:: Python
@@ -3377,7 +3377,7 @@ class Design(_JSONSerializable):
         return mods_5p | mods_3p | mods_int
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
-        """Used for "literal" chained method building by calling
+        """Used for chained method building by calling
         :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
