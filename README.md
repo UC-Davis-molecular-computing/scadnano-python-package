@@ -165,7 +165,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Running the code above produces the `.sc` JSON file shown in the [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology). That section explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
+Running the code above produces the `.sc` JSON file shown above. The [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology) explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
 
 
 ## abbreviated syntax with chained methods
@@ -216,9 +216,9 @@ Documentation is available in the [API docs](https://scadnano-python-package.rea
 
 
 
-## Documentation
+## API Documentation
 
-Online documentation of the package API is located here:
+Online documentation of the package API (which classes, methods, functions, and constants are provided by the package) is located here:
 https://scadnano-python-package.readthedocs.io
 
 
@@ -227,7 +227,7 @@ https://scadnano-python-package.readthedocs.io
 
 ## Tutorial
 
-A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scripting library.
+A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scadnano Python package.
 
 
 
@@ -235,10 +235,12 @@ A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-pac
 
 ## Other examples
 
+*Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
+
 Several example scripts are located in the 
-[examples/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples) subfolder. 
+[examples/](examples) subfolder. 
 Their output is contained in the 
-[examples/output_designs/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples/output_designs) subfolder.
+[examples/output_designs/](examples/output_designs) subfolder.
 
 
 

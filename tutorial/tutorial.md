@@ -40,7 +40,7 @@ Select File&rarr;Open. Choose the file you downloaded. Alternatively, you can dr
 
 Before going further in this tutorial, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
 
-It will also be help to have the [API documentation](https://scadnano-python-package.readthedocs.io) open. In this tutorial, we won't explain the full details of every function and method we use. If you wonder how it works, it is all explained in the API documentation.
+It will also be helpful to have available the [API documentation](https://scadnano-python-package.readthedocs.io). In this tutorial, we won't explain the full details of every function and method we use. If you wonder how it works, consult the API documentation.
 
 
 
