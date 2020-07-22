@@ -61,6 +61,9 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     pip install scadnano
     ```
 
+    ## Troubleshooting
+    If the above does not work for you, here are some things to try.
+
     If your Python installation does not already have pip installed, you may have to install it. 
     Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
     see also 
@@ -68,7 +71,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     or 
     https://www.liquidweb.com/kb/install-pip-windows/.
 
-    First, check your version of `pip` by typing 
+    Once pip is installed, or if you believe it is already installed, check your version of `pip` by typing 
     ```
     pip --version
     ```
@@ -91,9 +94,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     
 2. download
 
-    *Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
-
-    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). 
+    As a simple alternative (in case you run into trouble using pip), you can download and place the following files in your PYTHONPATH (e.g., in the same directory as the scripts you are running). **Note:** If you are reading this on the PyPI website or anywhere other than GitHub, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
 
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
