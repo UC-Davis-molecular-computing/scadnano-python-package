@@ -93,12 +93,15 @@ Once Python is installed (and the dataclasses backport if you have Python versio
 
     *Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
 
-    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...". 
+    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). 
 
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
     * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
+
+    To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
+    ![](images/download_raw_screenshot.png)
     
     The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`Design.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.Design.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
 
