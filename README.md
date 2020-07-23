@@ -1,11 +1,11 @@
-# scadnano-python-package
+# scadnano Python package
 
 ![Python package](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/workflows/Python%20package/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/scadnano-python-package/badge/?version=latest)](https://scadnano-python-package.readthedocs.io/en/latest/?badge=latest)
 
 [scadnano](http://scadnano.org) ("scriptable-cadnano") is a program for designing synthetic DNA structures such as DNA origami. 
-The scadnano Python module 
-[source code repository here](https://github.com/UC-Davis-molecular-computing/scadnano-python-package)) 
+The scadnano Python package 
+([source code repository here](https://github.com/UC-Davis-molecular-computing/scadnano-python-package)) 
 is a library for programmatically creating and editing these nanostructures.
 
 If you find scadnano useful in a scientific project, please cite its associated paper:
@@ -18,7 +18,7 @@ If you find scadnano useful in a scientific project, please cite its associated 
 
 ## Overview
 
-This module is used to write Python scripts outputting `.dna` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in scadnano.
+This package is used to write Python scripts outputting `.sc` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in the scadnano web interface.
 
 Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. 
 
@@ -39,20 +39,30 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. To check your current version of Python, open a command line and type
+### Getting Python
+The scadnano Python package requires Python version 3.7 or later (with a workaround available for version 3.6, but not for any lower version). 
+
+To check your current version of Python, open a command line and type
 
 ```
 python --version
 ```
 
-If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features.
-There is a Python 3.7 module used by scadnano, which is not present in 3.6: the
-[dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
-If you have at least Python version 3.6, you can install a backported library providing this module: 
-[dataclasses backport](https://pypi.org/project/dataclasses/)
+If it is version 2.7 or below, type
+
+```
+python3 --version
+```
+
+If that fails, or reports Python version 3.5 or below, you will have to install a later version of Python (recommended at least 3.7). Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
+
+If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features: the [dataclasses backport](https://pypi.org/project/dataclasses/); see `pip` instructions below to see how to install it.
+Python 3.7 provides the
+[dataclasses module](https://docs.python.org/3/library/dataclasses.html) automatically.
 
 Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
+### Installing the scadnano Python package
 
 1. pip (recommended)
 
@@ -61,6 +71,9 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     pip install scadnano
     ```
 
+    ### Troubleshooting
+    If the above does not work for you, here are some things to try.
+
     If your Python installation does not already have pip installed, you may have to install it. 
     Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
     see also 
@@ -68,7 +81,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     or 
     https://www.liquidweb.com/kb/install-pip-windows/.
 
-    First, check your version of `pip` by typing 
+    Once pip is installed, or if you believe it is already installed, check your version of `pip` by typing 
     ```
     pip --version
     ```
@@ -91,14 +104,15 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     
 2. download
 
-    *Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
-
-    As a simple alternative (in case you run into trouble using pip), you can download and place the following files (located in the [scadnano/](scadnano) subfolder) in your PYTHONPATH (e.g., in the same directory as the scripts you are running). To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...". 
+    As a simple alternative (in case you run into trouble using pip), you can download and place the following files in your [PYTHONPATH](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH) (e.g., in the same directory as the scripts you are running). **Note:** If you are reading this on the PyPI website or anywhere other than GitHub, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
 
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
-    * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.dna` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
+    * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.sc` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
+
+    To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
+    ![](images/download_raw_screenshot.png)
     
     The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`Design.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.Design.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
 
@@ -162,7 +176,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Running the code above produces the `.dna` JSON file shown in the [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology). That section explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
+Running the code above produces the `.sc` JSON file shown above. The [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology) explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
 
 
 ## abbreviated syntax with chained methods
@@ -213,9 +227,9 @@ Documentation is available in the [API docs](https://scadnano-python-package.rea
 
 
 
-## Documentation
+## API Documentation
 
-Online documentation of the package API is located here:
+Online documentation of the package API (which classes, methods, functions, and constants are provided by the package) is located here:
 https://scadnano-python-package.readthedocs.io
 
 
@@ -224,7 +238,7 @@ https://scadnano-python-package.readthedocs.io
 
 ## Tutorial
 
-A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scripting library.
+A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/tutorial/tutorial.md) shows how to create a "standard" 24-helix DNA origami rectangle using the scadnano Python package.
 
 
 
@@ -232,7 +246,14 @@ A [tutorial](https://github.com/UC-Davis-molecular-computing/scadnano-python-pac
 
 ## Other examples
 
+*Note:* If you are reading this on the PyPI website, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
+
 Several example scripts are located in the 
-[examples/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples) subfolder. 
+[examples/](examples) subfolder. 
 Their output is contained in the 
-[examples/output_designs/](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/master/examples/output_designs) subfolder.
+[examples/output_designs/](examples/output_designs) subfolder.
+
+
+
+## Contributing
+If you wish to contribute to scadnano, please see the [CONTRIBUTING document](CONTRIBUTING.md) to contribute to the scadnano Python package. There is also a [CONTRIBUTING document](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/CONTRIBUTING.md) for the web interface.

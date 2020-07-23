@@ -23,7 +23,7 @@ The design will look like this when we are done:
 
 ![](images/complete_design_no_DNA.png)
 
-The completed design is available as a [`.dna` file](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano/master/web/examples/output_designs/24_helix_origami_rectangle_twist_corrected.dna) readable by scadnano. Download it and save it somewhere on your local file system.
+The completed design is available as a [`.sc` file](https://raw.githubusercontent.com/UC-Davis-molecular-computing/scadnano/master/web/examples/output_designs/24_helix_origami_rectangle_twist_corrected.sc) readable by scadnano. Download it and save it somewhere on your local file system.
 
 To view it, first open scadnano in your browser: 
 https://scadnano.org.
@@ -31,16 +31,16 @@ Currently only [Chrome](https://www.google.com/chrome/)
 or [Firefox](https://www.mozilla.org/en-US/firefox/)
 are supported.
 
-Select File --> Open. Choose the file you downloaded. (Alternatively, you can drag the file from your file browser onto the open scadnano page in your web browser.) The design should look similar to the first screenshot in the tutorial.
+Select File&rarr;Open. Choose the file you downloaded. Alternatively, you can drag the file from your computer's file browser onto the open scadnano page in your web browser. The design should look similar to the first screenshot in the tutorial.
 
 
 
 
-## Terminology
+## Terminology and API
 
 Before going further in this tutorial, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
 
-
+It will also be helpful to have available the [API documentation](https://scadnano-python-package.readthedocs.io). In this tutorial, we won't explain the full details of every function and method we use. If you wonder how it works, consult the API documentation.
 
 
 
@@ -75,11 +75,11 @@ Depending on your installation, you may have to type `python3` instead of `pytho
 python3 24_helix_rectangle_twist_corrected.py
 ```
 
-In the same directory, a file named `24_helix_origami_rectangle_twist_corrected.dna` should appear. Open it in a text editor. The contents of the file should be something similar to this:
+In the same directory, a file named `24_helix_origami_rectangle_twist_corrected.sc` should appear. Open it in a text editor. The contents of the file should be something similar to this:
 
 ```json
 {
-  "version": "0.5.0",
+  "version": "0.10.0",
   "helices": [],
   "strands": []
 }
@@ -105,7 +105,7 @@ Change the Python file as follows. We marked the changed lines in `create_design
 import scadnano as sc
 
 def create_design():
-    helices = [sc.Helix(max_offset=304) for _ in range(24)]            ###
+    helices = [sc.Helix(max_offset=304) for _ in range(24)]         ###
     design = sc.Design(helices=helices, strands=[], grid=sc.square) ###
     return design
 
@@ -123,7 +123,7 @@ def create_design():
     return design
 ```
 
-Execute this script and inspect the output `24_helix_rectangle_twist_corrected.py` file:
+Execute this script and inspect the output `24_helix_rectangle_twist_corrected.sc` file:
 
 ```json
 {
@@ -158,7 +158,9 @@ Execute this script and inspect the output `24_helix_rectangle_twist_corrected.p
 }
 ```
 
-At this point and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.py` in the scadnano web interface, to verify that it resembles the design you expect. At this point, the design should look like this:
+At this point, and periodically throughout the tutorial, reload the file `24_helix_rectangle_twist_corrected.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Recall that this can be done either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.) Unfortunately, since it is a browser-based application, there's no way to have it automatically reload whenever your local `24_helix_rectangle_twist_corrected.sc` file changes, for the same reason you wouldn't want arbitrary websites to start reading files on your computer without you explicitly uploading them.
+
+At this point, the design should look like this:
 
 ![](images/design_with_helices_no_strands.png)
 
@@ -179,7 +181,9 @@ However, it can be difficult to see how to write a single loop, or even a small 
 
 We do this by creating a "precursor" design, which is not the final design, and then editing it by adding nicks and crossovers, which is done by calling methods on the `Design` object.
 
-The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying as suggested. Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
+The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying these strands with nicks and crossovers, eventually joining them into one long strand.
+
+Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
 boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
 integer `start` and `end` offsets.
@@ -197,7 +201,7 @@ def precursor_scaffolds() -> sc.Design:
     return sc.Design(helices=helices, strands=scaffolds, grid=sc.square)
 ```
 
-Execute the script. The file `24_helix_origami_rectangle_twist_corrected.dna` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
+Execute the script. The file `24_helix_origami_rectangle_twist_corrected.sc` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
 
 ```json
 "strands": [
@@ -288,16 +292,15 @@ This contrasts a so-called *half crossover*, depicted here:
 
 We add full crossovers at the seam and half crossovers at the left and right edges of the helices. Note that the offset specified for a full crossover is that of the half crossover on the right side.
 
-Also, at this point the scaffold is a single strand, so we can call `scaffold.set_scaffold()` to set it as the scaffold . 
+Also, at this point the scaffold is a single strand, so we can call `set_scaffold()` to set it as the scaffold.
 
 ```python
 def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
 
-    add_scaffold_crossovers(design) ###
-    scaffold = design.strands[0]    ###
-    scaffold.set_scaffold()         ###
+    add_scaffold_crossovers(design)  ###
+    design.strands[0].set_scaffold() ###
 
     return design
 
@@ -329,15 +332,16 @@ Now the design should look like this:
 
 ## Add staple precursors
 
-To add staples, we call `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
+We added the scaffold precursor strands by giving them in the constructor for `Design`, but now the `Design` is created, so we cannot call the constructor again.
+
+To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
 
 ```python
 def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
 
     add_precursor_staples(design) ###
 
@@ -367,8 +371,7 @@ def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
 
     add_staple_nicks(design) ###
@@ -391,15 +394,14 @@ The design should now look like this:
 
 ## Add crossovers to staples
 
-Since staples are now less connected than the scaffold was at this stage, we don't need to be as careful to avoid creating a circular strand, so we can add crossovers one at a time.
+Since staples are now less connected than the scaffold was at this stage, we don't need to be as careful to avoid creating a circular strand, so we can add crossovers one at a time using repeated calls to the method `add_full_crossover`.
 
 ```python
 def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
 
@@ -414,6 +416,8 @@ def add_staple_crossovers(design: sc.Design):
             if offset != 152: # skip crossover near seam
                 design.add_full_crossover(helix=helix, helix2=helix+1, offset=offset, forward=helix%2==1)
 ```
+
+If you inspect carefully, you'll see that we are adding crossovers at offsets where nicks, i.e., 5'/3' ends of strands, do not exist already; the nicks are automatically created when calling `add_full_crossover`. This only works for `add_full_crossover`; the method `add_half_crossover` can only be given offsets corresponding to 5'/3' ends of strands.
 
 The design is now mostly complete:
 
@@ -431,8 +435,7 @@ def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
@@ -466,8 +469,7 @@ def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
@@ -497,15 +499,14 @@ for strand in design.strands:
 
 Or you could use Python's I/O library to write them to a file in a format of your choosing.
 
-scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). To use either, each strand must have a field called `idt` set specifying the information that IDT expects, but we can call `strand.set_default_idt(use_default_idt=True)` to choose a reasonable default:
+scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). To use either method, each strand must have a field called `idt` set specifying the information that IDT expects, but we can call `strand.set_default_idt(use_default_idt=True)` to choose a reasonable default:
 
 ```python
 def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)
@@ -542,8 +543,7 @@ def create_design():
     design = precursor_scaffolds()
     add_scaffold_nicks(design)
     add_scaffold_crossovers(design)
-    scaffold = design.strands[0]
-    scaffold.set_scaffold()
+    design.strands[0].set_scaffold()
     add_precursor_staples(design)
     add_staple_nicks(design)
     add_staple_crossovers(design)

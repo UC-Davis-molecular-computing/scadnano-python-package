@@ -64,7 +64,7 @@ try:
     from ._version import __version__
 except ImportError:
     # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.10.0"
+    __version__ = "0.10.1"
 
 default_scadnano_file_extension = 'sc'
 
@@ -1702,7 +1702,7 @@ class StrandBuilder:
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
-    This is an intermediate object created when using "literal" chained method building by calling
+    This is an intermediate object created when using chained method building by calling
     :py:meth:`Design.strand`, for example
 
     .. code-block:: Python
@@ -3377,7 +3377,7 @@ class Design(_JSONSerializable):
         return mods_5p | mods_3p | mods_int
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
-        """Used for "literal" chained method building by calling
+        """Used for chained method building by calling
         :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
@@ -3414,16 +3414,17 @@ class Design(_JSONSerializable):
 
         Each call to
         :py:meth:`Design.strand`,
-        :py:meth:`Design.cross`,
-        :py:meth:`Design.loopout`,
-        :py:meth:`Design.to`
+        :py:meth:`StrandBuilder.cross`,
+        :py:meth:`StrandBuilder.loopout`,
+        :py:meth:`StrandBuilder.to`
+        :py:meth:`StrandBuilder.update_to`,
         returns a :any:`StrandBuilder` object.
 
         Each call to
-        :py:meth:`Design.to`,
-        :py:meth:`Design.update_to`,
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`Design.loopout`
+        :py:meth:`StrandBuilder.loopout`
         modifies the :any:`Design` by replacing the Strand with an updated version.
 
         See the documentation for :any:`StrandBuilder` for the methods available to call in this way.
@@ -3434,7 +3435,7 @@ class Design(_JSONSerializable):
         """
         return StrandBuilder(self, helix, offset)
 
-    def assign_m13_to_scaffold(self, rotation: int = 5588, variant: M13Variant = M13Variant.p7249):
+    def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
