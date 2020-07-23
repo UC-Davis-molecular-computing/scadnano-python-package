@@ -60,9 +60,11 @@ If you are using Python 3.6 and do not wish to upgrade, you can install a packag
 Python 3.7 provides the
 [dataclasses module](https://docs.python.org/3/library/dataclasses.html) automatically.
 
-Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
+
 
 ### Installing the scadnano Python package
+
+Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
 1. pip (recommended)
 
