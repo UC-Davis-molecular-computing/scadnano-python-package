@@ -39,20 +39,30 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
-The scadnano Python package requires Python version 3.7 or later. If you do not have that version (or later) of Python installed, follow [this link](https://www.python.org/downloads/) to install it. To check your current version of Python, open a command line and type
+### Getting Python
+The scadnano Python package requires Python version 3.7 or later (with a workaround available for version 3.6, but not for any lower version). 
+
+To check your current version of Python, open a command line and type
 
 ```
 python --version
 ```
 
-If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features.
-There is a Python 3.7 module used by scadnano, which is not present in 3.6: the
-[dataclasses](https://docs.python.org/3/library/dataclasses.html) module.
-If you have at least Python version 3.6, you can install a backported library providing this module: 
-[dataclasses backport](https://pypi.org/project/dataclasses/)
+If it is version 2.7 or below, type
+
+```
+python3 --version
+```
+
+If that fails, or reports Python version 3.5 or below, you will have to install a later version of Python (recommended at least 3.7). Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
+
+If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features: the [dataclasses backport](https://pypi.org/project/dataclasses/); see `pip` instructions below to see how to install it.
+Python 3.7 provides the
+[dataclasses module](https://docs.python.org/3/library/dataclasses.html) automatically.
 
 Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
 
+### Installing the scadnano Python package
 
 1. pip (recommended)
 
