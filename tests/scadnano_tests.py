@@ -28,8 +28,8 @@ def remove_whitespace(sequence):
     return sequence
 
 
-class TestCreateStrandLiterate(unittest.TestCase):
-    # tests methods for creating strands using chained "literate" notation as in this issue:
+class TestCreateStrandChainedMethods(unittest.TestCase):
+    # tests methods for creating strands using chained method notation as in this issue:
     # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/85
 
     def setUp(self):
@@ -2164,7 +2164,112 @@ class TestSetHelixIdx(unittest.TestCase):
         self.assertEqual(8, ss5.end)
 
 
+class TestHelixGroups(unittest.TestCase):
+
+    def setUp(self):
+        n = 'north'
+        e = 'east'
+        s = 'south'
+        w = 'west'
+        helices = [
+            sc.Helix(max_offset=20, group=n, grid_position=(1, 1)),                    # 0
+            sc.Helix(max_offset=21, group=n, grid_position=(0, 1)),                    # 1
+            sc.Helix(max_offset=19, group=n, grid_position=(0, 2)),                    # 2
+            sc.Helix(max_offset=18, group=n, grid_position=(1, 2)),                    # 3
+            sc.Helix(max_offset=17, group=n, grid_position=(2, 2)),                    # 4
+            sc.Helix(max_offset=16, group=n, grid_position=(2, 1)),                    # 5
+            sc.Helix(max_offset=24, group=s),                                          # 6
+            sc.Helix(max_offset=25, group=s),                                          # 7
+            sc.Helix(max_offset=26, group=w, position=sc.Position3D(x=0, y=0, z=0)),   # 8
+            sc.Helix(max_offset=27, group=w, position=sc.Position3D(x=0, y=2.5, z=0)), # 9
+            sc.Helix(idx=13, max_offset=22, group=e),                                  # 13
+            sc.Helix(idx=15, max_offset=23, group=e),                                  # 15
+        ]
+        group_north = sc.HelixGroup(position=sc.Position3D(x=0, y=-200, z=0), grid=sc.honeycomb)
+        group_south = sc.HelixGroup(position=sc.Position3D(x=0, y=70, z=0), helices_view_order=[7, 6],
+                                    grid=sc.square)
+        group_east = sc.HelixGroup(position=sc.Position3D(x=0, y=0, z=100), pitch=45, grid=sc.square)
+        group_west = sc.HelixGroup()
+        groups = {
+            n: group_north,
+            e: group_east,
+            s: group_south,
+            w: group_west,
+        }
+        self.design = sc.Design(helices=helices, groups=groups, strands=[])
+        self.n = n
+        self.e = e
+        self.s = s
+        self.w = w
+
+    def test_helix_groups(self):
+        self._asserts_for_fixture(self.design)
+
+    def test_helix_groups_to_from_JSON(self):
+        json_str = self.design.to_json()
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
+        self._asserts_for_fixture(design_from_json)
+
+    def test_helix_groups_fail_nonexistent(self):
+        helices = [
+            sc.Helix(max_offset=20, group="north"),
+            sc.Helix(max_offset=21, group="east"),
+        ]
+        group_north = sc.HelixGroup(position=sc.Position3D(x=0, y=-200, z=0), grid=sc.honeycomb)
+        groups = {self.n: group_north}
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            design = sc.Design(helices=helices, groups=groups, strands=[])
+
+    def _asserts_for_fixture(self, design: sc.Design):
+        n = self.n
+        e = self.e
+        s = self.s
+        w = self.w
+        groups = design.groups
+        if groups is None:
+            return # this makes MyPy shut up about how groups might be None
+
+        self.assertEqual(4, len(groups))
+
+        self.assertEqual([0, 1, 2, 3, 4, 5], groups[n].helices_view_order)
+        self.assertEqual([7, 6], groups[s].helices_view_order)
+        self.assertEqual([8, 9], groups[w].helices_view_order)
+        self.assertEqual([13, 15], groups[e].helices_view_order)
+
+        self.assertEqual(sc.Grid.honeycomb, groups[n].grid)
+        self.assertEqual(sc.Grid.square, groups[e].grid)
+        self.assertEqual(sc.Grid.square, groups[s].grid)
+        self.assertEqual(sc.Grid.none, groups[w].grid)
+
+        self.assertEqual(0, groups[n].pitch)
+        self.assertAlmostEqual(45, groups[e].pitch)
+        self.assertEqual(0, groups[s].pitch)
+        self.assertEqual(0, groups[w].pitch)
+
+
+
 class TestJSON(unittest.TestCase):
+
+    def test_default_helices_view_order_with_nondefault_helix_idxs_in_default_order(self):
+        helices = [sc.Helix(idx=1, max_offset=100), sc.Helix(idx=3, max_offset=100)]
+        design = sc.Design(helices=helices, strands=[])
+        self.assertListEqual([1, 3], design.helices_view_order)
+
+        # [1, 3] is default so json should not contain key
+        design_json_ser = design.to_json_serializable(suppress_indent=False)
+        self.assertFalse(sc.helices_view_order_key in design_json_ser)
+
+
+    def test_default_helices_view_order_with_nondefault_helix_idxs_in_nondefault_order(self):
+        helices = [sc.Helix(idx=1, max_offset=100), sc.Helix(idx=3, max_offset=100)]
+        design = sc.Design(helices=helices, strands=[], helices_view_order=[3, 1])
+        self.assertListEqual([3, 1], design.helices_view_order)
+
+        # [1, 3] is default so json should not contain key
+        design_json_ser = design.to_json_serializable(suppress_indent=False)
+        actual_view_order = design_json_ser[sc.helices_view_order_key]
+        self.assertListEqual([3, 1], actual_view_order)
+
 
     def test_strand_labels(self):
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
