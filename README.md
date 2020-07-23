@@ -71,7 +71,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     pip install scadnano
     ```
 
-    ## Troubleshooting
+    ### Troubleshooting
     If the above does not work for you, here are some things to try.
 
     If your Python installation does not already have pip installed, you may have to install it. 
