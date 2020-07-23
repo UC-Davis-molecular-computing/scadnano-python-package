@@ -52,7 +52,7 @@ import itertools
 import re
 import copy
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Set, Dict, Union, Optional, FrozenSet, Type, TypeVar, Generic
+from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, TypeVar, Generic, Any
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -99,7 +99,7 @@ def _docstring_parameter(*sub, **kwargs):
 class _JSONSerializable(ABC):
 
     @abstractmethod
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         raise NotImplementedError()
 
 
@@ -186,7 +186,7 @@ class Color(_JSONSerializable):
             self.g = int(hex_string[2:4], 16)
             self.b = int(hex_string[4:6], 16)
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         # Return object representing this Color that is JSON serializable.
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
@@ -357,6 +357,8 @@ def default_major_tick_distance(grid: Grid) -> int:
 default_pitch: float = 0.0
 default_roll: float = 0.0
 default_yaw: float = 0.0
+
+default_group_name = 'default_group'
 
 # XXX: code below related to SVG positions is not currently needed in the scripting library,
 # but I want to make sure these conventions are documented somewhere, so they are just commented out for now.
@@ -721,6 +723,7 @@ helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
 design_modifications_key = 'modifications_in_design'
 geometry_key = 'geometry'
+groups_key = 'groups'
 
 # Geometry keys
 rise_per_base_pair_key = 'rise_per_base_pair'
@@ -737,6 +740,7 @@ min_offset_key = 'min_offset'
 grid_position_key = 'grid_position'
 position_key = 'position'
 legacy_position_keys = ['origin']
+group_key = 'group'
 
 # Position keys
 position_x_key = 'x'
@@ -811,7 +815,7 @@ class Modification(_JSONSerializable):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         ret = {mod_display_text_key: self.display_text}
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
@@ -835,7 +839,7 @@ class Modification(_JSONSerializable):
 class Modification5Prime(Modification):
     """5' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "5'"
         return ret
@@ -853,7 +857,7 @@ class Modification5Prime(Modification):
 class Modification3Prime(Modification):
     """3' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "3'"
         return ret
@@ -878,7 +882,7 @@ class ModificationInternal(Modification):
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
     ``['A','C','G','T']``."""
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "internal"
         if self.allowed_bases is not None:
@@ -900,6 +904,7 @@ class ModificationInternal(Modification):
 # end modification abstract base classes
 ##########################################################################
 
+
 @dataclass
 class Position3D(_JSONSerializable):
     """
@@ -919,7 +924,7 @@ class Position3D(_JSONSerializable):
     """z-coordinate of position.
     Increasing `z` moves right in the side view and out of the screen in the main view."""
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = self.__dict__
         # return NoIndent(dct) if suppress_indent else dct
         return dct
@@ -938,16 +943,111 @@ class Position3D(_JSONSerializable):
         return Position3D(x=x, y=y, z=z)
 
 
-def in_browser() -> bool:
-    """Test if this code is running in the browser.
+origin: Position3D = Position3D(x=0, y=0, z=0)
 
-    Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
-    running in the browser."""
-    try:
-        import pyodide  # type: ignore
-        return True
-    except ImportError:
-        return False
+
+@dataclass
+class HelixGroup(_JSONSerializable):
+    """
+    Represents a set of properties to apply to a specific group of :any:`Helix`'s in the :any:`Design`.
+
+    A :any:`HelixGroup` is useful for grouping together helices that should all be in parallel,
+    as part of a design where different groups are not parallel. In particular, each :any:`HelixGroup`
+    can be given its own 3D position and pitch/yaw/roll orientation angles. Each :any:`HelixGroup` does
+    not actually *contain* its helices; they are associated through the field `Helix.group`, which is
+    a string representing a key in the dict ``groups`` specified in the constructor for :any:`Design`.
+
+    If there are :any:`HelixGroup`'s explicitly specified, then the field :py:data:`Design.grid` is ignored.
+    Each :any:`HelixGroup` has its own grid, and the fields :py:data:`Helix.position` or
+    :py:data:`Helix.grid_position` are considered relative to the origin of that :any:`HelixGroup`
+    (i.e., the value :py:data:`HelixGroup.position`). Although it is possible to assign a :any:`Helix`
+    in a :any:`HelixGroup` a non-zero :py:data:`Helix.pitch` or :py:data:`Helix.yaw`,
+    the most common use case is that all helices in a group are parallel, so they all have these angles
+    equal to 0 (since they are unrotated relative to each other along the pitch and yaw planes).
+    """
+
+    position: Position3D = origin
+    """The "origin" of this :any:`HelixGroup`."""
+
+    pitch: float = 0
+    """Same meaning as :py:data:`Helix.pitch`, applied to every :any:`Helix` in the group."""
+
+    yaw: float = 0
+    """Same meaning as :py:data:`Helix.yaw`, applied to every :any:`Helix` in the group."""
+
+    roll: float = 0
+    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
+
+    helices_view_order: Optional[List[int]] = None
+    """Same meaning as :py:data:`Design.helices_view_order`, applied to only the :any:`Helix` in the group."""
+
+    grid: Grid = Grid.none
+    """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix` in the group."""
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+        dct = dict()
+
+        helix_idxs: List[int] = kwargs['helix_idxs']
+
+        pos = self.position.to_json_serializable(suppress_indent)
+        dct[position_key] = NoIndent(pos) if suppress_indent else pos
+
+        if not _is_close(self.pitch, default_pitch):
+            dct[pitch_key] = self.pitch
+        if not _is_close(self.roll, default_roll):
+            dct[roll_key] = self.roll
+        if not _is_close(self.yaw, default_yaw):
+            dct[yaw_key] = self.yaw
+
+        dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+
+        default_helices_view_order = sorted(helix_idxs)
+        if self.helices_view_order != default_helices_view_order:
+            dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+
+        return dct
+
+    @staticmethod
+    def from_json(json_map: dict, **kwargs) -> 'HelixGroup':  # remove quotes when Python 3.6 support dropped
+        grid = optional_field(Grid.none, json_map, grid_key)
+
+        helix_idxs: List[int] = kwargs['helix_idxs']
+        helices_view_order = json_map.get(helices_view_order_key, sorted(helix_idxs))
+        if helices_view_order is not None:
+            num_helices = len(helix_idxs)
+            if len(helices_view_order) != num_helices:
+                raise IllegalDesignError(f'length of helices ({num_helices}) does not match '
+                                         f'length of helices_view_order ({len(helices_view_order)})')
+            if sorted(helices_view_order) != sorted(helix_idxs):
+                raise IllegalDesignError(f'helices_view_order = {helices_view_order} is not a '
+                                         f'permutation of the set of helices {helix_idxs}')
+            _check_helices_view_order_and_return(helices_view_order, helix_idxs)
+
+        position_map = mandatory_field(HelixGroup, json_map, position_key, *legacy_position_keys)
+        position = Position3D.from_json(position_map)
+
+        pitch = json_map.get(pitch_key, default_pitch)
+        roll = json_map.get(roll_key, default_roll)
+        yaw = json_map.get(yaw_key, default_yaw)
+
+        return HelixGroup(position=position,
+                          pitch=pitch,
+                          yaw=yaw,
+                          roll=roll,
+                          helices_view_order=helices_view_order,
+                          grid=grid)
+
+
+# def in_browser() -> bool:
+#     """Test if this code is running in the browser.
+#
+#     Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
+#     running in the browser."""
+#     try:
+#         import pyodide  # type: ignore
+#         return True
+#     except ImportError:
+#         return False
 
 
 @dataclass
@@ -981,14 +1081,14 @@ class Helix(_JSONSerializable):
     If unspecified, it is set to 0.
     """
 
-    major_tick_distance: int = -1
-    """If positive, overrides :any:`Design.major_tick_distance`."""
+    major_tick_distance: Optional[int] = None
+    """If non-None, overrides :any:`Design.major_tick_distance`."""
 
-    major_ticks: List[int] = None  # type: ignore
+    major_ticks: Optional[List[int]] = None  # type: ignore
     """If not ``None``, overrides :any:`Design.major_tick_distance` and :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
-    grid_position: Tuple[int, int] = None  # type: ignore
+    grid_position: Optional[Tuple[int, int]] = None  # type: ignore
     """`(h,v)` position of this helix in the side view grid,
     if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
     in the :any:`Design` containing this helix.
@@ -1009,7 +1109,7 @@ class Helix(_JSONSerializable):
     That convention is different from simply excluding coordinates from the hex lattice.
     """
 
-    position: Position3D = None  # type: ignore
+    position: Optional[Position3D] = None  # type: ignore
     """Position (x,y,z) of this :any:`Helix` in 3D space.
     
     Must be None if :py:data:`Helix.grid_position` is specified."""
@@ -1032,11 +1132,14 @@ class Helix(_JSONSerializable):
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
-    idx: int = None  # type: ignore
+    idx: Optional[int] = None  # type: ignore
     """Index of this :any:`Helix`.
     
     Optional if no other :any:`Helix` specifies a value for *idx*.
     Default is the order of the :any:`Helix` is listed in constructor for :any:`Design`."""
+
+    group: str = default_group_name  # type: ignore
+    """Name of the :any:`HelixGroup` to which this :any:`Helix` belongs."""
 
     # for optimization; list of domains on that Helix
     _domains: List['Domain'] = field(default_factory=list)
@@ -1044,20 +1147,23 @@ class Helix(_JSONSerializable):
     def __post_init__(self):
         if self.grid_position is not None and self.position is not None:
             raise IllegalDesignError('exactly one of grid_position or position must be specified, '
-                                        'but both are specified')
+                                     'but both are specified')
         if self.major_ticks is not None and self.max_offset is not None and self.min_offset is not None:
             for major_tick in self.major_ticks:
                 if major_tick > self.max_offset - self.min_offset:
                     raise IllegalDesignError(f'major tick {major_tick} in list {self.major_ticks} is '
-                                                f'outside the range of available offsets since max_offset = '
-                                                f'{self.max_offset}')
+                                             f'outside the range of available offsets since max_offset = '
+                                             f'{self.max_offset}')
 
-    def to_json_serializable(self, suppress_indent: bool = True):
-        dct = dict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+        dct: Any = dict()
 
         # if we have major ticks or position, it's harder to read Helix on one line,
         # so don't wrap it in NoIndent, but still wrap longer sub-objects in them
-        use_no_indent: bool = not (self.major_ticks is not None or self.position is not None)
+        use_no_indent_helix: bool = not (self.major_ticks is not None or self.position is not None)
+
+        if self.group != default_group_name:
+            dct[group_key] = self.group
 
         if self.min_offset != 0:
             dct[min_offset_key] = self.min_offset
@@ -1066,10 +1172,10 @@ class Helix(_JSONSerializable):
 
         if self.position is None:
             dct[grid_position_key] = NoIndent(
-                self.grid_position) if suppress_indent and not use_no_indent else self.grid_position
+                self.grid_position) if suppress_indent and not use_no_indent_helix else self.grid_position
         else:
             pos = self.position.to_json_serializable(suppress_indent)
-            dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent else pos
+            dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent_helix else pos
 
         if not _is_close(self.pitch, default_pitch):
             dct[pitch_key] = self.pitch
@@ -1083,11 +1189,11 @@ class Helix(_JSONSerializable):
 
         if self.major_ticks is not None:
             ticks = self.major_ticks
-            dct[major_ticks_key] = NoIndent(ticks) if suppress_indent and not use_no_indent else ticks
+            dct[major_ticks_key] = NoIndent(ticks) if suppress_indent and not use_no_indent_helix else ticks
 
         dct[idx_on_helix_key] = self.idx
 
-        return NoIndent(dct) if suppress_indent and use_no_indent else dct
+        return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     def default_grid_position(self):
         return 0, self.idx
@@ -1102,7 +1208,7 @@ class Helix(_JSONSerializable):
         """
         if self.major_ticks is not None:
             return self.major_ticks
-        distance = default_major_tick_distance_ if self.major_tick_distance <= 0 else self.major_tick_distance
+        distance = default_major_tick_distance_ if self.major_tick_distance is None else self.major_tick_distance
         return list(range(self.min_offset, self.max_offset + 1, distance))
 
     @staticmethod
@@ -1114,7 +1220,7 @@ class Helix(_JSONSerializable):
                 gp_list = gp_list[:2]
             if len(gp_list) != 2:
                 raise IllegalDesignError("list of grid_position coordinates must be length 2, "
-                                            f"but this is the list: {gp_list}")
+                                         f"but this is the list: {gp_list}")
             grid_position = tuple(gp_list)
 
         major_tick_distance = json_map.get(major_tick_distance_key)
@@ -1130,6 +1236,8 @@ class Helix(_JSONSerializable):
         roll = json_map.get(roll_key, default_roll)
         yaw = json_map.get(yaw_key, default_yaw)
 
+        group = json_map.get(group_key, default_group_name)
+
         return Helix(
             major_tick_distance=major_tick_distance,
             major_ticks=major_ticks,
@@ -1141,6 +1249,7 @@ class Helix(_JSONSerializable):
             roll=roll,
             yaw=yaw,
             idx=idx,
+            group=group,
         )
 
     @property
@@ -1217,7 +1326,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
     # not serialized; for efficiency
     # remove quotes when Python 3.6 support dropped
-    _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
+    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self):
         self._check_start_end()
@@ -1247,7 +1356,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
             raise StrandError(self._parent_strand,
                               f'start = {self.start} must be less than end = {self.end}')
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = OrderedDict()
         dct[helix_idx_key] = self.helix
         dct[forward_key] = self.forward
@@ -1558,7 +1667,7 @@ class Loopout(_JSONSerializable):
     # remove quotes when Python 3.6 support dropped
     _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = {loopout_key: self.length}
         return NoIndent(dct)
 
@@ -1677,12 +1786,12 @@ class IDTFields(_JSONSerializable):
         _check_idt_string_not_none_or_empty(self.purification, 'purification')
         if self.plate is None and self.well is not None:
             raise IllegalDesignError(f'IDTFields.plate cannot be None if IDTFields.well is not None\n'
-                                        f'IDTFields.well = {self.well}')
+                                     f'IDTFields.well = {self.well}')
         if self.plate is not None and self.well is None:
             raise IllegalDesignError(f'IDTFields.well cannot be None if IDTFields.plate is not None\n'
-                                        f'IDTFields.plate = {self.plate}')
+                                     f'IDTFields.plate = {self.plate}')
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = self.__dict__
         if self.plate is None:
             del dct['plate']
@@ -1777,8 +1886,8 @@ class StrandBuilder:
         if self.last_domain and ((self.last_domain.forward and offset < self.current_offset) or (
                 not self.last_domain.forward and offset > self.current_offset)):
             raise IllegalDesignError('offsets must be monotonic '
-                                        '(strictly increasing or strictly decreasing) '
-                                        'when calling to() twice in a row')
+                                     '(strictly increasing or strictly decreasing) '
+                                     'when calling to() twice in a row')
 
         if offset > self.current_offset:
             forward = True
@@ -2088,7 +2197,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
         init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = OrderedDict()
         if self.color is not None:
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
@@ -2199,13 +2308,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('idx of modification must be nonnegative')
         if idx >= self.dna_length():
             raise IllegalDesignError(f'idx of modification must be at most length of DNA: '
-                                        f'{self.dna_length()}')
+                                     f'{self.dna_length()}')
         if self.dna_sequence is not None:
             if mod.allowed_bases is not None and self.dna_sequence[idx] not in mod.allowed_bases:
                 raise IllegalDesignError(f'only bases {",".join(mod.allowed_bases)} are allowed at '
-                                            f'index {idx}, but sequence has base {self.dna_sequence[idx]} '
-                                            f'\nDNA sequence: {self.dna_sequence}'
-                                            f'\nmodification: {mod}')
+                                         f'index {idx}, but sequence has base {self.dna_sequence[idx]} '
+                                         f'\nDNA sequence: {self.dna_sequence}'
+                                         f'\nmodification: {mod}')
         elif warn_on_no_dna:
             print('WARNING: no DNA sequence has been assigned, so certain error checks on the internal '
                   'modification were not done. To be safe, first assign DNA, then add the modifications.')
@@ -2523,11 +2632,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             max_offset = max(mod_i_offsets_list) if len(mod_i_offsets_list) > 0 else None
             if min_offset is not None and min_offset < 0:
                 raise IllegalDesignError(f"smallest offset is {min_offset} but must be nonnegative: "
-                                            f"{self.modifications_int}")
+                                         f"{self.modifications_int}")
             if max_offset is not None and max_offset > len(self.dna_sequence):
                 raise IllegalDesignError(f"largeest offset is {max_offset} but must be at most "
-                                            f"{len(self.dna_sequence)}: "
-                                            f"{self.modifications_int}")
+                                         f"{len(self.dna_sequence)}: "
+                                         f"{self.modifications_int}")
 
     def _ensure_domains_nonoverlapping(self):
         for d1, d2 in itertools.combinations(self.domains, 2):
@@ -2817,7 +2926,7 @@ class Geometry(_JSONSerializable):
     def default_values() -> List[float]:
         return _default_geometry.values()
 
-    def to_json_serializable(self, suppress_indent: bool = True):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = OrderedDict()
         for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
             if val != val_default:
@@ -2826,6 +2935,22 @@ class Geometry(_JSONSerializable):
 
 
 _default_geometry = Geometry()
+
+
+def _check_helices_view_order_and_return(
+        helices_view_order: Optional[List[int]], helix_idxs: Iterable[int]) -> List[int]:
+    if helices_view_order is None:
+        identity = sorted(helix_idxs)
+        helices_view_order = identity
+    _check_helices_view_order_is_bijection(helices_view_order, helix_idxs)
+    return helices_view_order
+
+
+def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_idxs: Iterable[int]):
+    if not (sorted(helices_view_order) == sorted(helix_idxs)):
+        raise IllegalDesignError(
+            f"The specified helices view order: {helices_view_order}\n "
+            f"is not a bijection on helices indices: {', '.join(helix_idxs)}.")
 
 
 @dataclass
@@ -2847,10 +2972,15 @@ class Design(_JSONSerializable):
     stored in any :any:`Domain` 
     in :py:data:`Design.strands`."""
 
-    grid: Grid = Grid.square
+    groups: Optional[Dict[str, HelixGroup]] = None
+    """:any:`HelixGroup`'s in this :any:`Design`."""
+
+    grid: Grid = Grid.none
     """Common choices for how to arrange helices relative to each other.
     
-    Optional field."""
+    Optional field; default is Grid.none.
+    
+    Should not be specified if :any:`HelixGroup`'s are being used."""
 
     major_tick_distance: int = -1
     """Distance between major ticks (bold) delimiting boundaries between bases.
@@ -2862,14 +2992,6 @@ class Design(_JSONSerializable):
     when serialized.
     If :any:`Design.grid` = :any:`Grid.square` then the default value is 8.
     If :any:`Design.grid` = :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
-
-    helices_view_order: List[int] = None
-    """A list of the order in which the helix should be displayed in the main view of scadnano.
-       
-    This list must be a permutation containing each integer 0, 1, 2, ..., len(helices)-1 exactly once.
-
-    Optional field. If not specified, it will be set to the identity permutation [0, ..., len(helices)-1].
-    """
 
     geometry: Geometry = field(default_factory=lambda: Geometry())
     """Controls some geometric/physical aspects of this :any:`Design`."""
@@ -2884,6 +3006,7 @@ class Design(_JSONSerializable):
 
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
+                 groups: Optional[Dict[str, HelixGroup]] = None,
                  strands: List[Strand] = None,
                  helix_template: Optional[Helix] = None,
                  num_helices: Optional[int] = None,
@@ -2894,7 +3017,11 @@ class Design(_JSONSerializable):
         """
         :param helices: List of :any:`Helix`'s; if missing, set based on either `helix_template` and
             `num_helices`, or based on `strands`.
-            Mutually exlusive with  `helix_template` and `num_helices`
+            Mutually exclusive with  `helix_template` and `num_helices`
+        :param groups: Dict mapping group name to :any:`HelixGroup`.
+            Mutually exclusive with `helices_view_order`, and any non-none :any:`Grid`. If set, then each
+            :any:`Helix` must have its :py:data:`Helix.group` field set to a group name that is one of the
+            keys of this dict.
         :param strands: List of :any:`Strand`'s. If missing, will be empty.
         :param helix_template: If specified, `num_helices` must be specified.
             That many helices will be created,
@@ -2910,45 +3037,70 @@ class Design(_JSONSerializable):
             :any:`Helix.major_tick_distance` overrides this value for any :any:`Helix` in which it is
             specified.
         :param helices_view_order: order in which to view helices from top to bottom in web interface
-            main view
+            main view.
+            Mutually exclusive with `groups`.
+            This list must contain each :py:data:`Helix.idx` exactly once.
+            If no :py:data:`Helix.idx` is explicitly specified, then this should be a permutation of the
+            list [0,1,...,len(helices)-1].
+            default is to display in increasing order of :py:data:`Helix.idx`.
         :param geometry: geometric physical parameters for visualization.
             If not specified, a default set of parameters from the literature are used.
         """
-        self.helices = helices
-        self.strands = strands
+        if helices_view_order is not None and groups is not None:
+            raise IllegalDesignError('Design.helices_view_order and Design.groups are mutually exclusive. '
+                                     'Set at most one of them.')
+
+        self.strands = [] if strands is None else strands
+        self.groups = groups
         self.grid = grid
         self.major_tick_distance = major_tick_distance
-        self.helices_view_order = helices_view_order
         self.color_cycler = ColorCycler()
         self.geometry = Geometry() if geometry is None else geometry
-
-        if self.strands is None:
-            self.strands = []
 
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
-        if self.helices is not None and (helix_template is not None or num_helices is not None):
+        if helices is not None and (helix_template is not None or num_helices is not None):
             raise IllegalDesignError('helices is mutually exclusive with helix_template and num_helices; '
-                                        'you must specified the first, or the latter two')
+                                     'you must specified the first, or the latter two')
 
         if (helix_template is not None and num_helices is None) or (
                 helix_template is None and num_helices is not None):
             raise IllegalDesignError('helix type must be specified if and only if num_helices is')
 
-        if self.helices is None:
+        if self.groups is None:
+            self.groups = {default_group_name: HelixGroup()}
+        elif self.grid != Grid.none:
+            raise IllegalDesignError('cannot use a non-none grid for whole Design when helix groups are '
+                                     'used; only the HelixGroups can have non-none grids in this case')
+
+        if helices is None:
             if helix_template is not None and num_helices is not None:
-                self.helices = {idx: copy.deepcopy(helix_template) for idx in range(num_helices)}
-                for idx, helix in self.helices.items():
-                    replace(helix, idx=idx)
+                helices = {idx: copy.deepcopy(helix_template) for idx in range(num_helices)}
+                for idx, helix in helices.items():
+                    helices[idx] = replace(helix, idx=idx)
             elif len(self.strands) > 0:
                 max_helix_idx = max(
                     domain.helix for strand in self.strands for domain in strand.bound_domains())
-                self.helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
+                helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
             else:
-                self.helices = {}
+                helices = {}
+        elif not (isinstance(helices, dict) or isinstance(helices, list)):
+            raise IllegalDesignError('type of parameter helices must be list of helices, '
+                                     f'dict mapping int to helices, or None, but it is {type(helices)}')
 
-        self.helices = Design._normalize_helices_as_dict(self.helices)
+        self.helices = Design._normalize_helices_as_dict(helices)
+
+        # set up helices_view_order in groups
+        uses_default_group = self._has_default_groups()
+        for name, group in self.groups.items():
+            helix_idxs = self.helices_idxs_in_group(name)
+            if uses_default_group:
+                helices_view_order_for_group = helices_view_order
+            else:
+                helices_view_order_for_group = group.helices_view_order
+            group.helices_view_order = _check_helices_view_order_and_return(helices_view_order_for_group,
+                                                                            helix_idxs)
 
         self.__post_init__()
 
@@ -2956,16 +3108,40 @@ class Design(_JSONSerializable):
         # XXX: exact order of these calls is important
         self._ensure_helices_distinct_objects()
         self._ensure_strands_distinct_objects()
-        self._set_helices_idxs()
         self._set_helices_grid_positions()
         self._build_domains_on_helix_lists()
         self._set_helices_min_max_offsets(update=False)
+        self._ensure_helix_groups_exist()
         self._check_legal_design()
-
-        self._set_and_check_helices_view_order()
 
         if self.automatically_assign_color:
             self._assign_colors_to_strands()
+
+    @property
+    def helices_view_order(self) -> List[int]:
+        """
+        Return helices_view_order of this :any:`Design` if no :any:`HelixGroup`'s are being used, otherwise
+        raise a ValueError.
+
+        :return: helices_view_order of this :any:`Design`
+        """
+        if not self._has_default_groups():
+            raise ValueError('cannot access Design.helices_view_order when groups are used. '
+                             'Access group.helices_view_order for each group instead.')
+        if self.groups is None:
+            raise AssertionError('Design.groups should not be None by this point')
+        groups: List[HelixGroup] = list(self.groups.values())
+        group: HelixGroup = groups[0]
+        return group.helices_view_order
+
+    def helices_idxs_in_group(self, group_name: str) -> List[int]:
+        """
+        Indexes of :any:`Helix`'s in this group. Must be associated with a :any:`Design` for this to work.
+
+        :param group_name: name of group
+        :return: list of indices of :any:`Helix`'s in this :any:`HelixGroup`
+        """
+        return [idx for idx, helix in self.helices.items() if helix.group == group_name]
 
     def _assign_colors_to_strands(self):
         # if color not specified, pick one by cycling through list of staple colors,
@@ -3014,10 +3190,11 @@ class Design(_JSONSerializable):
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
 
-        :param json_map: JSON map describing the :any:`Design`
-        :return: Design described in the object
+        :param json_map: map describing the :any:`Design`;
+            should be JSON serializable via ``encode(json_map)``
+        :return: :any:`Design` described in the object
         """
-        # version = json_map.get(version_key, initial_version)  # not sure what to do with this
+        # version = json_map.get(version_key, initial_version)  # not sure what to do with version
 
         grid = optional_field(Grid.none, json_map, grid_key)
         grid_is_none = grid == Grid.none
@@ -3040,7 +3217,7 @@ class Design(_JSONSerializable):
         idx_default = 0
         for helix_json in deserialized_helices_list:
             helix = Helix.from_json(helix_json)
-            if grid_is_none and grid_position_key in helix_json:
+            if grid_is_none and groups_key not in json_map and grid_position_key in helix_json:
                 raise IllegalDesignError(
                     f'grid is none, but Helix {idx_default} has grid_position = {helix_json[grid_position_key]}')
             elif not grid_is_none and position_key in helix_json:
@@ -3049,16 +3226,30 @@ class Design(_JSONSerializable):
             helices.append(helix)
             idx_default += 1
 
+        groups = None
+        if groups_key in json_map:
+            if helices_view_order_key in json_map:
+                raise IllegalDesignError(f'cannot specify both {groups_key} and {helices_view_order_key} '
+                                         f'in a Design')
+            if not grid_is_none:
+                raise IllegalDesignError(f'cannot specify {groups_key} and have a non-none Design-level '
+                                         f'grid, but Design.grid is {grid}')
+            groups_json = json_map[groups_key]
+            groups = {}
+            for name, group_json in groups_json.items():
+                groups[name] = HelixGroup.from_json(group_json, helix_idxs=[helix.idx for helix in helices
+                                                                            if helix.group == name])
+
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
         if helices_view_order is not None:
             helix_idxs = [helix.idx for helix in helices]
             if len(helices_view_order) != num_helices:
                 raise IllegalDesignError(f'length of helices ({num_helices}) does not match '
-                                            f'length of helices_view_order ({len(helices_view_order)})')
+                                         f'length of helices_view_order ({len(helices_view_order)})')
             if sorted(helices_view_order) != sorted(helix_idxs):
                 raise IllegalDesignError(f'helices_view_order = {helices_view_order} is not a '
-                                            f'permutation of the set of helices {helix_idxs}')
+                                         f'permutation of the set of helices {helix_idxs}')
 
         # strands
         strands = []
@@ -3083,6 +3274,7 @@ class Design(_JSONSerializable):
 
         return Design(
             helices=helices,
+            groups=groups,
             strands=strands,
             grid=grid,
             major_tick_distance=major_tick_distance,
@@ -3090,13 +3282,24 @@ class Design(_JSONSerializable):
             geometry=geometry,
         )
 
-    def to_json_serializable(self, suppress_indent: bool = True):
-        dct = OrderedDict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+        dct: Any = OrderedDict()
         dct[version_key] = __version__
-        dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+
+        if self._has_default_groups():
+            dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
 
         if not self.geometry.is_default():
             dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
+
+        if not self._has_default_groups():
+            group_map = {}
+            for name, group in self.groups.items():
+                helix_idxs_in_group = [helix.idx for helix in self.helices.values() if
+                                       helix.group == name]
+                group_map[name] = group.to_json_serializable(suppress_indent,
+                                                             helix_idxs=helix_idxs_in_group)
+            dct[groups_key] = group_map
 
         if self.major_tick_distance >= 0 and (
                 self.major_tick_distance != default_major_tick_distance(self.grid)):
@@ -3106,14 +3309,18 @@ class Design(_JSONSerializable):
                             self.helices.values()]
 
         # remove idx key from list of helices if they have the default index
-        unwrapped_helices = dct[helices_key]
-        if len(unwrapped_helices) > 0 and isinstance(unwrapped_helices[0], NoIndent):
-            unwrapped_helices = [wrapped.value for wrapped in unwrapped_helices]
+        unwrapped_helices = list(dct[helices_key])
+        if len(unwrapped_helices) > 0:
+            for i, wrapped in enumerate(unwrapped_helices):
+                if isinstance(wrapped, NoIndent):
+                    unwrapped_helices[i] = wrapped.value
         remove_helix_idxs_if_default(unwrapped_helices)
 
-        default_helices_view_order = list(range(0, len(self.helices)))
-        if self.helices_view_order != default_helices_view_order:
-            dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+        if self._has_default_groups():
+            default_helices_view_order = sorted(self.helices.keys())
+            if self.helices_view_order != default_helices_view_order:
+                dct[helices_view_order_key] = NoIndent(
+                    self.helices_view_order) if suppress_indent else self.helices_view_order
 
         # modifications
         mods = self._all_modifications()
@@ -3363,7 +3570,12 @@ class Design(_JSONSerializable):
                         strands.append(strand)
 
         design = Design(grid=grid_type, helices=helices, strands=strands)
-        design.set_helices_view_order([num for num in helices])
+        # DD: Tristan, I commented this out because I think it's unnecessary given the way the Design
+        # constructor works, and because I'm now implementing this feature:
+        # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/121
+        # which means we may not have a well-defined helices_view_order on the whole design if groups
+        # are used
+        # design.set_helices_view_order([num for num in helices])
 
         return design
 
@@ -3639,26 +3851,24 @@ class Design(_JSONSerializable):
 
         return dct
 
-    def _set_and_check_helices_view_order(self):
-        identity = list(self.helices.keys())
-        if self.helices_view_order is None:
-            self.helices_view_order = identity
-        self._check_helices_view_order_is_bijection()
-
     def set_helices_view_order(self, helices_view_order: List[int]):
-        self.helices_view_order = helices_view_order
-        self._check_helices_view_order_is_bijection()
+        """
+        Sets helices_view_order.
 
-    def _check_helices_view_order_is_bijection(self):
-        if not (sorted(self.helices_view_order) == sorted(self.helices.keys())):
-            raise IllegalDesignError(
-                f"The specified helices view order: {self.helices_view_order}\n "
-                f"is not a bijection on helices indices: {self.helices_view_order} {self.helices.keys()}.")
+        :param helices_view_order: new view order of helices
+        """
+        if not self._has_default_groups():
+            raise ValueError('cannot call set_helices_view_order on a Design that uses HelixGroups')
+        group = self._default_group()
+        group.helices_view_order = helices_view_order
+        _check_helices_view_order_is_bijection(helices_view_order,
+                                               self.helices_idxs_in_group(default_group_name))
 
-    def _set_helices_idxs(self):
-        for idx, helix in self.helices.items():
-            if helix.idx is None:
-                helix.idx = idx
+    def _default_group(self) -> HelixGroup:
+        if not self._has_default_groups():
+            raise ValueError('cannot call _default_group on a Design that uses HelixGroups')
+        groups_list = list(self.groups.values())
+        return groups_list[0]
 
     def _set_helices_grid_positions(self):
         for idx, helix in self.helices.items():
@@ -3829,7 +4039,7 @@ class Design(_JSONSerializable):
     def set_helix_idx(self, old_idx: int, new_idx: int):
         if new_idx in self.helices:
             raise IllegalDesignError(f'cannot assign idx {new_idx} to helix {old_idx}; '
-                                        'another helix already has that index')
+                                     'another helix already has that index')
         helix: Helix = self.helices[old_idx]
         del self.helices[old_idx]
         self.helices[new_idx] = helix
@@ -4039,11 +4249,11 @@ class Design(_JSONSerializable):
             start = sum(prev_dom.dna_length() for prev_dom in strand.domains[:pos])
             if domain.dna_length() < len(sequence):
                 raise IllegalDesignError(f'cannot assign sequence {sequence} to strand domain '
-                                            f'\n{domain}\n'
-                                            f'The number of bases on the domain is {domain.dna_length()} '
-                                            f'but the length of the sequence is {len(sequence)}. The '
-                                            f'length of the sequence must be at most the numebr of bases '
-                                            f'on the domain.')
+                                         f'\n{domain}\n'
+                                         f'The number of bases on the domain is {domain.dna_length()} '
+                                         f'but the length of the sequence is {len(sequence)}. The '
+                                         f'length of the sequence must be at most the numebr of bases '
+                                         f'on the domain.')
         padded_sequence = _pad_and_remove_whitespace_and_uppercase(sequence, strand, start)
         if strand is None:
             raise IllegalDesignError('strand cannot be None to assign DNA to it')
@@ -4413,7 +4623,7 @@ class Design(_JSONSerializable):
                 break
         else:
             raise IllegalDesignError(f'no domain at helix {helix} in direction '
-                                        f'{"forward" if forward else "reverse"} at offset {offset}')
+                                     f'{"forward" if forward else "reverse"} at offset {offset}')
         strand = domain_to_remove.strand()
         domains = strand.domains
         order = domains.index(domain_to_remove)
@@ -4503,14 +4713,14 @@ class Design(_JSONSerializable):
 
         if strand1 == strand2:
             raise IllegalDesignError(f"Cannot add crossover from "
-                                        f"(helix={helix}, offset={offset}) to "
-                                        f"(helix={helix2}, offset={offset2}) "
-                                        f"because that would join two Domains "
-                                        f"already on the same Strand! "
-                                        f"Currently circular Strands are not supported. "
-                                        f"Instead, try adding nicks first, or rearrange the order of "
-                                        f"crossover addition, to ensure that all strands are "
-                                        f"non-circular, even in intermediate stages.")
+                                     f"(helix={helix}, offset={offset}) to "
+                                     f"(helix={helix2}, offset={offset2}) "
+                                     f"because that would join two Domains "
+                                     f"already on the same Strand! "
+                                     f"Currently circular Strands are not supported. "
+                                     f"Instead, try adding nicks first, or rearrange the order of "
+                                     f"crossover addition, to ensure that all strands are "
+                                     f"non-circular, even in intermediate stages.")
 
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
@@ -4520,8 +4730,8 @@ class Design(_JSONSerializable):
             strand_last = strand1
         else:
             raise IllegalDesignError("Cannot add half crossover. Must have one domain have its "
-                                        "5' end at the given offset and the other with its 3' end at the "
-                                        "given offset, but this is not the case.")
+                                     "5' end at the given offset and the other with its 3' end at the "
+                                     "given offset, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
         if strand_first.dna_sequence is None and strand_last.dna_sequence is None:
@@ -4604,13 +4814,13 @@ class Design(_JSONSerializable):
         domain_right = self.domain_at(helix, offset, forward)
         if domain_right is None:
             raise IllegalDesignError(f'You tried to create a full crossover at '
-                                        f'(helix={helix}, offset={offset}) '
-                                        f'but there is no Strand there.')
+                                     f'(helix={helix}, offset={offset}) '
+                                     f'but there is no Strand there.')
         domain_left = self.domain_at(helix, offset - 1, forward)
         if domain_left is None:
             raise IllegalDesignError(f'You tried to create a full crossover at '
-                                        f'(helix={helix}, offset={offset}) '
-                                        f'but there is no Strand at offset {offset - 1}.')
+                                     f'(helix={helix}, offset={offset}) '
+                                     f'but there is no Strand at offset {offset - 1}.')
         if domain_left == domain_right:
             self.add_nick(helix, offset, forward)
         else:
@@ -4718,14 +4928,24 @@ class Design(_JSONSerializable):
         if pair:
             i, j = pair
             raise IllegalDesignError('helices must all be distinct objects, but those at indices '
-                                        f'{i} and {j} are the same object')
+                                     f'{i} and {j} are the same object')
 
     def _ensure_strands_distinct_objects(self):
         pair = _find_index_pair_same_object(self.strands)
         if pair:
             i, j = pair
             raise IllegalDesignError('strands must all be distinct objects, but those at indices '
-                                        f'{i} and {j} are the same object')
+                                     f'{i} and {j} are the same object')
+
+    def _ensure_helix_groups_exist(self):
+        for helix in self.helices.values():
+            if helix.group not in self.groups.keys():
+                raise IllegalDesignError(f'helix {helix.idx} has group {helix.group}, which does not '
+                                         f'exist in the design. The valid groups are '
+                                         f'{", ".join(self.groups.keys())}')
+
+    def _has_default_groups(self):
+        return len(self.groups) == 1 and default_group_name in self.groups
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
@@ -4791,13 +5011,13 @@ class Crossover:
     forward: bool
     """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
-    offset2: int = None
+    offset2: Optional[int] = None
     """
     offset on `helix2` at which to add half crossover. 
     If not specified, defaults to `offset`
     """
 
-    forward2: bool = None
+    forward2: Optional[bool] = None
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
     If not specified, defaults to the negation of `forward`
