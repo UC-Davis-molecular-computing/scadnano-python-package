@@ -24,8 +24,7 @@ sys.path.insert(0, os.path.abspath('../scadnano'))
 # from scadnano.scadnano_version import current_version
 # this is ugly, but appears to be standard practice:
 # https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package/17626524#17626524
-# __version__ = open("scadnano/_version.py").readlines()[-1].split()[-1].strip("\"'")
-
+# __version__ = open("../scadnano/_version.py").readlines()[-1].split()[-1].strip("\"'")
 
 # this is ugly, but appears to be standard practice:
 # https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package/17626524#17626524
@@ -44,7 +43,6 @@ def extract_version(filename: str):
     raise AssertionError(f'could not find version in {filename}')
 
 __version__ = extract_version('../scadnano/scadnano.py')
-
 
 
 # Type "make html" at the command line to generate the documentation.
