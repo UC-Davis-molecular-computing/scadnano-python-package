@@ -57,14 +57,7 @@ from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 
-# Don't really understand why, but an explicit import solves the issue described here
-# https://stackoverflow.com/a/39131141
-# solves the build problems: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/actions/runs/125490116
-try:
-    from ._version import __version__
-except ImportError:
-    # this is so scadnano.py file works without _version.py being present, in case user downloads it
-    __version__ = "0.10.1"
+__version__ = "0.10.2" # version line; WARNING: do not remove or change this line or comment
 
 default_scadnano_file_extension = 'sc'
 

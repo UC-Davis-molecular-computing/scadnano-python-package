@@ -111,8 +111,7 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     * *required*: [scadnano.py](scadnano/scadnano.py) 
     * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
     * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
-    * *optional*: [_version.py](scadnano/_version.py) This ensures that the current version number is written into any `.sc` files written by the library; otherwise it may be out of date. (Which should not matter for the most part.)
-
+    
     To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
     ![](images/download_raw_screenshot.png)
     
