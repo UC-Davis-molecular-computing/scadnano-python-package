@@ -21,8 +21,6 @@ def extract_version(filename: str):
     with open(filename) as f:
         lines = f.readlines()
     version_comment = '# version line; WARNING: do not remove or change this line or comment'
-    newline = '\n'
-    print(f'lines 59-65 {newline.join(lines[59:66])}')
     for line in lines:
         if version_comment in line:
             idx = line.index(version_comment)
