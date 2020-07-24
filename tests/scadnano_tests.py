@@ -2246,6 +2246,90 @@ class TestHelixGroups(unittest.TestCase):
         self.assertEqual(0, groups[s].pitch)
         self.assertEqual(0, groups[w].pitch)
 
+    def test_JSON_bad_uses_groups_and_top_level_grid(self):
+        json_str = '''
+{
+  "grid": "none",
+  "groups": {
+    "north": {
+      "position": {"x": 0, "y": -200, "z": 0},
+      "grid": "honeycomb"
+    },
+    "east": {
+      "position": {"x": 0, "y": 0, "z": 100},
+      "pitch": 45,
+      "grid": "square"
+    }
+  },
+  "helices": [
+    {"group": "north", "max_offset": 20, "grid_position": [1, 1]},
+    {"group": "north", "max_offset": 21, "grid_position": [0, 1]},
+    {"group": "east", "max_offset": 22, "grid_position": [0, 13]},
+    {"group": "east", "max_offset": 23, "grid_position": [0, 15]}
+  ],
+  "strands": [
+    {
+      "color": "#f74308",
+      "domains": [
+        {"helix": 0, "forward": true, "start": 0, "end": 8},
+        {"helix": 1, "forward": false, "start": 0, "end": 8}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "domains": [
+        {"helix": 2, "forward": true, "start": 0, "end": 8},
+        {"helix": 3, "forward": false, "start": 0, "end": 8}
+      ]
+    }
+  ]
+}
+        '''
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            design = sc.Design.from_scadnano_json_str(json_str)
+
+    def test_JSON_bad_uses_groups_and_top_level_helices_view_order(self):
+        json_str = '''
+{
+  "helices_view_order": [3, 2, 1, 0],
+  "groups": {
+    "north": {
+      "position": {"x": 0, "y": -200, "z": 0},
+      "grid": "honeycomb"
+    },
+    "east": {
+      "position": {"x": 0, "y": 0, "z": 100},
+      "pitch": 45,
+      "grid": "square"
+    }
+  },
+  "helices": [
+    {"group": "north", "max_offset": 20, "grid_position": [1, 1]},
+    {"group": "north", "max_offset": 21, "grid_position": [0, 1]},
+    {"group": "east", "max_offset": 22, "grid_position": [0, 13]},
+    {"group": "east", "max_offset": 23, "grid_position": [0, 15]}
+  ],
+  "strands": [
+    {
+      "color": "#f74308",
+      "domains": [
+        {"helix": 0, "forward": true, "start": 0, "end": 8},
+        {"helix": 1, "forward": false, "start": 0, "end": 8}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "domains": [
+        {"helix": 2, "forward": true, "start": 0, "end": 8},
+        {"helix": 3, "forward": false, "start": 0, "end": 8}
+      ]
+    }
+  ]
+}
+        '''
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            design = sc.Design.from_scadnano_json_str(json_str)
+
 
 
 class TestJSON(unittest.TestCase):

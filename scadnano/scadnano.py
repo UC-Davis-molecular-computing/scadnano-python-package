@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Python 3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.10.3" # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.10.3"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -58,7 +58,6 @@ from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet,
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
-
 
 default_scadnano_file_extension = 'sc'
 
@@ -1002,21 +1001,24 @@ class HelixGroup(_JSONSerializable):
 
         return dct
 
+    def _assign_default_helices_view_order(self, helices_in_group: Dict[int, 'Helix']):
+        if self.helices_view_order is not None:
+            raise AssertionError('should not call _assign_default_helices_view_order if '
+                                 'HelixGroup.helices_view_order is not None, but it is '
+                                 f'{self.helices_view_order}')
+        helix_idxs = list(helices_in_group.keys())
+        self.helices_view_order = _check_helices_view_order_and_return(self.helices_view_order, helix_idxs)
+
     @staticmethod
     def from_json(json_map: dict, **kwargs) -> 'HelixGroup':  # remove quotes when Python 3.6 support dropped
         grid = optional_field(Grid.none, json_map, grid_key)
 
-        helix_idxs: List[int] = kwargs['helix_idxs']
-        helices_view_order = json_map.get(helices_view_order_key, sorted(helix_idxs))
+        num_helices: int = kwargs['num_helices']
+        helices_view_order = json_map.get(helices_view_order_key)
         if helices_view_order is not None:
-            num_helices = len(helix_idxs)
             if len(helices_view_order) != num_helices:
                 raise IllegalDesignError(f'length of helices ({num_helices}) does not match '
                                          f'length of helices_view_order ({len(helices_view_order)})')
-            if sorted(helices_view_order) != sorted(helix_idxs):
-                raise IllegalDesignError(f'helices_view_order = {helices_view_order} is not a '
-                                         f'permutation of the set of helices {helix_idxs}')
-            _check_helices_view_order_and_return(helices_view_order, helix_idxs)
 
         position_map = mandatory_field(HelixGroup, json_map, position_key, *legacy_position_keys)
         position = Position3D.from_json(position_map)
@@ -2937,7 +2939,8 @@ def _check_helices_view_order_and_return(
     if helices_view_order is None:
         identity = sorted(helix_idxs)
         helices_view_order = identity
-    _check_helices_view_order_is_bijection(helices_view_order, helix_idxs)
+    else:
+        _check_helices_view_order_is_bijection(helices_view_order, helix_idxs)
     return helices_view_order
 
 
@@ -2945,7 +2948,7 @@ def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_
     if not (sorted(helices_view_order) == sorted(helix_idxs)):
         raise IllegalDesignError(
             f"The specified helices view order: {helices_view_order}\n "
-            f"is not a bijection on helices indices: {', '.join(helix_idxs)}.")
+            f"is not a bijection on helices indices: {helix_idxs}.")
 
 
 @dataclass
@@ -2957,7 +2960,7 @@ class Design(_JSONSerializable):
     
     Required field."""
 
-    helices: Dict[int, Helix] = None
+    helices: Dict[int, Helix] = None # type: ignore
     """All of the :any:`Helix`'s in this :any:`Design`. 
     This is a dictionary mapping index to the :any:`Helix` with that index; if helices have indices 
     0, 1, ..., num_helices-1, then this can be used as a list of Helices. 
@@ -3107,6 +3110,7 @@ class Design(_JSONSerializable):
         self._build_domains_on_helix_lists()
         self._set_helices_min_max_offsets(update=False)
         self._ensure_helix_groups_exist()
+        self._assign_default_helices_view_orders_to_groups()
         self._check_legal_design()
 
         if self.automatically_assign_color:
@@ -3179,6 +3183,16 @@ class Design(_JSONSerializable):
             raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {e}')
 
     @staticmethod
+    def _check_mutually_exclusive_fields(json_map: dict):
+        exclusive_pairs = [
+            (grid_key, groups_key),
+            (helices_view_order_key, groups_key),
+        ]
+        for key1, key2 in exclusive_pairs:
+            if key1 in json_map and key2 in json_map:
+                raise IllegalDesignError(f'cannot specify both "{key1}" and "{key2}" in Design JSON')
+
+    @staticmethod
     def from_scadnano_json_map(
             json_map: dict) -> 'Design':  # remove quotes when Python 3.6 support dropped
         """
@@ -3190,6 +3204,8 @@ class Design(_JSONSerializable):
         :return: :any:`Design` described in the object
         """
         # version = json_map.get(version_key, initial_version)  # not sure what to do with version
+
+        Design._check_mutually_exclusive_fields(json_map)
 
         grid = optional_field(Grid.none, json_map, grid_key)
         grid_is_none = grid == Grid.none
@@ -3221,6 +3237,7 @@ class Design(_JSONSerializable):
             helices.append(helix)
             idx_default += 1
 
+        # helix groups
         groups = None
         if groups_key in json_map:
             if helices_view_order_key in json_map:
@@ -3231,9 +3248,10 @@ class Design(_JSONSerializable):
                                          f'grid, but Design.grid is {grid}')
             groups_json = json_map[groups_key]
             groups = {}
+
             for name, group_json in groups_json.items():
-                groups[name] = HelixGroup.from_json(group_json, helix_idxs=[helix.idx for helix in helices
-                                                                            if helix.group == name])
+                num_helices_in_group = sum(1 for helix in helices if helix.group == name)
+                groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
 
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
@@ -4941,6 +4959,12 @@ class Design(_JSONSerializable):
 
     def _has_default_groups(self):
         return len(self.groups) == 1 and default_group_name in self.groups
+
+    def _assign_default_helices_view_orders_to_groups(self):
+        for name, group in self.groups.items():
+            if group.helices_view_order is None:
+                helices_in_group = {idx: helix for idx, helix in self.helices if helix.group == name}
+                group._assign_default_helices_view_order(helices_in_group)
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
