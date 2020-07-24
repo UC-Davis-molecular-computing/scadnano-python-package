@@ -22,7 +22,7 @@ def extract_version(filename: str):
         lines = f.readlines()
     version_comment = '# version line; WARNING: do not remove or change this line or comment'
     for line in lines:
-        if line.endswith(version_comment):
+        if version_comment in line:
             idx = line.index(version_comment)
             line_prefix = line[:idx]
             parts = line_prefix.split('=')

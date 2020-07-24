@@ -44,6 +44,8 @@ so the user must take care not to set them.
 # commented out for now to support Python 3.6, which does not support this feature
 # from __future__ import annotations
 
+__version__ = "0.10.3" # version line; WARNING: do not remove or change this line or comment
+
 import dataclasses
 from abc import abstractmethod, ABC
 import json
@@ -57,7 +59,6 @@ from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 
-__version__ = "0.10.2" # version line; WARNING: do not remove or change this line or comment
 
 default_scadnano_file_extension = 'sc'
 
