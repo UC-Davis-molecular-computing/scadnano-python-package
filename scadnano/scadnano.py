@@ -972,10 +972,11 @@ class HelixGroup(_JSONSerializable):
     """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
 
     helices_view_order: Optional[List[int]] = None
-    """Same meaning as :py:data:`Design.helices_view_order`, applied to only the :any:`Helix` in the group."""
+    """Same meaning as :py:data:`Design.helices_view_order`, 
+    applied to only the :any:`Helix`'s in the group."""
 
     grid: Grid = Grid.none
-    """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix` in the group."""
+    """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix`'s in the group."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct = dict()
