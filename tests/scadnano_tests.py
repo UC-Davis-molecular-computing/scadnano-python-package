@@ -2404,6 +2404,39 @@ class TestHelixGroups(unittest.TestCase):
             design = sc.Design.from_scadnano_json_str(json_str)
 
 
+    def test_JSON_bad_no_groups_but_helices_reference_groups(self):
+        json_str = '''
+{
+  "grid": "square",
+  "helices": [
+    {"group": "north", "max_offset": 20, "grid_position": [0, 0]},
+    {"group": "north", "max_offset": 21, "grid_position": [0, 1]},
+    {"group": "east", "max_offset": 22, "grid_position": [0, 2]},
+    {"group": "east", "max_offset": 23, "grid_position": [0, 3]}
+  ],
+  "strands": [
+    {
+      "color": "#f74308",
+      "domains": [
+        {"helix": 0, "forward": true, "start": 0, "end": 8},
+        {"helix": 1, "forward": false, "start": 0, "end": 8}
+      ]
+    },
+    {
+      "color": "#57bb00",
+      "domains": [
+        {"helix": 2, "forward": true, "start": 0, "end": 8},
+        {"helix": 3, "forward": false, "start": 0, "end": 8}
+      ]
+    }
+  ]
+}
+
+'''
+        with self.assertRaises(sc.IllegalDesignError) as ex:
+            design = sc.Design.from_scadnano_json_str(json_str)
+
+
 class TestJSON(unittest.TestCase):
 
     def test_default_helices_view_order_with_nondefault_helix_idxs_in_default_order(self):
