@@ -1312,7 +1312,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     This is the number of *extra* bases in addition to the base already at this position. 
     The total number of bases at this offset is num_insertions+1."""
 
-    label: DomainLabel = None
+    label: Optional[DomainLabel] = None
     """Generic "label" object to associate to this :any:`Domain`.
 
     Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
@@ -1421,8 +1421,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         """Number of bases in this Domain."""
         return self.end - self.start - len(self.deletions) + self._num_insertions()
 
-    def dna_length_in(self, left, right) -> int:
-        """Number of bases in this Domain between `left` and `right` (INCLUSIVE)."""
+    def dna_length_in(self, left: int, right: int) -> int:
+        """Number of bases in this Domain between offsets `left` and `right` (INCLUSIVE)."""
         if not left <= right + 1:
             raise ValueError(f'left = {left} and right = {right} but we should have left <= right + 1')
         if not self.start <= left:
@@ -1453,7 +1453,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         unlike other parts of this API where the right endpoint is exclusive.
         This is to make the notion well-defined when one of the endpoints is on an offset with a
         deletion or insertion."""
-        strand_seq = self._parent_strand.dna_sequence
+        strand_seq = self._parent_strand.dna_sequence if self._parent_strand is not None else None
         if strand_seq is None:
             return None
 
@@ -1480,6 +1480,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     def get_seq_start_idx(self) -> int:
         """Starting DNA subsequence index for first base of this :any:`Domain` on its
         Parent :any:`Strand`'s DNA sequence."""
+        if self._parent_strand is None:
+            raise ValueError('should not call this method if a Strand has not be associated to this Domain')
         domains = self._parent_strand.domains
         # index of self in parent strand's list of domains
         self_domain_idx = domains.index(self)
@@ -3006,30 +3008,17 @@ class Design(_JSONSerializable):
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  groups: Optional[Dict[str, HelixGroup]] = None,
                  strands: List[Strand] = None,
-                 helix_template: Optional[Helix] = None,
-                 num_helices: Optional[int] = None,
                  grid: Grid = Grid.none,
                  major_tick_distance: int = -1,
                  helices_view_order: List[int] = None,
                  geometry: Geometry = None):
         """
-        :param helices: List of :any:`Helix`'s; if missing, set based on either `helix_template` and
-            `num_helices`, or based on `strands`.
-            Mutually exclusive with  `helix_template` and `num_helices`
+        :param helices: List of :any:`Helix`'s; if missing, set based on `strands`.
         :param groups: Dict mapping group name to :any:`HelixGroup`.
             Mutually exclusive with `helices_view_order`, and any non-none :any:`Grid`. If set, then each
             :any:`Helix` must have its :py:data:`Helix.group` field set to a group name that is one of the
             keys of this dict.
         :param strands: List of :any:`Strand`'s. If missing, will be empty.
-        :param helix_template: If specified, `num_helices` must be specified.
-            That many helices will be created,
-            modeled after this Helix. This Helix will not be any of them, so modifications to it will not
-            affect the :any:`Design` after it is created. The ``idx`` field of `helix_template` will be
-            ignored, and the ``idx`` fields of the created helices will be 0 through `num_helices` - 1.
-            Mutually exclusive with `helices`.
-        :param num_helices: Number of :any:`Helix`'s to create, each of which is copied from `helix_template`.
-            If specified, `helix_template` must be specified
-            Mutually exclusive with `helices`.
         :param grid: :any:`Grid` to use.
         :param major_tick_distance: regularly spaced major ticks between all helices.
             :any:`Helix.major_tick_distance` overrides this value for any :any:`Helix` in which it is
@@ -3058,14 +3047,6 @@ class Design(_JSONSerializable):
         if self.major_tick_distance < 0 or self.major_tick_distance is None:
             self.major_tick_distance = default_major_tick_distance(self.grid)
 
-        if helices is not None and (helix_template is not None or num_helices is not None):
-            raise IllegalDesignError('helices is mutually exclusive with helix_template and num_helices; '
-                                     'you must specified the first, or the latter two')
-
-        if (helix_template is not None and num_helices is None) or (
-                helix_template is None and num_helices is not None):
-            raise IllegalDesignError('helix type must be specified if and only if num_helices is')
-
         if self.groups is None:
             self.groups = {default_group_name: HelixGroup()}
         elif self.grid != Grid.none:
@@ -3073,11 +3054,7 @@ class Design(_JSONSerializable):
                                      'used; only the HelixGroups can have non-none grids in this case')
 
         if helices is None:
-            if helix_template is not None and num_helices is not None:
-                helices = {idx: copy.deepcopy(helix_template) for idx in range(num_helices)}
-                for idx, helix in helices.items():
-                    helices[idx] = replace(helix, idx=idx)
-            elif len(self.strands) > 0:
+            if len(self.strands) > 0:
                 max_helix_idx = max(
                     domain.helix for strand in self.strands for domain in strand.bound_domains())
                 helices = {idx: Helix(idx=idx) for idx in range(max_helix_idx + 1)}
@@ -3240,15 +3217,8 @@ class Design(_JSONSerializable):
         # helix groups
         groups = None
         if groups_key in json_map:
-            if helices_view_order_key in json_map:
-                raise IllegalDesignError(f'cannot specify both {groups_key} and {helices_view_order_key} '
-                                         f'in a Design')
-            if not grid_is_none:
-                raise IllegalDesignError(f'cannot specify {groups_key} and have a non-none Design-level '
-                                         f'grid, but Design.grid is {grid}')
             groups_json = json_map[groups_key]
             groups = {}
-
             for name, group_json in groups_json.items():
                 num_helices_in_group = sum(1 for helix in helices if helix.group == name)
                 groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)

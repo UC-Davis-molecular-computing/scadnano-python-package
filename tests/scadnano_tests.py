@@ -2172,18 +2172,18 @@ class TestHelixGroups(unittest.TestCase):
         s = 'south'
         w = 'west'
         helices = [
-            sc.Helix(max_offset=20, group=n, grid_position=(1, 1)),                    # 0
-            sc.Helix(max_offset=21, group=n, grid_position=(0, 1)),                    # 1
-            sc.Helix(max_offset=19, group=n, grid_position=(0, 2)),                    # 2
-            sc.Helix(max_offset=18, group=n, grid_position=(1, 2)),                    # 3
-            sc.Helix(max_offset=17, group=n, grid_position=(2, 2)),                    # 4
-            sc.Helix(max_offset=16, group=n, grid_position=(2, 1)),                    # 5
-            sc.Helix(max_offset=24, group=s),                                          # 6
-            sc.Helix(max_offset=25, group=s),                                          # 7
-            sc.Helix(max_offset=26, group=w, position=sc.Position3D(x=0, y=0, z=0)),   # 8
-            sc.Helix(max_offset=27, group=w, position=sc.Position3D(x=0, y=2.5, z=0)), # 9
-            sc.Helix(idx=13, max_offset=22, group=e),                                  # 13
-            sc.Helix(idx=15, max_offset=23, group=e),                                  # 15
+            sc.Helix(max_offset=20, group=n, grid_position=(1, 1)),  # 0
+            sc.Helix(max_offset=21, group=n, grid_position=(0, 1)),  # 1
+            sc.Helix(max_offset=19, group=n, grid_position=(0, 2)),  # 2
+            sc.Helix(max_offset=18, group=n, grid_position=(1, 2)),  # 3
+            sc.Helix(max_offset=17, group=n, grid_position=(2, 2)),  # 4
+            sc.Helix(max_offset=16, group=n, grid_position=(2, 1)),  # 5
+            sc.Helix(max_offset=24, group=s),  # 6
+            sc.Helix(max_offset=25, group=s),  # 7
+            sc.Helix(max_offset=26, group=w, position=sc.Position3D(x=0, y=0, z=0)),  # 8
+            sc.Helix(max_offset=27, group=w, position=sc.Position3D(x=0, y=2.5, z=0)),  # 9
+            sc.Helix(idx=13, max_offset=22, group=e),  # 13
+            sc.Helix(idx=15, max_offset=23, group=e),  # 15
         ]
         group_north = sc.HelixGroup(position=sc.Position3D(x=0, y=-200, z=0), grid=sc.honeycomb)
         group_south = sc.HelixGroup(position=sc.Position3D(x=0, y=70, z=0), helices_view_order=[7, 6],
@@ -2206,8 +2206,81 @@ class TestHelixGroups(unittest.TestCase):
         self._asserts_for_fixture(self.design)
 
     def test_helix_groups_to_from_JSON(self):
-        json_str = self.design.to_json()
-        design_from_json = sc.Design.from_scadnano_json_str(json_str)
+        n = self.n
+        e = self.e
+        s = self.s
+        w = self.w
+        design_json_str = self.design.to_json()
+
+        design_json_map = json.loads(design_json_str)
+        groups_map = design_json_map[sc.groups_key]
+        group_n = groups_map[n]
+        group_e = groups_map[e]
+        group_s = groups_map[s]
+        group_w = groups_map[w]
+
+        pos_n = group_n[sc.position_key]
+        self.assertAlmostEqual(0, pos_n['x'])
+        self.assertAlmostEqual(-200, pos_n['y'])
+        self.assertAlmostEqual(0, pos_n['z'])
+
+        pos_s = group_e[sc.position_key]
+        self.assertAlmostEqual(0, pos_s['x'])
+        self.assertAlmostEqual(0, pos_s['y'])
+        self.assertAlmostEqual(100, pos_s['z'])
+
+        pos_w = group_s[sc.position_key]
+        self.assertAlmostEqual(0, pos_w['x'])
+        self.assertAlmostEqual(70, pos_w['y'])
+        self.assertAlmostEqual(0, pos_w['z'])
+
+        pos_e = group_w[sc.position_key]
+        self.assertAlmostEqual(0, pos_e['x'])
+        self.assertAlmostEqual(0, pos_e['y'])
+        self.assertAlmostEqual(0, pos_e['z'])
+
+        helices_map = design_json_map[sc.helices_key]
+        self.assertEqual(12, len(helices_map))
+        helix0_map = helices_map[0]
+        helix1_map = helices_map[1]
+        helix2_map = helices_map[2]
+        helix3_map = helices_map[3]
+        helix4_map = helices_map[4]
+        helix5_map = helices_map[5]
+        helix6_map = helices_map[6]
+        helix7_map = helices_map[7]
+        helix8_map = helices_map[8]
+        helix9_map = helices_map[9]
+        helix13_map = helices_map[10]
+        helix15_map = helices_map[11]
+
+        self.assertEqual(n, helix0_map[sc.group_key])
+        self.assertEqual(n, helix1_map[sc.group_key])
+        self.assertEqual(n, helix2_map[sc.group_key])
+        self.assertEqual(n, helix3_map[sc.group_key])
+        self.assertEqual(n, helix4_map[sc.group_key])
+        self.assertEqual(n, helix5_map[sc.group_key])
+        self.assertEqual(s, helix6_map[sc.group_key])
+        self.assertEqual(s, helix7_map[sc.group_key])
+        self.assertEqual(w, helix8_map[sc.group_key])
+        self.assertEqual(w, helix9_map[sc.group_key])
+        self.assertEqual(e, helix13_map[sc.group_key])
+        self.assertEqual(e, helix15_map[sc.group_key])
+
+        self.assertEqual(0, helix0_map[sc.idx_on_helix_key])
+        self.assertEqual(1, helix1_map[sc.idx_on_helix_key])
+        self.assertEqual(2, helix2_map[sc.idx_on_helix_key])
+        self.assertEqual(3, helix3_map[sc.idx_on_helix_key])
+        self.assertEqual(4, helix4_map[sc.idx_on_helix_key])
+        self.assertEqual(5, helix5_map[sc.idx_on_helix_key])
+        self.assertEqual(6, helix6_map[sc.idx_on_helix_key])
+        self.assertEqual(7, helix7_map[sc.idx_on_helix_key])
+        self.assertEqual(8, helix8_map[sc.idx_on_helix_key])
+        self.assertEqual(9, helix9_map[sc.idx_on_helix_key])
+        self.assertEqual(13, helix13_map[sc.idx_on_helix_key])
+        self.assertEqual(15, helix15_map[sc.idx_on_helix_key])
+
+        design_from_json = sc.Design.from_scadnano_json_str(design_json_str)
         self._asserts_for_fixture(design_from_json)
 
     def test_helix_groups_fail_nonexistent(self):
@@ -2227,7 +2300,7 @@ class TestHelixGroups(unittest.TestCase):
         w = self.w
         groups = design.groups
         if groups is None:
-            return # this makes MyPy shut up about how groups might be None
+            return  # this makes MyPy shut up about how groups might be None
 
         self.assertEqual(4, len(groups))
 
@@ -2241,10 +2314,10 @@ class TestHelixGroups(unittest.TestCase):
         self.assertEqual(sc.Grid.square, groups[s].grid)
         self.assertEqual(sc.Grid.none, groups[w].grid)
 
-        self.assertEqual(0, groups[n].pitch)
+        self.assertAlmostEqual(0, groups[n].pitch)
         self.assertAlmostEqual(45, groups[e].pitch)
-        self.assertEqual(0, groups[s].pitch)
-        self.assertEqual(0, groups[w].pitch)
+        self.assertAlmostEqual(0, groups[s].pitch)
+        self.assertAlmostEqual(0, groups[w].pitch)
 
     def test_JSON_bad_uses_groups_and_top_level_grid(self):
         json_str = '''
@@ -2331,7 +2404,6 @@ class TestHelixGroups(unittest.TestCase):
             design = sc.Design.from_scadnano_json_str(json_str)
 
 
-
 class TestJSON(unittest.TestCase):
 
     def test_default_helices_view_order_with_nondefault_helix_idxs_in_default_order(self):
@@ -2343,7 +2415,6 @@ class TestJSON(unittest.TestCase):
         design_json_ser = design.to_json_serializable(suppress_indent=False)
         self.assertFalse(sc.helices_view_order_key in design_json_ser)
 
-
     def test_default_helices_view_order_with_nondefault_helix_idxs_in_nondefault_order(self):
         helices = [sc.Helix(idx=1, max_offset=100), sc.Helix(idx=3, max_offset=100)]
         design = sc.Design(helices=helices, strands=[], helices_view_order=[3, 1])
@@ -2353,7 +2424,6 @@ class TestJSON(unittest.TestCase):
         design_json_ser = design.to_json_serializable(suppress_indent=False)
         actual_view_order = design_json_ser[sc.helices_view_order_key]
         self.assertListEqual([3, 1], actual_view_order)
-
 
     def test_strand_labels(self):
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
@@ -2934,7 +3004,8 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 class TestInsertRemoveDomains(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.design = sc.Design(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        helices = [sc.Helix(max_offset=100) for _ in range(4)]
+        self.design = sc.Design(helices=helices, strands=[])
         self.design.strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
         self.strand = self.design.strands[0]
 
@@ -2947,7 +3018,8 @@ class TestInsertRemoveDomains(unittest.TestCase):
         self.assertEqual(expected_strand_before, self.strand)
 
     def test_insert_domain_with_sequence(self):
-        design = sc.Design(helix_template=sc.Helix(max_offset=100), num_helices=4, strands=[])
+        helices = [sc.Helix(max_offset=100) for _ in range(4)]
+        design = sc.Design(helices=helices, strands=[])
         design.strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
         strand = design.strands[0]
 
