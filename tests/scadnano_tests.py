@@ -2304,10 +2304,10 @@ class TestHelixGroups(unittest.TestCase):
 
         self.assertEqual(4, len(groups))
 
-        self.assertEqual([0, 1, 2, 3, 4, 5], groups[n].helices_view_order)
-        self.assertEqual([7, 6], groups[s].helices_view_order)
-        self.assertEqual([8, 9], groups[w].helices_view_order)
-        self.assertEqual([13, 15], groups[e].helices_view_order)
+        self.assertSequenceEqual([0, 1, 2, 3, 4, 5], groups[n].helices_view_order)
+        self.assertSequenceEqual([7, 6], groups[s].helices_view_order)
+        self.assertSequenceEqual([8, 9], groups[w].helices_view_order)
+        self.assertSequenceEqual([13, 15], groups[e].helices_view_order)
 
         self.assertEqual(sc.Grid.honeycomb, groups[n].grid)
         self.assertEqual(sc.Grid.square, groups[e].grid)
@@ -2318,6 +2318,12 @@ class TestHelixGroups(unittest.TestCase):
         self.assertAlmostEqual(45, groups[e].pitch)
         self.assertAlmostEqual(0, groups[s].pitch)
         self.assertAlmostEqual(0, groups[w].pitch)
+
+        # test auto-assignment of grid_positions based on helices view order
+        self.assertSequenceEqual([0, 1], design.helices[6].grid_position)
+        self.assertSequenceEqual([0, 0], design.helices[7].grid_position)
+        self.assertSequenceEqual([0, 0], design.helices[13].grid_position)
+        self.assertSequenceEqual([0, 1], design.helices[15].grid_position)
 
     def test_JSON_bad_uses_groups_and_top_level_grid(self):
         json_str = '''
@@ -2402,7 +2408,6 @@ class TestHelixGroups(unittest.TestCase):
         '''
         with self.assertRaises(sc.IllegalDesignError) as ex:
             design = sc.Design.from_scadnano_json_str(json_str)
-
 
     def test_JSON_bad_no_groups_but_helices_reference_groups(self):
         json_str = '''

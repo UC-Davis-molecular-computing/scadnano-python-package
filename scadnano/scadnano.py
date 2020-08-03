@@ -1036,6 +1036,15 @@ class HelixGroup(_JSONSerializable):
                           helices_view_order=helices_view_order,
                           grid=grid)
 
+    def helices_view_order_inverse(self, idx: int) -> int:
+        """
+        Given a :py:data:`Helix.idx` in this :any:`HelixGroup`, return its view order.
+
+        :param idx: index of :any:`Helix` in this :any:`HelixGroup`
+        :return: view order of the :any:`Helix`
+        :raises ValueError: if `idx` is not the index of a :any:`Helix` in this :any:`HelixGroup`
+        """
+        return self.helices_view_order.index(idx)
 
 # def in_browser() -> bool:
 #     """Test if this code is running in the browser.
@@ -3054,7 +3063,7 @@ class Design(_JSONSerializable):
         self.color_cycler = ColorCycler()
         self.geometry = Geometry() if geometry is None else geometry
 
-        if self.groups is None:
+        if not using_groups:
             self.groups = {default_group_name: HelixGroup()}
         else:
             if grid is not None:
@@ -3875,9 +3884,12 @@ class Design(_JSONSerializable):
         return groups_list[0]
 
     def _set_helices_grid_positions(self):
-        for idx, helix in self.helices.items():
-            if helix.grid_position is None:
-                helix.grid_position = helix.default_grid_position()
+        for name, group in self.groups.items():
+            if group.grid != Grid.none:
+                for idx in self.helices_idxs_in_group(name):
+                    helix = self.helices[idx]
+                    if helix.grid_position is None:
+                        helix.grid_position = (0, group.helices_view_order_inverse(idx))
 
     def _set_helices_min_max_offsets(self, update: bool):
         """update = whether to overwrite existing Helix.max_offset and Helix.min_offset.
