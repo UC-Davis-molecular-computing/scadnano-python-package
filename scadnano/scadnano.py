@@ -4687,7 +4687,7 @@ class Design(_JSONSerializable):
 
         _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
 
-    def add_nick(self, helix: int, offset: int, forward: bool):
+    def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True):
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
         in direction given by `forward`, at offset `offset`. The two :any:`Domain`'s created by this nick
         will have 5'/3' ends at offsets `offset` and `offset-1`.
@@ -4710,6 +4710,15 @@ class Design(_JSONSerializable):
         :py:data:`Domain.forward` = ``True``,
         :py:data:`Domain.start` = ``5``,
         :py:data:`Domain.end` = ``10``.
+
+        :param helix: index of helix where nick will occur
+        :param offset: offset to nick (nick will be between offset and offset-1)
+        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
+        :param new_color: whether to assign a new color to one of the :any:`Strand`'s resulting from the
+                          nick.
+                          If False, both :any:`Strand`'s created have the same color as the original
+                          If True, one :any:`Strand` keeps the same color as the original and the other
+                          is assigned a new color
         """
         for domain_to_remove in self.domains_at(helix, offset):
             if domain_to_remove.forward == forward:
@@ -4733,8 +4742,10 @@ class Design(_JSONSerializable):
             domain_to_add_after = domain_left
 
         if strand.dna_sequence:
-            dna_sequence_before = ''.join(domain.dna_sequence() for domain in domains_before)
-            dna_sequence_after = ''.join(domain.dna_sequence() for domain in domains_after)
+            dna_sequence_before: str = ''.join(
+                domain.dna_sequence() for domain in domains_before)  # ignore: typing
+            dna_sequence_after: str = ''.join(
+                domain.dna_sequence() for domain in domains_after)  # ignore: typing
             dna_sequence_on_domain_left = domain_to_remove.dna_sequence_in(
                 domain_to_remove.start,
                 offset - 1)
@@ -4759,10 +4770,11 @@ class Design(_JSONSerializable):
                                dna_sequence=dna_sequence_before_whole,
                                color=strand.color, idt=strand.idt if idt_present else None)
 
+        color_after = next(self.color_cycler) if new_color else strand.color
         strand_after = Strand(domains=[domain_to_add_after] + domains_after,
                               dna_sequence=dna_sequence_after_whole,
-                              use_default_idt=idt_present)
-
+                              color=color_after, use_default_idt=idt_present)
+        
         self.helices[helix].domains.remove(domain_to_remove)
         self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
 
