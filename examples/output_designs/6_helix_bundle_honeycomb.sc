@@ -1,5 +1,5 @@
 {
-  "version": "0.10.3",
+  "version": "0.11.0",
   "grid": "honeycomb",
   "helices": [
     {"max_offset": 1295, "grid_position": [1, 1]},
