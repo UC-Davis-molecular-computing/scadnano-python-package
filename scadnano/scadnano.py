@@ -61,9 +61,6 @@ import os.path
 
 default_scadnano_file_extension = 'sc'
 
-StrandLabel = TypeVar('StrandLabel')
-DomainLabel = TypeVar('DomainLabel')
-
 
 def _pairwise(iterable):
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
@@ -1362,7 +1359,7 @@ def _is_close(x1: float, x2: float):
 
 
 @dataclass
-class Domain(_JSONSerializable, Generic[DomainLabel]):
+class Domain(_JSONSerializable):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
@@ -1409,7 +1406,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     This is the number of *extra* bases in addition to the base already at this position. 
     The total number of bases at this offset is num_insertions+1."""
 
-    label: Optional[DomainLabel] = None
+    label: Any = None
     """Generic "label" object to associate to this :any:`Domain`.
 
     Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
@@ -1441,7 +1438,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
         return self._parent_strand
 
-    def set_label(self, label: StrandLabel):
+    def set_label(self, label):
         """Sets label of this :any:`Domain`."""
         self.label = label
 
@@ -1644,7 +1641,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     # The type hint 'Domain' must be in quotes since Domain is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
     # remove quotes when Python 3.6 support dropped
-    # def overlaps(self, other: Domain[DomainLabel]) -> bool:
+    # def overlaps(self, other: Domain) -> bool:
     def overlaps(self, other: 'Domain') -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
@@ -1660,7 +1657,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
                 self.compute_overlap(other)[0] >= 0)
 
     # remove quotes when Python 3.6 support dropped
-    # def overlaps_illegally(self, other: Domain[DomainLabel]):
+    # def overlaps_illegally(self, other: Domain):
     def overlaps_illegally(self, other: 'Domain'):
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
@@ -1676,7 +1673,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
                 self.compute_overlap(other)[0] >= 0)
 
     # remove quotes when Python 3.6 support dropped
-    # def compute_overlap(self, other: Domain[DomainLabel]) -> Tuple[int, int]:
+    # def compute_overlap(self, other: Domain) -> Tuple[int, int]:
     def compute_overlap(self, other: 'Domain') -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Domain and `other`.
 
@@ -1926,7 +1923,7 @@ class StrandBuilder:
         self.loopout_length: Optional[int] = None
         self.strand: Optional[Strand] = None
         self.just_moved_to_helix: bool = True
-        self.last_domain: Optional[Domain[DomainLabel]] = None
+        self.last_domain: Optional[Domain] = None
 
     # remove quotes when Python 3.6 support dropped
     def cross(self, helix: int, offset: int = None) -> 'StrandBuilder':
@@ -2147,7 +2144,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Python 3.6 support dropped
-    def with_label(self, label: StrandLabel) -> 'StrandBuilder':
+    def with_label(self, label) -> 'StrandBuilder':
         """
         Assigns `label` as label of the :any:`Strand` being built.
 
@@ -2162,7 +2159,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Python 3.6 support dropped
-    def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder':
+    def with_domain_label(self, label) -> 'StrandBuilder':
         """
         Assigns `label` as DNA sequence of the most recently created :any:`Domain` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2188,7 +2185,7 @@ class StrandBuilder:
 
 
 @dataclass
-class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
+class Strand(_JSONSerializable):
     """
     Represents a single strand of DNA.
 
@@ -2225,7 +2222,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout]]
+    domains: List[Union[Domain, Loopout]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2280,7 +2277,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
     and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
 
-    label: StrandLabel = None
+    label: Any = None
     """Generic "label" object to associate to this :any:`Strand`.
     
     Useful for associating extra information with the Strand that will be serialized, for example,
@@ -2290,7 +2287,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
 
     # not serialized; efficient way to see a list of all domains on a given helix
-    _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
+    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
@@ -2360,7 +2357,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if is_scaf:
             self.color = default_scaffold_color
 
-    def set_label(self, label: StrandLabel):
+    def set_label(self, label):
         """Sets label of this :any:`Strand`."""
         self.label = label
 
@@ -2421,11 +2418,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if idx in self.modifications_int:
             del self.modifications_int[idx]
 
-    def first_domain(self) -> Union[Domain[DomainLabel], Loopout]:
+    def first_domain(self) -> Union[Domain, Loopout]:
         """First domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
         return self.domains[0]
 
-    def last_domain(self) -> Union[Domain[DomainLabel], Loopout]:
+    def last_domain(self) -> Union[Domain, Loopout]:
         """Last domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
         return self.domains[-1]
 
@@ -2459,7 +2456,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             acc += domain.dna_length()
         return acc
 
-    def bound_domains(self) -> List[Domain[DomainLabel]]:
+    def bound_domains(self) -> List[Domain]:
         """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
         return [domain for domain in self.domains if domain.is_domain()]
 
@@ -2603,7 +2600,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
             self.dna_sequence = prefix + new_wildcards + suffix
 
-    def remove_domain(self, domain: Union[Domain[DomainLabel], Loopout]):
+    def remove_domain(self, domain: Union[Domain, Loopout]):
         # Only intended to be called by Design.remove_domain
 
         # remove relevant portion of DNA sequence to maintain its length
@@ -2621,7 +2618,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if self.use_default_idt:
             self.set_default_idt()
 
-    def dna_index_start_domain(self, domain: Domain[DomainLabel]):
+    def dna_index_start_domain(self, domain: Domain):
         """
         Returns index in DNA sequence of domain, e.g., if there are five domains
 
@@ -2643,7 +2640,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 return True
         return False
 
-    def first_bound_domain(self) -> Domain[DomainLabel]:
+    def first_bound_domain(self) -> Domain:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -2653,7 +2650,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if domain.is_domain():
                 return domain
 
-    def last_bound_domain(self) -> Domain[DomainLabel]:
+    def last_bound_domain(self) -> Domain:
         """Last :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
 
         Currently the first and last strand must not be :any:`Loopout`'s, so this should return the same
@@ -3079,7 +3076,7 @@ class Design(_JSONSerializable):
     stored in any :any:`Domain` 
     in :py:data:`Design.strands`."""
 
-    groups: Dict[str, HelixGroup] = None # type: ignore
+    groups: Dict[str, HelixGroup] = None  # type: ignore
     """:any:`HelixGroup`'s in this :any:`Design`."""
 
     geometry: Geometry = field(default_factory=lambda: Geometry())
@@ -4026,11 +4023,11 @@ class Design(_JSONSerializable):
                           f'helix.max_offset = {helix.max_offset}'
                 raise IllegalDesignError(err_msg)
 
-    def _check_strands_overlap_legally(self, domain_to_check: Domain[DomainLabel] = None):
+    def _check_strands_overlap_legally(self, domain_to_check: Domain = None):
         """If `Domain_to_check` is None, check all.
         Otherwise only check pairs where one is domain_to_check."""
 
-        def err_msg(d1: Domain[DomainLabel], d2: Domain[DomainLabel], h_idx: int) -> str:
+        def err_msg(d1: Domain, d2: Domain, h_idx: int) -> str:
             return f"two domains overlap on helix {h_idx}: " \
                    f"\n{d1}\n  and\n{d2}\n  but have the same direction"
 
@@ -4051,7 +4048,7 @@ class Design(_JSONSerializable):
                 offsets_data.append((domain.end, False, domain))
             offsets_data.sort(key=lambda offset_data: offset_data[0])
 
-            current_domains: List[Domain[DomainLabel]] = []
+            current_domains: List[Domain] = []
             for offset, is_start, domain in offsets_data:
                 if is_start:
                     if len(current_domains) >= 2:
@@ -4158,7 +4155,7 @@ class Design(_JSONSerializable):
                 return domain
         return None
 
-    def domains_at(self, helix: int, offset: int) -> List[Domain[DomainLabel]]:
+    def domains_at(self, helix: int, offset: int) -> List[Domain]:
         """Return list of :any:`Domain`'s that overlap `offset` on helix with idx `helix`.
 
         If constructed properly, this list should have 0, 1, or 2 elements."""
@@ -4190,7 +4187,7 @@ class Design(_JSONSerializable):
             if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
-    def append_domain(self, strand: Strand, domain: Union[Domain[DomainLabel], Loopout]):
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
         """
         Same as :any:`Design.insert_domain`, but inserts at end.
 
@@ -4199,7 +4196,7 @@ class Design(_JSONSerializable):
         """
         self.insert_domain(strand, len(strand.domains), domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain[DomainLabel], Loopout]):
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]):
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``design.insert_domain(strand, domain, 0)``
         inserts ``domain`` as the new first :any:`Domain`."""
@@ -4216,7 +4213,7 @@ class Design(_JSONSerializable):
             self.helices[domain.helix].domains.append(domain)
             self._check_strands_overlap_legally(domain_to_check=domain)
 
-    def remove_domain(self, strand: Strand, domain: Union[Domain[DomainLabel], Loopout]):
+    def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
         """Remove `Domain` from `strand`."""
         assert strand in self.strands
         strand.remove_domain(domain)
@@ -4282,13 +4279,13 @@ class Design(_JSONSerializable):
             if domain.contains_offset(offset):
                 domain.insertions.append((offset, length))
 
-    def set_start(self, domain: Domain[DomainLabel], start: int):
+    def set_start(self, domain: Domain, start: int):
         """Sets ``Domain.start`` to `start`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_start(start)
         self._check_strands_overlap_legally(domain)
 
-    def set_end(self, domain: Domain[DomainLabel], end: int):
+    def set_end(self, domain: Domain, end: int):
         """Sets ``Domain.end`` to `end`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_end(end)
