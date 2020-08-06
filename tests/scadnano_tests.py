@@ -2444,6 +2444,88 @@ class TestHelixGroups(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
+    def test_Helix_major_tick_start_default_min_offset(self):
+        helices = [
+            sc.Helix(min_offset=10, max_offset=100),
+            sc.Helix(max_offset=100),
+            sc.Helix(major_tick_start=15),
+        ]
+        design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        self.assertEqual(10, design.helices[0].major_tick_start)
+        self.assertEqual(0, design.helices[1].major_tick_start)
+        self.assertEqual(15, design.helices[2].major_tick_start)
+
+        design_json_map = design.to_json_serializable(suppress_indent=False)
+        self.assertNotIn(sc.major_tick_start_key, design_json_map['helices'][0])
+        self.assertNotIn(sc.major_tick_start_key, design_json_map['helices'][1])
+        self.assertIn(sc.major_tick_start_key, design_json_map['helices'][2])
+        self.assertEqual(15, design_json_map['helices'][2][sc.major_tick_start_key])
+
+        # this isn't related to major_tick_start, but it failed for some reason so let's check it
+        self.assertIn(sc.grid_position_key, design_json_map['helices'][0])
+        self.assertIn(sc.grid_position_key, design_json_map['helices'][1])
+        self.assertIn(sc.grid_position_key, design_json_map['helices'][2])
+        self.assertSequenceEqual([0, 0], design_json_map['helices'][0][sc.grid_position_key])
+        self.assertSequenceEqual([0, 1], design_json_map['helices'][1][sc.grid_position_key])
+        self.assertSequenceEqual([0, 2], design_json_map['helices'][2][sc.grid_position_key])
+
+        design_json_str = json.dumps(design_json_map)
+        design = sc.Design.from_scadnano_json_str(design_json_str)
+        self.assertEqual(10, design.helices[0].major_tick_start)
+        self.assertEqual(0, design.helices[1].major_tick_start)
+        self.assertEqual(15, design.helices[2].major_tick_start)
+
+    def test_Helix_major_tick_periodic_distances(self):
+        grid = sc.square
+        helices = [
+            sc.Helix(major_tick_start=10, max_offset=30, major_tick_distance=5),
+            sc.Helix(major_tick_start=10, max_offset=30, major_tick_periodic_distances=[2, 3]),
+            sc.Helix(major_tick_start=10, max_offset=30, major_ticks=[10, 20, 30]),
+            sc.Helix(major_tick_start=10, max_offset=30),
+            sc.Helix(max_offset=30),
+        ]
+        design = sc.Design(helices=helices, strands=[], grid=grid)
+        self.assertEqual(10, design.helices[0].major_tick_start)
+
+        self.assertSequenceEqual([10, 15, 20, 25, 30], design.helices[0].calculate_major_ticks(grid))
+        self.assertSequenceEqual([10, 12, 15, 17, 20, 22, 25, 27, 30],
+                                 design.helices[1].calculate_major_ticks(grid))
+        self.assertSequenceEqual([10, 20, 30], design.helices[2].calculate_major_ticks(grid))
+        self.assertSequenceEqual([10, 18, 26], design.helices[3].calculate_major_ticks(grid))
+        self.assertSequenceEqual([0, 8, 16, 24], design.helices[4].calculate_major_ticks(grid))
+
+        design_json_map = design.to_json_serializable(suppress_indent=False)
+
+        h0 = design_json_map['helices'][0]
+        self.assertNotIn(sc.major_ticks_key, h0)
+        self.assertNotIn(sc.major_tick_periodic_distances_key, h0)
+        self.assertIn(sc.major_tick_distance_key, h0)
+        self.assertEqual(5, h0[sc.major_tick_distance_key])
+
+        h1 = design_json_map['helices'][1]
+        self.assertNotIn(sc.major_ticks_key, h1)
+        self.assertIn(sc.major_tick_periodic_distances_key, h1)
+        self.assertNotIn(sc.major_tick_distance_key, h1)
+        self.assertSequenceEqual([2, 3], h1[sc.major_tick_periodic_distances_key])
+
+        h2 = design_json_map['helices'][2]
+        self.assertIn(sc.major_ticks_key, h2)
+        self.assertNotIn(sc.major_tick_distance_key, h2)
+        self.assertNotIn(sc.major_tick_periodic_distances_key, h2)
+        self.assertSequenceEqual([10, 20, 30], h2[sc.major_ticks_key])
+
+        h3 = design_json_map['helices'][3]
+        self.assertNotIn(sc.major_ticks_key, h3)
+        self.assertNotIn(sc.major_tick_distance_key, h3)
+        self.assertNotIn(sc.major_tick_periodic_distances_key, h3)
+        self.assertIn(sc.major_tick_start_key, h3)
+
+        h4 = design_json_map['helices'][4]
+        self.assertNotIn(sc.major_ticks_key, h4)
+        self.assertNotIn(sc.major_tick_distance_key, h4)
+        self.assertNotIn(sc.major_tick_periodic_distances_key, h4)
+        self.assertNotIn(sc.major_tick_start_key, h4)
+
     def test_default_helices_view_order_with_nondefault_helix_idxs_in_default_order(self):
         helices = [sc.Helix(idx=1, max_offset=100), sc.Helix(idx=3, max_offset=100)]
         design = sc.Design(helices=helices, strands=[])

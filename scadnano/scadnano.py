@@ -1046,6 +1046,7 @@ class HelixGroup(_JSONSerializable):
         """
         return self.helices_view_order.index(idx)
 
+
 # def in_browser() -> bool:
 #     """Test if this code is running in the browser.
 #
@@ -1080,17 +1081,30 @@ class Helix(_JSONSerializable):
 
     max_offset: int = None  # type: ignore
     """Maximum offset (exclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
+    
+    Optional field.
     If unspecified, it is calculated when the :any:`Design` is instantiated as 
     the largest :any:`Domain.end` offset of any :any:`Domain` in the design.
     """
 
     min_offset: int = 0
     """Minimum offset (inclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
-    If unspecified, it is set to 0.
+    
+    Optional field. Default value 0.
     """
 
+    major_tick_start: int = None  # type: ignore
+    """Offset of first major tick when not specifying :py:data:`Helix.major_ticks`. 
+    Used in combination with either 
+    :py:data:`Helix.major_tick_distance` or 
+    :py:data:`Helix.major_tick_periodic_distances`.
+    
+    Optional field. 
+    If not specified, is initialized to value :py:data:`Helix.min_offset`."""
+
     major_tick_distance: Optional[int] = None
-    """Distance between major ticks (bold) delimiting boundaries between bases.
+    """Distance between major ticks (bold) delimiting boundaries between bases. Major ticks will appear
+    in the visual interface at positions 
 
     Optional field.
     If 0 then no major ticks are drawn.
@@ -1098,8 +1112,26 @@ class Helix(_JSONSerializable):
     If the grid is :any:`Grid.square` then the default value is 8.
     If the grid is :any:`Grid.hex` or :any:`Grid.honeycomb` then the default value is 7."""
 
+    major_tick_periodic_distances: Optional[List[int]] = None
+    """Periodic distances between major ticks. For example, setting 
+    :py:data:`Helix.major_tick_periodic_distances` = [2, 3] and 
+    :py:data:`Helix.major_tick_start` = 10 means that major ticks will appear at
+    12, 
+    15,
+    17,
+    20,
+    22, 
+    25,
+    27,
+    30, ...
+    
+    Optional field.
+    :py:data:`Helix.major_tick_distance` is equivalent to 
+    the setting :py:data:`Helix.major_tick_periodic_distances` = [:py:data:`Helix.major_tick_distance`].
+    """
+
     major_ticks: Optional[List[int]] = None  # type: ignore
-    """If not ``None``, overrides :any:`Design.major_tick_distance` and :any:`Helix.major_tick_distance`
+    """If not ``None``, overrides :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
     grid_position: Optional[Tuple[int, int]] = None  # type: ignore
@@ -1159,6 +1191,8 @@ class Helix(_JSONSerializable):
     _domains: List['Domain'] = field(default_factory=list)
 
     def __post_init__(self):
+        if self.major_tick_start is None:  # type: ignore
+            self.major_tick_start = self.min_offset  # type: ignore
         if self.grid_position is not None and self.position is not None:
             raise IllegalDesignError('exactly one of grid_position or position must be specified, '
                                      'but both are specified')
@@ -1172,6 +1206,8 @@ class Helix(_JSONSerializable):
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
         dct: Any = dict()
 
+        grid: Grid = kwargs['grid']
+
         # if we have major ticks or position, it's harder to read Helix on one line,
         # so don't wrap it in NoIndent, but still wrap longer sub-objects in them
         use_no_indent_helix: bool = not (self.major_ticks is not None or self.position is not None)
@@ -1179,8 +1215,11 @@ class Helix(_JSONSerializable):
         if self.group != default_group_name:
             dct[group_key] = self.group
 
-        if self.min_offset != 0:
+        if not self.min_offset_is_default():
             dct[min_offset_key] = self.min_offset
+
+        if not self.major_tick_start_is_default():
+            dct[major_tick_start_key] = self.major_tick_start
 
         dct[max_offset_key] = self.max_offset
 
@@ -1198,35 +1237,21 @@ class Helix(_JSONSerializable):
         if not _is_close(self.yaw, default_yaw):
             dct[yaw_key] = self.yaw
 
-        if self.major_tick_distance is not None and self.major_tick_distance > 0:
+        if not self.major_tick_distance_is_default(grid):
             dct[major_tick_distance_key] = self.major_tick_distance
 
-        if self.major_ticks is not None:
-            ticks = self.major_ticks
-            dct[major_ticks_key] = NoIndent(ticks) if suppress_indent and not use_no_indent_helix else ticks
+        if not self.major_tick_periodic_distances_is_default():
+            dct[major_tick_periodic_distances_key] = NoIndent(
+                self.major_tick_periodic_distances) if suppress_indent and not use_no_indent_helix else \
+                self.major_tick_periodic_distances
+
+        if not self.major_ticks_is_default():
+            dct[major_ticks_key] = NoIndent(
+                self.major_ticks) if suppress_indent and not use_no_indent_helix else self.major_ticks
 
         dct[idx_on_helix_key] = self.idx
 
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
-
-    def default_grid_position(self) -> Tuple[int, int]:
-        if self.idx is None:
-            raise AssertionError('cannot call default_grid_position when idx is None')
-        return 0, self.idx
-
-    def calculate_major_ticks(self, grid: Grid) -> List[int]:
-        """
-        Calculates full list of major tick marks, whether using `default_major_tick_distance` (from
-        :any:`Design`), :py:data:`Helix.major_tick_distance`, or :py:data:`Helix.major_ticks`.
-        They are used in reverse order to determine precedence. (e.g., :py:data:`Helix.major_ticks`
-        overrides :py:data:`Helix.major_tick_distance`, which overrides
-        `default_major_tick_distance` from :any:`Design`.
-        """
-        if self.major_ticks is not None:
-            return self.major_ticks
-        distance = default_major_tick_distance(
-            grid) if self.major_tick_distance is None else self.major_tick_distance
-        return list(range(self.min_offset, self.max_offset + 1, distance))
 
     @staticmethod
     def from_json(json_map: dict) -> 'Helix':  # remove quotes when Python 3.6 support dropped
@@ -1242,7 +1267,9 @@ class Helix(_JSONSerializable):
 
         major_tick_distance = json_map.get(major_tick_distance_key)
         major_ticks = json_map.get(major_ticks_key)
-        min_offset = json_map.get(min_offset_key)
+        major_tick_start = json_map.get(major_tick_start_key)
+        major_tick_periodic_distances = json_map.get(major_tick_periodic_distances_key)
+        min_offset = optional_field(0, json_map, min_offset_key)
         max_offset = json_map.get(max_offset_key)
         idx = json_map.get(idx_on_helix_key)
 
@@ -1258,6 +1285,8 @@ class Helix(_JSONSerializable):
         return Helix(
             major_tick_distance=major_tick_distance,
             major_ticks=major_ticks,
+            major_tick_start=major_tick_start,
+            major_tick_periodic_distances=major_tick_periodic_distances,
             grid_position=grid_position,
             min_offset=min_offset,
             max_offset=max_offset,
@@ -1269,6 +1298,38 @@ class Helix(_JSONSerializable):
             group=group,
         )
 
+    def default_grid_position(self) -> Tuple[int, int]:
+        if self.idx is None:
+            raise AssertionError('cannot call default_grid_position when idx is None')
+        return 0, self.idx
+
+    def calculate_major_ticks(self, grid: Grid) -> List[int]:
+        """
+        Calculates full list of major tick marks, whether using `default_major_tick_distance` (from
+        :any:`Design`), :py:data:`Helix.major_tick_distance`, or :py:data:`Helix.major_ticks`.
+        They are used in reverse order to determine precedence. (e.g., :py:data:`Helix.major_ticks`
+        overrides :py:data:`Helix.major_tick_distance`, which overrides
+        `default_major_tick_distance` from :any:`Design`.
+        """
+        if self.major_tick_start is None:
+            raise AssertionError('major_tick_start should never be None')
+        if self.major_ticks is not None:
+            return self.major_ticks
+        elif self.major_tick_distance is not None:
+            return list(range(self.major_tick_start, self.max_offset + 1, self.major_tick_distance))
+        elif self.major_tick_periodic_distances is not None:
+            ticks = []
+            tick = self.major_tick_start
+            idx_period = 0
+            while tick <= self.max_offset:
+                ticks.append(tick)
+                tick += self.major_tick_periodic_distances[idx_period]
+                idx_period = (idx_period + 1) % len(self.major_tick_periodic_distances)
+            return ticks
+        else:
+            distance = default_major_tick_distance(grid)
+            return list(range(self.major_tick_start, self.max_offset + 1, distance))
+
     @property
     def domains(self):
         """
@@ -1278,6 +1339,22 @@ class Helix(_JSONSerializable):
         :return: :any:`Domain`'s on this helix
         """
         return self._domains
+
+    def min_offset_is_default(self) -> bool:
+        return self.min_offset == 0
+
+    def major_tick_start_is_default(self) -> bool:
+        return self.major_tick_start == self.min_offset
+
+    def major_tick_distance_is_default(self, grid: Grid) -> bool:
+        return (self.major_tick_distance is None
+                or default_major_tick_distance(grid) == self.major_tick_distance)
+
+    def major_tick_periodic_distances_is_default(self) -> bool:
+        return self.major_tick_periodic_distances is None
+
+    def major_ticks_is_default(self) -> bool:
+        return self.major_ticks is None
 
 
 def _is_close(x1: float, x2: float):
@@ -3002,7 +3079,7 @@ class Design(_JSONSerializable):
     stored in any :any:`Domain` 
     in :py:data:`Design.strands`."""
 
-    groups: Optional[Dict[str, HelixGroup]] = None
+    groups: Dict[str, HelixGroup] = None # type: ignore
     """:any:`HelixGroup`'s in this :any:`Design`."""
 
     geometry: Geometry = field(default_factory=lambda: Geometry())
@@ -3046,7 +3123,7 @@ class Design(_JSONSerializable):
         """
         using_groups = groups is not None
 
-        if helices_view_order is not None and groups is not None:
+        if helices_view_order is not None and using_groups:
             raise IllegalDesignError('Design.helices_view_order and Design.groups are mutually exclusive. '
                                      'Set at most one of them.')
 
@@ -3059,13 +3136,13 @@ class Design(_JSONSerializable):
             grid = Grid.none
 
         self.strands = [] if strands is None else strands
-        self.groups = groups
         self.color_cycler = ColorCycler()
         self.geometry = Geometry() if geometry is None else geometry
 
-        if not using_groups:
+        if groups is None:
             self.groups = {default_group_name: HelixGroup()}
         else:
+            self.groups = groups
             if grid is not None:
                 raise IllegalDesignError('cannot use a non-none grid for whole Design when helix groups are '
                                          'used; only the HelixGroups can have non-none grids in this case')
@@ -3145,8 +3222,7 @@ class Design(_JSONSerializable):
     def _get_default_group(self):
         # Gets default group and raise exception if default group is not being used
         if not self._has_default_groups():
-            raise ValueError('cannot access Design.helices_view_order when groups are used. '
-                             'Access group.helices_view_order for each group instead.')
+            raise ValueError('The default group is not being used for this design.')
         if self.groups is None:
             raise AssertionError('Design.groups should not be None by this point')
         groups: List[HelixGroup] = list(self.groups.values())
@@ -3318,8 +3394,12 @@ class Design(_JSONSerializable):
                                                              helix_idxs=helix_idxs_in_group)
             dct[groups_key] = group_map
 
-        dct[helices_key] = [helix.to_json_serializable(suppress_indent) for helix in
-                            self.helices.values()]
+        helices_json = []
+        for helix in self.helices.values():
+            group = self.groups[helix.group]
+            helix_json = helix.to_json_serializable(suppress_indent, grid=group.grid)
+            helices_json.append(helix_json)
+        dct[helices_key] = helices_json
 
         # remove idx key from list of helices if they have the default index
         unwrapped_helices = list(dct[helices_key])
@@ -4097,7 +4177,7 @@ class Design(_JSONSerializable):
         self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
         for domain in strand.domains:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.append(domain)
                 self._check_strands_overlap_legally(domain_to_check=domain)
         if self.automatically_assign_color:
@@ -4107,7 +4187,7 @@ class Design(_JSONSerializable):
         """Remove `strand` from this design."""
         self.strands.remove(strand)
         for domain in strand.domains:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
     def append_domain(self, strand: Strand, domain: Union[Domain[DomainLabel], Loopout]):
