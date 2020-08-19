@@ -2127,9 +2127,9 @@ class StrandBuilder:
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_sequence('AAA')\
-                .cross(1).to(5).with_domain_sequence('TTT')\
-                .loopout(2, 4).with_domain_sequence('CCCC')\
+            design.strand(0, 5).to(8).with_domain_sequence('AAA')\\
+                .cross(1).to(5).with_domain_sequence('TTT')\\
+                .loopout(2, 4).with_domain_sequence('CCCC')\\
                 .to(10).with_domain_sequence('GGGGG')
 
         :param sequence: the DNA sequence to assign to the :any:`Domain`
@@ -2171,9 +2171,9 @@ class StrandBuilder:
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_label('domain 1')\
-                .cross(1).to(5).with_domain_label('domain 2')\
-                .loopout(2, 4).with_domain_label('domain 3')\
+            design.strand(0, 5).to(8).with_domain_label('domain 1')\\
+                .cross(1).to(5).with_domain_label('domain 2')\\
+                .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
         :param label: label to assign to the :any:`Domain`
