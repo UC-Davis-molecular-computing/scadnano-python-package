@@ -2608,14 +2608,14 @@ class TestJSON(unittest.TestCase):
         self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
         self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
 
-    def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
+    def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self) -> None:
         helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]
         strands = []
         design = sc.Design(helices=helices, strands=strands)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
-        self.assertFalse(isinstance(helix_json, sc.NoIndent))
-        self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
+        self.assertTrue(isinstance(helix_json, sc.NoIndent))
+        # self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
 
     def test_NoIndent_on_helix_without_position_or_major_ticks_present(self) -> None:
         helices = [sc.Helix()]
