@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Python 3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.11.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.11.2"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -1207,7 +1207,8 @@ class Helix(_JSONSerializable):
 
         # if we have major ticks or position, it's harder to read Helix on one line,
         # so don't wrap it in NoIndent, but still wrap longer sub-objects in them
-        use_no_indent_helix: bool = not (self.major_ticks is not None or self.position is not None)
+        # use_no_indent_helix: bool = not (self.major_ticks is not None or self.position is not None)
+        use_no_indent_helix: bool = not (self.major_ticks is not None)
 
         if self.group != default_group_name:
             dct[group_key] = self.group
@@ -1411,7 +1412,8 @@ class Domain(_JSONSerializable):
     The total number of bases at this offset is num_insertions+1."""
 
     label: Any = None
-    """Generic "label" object to associate to this :any:`Domain`.
+    """
+    Generic "label" object to associate to this :any:`Domain`.
 
     Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
     for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
@@ -1426,7 +1428,7 @@ class Domain(_JSONSerializable):
     def __post_init__(self):
         self._check_start_end()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rep = (f'Domain(helix={self.helix}'
                f', forward={self.forward}'
                f', start={self.start}'
@@ -1436,17 +1438,17 @@ class Domain(_JSONSerializable):
               ')'
         return rep
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
     def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
         return self._parent_strand
 
-    def set_label(self, label):
+    def set_label(self, label) -> None:
         """Sets label of this :any:`Domain`."""
         self.label = label
 
-    def _check_start_end(self):
+    def _check_start_end(self) -> None:
         if self.start >= self.end:
             raise StrandError(self._parent_strand,
                               f'start = {self.start} must be less than end = {self.end}')
@@ -1760,19 +1762,35 @@ class Loopout(_JSONSerializable):
     length: int
     """Length (in DNA bases) of this Loopout."""
 
+    label: Any = None
+    """
+    Generic "label" object to associate to this :any:`Loopout`.
+
+    Useful for associating extra information with the :any:`Loopout` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
+    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
+    having to specify a custom encoder.)
+    """
+
     # not serialized; for efficiency
     # remove quotes when Python 3.6 support dropped
     _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: dict) -> Union[dict, NoIndent]:
         dct = {loopout_key: self.length}
-        return NoIndent(dct)
+        if self.label is not None:
+            dct[domain_label_key] = self.label
+        return NoIndent(dct) if suppress_indent else dct
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Loopout({self.length})'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
+
+    def set_label(self, label: Any) -> None:
+        """Sets label of this :any:`Loopout`."""
+        self.label = label
 
     @staticmethod
     def is_loopout() -> bool:
@@ -1818,12 +1836,13 @@ class Loopout(_JSONSerializable):
         return self_seq_idx_start
 
     @staticmethod
-    def from_json(json_map) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
         # XXX: this should never fail since we detect whether to call this from_json by the presence
         # of a length key in json_map
         length_str = mandatory_field(Loopout, json_map, loopout_key)
         length = int(length_str)
-        return Loopout(length=length)
+        label = json_map.get(domain_label_key)
+        return Loopout(length=length, label=label)
 
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
@@ -1924,10 +1943,16 @@ class StrandBuilder:
         self.design: Design = design
         self.current_helix: int = helix
         self.current_offset: int = offset
-        self.loopout_length: Optional[int] = None
-        self.strand: Optional[Strand] = None
+        # self.loopout_length: Optional[int] = None
+        self._strand: Optional[Strand] = None
         self.just_moved_to_helix: bool = True
         self.last_domain: Optional[Domain] = None
+
+    @property
+    def strand(self) -> 'Strand':
+        if self._strand is None:
+            raise ValueError('no strand has been created yet')
+        return self._strand
 
     # remove quotes when Python 3.6 support dropped
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) -> 'StrandBuilder':
@@ -1973,8 +1998,9 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
-        self.loopout_length = length
-        return self.cross(helix, offset=offset, move=move)
+        self.cross(helix, offset=offset, move=move)
+        self.design.append_domain(self._strand, Loopout(length))
+        return self
 
     def move(self, delta: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
         """
@@ -2039,14 +2065,11 @@ class StrandBuilder:
 
         domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
         self.last_domain = domain
-        if self.strand:
-            if self.loopout_length is not None:
-                self.design.append_domain(self.strand, Loopout(self.loopout_length))
-            self.design.append_domain(self.strand, domain)
-            self.loopout_length = None
+        if self._strand is not None:
+            self.design.append_domain(self._strand, domain)
         else:
-            self.strand = Strand(domains=[domain])
-            self.design.add_strand(self.strand)
+            self._strand = Strand(domains=[domain])
+            self.design.add_strand(self._strand)
 
         self.current_offset = offset
 
@@ -2090,7 +2113,7 @@ class StrandBuilder:
 
         :return: self
         """
-        self.strand.set_scaffold(True)
+        self._strand.set_scaffold(True)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2101,7 +2124,7 @@ class StrandBuilder:
         :param mod: 5' modification
         :return: self
         """
-        self.strand.set_modification_5p(mod)
+        self._strand.set_modification_5p(mod)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2112,7 +2135,7 @@ class StrandBuilder:
         :param mod: 3' modification
         :return: self
         """
-        self.strand.set_modification_3p(mod)
+        self._strand.set_modification_3p(mod)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2126,7 +2149,7 @@ class StrandBuilder:
         :param warn_on_no_dna: whether to print warning to screen if DNA has not been assigned
         :return: self
         """
-        self.strand.set_modification_internal(idx, mod, warn_on_no_dna)
+        self._strand.set_modification_internal(idx, mod, warn_on_no_dna)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2137,7 +2160,7 @@ class StrandBuilder:
         :param color: color to set for Strand
         :return: self
         """
-        self.strand.set_color(color)
+        self._strand.set_color(color)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2156,7 +2179,7 @@ class StrandBuilder:
             :py:meth:`Design.assign_dna`.
         :return: self
         """
-        self.design.assign_dna(strand=self.strand, sequence=sequence, assign_complement=assign_complement)
+        self.design.assign_dna(strand=self._strand, sequence=sequence, assign_complement=assign_complement)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2183,8 +2206,8 @@ class StrandBuilder:
             :py:meth:`Design.assign_dna`.
         :return: self
         """
-        last_domain = self.strand.domains[-1]
-        self.design.assign_dna(strand=self.strand, sequence=sequence, domain=last_domain,
+        last_domain = self._strand.domains[-1]
+        self.design.assign_dna(strand=self._strand, sequence=sequence, domain=last_domain,
                                assign_complement=assign_complement)
         return self
 
@@ -2200,7 +2223,7 @@ class StrandBuilder:
         :param label: label to assign to the :any:`Strand`
         :return: self
         """
-        self.strand.set_label(label)
+        self._strand.set_label(label)
         return self
 
     # remove quotes when Python 3.6 support dropped
@@ -2224,7 +2247,7 @@ class StrandBuilder:
         :param label: label to assign to the :any:`Domain`
         :return: self
         """
-        last_domain = self.strand.domains[-1]
+        last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
         return self
 
@@ -3479,8 +3502,9 @@ class Design(_JSONSerializable):
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
             #     del helix_json[min_offset_key]
-            max_offset = max((domain.end for domain in helix.domains), default=-1)
-            if max_offset == helix_json[max_offset_key]:
+            max_offset = max((domain.end for strand in self.strands for domain in strand.bound_domains()),
+                             default=-1)
+            if max_offset == helix_json[max_offset_key] or helix_json[max_offset_key] is None:
                 del helix_json[max_offset_key]
 
         return dct

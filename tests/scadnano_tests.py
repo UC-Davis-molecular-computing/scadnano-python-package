@@ -7,6 +7,8 @@ import re
 import json
 from typing import Iterable
 
+from docutils.nodes import label
+
 import scadnano as sc
 import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
@@ -35,6 +37,58 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
     def setUp(self):
         helices = [sc.Helix(max_offset=100) for _ in range(6)]
         self.design_6helix = sc.Design(helices=helices, strands=[], grid=sc.square)
+
+    def test_strand__loopouts_with_labels(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.loopout(1, 8)
+        sb.with_domain_label('loop0')
+        sb.to(5)
+        sb.with_domain_label('dom1')
+        sb.cross(2)
+        sb.to(10)
+        sb.with_domain_label('dom2')
+        sb.loopout(3, 12)
+        sb.with_domain_label('loop1')
+        sb.to(5)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Loopout(8, label='loop0'),
+            sc.Domain(1, False, 5, 10, label='dom1'),
+            sc.Domain(2, True, 5, 10, label='dom2'),
+            sc.Loopout(12, label='loop1'),
+            sc.Domain(3, False, 5, 10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__loopouts_with_labels_to_json(self):
+        design = self.design_6helix
+        sb = design.strand(0, 0)
+        sb.to(10)
+        sb.loopout(1, 8)
+        sb.with_domain_label('loop0')
+        sb.to(5)
+        sb.with_domain_label('dom1')
+        sb.cross(2)
+        sb.to(10)
+        sb.with_domain_label('dom2')
+        sb.loopout(3, 12)
+        sb.with_domain_label('loop1')
+        sb.to(5)
+        design_json_map = design.to_json_serializable(suppress_indent=False)
+        design_from_json = sc.Design.from_scadnano_json_map(design_json_map)
+        expected_strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Loopout(8, label='loop0'),
+            sc.Domain(1, False, 5, 10, label='dom1'),
+            sc.Domain(2, True, 5, 10, label='dom2'),
+            sc.Loopout(12, label='loop1'),
+            sc.Domain(3, False, 5, 10),
+        ])
+        self.assertEqual(1, len(design_from_json.strands))
+        self.assertEqual(expected_strand, design_from_json.strands[0])
 
     def test_strand__0_0_to_10_cross_1_to_5(self):
         design = self.design_6helix
@@ -2608,14 +2662,14 @@ class TestJSON(unittest.TestCase):
         self.assertAlmostEqual(geometry_expected.minor_groove_angle, geometry_actual.minor_groove_angle)
         self.assertAlmostEqual(geometry_expected.inter_helix_gap, geometry_actual.inter_helix_gap)
 
-    def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self):
+    def test_lack_of_NoIndent_on_helix_if_position_or_major_ticks_present(self) -> None:
         helices = [sc.Helix(position=sc.Position3D(0, 0, 0))]
         strands = []
         design = sc.Design(helices=helices, strands=strands)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
-        self.assertFalse(isinstance(helix_json, sc.NoIndent))
-        self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
+        self.assertTrue(isinstance(helix_json, sc.NoIndent))
+        # self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
 
     def test_NoIndent_on_helix_without_position_or_major_ticks_present(self) -> None:
         helices = [sc.Helix()]
