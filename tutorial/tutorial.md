@@ -175,7 +175,7 @@ At this point, the design should look like this:
 
 ## Add scaffold "precursor strands"
 
-One can specify a design by explcitly listing every `Strand`, each of which is specified by listing every `Domain` (and if included, every `Loopout`). The point of a scripting library, however, is to automate tedious tasks by enabling a few loops to iterate over many of the `Strand`'s.
+One can specify a design by explicitly listing every `Strand`, each of which is specified by listing every `Domain` (and if included, every `Loopout`). The point of a scripting library, however, is to automate tedious tasks by enabling a few loops to iterate over many of the `Strand`'s.
 
 However, it can be difficult to see how to write a single loop, or even a small number of loops, to specify a complex design such as this one. An alternate simple way to specify a design is instead to visualize the design as consisting of several long strands, two per helix, which have had nicks and crossovers added. This is how we will design this DNA origami.
 
@@ -309,12 +309,12 @@ def add_scaffold_crossovers(design: sc.Design):
 
     # scaffold interior: full crossovers
     for helix in range(1, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=152, forward1=False))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=152, forward=False))
 
     # scaffold edges: half crossovers
     for helix in range(0, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=8, forward1=True, half=True))
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=295, forward1=True, half=True))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=8, forward=True, half=True))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=295, forward=True, half=True))
 
     design.add_crossovers(crossovers)
 ```
@@ -606,13 +606,13 @@ def add_scaffold_crossovers(design: sc.Design):
 
     # scaffold interior
     for helix in range(1, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=152, forward1=False))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=152, forward=False))
 
     # scaffold edges
     for helix in range(0, 23, 2):
-        crossovers.append(sc.Crossover(helix1=helix, helix2=helix + 1, offset1=8, forward1=True, half=True))
+        crossovers.append(sc.Crossover(helix=helix, helix2=helix + 1, offset=8, forward=True, half=True))
         crossovers.append(
-            sc.Crossover(helix1=helix, helix2=helix + 1, offset1=295, forward1=True, half=True))
+            sc.Crossover(helix=helix, helix2=helix + 1, offset=295, forward=True, half=True))
 
     design.add_crossovers(crossovers)
 

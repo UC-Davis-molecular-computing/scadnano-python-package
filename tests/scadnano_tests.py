@@ -2617,10 +2617,12 @@ class TestJSON(unittest.TestCase):
         self.assertFalse(isinstance(helix_json, sc.NoIndent))
         self.assertTrue(isinstance(helix_json[sc.position_key], sc.NoIndent))
 
-    def test_NoIndent_on_helix_without_position_or_major_ticks_present(self):
+    def test_NoIndent_on_helix_without_position_or_major_ticks_present(self) -> None:
         helices = [sc.Helix()]
         strands = []
-        design = sc.Design(helices=helices, strands=strands)
+        # will only be NoIndent if we don't have a Helix.position field, so make sure one isn't created
+        # by choosing a grid
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         json_map = design.to_json_serializable(suppress_indent=True)
         helix_json = json_map[sc.helices_key][0]
         self.assertTrue(isinstance(helix_json, sc.NoIndent))

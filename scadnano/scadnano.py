@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Python 3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.11.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.11.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -166,7 +166,7 @@ class Color(_JSONSerializable):
     
     Optional if :py:data:`Color.r`, :py:data:`Color.g`, :py:data:`Color.b` are all given."""
 
-    def __post_init__(self, hex_string):
+    def __post_init__(self, hex_string: str) -> None:
         if hex_string is None:
             assert (self.r is not None and self.g is not None and self.b is not None)
         else:
@@ -1187,7 +1187,7 @@ class Helix(_JSONSerializable):
     # for optimization; list of domains on that Helix
     _domains: List['Domain'] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.major_tick_start is None:  # type: ignore
             self.major_tick_start = self.min_offset  # type: ignore
         if self.grid_position is not None and self.position is not None:
@@ -1200,7 +1200,7 @@ class Helix(_JSONSerializable):
                                              f'outside the range of available offsets since max_offset = '
                                              f'{self.max_offset}')
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> dict:
         dct: Any = dict()
 
         grid: Grid = kwargs['grid']
@@ -1221,9 +1221,13 @@ class Helix(_JSONSerializable):
         dct[max_offset_key] = self.max_offset
 
         if self.position is None:
+            if grid == Grid.none:
+                raise IllegalDesignError('cannot have Helix.position == None when grid is None')
             dct[grid_position_key] = NoIndent(
                 self.grid_position) if suppress_indent and not use_no_indent_helix else self.grid_position
         else:
+            if grid != Grid.none:
+                raise IllegalDesignError('cannot have Helix.position != None when grid is not None')
             pos = self.position.to_json_serializable(suppress_indent)
             dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent_helix else pos
 
@@ -1251,7 +1255,7 @@ class Helix(_JSONSerializable):
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Helix':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict, **kwargs) -> 'Helix':  # remove quotes when Python 3.6 support dropped
         grid_position = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
@@ -1926,39 +1930,79 @@ class StrandBuilder:
         self.last_domain: Optional[Domain] = None
 
     # remove quotes when Python 3.6 support dropped
-    def cross(self, helix: int, offset: int = None) -> 'StrandBuilder':
+    def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) -> 'StrandBuilder':
         """
         Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
 
         :param helix: :any:`Helix` to crossover to
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
             (i.e., a "vertical" crossover)
+            Mutually excusive with `move`.
+        :param move:
+            Relative distance to new offset on `helix` from current offset.
+            If not specified, defaults to using parameter `offset`.
+            Mutually excusive with `offset`.
         :return: self
         """
+        if move is not None and offset is not None:
+            raise IllegalDesignError('move and offset cannot both be specified:\n'
+                                     f'move:   {move}\n'
+                                     f'offset: {offset}')
         self.last_domain = None
         self.current_helix = helix
         if offset is not None:
             self.current_offset = offset
+        elif move is not None:
+            self.current_offset += move
         return self
 
     # remove quotes when Python 3.6 support dropped
-    def loopout(self, helix: int, length: int, offset: int = None) -> 'StrandBuilder':
+    def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
+            -> 'StrandBuilder':
         """
         Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
 
         :param helix: :any:`Helix` to crossover to
         :param length: length of :any:`Loopout` to add
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
-            (i.e., a "vertical" crossover)
+            (i.e., a "vertical" loopout)
+            Mutually excusive with `move`.
+        :param move:
+            Relative distance to new offset on `helix` from current offset.
+            If not specified, defaults to using parameter `offset`.
+            Mutually excusive with `offset`.
         :return: self
         """
         self.loopout_length = length
-        return self.cross(helix, offset)
+        return self.cross(helix, offset=offset, move=move)
+
+    def move(self, delta: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
+        """
+        Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
+        plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
+        "relative move", whereas :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to`
+        are "absolute moves".
+
+        This updates the underlying :any:`Design` with a new :any:`Domain`,
+        and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
+        also a new :any:`Loopout`.
+
+        If two instances of :py:meth:`StrandBuilder.move` are chained together, this creates two domains
+        on the same helix. The two offsets must move in the same direction. In other words, if we call
+        ``.move(o1).to(o2)``, then ``o1`` and ``o2`` must be either both negative or both positive.
+
+        :param delta:
+            Distance to new offset to extend to, compared to current offset.
+            If less than current offset, the new :any:`Domain` is reverse, otherwise it is forward.
+        :return: self
+        """
+        return self.to(self.current_offset + delta)
 
     def to(self, offset: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
         """
         Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
-        which adds a new :any:`Domain` to the :any:`Strand` being built.
+        which adds a new :any:`Domain` to the :any:`Strand` being built. This is an
+        "absolute move", whereas :py:meth:`StrandBuilder.move` is a "relative move".
 
         This updates the underlying :any:`Design` with a new :any:`Domain`,
         and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
@@ -2012,7 +2056,8 @@ class StrandBuilder:
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
-        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call.
+        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call. This is an
+        "absolute move", whereas :py:meth:`StrandBuilder.move` is a "relative move".
 
         If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
         then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
@@ -2127,9 +2172,9 @@ class StrandBuilder:
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_sequence('AAA')\
-                .cross(1).to(5).with_domain_sequence('TTT')\
-                .loopout(2, 4).with_domain_sequence('CCCC')\
+            design.strand(0, 5).to(8).with_domain_sequence('AAA')\\
+                .cross(1).to(5).with_domain_sequence('TTT')\\
+                .loopout(2, 4).with_domain_sequence('CCCC')\\
                 .to(10).with_domain_sequence('GGGGG')
 
         :param sequence: the DNA sequence to assign to the :any:`Domain`
@@ -2171,9 +2216,9 @@ class StrandBuilder:
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_label('domain 1')\
-                .cross(1).to(5).with_domain_label('domain 2')\
-                .loopout(2, 4).with_domain_label('domain 3')\
+            design.strand(0, 5).to(8).with_domain_label('domain 1')\\
+                .cross(1).to(5).with_domain_label('domain 2')\\
+                .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
         :param label: label to assign to the :any:`Domain`
@@ -2986,8 +3031,11 @@ class Geometry(_JSONSerializable):
     minor_groove_angle: float = 150.0
     """Minor groove angle in degrees."""
 
-    inter_helix_gap: float = 0.5
+    inter_helix_gap: float = 1.0
     """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+
+    def distance_between_helices(self) -> float:
+        return 2 * self.helix_radius + self.inter_helix_gap
 
     def is_default(self):
         return self == _default_geometry
@@ -3184,7 +3232,7 @@ class Design(_JSONSerializable):
         # XXX: exact order of these calls is important
         self._ensure_helices_distinct_objects()
         self._ensure_strands_distinct_objects()
-        self._set_helices_grid_positions()
+        self._set_helices_grid_positions_or_positions()
         self._build_domains_on_helix_lists()
         self._set_helices_min_max_offsets(update=False)
         self._ensure_helix_groups_exist()
@@ -3960,15 +4008,18 @@ class Design(_JSONSerializable):
         groups_list = list(self.groups.values())
         return groups_list[0]
 
-    def _set_helices_grid_positions(self):
+    def _set_helices_grid_positions_or_positions(self) -> None:
         for name, group in self.groups.items():
-            if group.grid != Grid.none:
-                for idx in self.helices_idxs_in_group(name):
-                    helix = self.helices[idx]
-                    if helix.grid_position is None:
-                        helix.grid_position = (0, group.helices_view_order_inverse(idx))
+            for idx in self.helices_idxs_in_group(name):
+                helix = self.helices[idx]
+                if group.grid != Grid.none and helix.grid_position is None:
+                    helix.grid_position = (0, group.helices_view_order_inverse(idx))
+                elif group.grid == Grid.none and helix.position is None:
+                    y_delta = self.geometry.distance_between_helices()
+                    y = y_delta * group.helices_view_order_inverse(idx)
+                    helix.position = Position3D(x=0, y=y, z=0)
 
-    def _set_helices_min_max_offsets(self, update: bool):
+    def _set_helices_min_max_offsets(self, update: bool) -> None:
         """update = whether to overwrite existing Helix.max_offset and Helix.min_offset.
         Don't do this when Design is first created, but do it later when updating."""
         for helix in self.helices.values():
@@ -3987,7 +4038,7 @@ class Design(_JSONSerializable):
                     min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt: bool = True):
+    def set_default_idt(self, use_default_idt: bool = True) -> None:
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
         :any:`Design` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
         default idt field.
@@ -4006,14 +4057,14 @@ class Design(_JSONSerializable):
         on the :any:`Helix` with index `helix`."""
         return [strand for strand in self.strands if strand.domains[-1].helix == helix]
 
-    def _check_legal_design(self):
+    def _check_legal_design(self) -> None:
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
-    def _check_helix_offsets(self):
+    def _check_helix_offsets(self) -> None:
         for helix in self.helices.values():
             if helix.min_offset is not None \
                     and helix.max_offset is not None \
@@ -4774,7 +4825,7 @@ class Design(_JSONSerializable):
         strand_after = Strand(domains=[domain_to_add_after] + domains_after,
                               dna_sequence=dna_sequence_after_whole,
                               color=color_after, use_default_idt=idt_present)
-        
+
         self.helices[helix].domains.remove(domain_to_remove)
         self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
 
