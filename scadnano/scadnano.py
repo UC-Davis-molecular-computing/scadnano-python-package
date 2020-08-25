@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Python 3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.11.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.11.2"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -1412,7 +1412,8 @@ class Domain(_JSONSerializable):
     The total number of bases at this offset is num_insertions+1."""
 
     label: Any = None
-    """Generic "label" object to associate to this :any:`Domain`.
+    """
+    Generic "label" object to associate to this :any:`Domain`.
 
     Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
     for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
@@ -1427,7 +1428,7 @@ class Domain(_JSONSerializable):
     def __post_init__(self):
         self._check_start_end()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         rep = (f'Domain(helix={self.helix}'
                f', forward={self.forward}'
                f', start={self.start}'
@@ -1437,17 +1438,17 @@ class Domain(_JSONSerializable):
               ')'
         return rep
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
     def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
         return self._parent_strand
 
-    def set_label(self, label):
+    def set_label(self, label) -> None:
         """Sets label of this :any:`Domain`."""
         self.label = label
 
-    def _check_start_end(self):
+    def _check_start_end(self) -> None:
         if self.start >= self.end:
             raise StrandError(self._parent_strand,
                               f'start = {self.start} must be less than end = {self.end}')
@@ -1761,19 +1762,35 @@ class Loopout(_JSONSerializable):
     length: int
     """Length (in DNA bases) of this Loopout."""
 
+    label: Any = None
+    """
+    Generic "label" object to associate to this :any:`Loopout`.
+
+    Useful for associating extra information with the :any:`Loopout` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
+    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
+    having to specify a custom encoder.)
+    """
+
     # not serialized; for efficiency
     # remove quotes when Python 3.6 support dropped
     _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: dict) -> Union[dict, NoIndent]:
         dct = {loopout_key: self.length}
-        return NoIndent(dct)
+        if self.label is not None:
+            dct[domain_label_key] = self.label
+        return NoIndent(dct) if suppress_indent else dct
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'Loopout({self.length})'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
+
+    def set_label(self, label: Any) -> None:
+        """Sets label of this :any:`Loopout`."""
+        self.label = label
 
     @staticmethod
     def is_loopout() -> bool:
@@ -1819,12 +1836,13 @@ class Loopout(_JSONSerializable):
         return self_seq_idx_start
 
     @staticmethod
-    def from_json(json_map) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
         # XXX: this should never fail since we detect whether to call this from_json by the presence
         # of a length key in json_map
         length_str = mandatory_field(Loopout, json_map, loopout_key)
         length = int(length_str)
-        return Loopout(length=length)
+        label = json_map.get(domain_label_key)
+        return Loopout(length=length, label=label)
 
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
@@ -1925,7 +1943,7 @@ class StrandBuilder:
         self.design: Design = design
         self.current_helix: int = helix
         self.current_offset: int = offset
-        self.loopout_length: Optional[int] = None
+        # self.loopout_length: Optional[int] = None
         self._strand: Optional[Strand] = None
         self.just_moved_to_helix: bool = True
         self.last_domain: Optional[Domain] = None
@@ -1980,8 +1998,9 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
-        self.loopout_length = length
-        return self.cross(helix, offset=offset, move=move)
+        self.cross(helix, offset=offset, move=move)
+        self.design.append_domain(self._strand, Loopout(length))
+        return self
 
     def move(self, delta: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
         """
@@ -2047,10 +2066,7 @@ class StrandBuilder:
         domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
         self.last_domain = domain
         if self._strand is not None:
-            if self.loopout_length is not None:
-                self.design.append_domain(self._strand, Loopout(self.loopout_length))
             self.design.append_domain(self._strand, domain)
-            self.loopout_length = None
         else:
             self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
