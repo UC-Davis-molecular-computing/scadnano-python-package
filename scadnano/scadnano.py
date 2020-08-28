@@ -1417,8 +1417,9 @@ class Domain(_JSONSerializable):
 
     Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
     for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
-    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
-    having to specify a custom encoder.)
+    that is naturally JSON serializable. (Calling 
+    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
+    on the object should succeed without having to specify a custom encoder.)
     """
 
     # not serialized; for efficiency
@@ -1768,8 +1769,9 @@ class Loopout(_JSONSerializable):
 
     Useful for associating extra information with the :any:`Loopout` that will be serialized, for example,
     for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
-    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
-    having to specify a custom encoder.)
+    that is naturally JSON serializable. (Calling 
+    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
+    on the object should succeed without having to specify a custom encoder.)
     """
 
     # not serialized; for efficiency
