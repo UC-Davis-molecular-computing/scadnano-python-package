@@ -195,14 +195,16 @@ def create_design():
     # whole design
     design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
+    # for absolute offsets, call method "to"
     # left staple
     design.strand(1, 8).to(24).cross(0).to(8)
 
+    # for relative offsets, call method "move"
     # right staple
-    design.strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p)
+    design.strand(0, 40).move(-16).cross(1).move(16).with_modification_5p(mod.biotin_5p)
 
     # scaffold
-    design.strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
+    design.strand(1, 24).move(-16).cross(0).move(32).loopout(1, 3).move(-16).as_scaffold()
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)
