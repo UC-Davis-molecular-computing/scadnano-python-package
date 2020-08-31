@@ -4385,7 +4385,7 @@ class Design(_JSONSerializable):
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout] = None):
+                   domain: Union[Domain, Loopout] = None, check_length: bool = False):
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -4394,24 +4394,35 @@ class Design(_JSONSerializable):
         and any remaining portions of the other strand that have not already been assigned a DNA sequence
         are assigned to be the symbol :py:data:`DNA_base_wildcard`.
 
-        Before assigning, `sequence` is first forced to be the same length as `strand`
-        as follows:
+        Before assigning, `sequence` is first forced to be the same length as `strand` as follows:
         If `sequence` is longer, it is truncated.
         If `sequence` is shorter, it is padded with :py:data:`DNA_base_wildcard`'s.
+        This can be disabled by setting `check_length` to True, in which case the method raises an
+        :any:`IllegalDesignError` if the lengths do not match.
 
         All whitespace in `sequence` is removed, and lowercase bases
         'a', 'c', 'g', 't' are converted to uppercase.
 
-        :param strand: :any:`Strand` to assign DNA sequence to
-        :param sequence: string of DNA bases to assign
-        :param assign_complement: whether to assign the complement DNA sequence to any :any:`Strand` that
+        :param strand:
+            :any:`Strand` to assign DNA sequence to
+        :param sequence:
+            String of DNA bases to assign
+        :param assign_complement:
+            Whether to assign the complement DNA sequence to any :any:`Strand` that
             is bound to this one (default True)
-        :param domain: :any:`Domain` on `strand` to assign. If ``None``, then the whole :any:`Strand` is
+        :param domain:
+            :any:`Domain` on `strand` to assign. If ``None``, then the whole :any:`Strand` is
             given a DNA sequence. Otherwise, only `domain` is assigned, and the rest of the :any:`Domain`'s
             on `strand` are left alone (either keeping their DNA sequence, or being assigned
             :py:const:`DNA_case_wildcard` if no DNA sequence was previously assigned.)
             If `domain` is specified, then ``len(sequence)`` must be least than or equal to the number
             of bases on `domain`. (i.e., ``domain.dna_length()``)
+        :param check_length:
+            If True, raises :any:`IllegalDesignError` if length of :any:`Strand` or :any:`Domain` being
+            assigned to does not match the length of the DNA sequence.
+        :raises IllegalDesignError:
+            If `check_length` is True and the length of :any:`Strand` or :any:`Domain` being
+            assigned to does not match the length of the DNA sequence.
         """
         start = 0
         if domain is not None:
@@ -4421,10 +4432,25 @@ class Design(_JSONSerializable):
                 raise IllegalDesignError(f'cannot assign sequence {sequence} to strand domain '
                                          f'\n{domain}\n'
                                          f'The number of bases on the domain is {domain.dna_length()} '
-                                         f'but the length of the sequence is {len(sequence)}. The '
-                                         f'length of the sequence must be at most the numebr of bases '
-                                         f'on the domain.')
+                                         f'but the length of the sequence is {len(sequence)}. The length of '
+                                         f'the sequence must be at most the number of bases on the domain.')
+            elif domain.dna_length() > len(sequence) and check_length:
+                raise IllegalDesignError(f'cannot assign sequence {sequence} to strand domain '
+                                         f'\n{domain}\n'
+                                         f'The number of bases on the domain is {domain.dna_length()} '
+                                         f'but the length of the sequence is {len(sequence)}. Since the '
+                                         f'parameter `check_length` is set to True, these lengths must '
+                                         f'be exactly equal.')
+        elif check_length and len(sequence) != strand.dna_length():
+            raise IllegalDesignError(f'cannot assign sequence {sequence} to strand '
+                                     f'\n{strand}\n'
+                                     f'The number of bases on the strand is {strand.dna_length()} '
+                                     f'but the length of the sequence is {len(sequence)}. Since the '
+                                     f'parameter `check_length` is set to True, these lengths must '
+                                     f'be exactly equal.')
+
         padded_sequence = _pad_and_remove_whitespace_and_uppercase(sequence, strand, start)
+
         if strand is None:
             raise IllegalDesignError('strand cannot be None to assign DNA to it')
         if strand not in self.strands:
