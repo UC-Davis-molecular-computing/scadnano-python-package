@@ -2496,6 +2496,80 @@ class TestHelixGroups(unittest.TestCase):
             design = sc.Design.from_scadnano_json_str(json_str)
 
 
+class TestNames(unittest.TestCase):
+
+    def test_strand_domain_names_json(self) -> None:
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        strand0 = sc.Strand(name='strand0', domains=[
+            sc.Domain(0, True, 0, 8, name='domain_forward0'),
+            sc.Domain(0, True, 8, 16, name='domain_forward1'),
+        ])
+        strand1 = sc.Strand(name='strand1', domains=[
+            sc.Domain(0, False, 0, 8, name='domain_reverse0'),
+            sc.Loopout(3, name='loopout'),
+            sc.Domain(2, True, 0, 8, name='domain_forward2'),
+        ])
+        strand2 = sc.Strand(domains=[
+            sc.Domain(1, True, 0, 8),
+            sc.Domain(1, True, 8, 16, name='domain_forward0'),
+        ])
+        strands = [strand0, strand1, strand2]
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
+
+        json_map = design.to_json_serializable(suppress_indent=False)
+
+        self.assertIn(sc.strand_name_key, json_map[sc.strands_key][0].keys())
+        self.assertIn(sc.strand_name_key, json_map[sc.strands_key][1].keys())
+        self.assertNotIn(sc.strand_name_key, json_map[sc.strands_key][2].keys())
+        self.assertEqual('strand0', json_map[sc.strands_key][0][sc.strand_name_key])
+        self.assertEqual('strand1', json_map[sc.strands_key][1][sc.strand_name_key])
+
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][0]['domains'][0])
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][0]['domains'][1])
+        self.assertEqual('domain_forward0', json_map[sc.strands_key][0]['domains'][0][sc.domain_name_key])
+        self.assertEqual('domain_forward1', json_map[sc.strands_key][0]['domains'][1][sc.domain_name_key])
+
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][1]['domains'][0])
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][1]['domains'][1])
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][1]['domains'][2])
+        self.assertEqual('domain_reverse0', json_map[sc.strands_key][1]['domains'][0][sc.domain_name_key])
+        self.assertEqual('loopout', json_map[sc.strands_key][1]['domains'][1][sc.domain_name_key])
+        self.assertEqual('domain_forward2', json_map[sc.strands_key][1]['domains'][2][sc.domain_name_key])
+
+        self.assertIn(sc.domain_name_key, json_map[sc.strands_key][2]['domains'][1])
+        self.assertEqual('domain_forward0', json_map[sc.strands_key][2]['domains'][1][sc.domain_name_key])
+
+        design_from_json = sc.Design.from_scadnano_json_map(json_map)
+
+        self.assertEqual(3, len(design_from_json.strands))
+        self.assertEqual('strand0', design_from_json.strands[0].name)
+        self.assertEqual('strand1', design_from_json.strands[1].name)
+        self.assertEqual(None, design_from_json.strands[2].name)
+
+        self.assertEqual('domain_forward0', design_from_json.strands[0].domains[0].name)
+        self.assertEqual('domain_forward1', design_from_json.strands[0].domains[1].name)
+        
+        self.assertEqual('domain_reverse0', design_from_json.strands[1].domains[0].name)
+        self.assertEqual('loopout', design_from_json.strands[1].domains[1].name)
+        self.assertEqual('domain_forward2', design_from_json.strands[1].domains[2].name)
+        
+        self.assertEqual(None, design_from_json.strands[2].domains[0].name)
+        self.assertEqual('domain_forward0', design_from_json.strands[2].domains[1].name)
+
+    def test_strand_names_can_be_nonunique(self) -> None:
+        helices = [sc.Helix(max_offset=100)]
+        strand0 = sc.Strand(name='strand0', domains=[
+            sc.Domain(0, True, 0, 8, name='domain_forward0'),
+            sc.Domain(0, True, 8, 16, name='domain_forward1'),
+        ])
+        strand1 = sc.Strand(name='strand0', domains=[
+            sc.Domain(0, False, 0, 8, name='domain_reverse0'),
+            sc.Domain(0, False, 8, 16, name='domain_reverse1'),
+        ])
+        strands = [strand0, strand1]
+        d = sc.Design(helices=helices, strands=strands, grid=sc.square)
+
+
 class TestJSON(unittest.TestCase):
 
     def test_Helix_major_tick_start_default_min_offset(self):
