@@ -54,7 +54,7 @@ import itertools
 import re
 import copy
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, TypeVar, Generic, Any
+from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -744,6 +744,7 @@ yaw_key = 'yaw'
 position_origin_key = 'origin'
 
 # Strand keys
+strand_name_key = 'name'
 color_key = 'color'
 dna_sequence_key = 'sequence'
 legacy_dna_sequence_keys = ['dna_sequence']  # support legacy names for these ideas
@@ -757,6 +758,7 @@ modifications_int_key = 'internal_modifications'
 strand_label_key = 'label'
 
 # Domain keys
+domain_name_key = 'name'
 helix_idx_key = 'helix'
 forward_key = 'forward'
 legacy_forward_keys = ['right']  # support legacy names for these ideas
@@ -1359,7 +1361,7 @@ class Helix(_JSONSerializable):
         return self.major_ticks is None
 
 
-def _is_close(x1: float, x2: float):
+def _is_close(x1: float, x2: float) -> bool:
     return abs(x1 - x2) < 0.00000001
 
 
@@ -1411,6 +1413,11 @@ class Domain(_JSONSerializable):
     This is the number of *extra* bases in addition to the base already at this position. 
     The total number of bases at this offset is num_insertions+1."""
 
+    name: Optional[str] = None
+    """Optional name to give this :any:`Domain`. 
+    
+    This is used to interoperate with the dsd DNA sequence design package."""
+
     label: Any = None
     """
     Generic "label" object to associate to this :any:`Domain`.
@@ -1426,36 +1433,13 @@ class Domain(_JSONSerializable):
     # remove quotes when Python 3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._check_start_end()
 
-    def __repr__(self) -> str:
-        rep = (f'Domain(helix={self.helix}'
-               f', forward={self.forward}'
-               f', start={self.start}'
-               f', end={self.end}') + \
-              (f', deletions={self.deletions}' if len(self.deletions) > 0 else '') + \
-              (f', insertions={self.insertions}' if len(self.insertions) > 0 else '') + \
-              ')'
-        return rep
-
-    def __str__(self) -> str:
-        return repr(self)
-
-    def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
-        return self._parent_strand
-
-    def set_label(self, label) -> None:
-        """Sets label of this :any:`Domain`."""
-        self.label = label
-
-    def _check_start_end(self) -> None:
-        if self.start >= self.end:
-            raise StrandError(self._parent_strand,
-                              f'start = {self.start} must be less than end = {self.end}')
-
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> Union[NoIndent, dict]:
         dct = OrderedDict()
+        if self.name is not None:
+            dct[domain_name_key] = self.name
         dct[helix_idx_key] = self.helix
         dct[forward_key] = self.forward
         dct[start_key] = self.start
@@ -1467,6 +1451,59 @@ class Domain(_JSONSerializable):
         if self.label is not None:
             dct[domain_label_key] = self.label
         return NoIndent(dct) if suppress_indent else dct
+
+    @staticmethod
+    def from_json(json_map: dict) -> 'Domain':  # remove quotes when Python 3.6 support dropped
+        helix = mandatory_field(Domain, json_map, helix_idx_key)
+        forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
+        start = mandatory_field(Domain, json_map, start_key)
+        end = mandatory_field(Domain, json_map, end_key)
+        deletions = json_map.get(deletions_key, [])
+        insertions = cast(List[Tuple[int, int]],  # noqa
+                          list(map(tuple, json_map.get(insertions_key, []))))  # type: ignore
+        name = json_map.get(domain_name_key)
+        label = json_map.get(domain_label_key)
+        return Domain(
+            helix=helix,
+            forward=forward,
+            start=start,
+            end=end,
+            deletions=deletions,
+            insertions=insertions,
+            name=name,
+            label=label,
+        )
+
+    def __repr__(self) -> str:
+        rep = (f'Domain(' +
+               (f'name={self.name}' if self.name is not None else '') +
+               f', helix={self.helix}'
+               f', forward={self.forward}'
+               f', start={self.start}'
+               f', end={self.end}') + \
+              (f', deletions={self.deletions}' if len(self.deletions) > 0 else '') + \
+              (f', insertions={self.insertions}' if len(self.insertions) > 0 else '') + \
+              ')'
+        return rep
+
+    def __str__(self) -> str:
+        return repr(self) if self.name is None else self.name
+
+    def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
+        return self._parent_strand
+
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Domain`."""
+        self.name = name
+
+    def set_label(self, label) -> None:  # type: ignore
+        """Sets label of this :any:`Domain`."""
+        self.label = label
+
+    def _check_start_end(self) -> None:
+        if self.start >= self.end:
+            raise StrandError(self._parent_strand,
+                              f'start = {self.start} must be less than end = {self.end}')
 
     @staticmethod
     def is_loopout() -> bool:
@@ -1696,25 +1733,6 @@ class Domain(_JSONSerializable):
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
-    @staticmethod
-    def from_json(json_map):
-        helix = mandatory_field(Domain, json_map, helix_idx_key)
-        forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
-        start = mandatory_field(Domain, json_map, start_key)
-        end = mandatory_field(Domain, json_map, end_key)
-        deletions = json_map.get(deletions_key, [])
-        insertions = list(map(tuple, json_map.get(insertions_key, [])))
-        label = json_map.get(domain_label_key)
-        return Domain(
-            helix=helix,
-            forward=forward,
-            start=start,
-            end=end,
-            deletions=deletions,
-            insertions=insertions,
-            label=label,
-        )
-
 
 '''
     var forward = util.get_value(json_map, constants.forward_key, name);
@@ -1763,6 +1781,10 @@ class Loopout(_JSONSerializable):
     length: int
     """Length (in DNA bases) of this Loopout."""
 
+    name: Optional[str] = None
+    """
+    """
+
     label: Any = None
     """
     Generic "label" object to associate to this :any:`Loopout`.
@@ -1780,15 +1802,35 @@ class Loopout(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: dict) -> Union[dict, NoIndent]:
         dct = {loopout_key: self.length}
+        if self.name is not None:
+            dct[domain_name_key] = self.name
         if self.label is not None:
             dct[domain_label_key] = self.label
         return NoIndent(dct) if suppress_indent else dct
 
+    @staticmethod
+    def from_json(json_map: dict) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
+        # XXX: this should never fail since we detect whether to call this from_json by the presence
+        # of a length key in json_map
+        length_str = mandatory_field(Loopout, json_map, loopout_key)
+        length = int(length_str)
+        name = json_map.get(domain_name_key)
+        label = json_map.get(domain_label_key)
+        return Loopout(length=length, name=name, label=label)
+
     def __repr__(self) -> str:
-        return f'Loopout({self.length})'
+        return f'Loopout(' + \
+               (f'{self.name}, ' if self.name is not None else '') + \
+               f'{self.length}, ' + \
+               ((f'{self.label}, ' if self.label is not None else '')) + \
+               f')'
 
     def __str__(self) -> str:
-        return repr(self)
+        return repr(self) if self.name is None else self.name
+
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Loopout`."""
+        self.name = name
 
     def set_label(self, label: Any) -> None:
         """Sets label of this :any:`Loopout`."""
@@ -1836,15 +1878,6 @@ class Loopout(_JSONSerializable):
         self_seq_idx_start = sum(prev_domain.dna_length()
                                  for prev_domain in domains[:self_domain_idx])
         return self_seq_idx_start
-
-    @staticmethod
-    def from_json(json_map: dict) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
-        # XXX: this should never fail since we detect whether to call this from_json by the presence
-        # of a length key in json_map
-        length_str = mandatory_field(Loopout, json_map, loopout_key)
-        length = int(length_str)
-        label = json_map.get(domain_label_key)
-        return Loopout(length=length, label=label)
 
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
@@ -2214,7 +2247,24 @@ class StrandBuilder:
         return self
 
     # remove quotes when Python 3.6 support dropped
-    def with_label(self, label) -> 'StrandBuilder':
+    def with_name(self, name: str) -> 'StrandBuilder':
+        """
+        Assigns `name` as name of the :any:`Strand` being built.
+
+        .. code-block:: Python
+
+            design.strand(0, 0).to(10).cross(1).to(5).with_name('scaffold')
+
+        :param name: name to assign to the :any:`Strand`
+        :return: self
+        """
+        if self._strand is None:
+            raise AssertionError('_strand cannot be None')
+        self._strand.set_name(name)
+        return self
+
+    # remove quotes when Python 3.6 support dropped
+    def with_label(self, label) -> 'StrandBuilder':  # type: ignore
         """
         Assigns `label` as label of the :any:`Strand` being built.
 
@@ -2225,13 +2275,39 @@ class StrandBuilder:
         :param label: label to assign to the :any:`Strand`
         :return: self
         """
+        if self._strand is None:
+            raise AssertionError('_strand cannot be None')
         self._strand.set_label(label)
         return self
 
     # remove quotes when Python 3.6 support dropped
-    def with_domain_label(self, label) -> 'StrandBuilder':
+    def with_domain_name(self, name: str) -> 'StrandBuilder':
         """
-        Assigns `label` as DNA sequence of the most recently created :any:`Domain` in
+        Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
+        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
+        via a call to
+        :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.update_to`,
+        or
+        :py:meth:`StrandBuilder.loopout`, e.g.,
+
+        .. code-block:: Python
+
+            design.strand(0, 0).to(10).with_domain_name('dom1*').cross(1).to(5).with_domain_name('dom1')
+
+        :param name: name to assign to the most recently created :any:`Domain` or :any:`Loopout`
+        :return: self
+        """
+        if self._strand is None:
+            raise AssertionError('_strand cannot be None')
+        last_domain = self._strand.domains[-1]
+        last_domain.set_name(name)
+        return self
+
+    # remove quotes when Python 3.6 support dropped
+    def with_domain_label(self, label) -> 'StrandBuilder':  # type: ignore
+        """
+        Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
         via a call to
         :py:meth:`StrandBuilder.to`,
@@ -2246,9 +2322,11 @@ class StrandBuilder:
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
-        :param label: label to assign to the :any:`Domain`
+        :param label: label to assign to the :any:`Domain` or :any:`Loopout`
         :return: self
         """
+        if self._strand is None:
+            raise AssertionError('_strand cannot be None')
         last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
         return self
@@ -2347,6 +2425,13 @@ class Strand(_JSONSerializable):
     So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
     and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
 
+    name: Optional[str] = None
+    """
+    Optional name to give the strand. If specified it is shown on mouseover in the scadnano web interface.
+    
+    This is used to interoperate with the dsd DNA sequence design package.
+    """
+
     label: Any = None
     """Generic "label" object to associate to this :any:`Strand`.
     
@@ -2360,8 +2445,34 @@ class Strand(_JSONSerializable):
     _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def __post_init__(self) -> None:
+        self._helix_idx_domain_map = defaultdict(list)
+
+        for domain in self.domains:
+            if domain.is_domain():
+                self._helix_idx_domain_map[domain.helix].append(domain)
+
+        for domain in self.domains:
+            domain._parent_strand = self
+
+        if len(self.domains) == 1:
+            if self.first_domain().is_loopout():
+                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
+
+        for domain1, domain2 in _pairwise(self.domains):
+            if domain1.is_loopout() and domain2.is_loopout():
+                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+
+        if self.use_default_idt:
+            self.set_default_idt(True)
+
+        self._ensure_modifications_legal()
+        self._ensure_domains_nonoverlapping()
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> dict:
         dct = OrderedDict()
+        if self.name is not None:
+            dct[strand_name_key] = self.name
         if self.color is not None:
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
@@ -2387,39 +2498,62 @@ class Strand(_JSONSerializable):
 
         return dct
 
-    def __post_init__(self):
-        self._helix_idx_domain_map = defaultdict(list)
+    @staticmethod
+    def from_json(json_map: dict) -> 'Strand':  # remove quotes when Python 3.6 support dropped
+        domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
+        if len(domain_jsons) == 0:
+            raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        for domain in self.domains:
-            if domain.is_domain():
-                self._helix_idx_domain_map[domain.helix].append(domain)
+        domains = []
+        for domain_json in domain_jsons:
+            if loopout_key in domain_json:
+                domains.append(Loopout.from_json(domain_json))
+            else:
+                domains.append(Domain.from_json(domain_json))
+        if isinstance(domains[0], Loopout):
+            raise IllegalDesignError('Loopout at beginning of Strand not supported')
+        if isinstance(domains[-1], Loopout):
+            raise IllegalDesignError('Loopout at end of Strand not supported')
 
-        for domain in self.domains:
-            domain._parent_strand = self
+        is_scaffold = json_map.get(is_scaffold_key, False)
 
-        if len(self.domains) == 1:
-            if self.first_domain().is_loopout():
-                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
+        dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
-        for domain1, domain2 in _pairwise(self.domains):
-            if domain1.is_loopout() and domain2.is_loopout():
-                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+        idt = json_map.get(idt_key)
+        color_str = json_map.get(color_key,
+                                 default_scaffold_color if is_scaffold else default_strand_color)
+        if isinstance(color_str, int):
+            def decimal_int_to_hex(d: int) -> str:
+                return "#" + "{0:#08x}".format(d, 8)[2:]
 
-        if self.use_default_idt:
-            self.set_default_idt(True)
+            color_str = decimal_int_to_hex(color_str)
+        color = Color(hex_string=color_str)
 
-        self._ensure_modifications_legal()
-        self._ensure_domains_nonoverlapping()
+        name = json_map.get(strand_name_key)
+        label = json_map.get(strand_label_key)
+
+        return Strand(
+            domains=domains,
+            dna_sequence=dna_sequence,
+            color=color,
+            idt=idt,
+            is_scaffold=is_scaffold,
+            name=name,
+            label=label,
+        )
 
     def __eq__(self, other: 'Strand') -> bool:  # remove quotes when Python 3.6 support dropped
         if not isinstance(other, Strand):
             return False
         return self.domains == other.domains
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.domains)
 
-    def set_scaffold(self, is_scaf: bool = True):
+    def __str__(self) -> str:
+        return repr(self) if self.name is None else self.name
+
+    def set_scaffold(self, is_scaf: bool = True) -> None:
         """Sets this :any:`Strand` as a scaffold. Alters color to default scaffold color.
 
         If `is_scaf` == ``False``, sets this strand as not a scaffold, and leaves the color alone."""
@@ -2427,15 +2561,19 @@ class Strand(_JSONSerializable):
         if is_scaf:
             self.color = default_scaffold_color
 
-    def set_label(self, label):
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Strand`."""
+        self.name = name
+
+    def set_label(self, label) -> None:
         """Sets label of this :any:`Strand`."""
         self.label = label
 
-    def set_color(self, color: Color):
+    def set_color(self, color: Color) -> None:
         """Sets color of this :any:`Strand`."""
         self.color = color
 
-    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True):
+    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True) -> None:
         """Sets idt field to be the default given the Domain data of this :any:`Strand`."""
         if skip_scaffold and self.is_scaffold:
             return
@@ -2743,48 +2881,6 @@ class Strand(_JSONSerializable):
         self.domains.reverse()
         for domain in self.bound_domains():
             domain.forward = not domain.forward
-
-    @staticmethod
-    def from_json(json_map: dict) -> 'Strand':  # remove quotes when Python 3.6 support dropped
-        domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
-        if len(domain_jsons) == 0:
-            raise IllegalDesignError(f'{domains_key} list cannot be empty')
-
-        domains = []
-        for domain_json in domain_jsons:
-            if loopout_key in domain_json:
-                domains.append(Loopout.from_json(domain_json))
-            else:
-                domains.append(Domain.from_json(domain_json))
-        if isinstance(domains[0], Loopout):
-            raise IllegalDesignError('Loopout at beginning of Strand not supported')
-        if isinstance(domains[-1], Loopout):
-            raise IllegalDesignError('Loopout at end of Strand not supported')
-
-        is_scaffold = json_map.get(is_scaffold_key, False)
-
-        dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
-
-        idt = json_map.get(idt_key)
-        color_str = json_map.get(color_key,
-                                 default_scaffold_color if is_scaffold else default_strand_color)
-        if isinstance(color_str, int):
-            def decimal_int_to_hex(d: int) -> str:
-                return "#" + "{0:#08x}".format(d, 8)[2:]
-
-            color_str = decimal_int_to_hex(color_str)
-        color = Color(hex_string=color_str)
-
-        label = json_map.get(strand_label_key)
-
-        return Strand(
-            domains=domains,
-            dna_sequence=dna_sequence,
-            color=color,
-            idt=idt,
-            is_scaffold=is_scaffold,
-            label=label,
-        )
 
     def _ensure_modifications_legal(self, check_offsets_legal=False):
         if check_offsets_legal:
@@ -4088,6 +4184,7 @@ class Design(_JSONSerializable):
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_strands_overlap_legally()
+        self._warn_if_strand_names_not_unique()
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self) -> None:
@@ -5161,6 +5258,24 @@ class Design(_JSONSerializable):
             if group.helices_view_order is None:
                 helices_in_group = {idx: helix for idx, helix in self.helices if helix.group == name}
                 group._assign_default_helices_view_order(helices_in_group)
+
+    def _warn_if_strand_names_not_unique(self) -> None:
+        names = [strand.name for strand in self.strands if strand.name is not None]
+        if len(names) > len(set(names)):
+            for name1, name2 in itertools.combinations(names, 2):
+                if name1 == name2:
+                    print(f'WARNING: there are two strands with name {name1}')
+
+    def strand_with_name(self, name: str) -> Optional[Strand]:
+        """
+        :param name: name of a :any:`Strand`.
+        :return: the :any:`Strand` with name `name`, or None if no :any:`Strand` in the :any:`Design` has
+                 that name.
+        """
+        for strand in self.strands:
+            if strand.name == name:
+                return strand
+        return None
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
