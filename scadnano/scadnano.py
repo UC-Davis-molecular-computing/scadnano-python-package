@@ -2553,6 +2553,29 @@ class Strand(_JSONSerializable):
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
 
+    def rotate_domains(self, rotation: int, forward: bool = True) -> None:
+        """
+        "Rotates" the strand by replacing domains with a circular rotation, e.g., if the domains are
+
+        A, B, C, D, E, F
+
+        then ``strand.rotate(2)`` makes the :any:`Strand` have the same domains, but in this order:
+        
+        C, D, E, F, A, B
+        
+        and  ``strand.rotate(2, forward=False)`` makes 
+        
+        E, F, A, B, C, D
+
+        :param rotation:
+            Amount to rotate domains.
+        :param forward:
+            Whether to move domains forward (wrapping off 3' end back to 5' end) or backward (wrapping off
+            5' end back to 3' end).
+        """
+        idx = rotation if not forward else len(self.domains) - rotation
+        self.domains = self.domains[idx:] + self.domains[:idx]
+
     def set_scaffold(self, is_scaf: bool = True) -> None:
         """Sets this :any:`Strand` as a scaffold. Alters color to default scaffold color.
 
