@@ -3039,14 +3039,14 @@ class StrandError(IllegalDesignError):
         first_domain = strand.first_bound_domain()
         last_domain = strand.last_bound_domain()
 
-        msg = (f'{the_cause}\n'
-               f'strand length        =  {strand.dna_length()}\n'
-               f'DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}\n'
-               f'DNA sequence         =  {strand.dna_sequence}'
-               f"strand 5' helix      =  {first_domain.helix if first_domain else 'N/A'}\n"
-               f"strand 5' end offset =  {first_domain.offset_5p() if first_domain else 'N/A'}\n"
-               f"strand 3' helix      =  {last_domain.helix if last_domain else 'N/A'}\n"
-               f"strand 3' end offset =  {last_domain.offset_3p() if last_domain else 'N/A'}\n")
+        msg = (f'''{the_cause}
+    strand length        =  {strand.dna_length()}
+    DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}
+    DNA sequence         =  {strand.dna_sequence}
+    strand 5' helix      =  {first_domain.helix if first_domain else 'N/A'}
+    strand 5' end offset =  {first_domain.offset_5p() if first_domain else 'N/A'}
+    strand 3' helix      =  {last_domain.helix if last_domain else 'N/A'}
+    strand 3' end offset =  {last_domain.offset_3p() if last_domain else 'N/A'}\n''')
 
         super().__init__(msg)
         # super(IllegalDesignError, self).__init__(msg)
@@ -4206,6 +4206,7 @@ class Design(_JSONSerializable):
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
+        self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
         self._warn_if_strand_names_not_unique()
 
@@ -4268,27 +4269,34 @@ class Design(_JSONSerializable):
                         if d_first.forward == d_second.forward:
                             raise IllegalDesignError(err_msg(d_first, d_second, helix_idx))
 
-    def _check_loopouts_not_consecutive_or_singletons_or_zero_length(self):
+    def _check_loopouts_not_consecutive_or_singletons_or_zero_length(self) -> None:
         for strand in self.strands:
             Design._check_loopout_not_singleton(strand)
             Design._check_two_consecutive_loopouts(strand)
             Design._check_loopouts_length(strand)
 
+    def _check_loopouts_not_first_or_last_substrand(self) -> None:
+        for strand in self.strands:
+            if isinstance(strand.first_domain(), Loopout):
+                raise StrandError(strand, 'strand cannot have a Loopout as its first domain')
+            if isinstance(strand.last_domain(), Loopout):
+                raise StrandError(strand, 'strand cannot have a Loopout as its last domain')
+
     @staticmethod
-    def _check_loopout_not_singleton(strand: Strand):
-        if len(strand.domains) == 1 and strand.first_domain().is_loopout():
+    def _check_loopout_not_singleton(strand: Strand) -> None:
+        if len(strand.domains) == 1 and isinstance(strand.first_domain(), Loopout):
             raise StrandError(strand, 'strand cannot have a single Loopout as its only domain')
 
     @staticmethod
-    def _check_two_consecutive_loopouts(strand: Strand):
+    def _check_two_consecutive_loopouts(strand: Strand) -> None:
         for domain1, domain2 in _pairwise(strand.domains):
             if domain1.is_loopout() and domain2.is_loopout():
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     @staticmethod
-    def _check_loopouts_length(strand: Strand):
+    def _check_loopouts_length(strand: Strand) -> None:
         for loopout in strand.domains:
-            if loopout.is_loopout() and loopout.length <= 0:
+            if isinstance(loopout, Loopout) and loopout.length <= 0:
                 raise StrandError(strand, f'loopout length must be positive but is {loopout.length}')
 
     def _check_strands_reference_helices_legally(self):
@@ -4308,12 +4316,12 @@ class Design(_JSONSerializable):
         for domain in strand.domains:
             if domain.is_domain():
                 helix = self.helices[domain.helix]
-                if domain.start < helix.min_offset:
+                if helix.min_offset is not None and domain.start < helix.min_offset:
                     err_msg = f"domain {domain} has start offset {domain.start}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
                     raise StrandError(strand, err_msg)
-                if domain.end > helix.max_offset:
+                if helix.max_offset is not None and domain.end > helix.max_offset:
                     err_msg = f"domain {domain} has end offset {domain.end}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
@@ -4880,6 +4888,7 @@ class Design(_JSONSerializable):
         :param extension: extension for filename (default: ``.{default_extension}``)
             Mutually exclusive with `filename`
         """
+        self._check_legal_design()
         contents = self.to_json()
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
