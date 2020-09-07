@@ -2,14 +2,13 @@
 The :mod:`origami_rectangle` module defines the function :py:func:`origami_rectangle.create` for creating a DNA origami rectangle
 using the :mod:`scadnano` module.
 """
-
-from dataclasses import dataclass, field
-
+from typing import List, Union, cast
 # from . import scadnano as sc
 import scadnano as sc
 from enum import Enum, auto
 
-#TODO: write version of origami_rectangle.create that uses add_nick and add_crossover.
+
+# TODO: write version of origami_rectangle.create that uses add_nick and add_crossover.
 
 class NickPattern(Enum):
     """Represents options for where to place nicks between staples."""
@@ -62,12 +61,11 @@ instead of :const:`origami_rectangle.NickPattern.odd`.
 CURRENTLY UNSUPPORTED."""
 
 
-
-def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column=-1,
+def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_left_column: int = -1,
            nick_pattern: NickPattern = NickPattern.staggered,
            twist_correction_deletion_spacing: int = 0, twist_correction_start_col: int = 1,
-           twist_correction_deletion_offset=-1,
-           num_flanking_columns: int = 1, num_flanking_helices=0,
+           twist_correction_deletion_offset: int = -1,
+           num_flanking_columns: int = 1, num_flanking_helices: int = 0,
            custom_scaffold: str = None, edge_staples: bool = True,
            scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.Design:
     """
@@ -234,7 +232,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     scaffold = _create_scaffold(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
                                 scaffold_nick_offset)
     staples = _create_staples(offset_start, offset_end, offset_mid, num_helices, num_flanking_helices,
-                              num_cols, nick_pattern, edge_staples, use_idt_defaults)
+                              num_cols, nick_pattern, edge_staples)
 
     design = sc.Design(helices=helices, strands=[scaffold] + staples, grid=sc.square)
 
@@ -262,15 +260,15 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
 BASES_PER_COLUMN = 16
 
 
-def _create_helices(num_helices: int, num_bases_per_helix: int):
+def _create_helices(num_helices: int, num_bases_per_helix: int) -> List[sc.Helix]:
     return [sc.Helix(max_offset=num_bases_per_helix) for _ in range(num_helices)]
 
 
 def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
-                     num_flanking_helices: int, scaffold_nick_offset: int):
+                     num_flanking_helices: int, scaffold_nick_offset: int) -> sc.Strand:
     # top domain is continguous
     top_domain = sc.Domain(helix=0 + num_flanking_helices, forward=True,
-                              start=offset_start, end=offset_end)
+                           start=offset_start, end=offset_end)
     domains_left = []
     domains_right = []
     if scaffold_nick_offset < 0:
@@ -281,32 +279,33 @@ def _create_scaffold(offset_start: int, offset_end: int, offset_mid: int, num_he
         center_offset = offset_mid if helix < num_helices + num_flanking_helices - 1 else scaffold_nick_offset
         forward = (helix % 2 == num_flanking_helices % 2)
         left_domain = sc.Domain(helix=helix, forward=forward,
-                                   start=offset_start, end=center_offset)
+                                start=offset_start, end=center_offset)
         right_domain = sc.Domain(helix=helix, forward=forward,
-                                    start=center_offset, end=offset_end)
+                                 start=center_offset, end=offset_end)
         domains_left.append(left_domain)
         domains_right.append(right_domain)
     domains_left.reverse()
-    domains = domains_left + [top_domain] + domains_right
+    domains = cast(List[Union[sc.Domain, sc.Loopout]],  # noqa
+                   domains_left + [top_domain] + domains_right)  # type: ignore
     return sc.Strand(domains=domains, color=sc.default_scaffold_color, is_scaffold=True)
 
 
 def _create_staples(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
                     num_flanking_helices: int, num_cols: int,
-                    nick_pattern: NickPattern, edge_staples, idt: bool):
+                    nick_pattern: NickPattern, edge_staples: bool) -> List[sc.Strand]:
     if edge_staples:
-        left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices, idt)
-        right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices, idt)
+        left_edge_staples = _create_left_edge_staples(offset_start, num_helices, num_flanking_helices)
+        right_edge_staples = _create_right_edge_staples(offset_end, num_helices, num_flanking_helices)
     else:
         left_edge_staples = []
         right_edge_staples = []
-    seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices, idt)
+    seam_staples = _create_seam_staples(offset_mid, num_helices, num_flanking_helices)
     inner_staples = _create_inner_staples(offset_start, offset_end, offset_mid, num_helices,
-                                          num_flanking_helices, num_cols, nick_pattern, idt)
+                                          num_flanking_helices, num_cols, nick_pattern)
     return left_edge_staples + right_edge_staples + seam_staples + inner_staples
 
 
-def _create_seam_staples(offset_mid: int, num_helices: int, num_flanking_helices: int, idt: bool):
+def _create_seam_staples(offset_mid: int, num_helices: int, num_flanking_helices: int) -> List[sc.Strand]:
     staples = []
     crossover_left = offset_mid - BASES_PER_COLUMN
     crossover_right = offset_mid + BASES_PER_COLUMN
@@ -339,7 +338,8 @@ def _create_seam_staples(offset_mid: int, num_helices: int, num_flanking_helices
     return [first_staple] + staples + [last_staple]
 
 
-def _create_left_edge_staples(offset_start: int, num_helices: int, num_flanking_helices: int, idt: bool):
+def _create_left_edge_staples(offset_start: int, num_helices: int,
+                              num_flanking_helices: int) -> List[sc.Strand]:
     staples = []
     crossover_right = offset_start + BASES_PER_COLUMN
     for helix in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
@@ -353,7 +353,8 @@ def _create_left_edge_staples(offset_start: int, num_helices: int, num_flanking_
     return staples
 
 
-def _create_right_edge_staples(offset_end: int, num_helices: int, num_flanking_helices: int, idt: bool):
+def _create_right_edge_staples(offset_end: int, num_helices: int,
+                               num_flanking_helices: int) -> List[sc.Strand]:
     staples = []
     crossover_left = offset_end - BASES_PER_COLUMN
     for helix in range(0 + num_flanking_helices, num_helices + num_flanking_helices, 2):
@@ -369,7 +370,7 @@ def _create_right_edge_staples(offset_end: int, num_helices: int, num_flanking_h
 
 def _create_inner_staples(offset_start: int, offset_end: int, offset_mid: int, num_helices: int,
                           num_flanking_helices: int, num_cols: int,
-                          nick_pattern: NickPattern, idt: bool):
+                          nick_pattern: NickPattern) -> List[sc.Strand]:
     if nick_pattern is not NickPattern.staggered:
         raise NotImplementedError("Currently can only handle staggered nick pattern")
     # if ((num_cols - 4) // 2) % 2 != 0:
@@ -434,11 +435,11 @@ def _create_inner_staples(offset_start: int, offset_end: int, offset_mid: int, n
     return staples
 
 
-def add_deletion_in_range(design: sc.Design, helix: int, start: int, end: int, deletion_offset: int):
-    #Inserts deletion somewhere in given range.
+def add_deletion_in_range(design: sc.Design, helix: int, start: int, end: int, deletion_offset: int) -> None:
+    # Inserts deletion somewhere in given range.
 
-    #`offset` is the relative offset within a column at which to put the deletions.
-    #If negative, chooses first available offset.
+    # `offset` is the relative offset within a column at which to put the deletions.
+    # If negative, chooses first available offset.
     candidate_offsets = []
     for candidate_deletion_offset in range(start, end):
         if valid_deletion_offset(design, helix, candidate_deletion_offset):
@@ -455,7 +456,7 @@ def add_deletion_in_range(design: sc.Design, helix: int, start: int, end: int, d
     design.add_deletion(helix, deletion_absolute_offset)
 
 
-def valid_deletion_offset(design: sc.Design, helix: int, offset: int):
+def valid_deletion_offset(design: sc.Design, helix: int, offset: int) -> bool:
     domains_at_offset = design.domains_at(helix, offset)
     if len(domains_at_offset) > 2:
         raise ValueError(f'Invalid Design; more than two Substrands found at '
@@ -482,7 +483,7 @@ def add_twist_correction_deletions(design: sc.Design,
                                    deletion_offset: int,
                                    num_helices: int,
                                    num_cols: int,
-                                   num_flanking_helices: int):
+                                   num_flanking_helices: int) -> None:
     for col in range(deletion_start_col, num_cols):
         col_start = offset_start + col * BASES_PER_COLUMN
         col_end = offset_start + (col + 1) * BASES_PER_COLUMN
