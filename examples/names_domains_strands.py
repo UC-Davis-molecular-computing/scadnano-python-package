@@ -34,7 +34,7 @@ def create_design() -> sc.Design:
     # domain names match but domains are mis-aligned
     design.strand(0, 48).move(7).with_domain_name('domain 7').with_name('top strand 7')
 
-    # domain names match but domains are mis-aligned
+    # no overlap so no mismatch
     design.strand(0, 64).move(8).with_domain_name('domain 9').with_name('top strand 9')
 
     return design
