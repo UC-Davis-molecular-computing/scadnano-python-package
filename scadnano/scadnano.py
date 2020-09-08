@@ -4022,7 +4022,7 @@ class Design(_JSONSerializable):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int) -> dict:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> dict:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
@@ -4030,11 +4030,11 @@ class Design(_JSONSerializable):
             helix_dct = OrderedDict()
             helix_dct['num'] = helix.idx
 
-            if self.grid == Grid.square:
+            if design_grid == Grid.square:
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
 
-            if self.grid == Grid.honeycomb:
+            if design_grid == Grid.honeycomb:
                 helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
@@ -4063,9 +4063,22 @@ class Design(_JSONSerializable):
         dct = OrderedDict()
         dct['vstrands'] = []
 
-        if self.__class__ != Design:
-            raise ValueError(
-                'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
+        '''Check if helix group are used or if only one grid is used'''
+        design_grid = None
+        if self._has_default_groups():
+            design_grid = self.grid
+        else:
+            gridUsed = {}
+            grid_type = None
+            for group_name in self.groups:
+                gridUsed[self.groups[group_name].grid] = True
+                grid_type = self.groups[group_name].grid
+            if len(gridUsed) > 1:
+                raise ValueError('Designs using helix groups can be exported to cadnano v2 \
+                    only if all groups share the same grid type.')
+            else:
+                design_grid = grid_type
+                
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -4077,9 +4090,9 @@ class Design(_JSONSerializable):
         for helix in self.helices.values():
             num_bases = max(num_bases, helix.max_offset)
 
-        if self.grid == Grid.square:
+        if design_grid == Grid.square:
             num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
-        elif self.grid == Grid.honeycomb:
+        elif design_grid == Grid.honeycomb:
             num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
@@ -4102,7 +4115,7 @@ class Design(_JSONSerializable):
 
         '''Filling the helices with blank.
         '''
-        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
+        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases, design_grid)
         '''Putting the scaffold in place.
         '''
 
