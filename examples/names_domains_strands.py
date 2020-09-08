@@ -4,7 +4,7 @@ import scadnano as sc
 def create_design() -> sc.Design:
     num_domains = 9
     helices = [sc.Helix(max_offset=(num_domains) * 8)]
-    design = sc.Design(helices=helices, strands=[], grid=sc.square)
+    design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
     design.strand(0, (num_domains - 1) * 8) \
         .move(-8).with_domain_name('domain 8*') \
         .move(-8).with_domain_name('domain 7*') \
