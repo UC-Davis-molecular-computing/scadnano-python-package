@@ -4133,11 +4133,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-<<<<<<< HEAD
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int) -> Dict[int, int]:
-=======
     def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> dict:
->>>>>>> master
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
@@ -4145,23 +4141,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helix_dct: Dict[str, Any] = OrderedDict()
             helix_dct['num'] = helix.idx
 
-<<<<<<< HEAD
-            if self.grid == Grid.square:
-                if helix.grid_position is None:
-                    raise ValueError('cannot have grid_position == None if grid is square')
-                helix_dct['row'] = helix.grid_position[1]
-                helix_dct['col'] = helix.grid_position[0]
-
-            elif self.grid == Grid.honeycomb:
-                if helix.grid_position is None:
-                    raise ValueError('cannot have grid_position == None if grid is honeycomb')
-=======
             if design_grid == Grid.square:
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
 
             if design_grid == Grid.honeycomb:
->>>>>>> master
                 helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
@@ -4244,11 +4228,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         '''Filling the helices with blank.
         '''
-<<<<<<< HEAD
-        helices_ids_reverse: Dict[int, int] = self._cadnano_v2_fill_blank(dct, num_bases)
-=======
         helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases, design_grid)
->>>>>>> master
         '''Putting the scaffold in place.
         '''
 
