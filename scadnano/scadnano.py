@@ -54,7 +54,8 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+    TypeVar, Generic
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -123,7 +124,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
             key = self.unique_id
             self.unique_id += 1
             self._replacement_map[key] = json.dumps(obj.value, **self.kwargs)
-            return "@@%s@@" % (key,)
+            return f"@@{key}@@"
         else:
             return super().default(obj)
 
@@ -1375,8 +1376,12 @@ def _is_close(x1: float, x2: float) -> bool:
     return abs(x1 - x2) < 0.00000001
 
 
+DomainLabel = TypeVar('DomainLabel')
+StrandLabel = TypeVar('StrandLabel')
+
+
 @dataclass
-class Domain(_JSONSerializable):
+class Domain(_JSONSerializable, Generic[DomainLabel]):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
@@ -1428,7 +1433,7 @@ class Domain(_JSONSerializable):
     
     This is used to interoperate with the dsd DNA sequence design package."""
 
-    label: Any = None
+    label: Optional[DomainLabel] = None
     """
     Generic "label" object to associate to this :any:`Domain`.
 
@@ -1509,7 +1514,7 @@ class Domain(_JSONSerializable):
         """Sets name of this :any:`Domain`."""
         self.name = name
 
-    def set_label(self, label) -> None:  # type: ignore
+    def set_label(self, label: DomainLabel) -> None:
         """Sets label of this :any:`Domain`."""
         self.label = label
 
@@ -1965,7 +1970,7 @@ def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
         raise IllegalDesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
-class StrandBuilder:
+class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
@@ -1981,23 +1986,24 @@ class StrandBuilder:
     """
 
     # remove quotes when Py3.6 support dropped
-    def __init__(self, design: 'Design', helix: int, offset: int):
-        self.design: Design = design
+    def __init__(self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int):
+        self.design: Design[StrandLabel, DomainLabel] = design
         self.current_helix: int = helix
         self.current_offset: int = offset
         # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand] = None
+        self._strand: Optional[Strand[StrandLabel]] = None
         self.just_moved_to_helix: bool = True
-        self.last_domain: Optional[Domain] = None
+        self.last_domain: Optional[Domain[DomainLabel]] = None
 
     @property
-    def strand(self) -> 'Strand':
+    def strand(self) -> 'Strand[StrandLabel]':
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
 
     # remove quotes when Py3.6 support dropped
-    def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) -> 'StrandBuilder':
+    def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
 
@@ -2027,7 +2033,7 @@ class StrandBuilder:
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
-            -> 'StrandBuilder':
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
 
@@ -2048,7 +2054,8 @@ class StrandBuilder:
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def move(self, delta: int) -> 'StrandBuilder':  # remove quotes when Py3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
         plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
@@ -2070,7 +2077,8 @@ class StrandBuilder:
         """
         return self.to(self.current_offset + delta)
 
-    def to(self, offset: int) -> 'StrandBuilder':  # remove quotes when Py3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
         which adds a new :any:`Domain` to the :any:`Strand` being built. This is an
@@ -2109,7 +2117,7 @@ class StrandBuilder:
         else:
             raise IllegalDesignError(f'offset {offset} cannot be equal to current offset')
 
-        domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        domain: Domain[DomainLabel] = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
         self.last_domain = domain
         if self._strand is not None:
             self.design.append_domain(self._strand, domain)
@@ -2121,7 +2129,8 @@ class StrandBuilder:
 
         return self
 
-    def update_to(self, offset: int) -> 'StrandBuilder':  # remove quotes when Py3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
@@ -2153,7 +2162,8 @@ class StrandBuilder:
 
         return self
 
-    def as_scaffold(self) -> 'StrandBuilder':  # remove quotes when Py3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Makes Strand being built a scaffold.
 
@@ -2165,7 +2175,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_modification_5p(self, mod: Modification5Prime) -> 'StrandBuilder':
+    def with_modification_5p(self, mod: Modification5Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given 5' modification.
 
@@ -2178,7 +2188,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_modification_3p(self, mod: Modification3Prime) -> 'StrandBuilder':
+    def with_modification_3p(self, mod: Modification3Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given 3' modification.
 
@@ -2191,8 +2201,8 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_modification_internal(self, idx: int, mod: ModificationInternal,
-                                   warn_on_no_dna: bool) -> 'StrandBuilder':
+    def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given internal modification.
 
@@ -2207,7 +2217,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_color(self, color: Color) -> 'StrandBuilder':
+    def with_color(self, color: Color) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given color.
 
@@ -2220,7 +2230,8 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_sequence(self, sequence: str, assign_complement: bool = True) -> 'StrandBuilder':
+    def with_sequence(self, sequence: str, assign_complement: bool = True) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
         This should be done after the :any:`Strand`'s structure is done being built, e.g.,
@@ -2241,7 +2252,8 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) -> 'StrandBuilder':
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2272,7 +2284,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_name(self, name: str) -> 'StrandBuilder':
+    def with_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `name` as name of the :any:`Strand` being built.
 
@@ -2289,7 +2301,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_label(self, label) -> 'StrandBuilder':  # type: ignore
+    def with_label(self, label: StrandLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the :any:`Strand` being built.
 
@@ -2306,7 +2318,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_domain_name(self, name: str) -> 'StrandBuilder':
+    def with_domain_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2330,7 +2342,7 @@ class StrandBuilder:
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_domain_label(self, label) -> 'StrandBuilder':  # type: ignore
+    def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2358,7 +2370,7 @@ class StrandBuilder:
 
 
 @dataclass
-class Strand(_JSONSerializable):
+class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
     Represents a single strand of DNA.
 
@@ -2395,7 +2407,7 @@ class Strand(_JSONSerializable):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain, Loopout]]
+    domains: List[Union[Domain[DomainLabel], Loopout]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2457,7 +2469,7 @@ class Strand(_JSONSerializable):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Any = None
+    label: Optional[DomainLabel] = None
     """Generic "label" object to associate to this :any:`Strand`.
     
     Useful for associating extra information with the Strand that will be serialized, for example,
@@ -2467,7 +2479,7 @@ class Strand(_JSONSerializable):
     """
 
     # not serialized; efficient way to see a list of all domains on a given helix
-    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
+    _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -2519,7 +2531,7 @@ class Strand(_JSONSerializable):
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         if self.label is not None:
-            dct[strand_label_key] = self.label
+            dct[strand_label_key] = NoIndent(self.label) if suppress_indent else self.label
 
         return dct
 
@@ -3305,10 +3317,10 @@ def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_
 
 
 @dataclass
-class Design(_JSONSerializable):
+class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
 
-    strands: List[Strand]
+    strands: List[Strand[StrandLabel, DomainLabel]]
     """All of the :any:`Strand`'s in this :any:`Design`.
     
     Required field."""
