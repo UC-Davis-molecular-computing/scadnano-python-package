@@ -16,7 +16,7 @@ If you find scadnano useful in a scientific project, please cite its associated 
  | scadnano: A browser-based, scriptable tool for designing DNA nanostructures.
  | David Doty, Benjamin L Lee, and Tristan Stérin.
  | DNA 2020: *Proceedings of the 26th International Conference on DNA Computing and Molecular Programming*
- | [ `paper <https://arxiv.org/abs/2005.11841>`_ | `BibTeX <https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib>`_ ]
+ | [ `paper <https://doi.org/10.4230/LIPIcs.DNA.2020.9>`_ | `BibTeX <https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib>`_ ]
 
 This library uses typing hints from the Python typing library.
 (https://docs.python.org/3/library/typing.html)
@@ -41,10 +41,10 @@ so the user must take care not to set them.
 """
 
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
-# commented out for now to support Python 3.6, which does not support this feature
+# commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.12.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.12.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -52,17 +52,20 @@ import json
 import enum
 import itertools
 import re
-import copy
+from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+    TypeVar, Generic
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 
 default_scadnano_file_extension = 'sc'
 
+VStrands = Dict[int, Dict[str, Any]]
 
-def _pairwise(iterable):
+
+def _pairwise(iterable: Iterable) -> Iterable:
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = itertools.tee(iterable)
     next(b, None)
@@ -71,8 +74,8 @@ def _pairwise(iterable):
 
 # for putting evaluated expressions in docstrings
 # https://stackoverflow.com/questions/10307696/how-to-put-a-variable-into-python-docstring
-def _docstring_parameter(*sub, **kwargs):
-    def dec(obj):
+def _docstring_parameter(*sub: Any, **kwargs: Any) -> Any:
+    def dec(obj: Any) -> Any:
         obj.__doc__ = obj.__doc__.format(*sub, **kwargs)
         return obj
 
@@ -89,7 +92,7 @@ def _docstring_parameter(*sub, **kwargs):
 class _JSONSerializable(ABC):
 
     @abstractmethod
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Any:
         raise NotImplementedError()
 
 
@@ -103,32 +106,32 @@ class NoIndent:
     # Value wrapper. Placing a value in this will stop it from being indented when converting to JSON
     # using _SuppressableIndentEncoder
 
-    def __init__(self, value):
+    def __init__(self, value: Any) -> None:
         self.value = value
 
 
 class _SuppressableIndentEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.unique_id = 0
         super(_SuppressableIndentEncoder, self).__init__(*args, **kwargs)
         self.kwargs = dict(kwargs)
         del self.kwargs['indent']
-        self._replacement_map = {}
+        self._replacement_map: Dict[int, Any] = {}
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, NoIndent):
             # key = uuid.uuid1().hex # this caused problems with Brython.
             key = self.unique_id
             self.unique_id += 1
             self._replacement_map[key] = json.dumps(obj.value, **self.kwargs)
-            return "@@%s@@" % (key,)
+            return f"@@{key}@@"
         else:
             return super().default(obj)
 
-    def encode(self, obj):
+    def encode(self, obj: Any) -> Any:
         result = super().encode(obj)
         for k, v in self._replacement_map.items():
-            result = result.replace('"@@%s@@"' % (k,), v)
+            result = result.replace(f'"@@{k}@@"', v)
         return result
 
 
@@ -176,16 +179,16 @@ class Color(_JSONSerializable):
             self.g = int(hex_string[2:4], 16)
             self.b = int(hex_string[4:6], 16)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> str:
         # Return object representing this Color that is JSON serializable.
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
 
-    def to_cadnano_v2_int_hex(self):
+    def to_cadnano_v2_int_hex(self) -> int:
         return int(f'{self.r:02x}{self.g:02x}{self.b:02x}', 16)
 
     @classmethod
-    def from_cadnano_v2_int_hex(cls, hex_int):
+    def from_cadnano_v2_int_hex(cls, hex_int: int) -> 'Color':
         hex_str = "0x{:06x}".format(hex_int)
         return Color(hex_string=hex_str[2:])
 
@@ -227,7 +230,7 @@ class ColorCycler:
     # _colors = [Color(hex_string=kelly_color) for kelly_color in _kelly_colors]
     # """List of colors to cycle through."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._current_color_idx = 0
         # random order
         order = [3, 11, 0, 12, 8, 1, 10, 6, 5, 9, 4, 7, 2]
@@ -237,11 +240,11 @@ class ColorCycler:
             colors_shuffled[i] = color
         self._colors: List[Color] = colors_shuffled
 
-    def __iter__(self):
+    def __iter__(self) -> 'ColorCycler':
         # need to make ColorCycler an iterator
         return self
 
-    def __next__(self):
+    def __next__(self) -> Color:
         color = self.current_color()
         self._current_color_idx = (self._current_color_idx + 1) % len(self._colors)
         return color
@@ -249,28 +252,28 @@ class ColorCycler:
     def current_color(self) -> Color:
         return self._colors[self._current_color_idx]
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.current_color())
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, ColorCycler):
             return False
         return self._current_color_idx == other._current_color_idx
 
-    def __str__(self):
-        repr(self)
+    def __str__(self) -> str:
+        return repr(self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'ColorCycler({self.current_color()})'
 
     @property
-    def colors(self):
+    def colors(self) -> List[Color]:
         """The colors that are cycled through when calling ``next()`` on some :any:`ColorCycler`."""
         return list(self._colors)
 
     @colors.setter
-    def colors(self, newcolors):
-        self._colors = newcolors
+    def colors(self, newcolors: Iterable[Color]) -> None:
+        self._colors = list(newcolors)
         self._current_color_idx = 0
 
 
@@ -386,7 +389,7 @@ DNA sequence assigned to a strand is too short; the sequence is padded with :any
 make its length the same as the length of the strand."""
 
 
-def _rotate_string(string: str, rotation: int):
+def _rotate_string(string: str, rotation: int) -> str:
     rotation = rotation % len(string)
     return string[rotation:] + string[:rotation]
 
@@ -417,7 +420,7 @@ class M13Variant(enum.Enum):
     """
 
 
-def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
+def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     """
     The M13mp18 DNA sequence (commonly called simply M13).
     
@@ -809,7 +812,7 @@ class Modification(_JSONSerializable):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = {mod_display_text_key: self.display_text}
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
@@ -817,7 +820,8 @@ class Modification(_JSONSerializable):
         return ret
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Modification':  # remove quotes when Python 3.6 support dropped
+    def from_json(
+            json_map: Dict[str, Any]) -> 'Modification':  # remove quotes when Py3.6 support dropped
         location = json_map[mod_location_key]
         if location == "5'":
             return Modification5Prime.from_json(json_map)
@@ -833,13 +837,14 @@ class Modification(_JSONSerializable):
 class Modification5Prime(Modification):
     """5' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "5'"
         return ret
 
+    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: dict) -> 'Modification5Prime':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'Modification5Prime':
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "5'"
@@ -851,13 +856,14 @@ class Modification5Prime(Modification):
 class Modification3Prime(Modification):
     """3' modification of DNA sequence, e.g., biotin or Cy3."""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "3'"
         return ret
 
+    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: dict) -> 'Modification3Prime':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'Modification3Prime':
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "3'"
@@ -876,7 +882,7 @@ class ModificationInternal(Modification):
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
     ``['A','C','G','T']``."""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
         ret[mod_location_key] = "internal"
         if self.allowed_bases is not None:
@@ -884,8 +890,9 @@ class ModificationInternal(Modification):
                 list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
         return ret
 
+    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: dict) -> 'ModificationInternal':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'ModificationInternal':
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "internal"
@@ -918,18 +925,18 @@ class Position3D(_JSONSerializable):
     """z-coordinate of position.
     Increasing `z` moves right in the side view and out of the screen in the main view."""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
-        dct = self.__dict__
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = self.__dict__
         # return NoIndent(dct) if suppress_indent else dct
         return dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Position3D':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'Position3D':  # remove quotes when Py3.6 support dropped
         if position_origin_key in json_map:
-            origin = json_map[position_origin_key]
-            x = origin[position_x_key]
-            y = origin[position_y_key]
-            z = origin[position_z_key]
+            origin_ = json_map[position_origin_key]
+            x = origin_[position_x_key]
+            y = origin_[position_y_key]
+            z = origin_[position_z_key]
         else:
             x = json_map[position_x_key]
             y = json_map[position_y_key]
@@ -979,8 +986,8 @@ class HelixGroup(_JSONSerializable):
     grid: Grid = Grid.none
     """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix`'s in the group."""
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
-        dct = dict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = dict()
 
         helix_idxs: List[int] = kwargs['helix_idxs']
 
@@ -1002,7 +1009,7 @@ class HelixGroup(_JSONSerializable):
 
         return dct
 
-    def _assign_default_helices_view_order(self, helices_in_group: Dict[int, 'Helix']):
+    def _assign_default_helices_view_order(self, helices_in_group: Dict[int, 'Helix']) -> None:
         if self.helices_view_order is not None:
             raise AssertionError('should not call _assign_default_helices_view_order if '
                                  'HelixGroup.helices_view_order is not None, but it is '
@@ -1011,7 +1018,7 @@ class HelixGroup(_JSONSerializable):
         self.helices_view_order = _check_helices_view_order_and_return(self.helices_view_order, helix_idxs)
 
     @staticmethod
-    def from_json(json_map: dict, **kwargs) -> 'HelixGroup':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict, **kwargs: Any) -> 'HelixGroup':  # remove quotes when Py3.6 support dropped
         grid = optional_field(Grid.none, json_map, grid_key)
 
         num_helices: int = kwargs['num_helices']
@@ -1043,6 +1050,8 @@ class HelixGroup(_JSONSerializable):
         :return: view order of the :any:`Helix`
         :raises ValueError: if `idx` is not the index of a :any:`Helix` in this :any:`HelixGroup`
         """
+        if self.helices_view_order is None:
+            raise ValueError('cannot access helices_view_order_inverse until helices_view_order is set')
         return self.helices_view_order.index(idx)
 
 
@@ -1078,7 +1087,7 @@ class Helix(_JSONSerializable):
     associated to the :any:`Helix` via the integer index :any:`Domain.helix`.
     """
 
-    max_offset: int = None  # type: ignore
+    max_offset: Optional[int] = None  # type: ignore
     """Maximum offset (exclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
     
     Optional field.
@@ -1092,7 +1101,7 @@ class Helix(_JSONSerializable):
     Optional field. Default value 0.
     """
 
-    major_tick_start: int = None  # type: ignore
+    major_tick_start: Optional[int] = None  # type: ignore
     """Offset of first major tick when not specifying :py:data:`Helix.major_ticks`. 
     Used in combination with either 
     :py:data:`Helix.major_tick_distance` or 
@@ -1177,7 +1186,7 @@ class Helix(_JSONSerializable):
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
-    idx: Optional[int] = None  # type: ignore
+    idx: Optional[int] = None
     """Index of this :any:`Helix`.
     
     Optional if no other :any:`Helix` specifies a value for *idx*.
@@ -1202,7 +1211,7 @@ class Helix(_JSONSerializable):
                                              f'outside the range of available offsets since max_offset = '
                                              f'{self.max_offset}')
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> dict:
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Any = dict()
 
         grid: Grid = kwargs['grid']
@@ -1258,8 +1267,8 @@ class Helix(_JSONSerializable):
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     @staticmethod
-    def from_json(json_map: dict, **kwargs) -> 'Helix':  # remove quotes when Python 3.6 support dropped
-        grid_position = None
+    def from_json(json_map: dict) -> 'Helix':  # remove quotes when Py3.6 support dropped
+        grid_position: Optional[Tuple[int, int]] = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
             if len(gp_list) == 3:
@@ -1267,7 +1276,7 @@ class Helix(_JSONSerializable):
             if len(gp_list) != 2:
                 raise IllegalDesignError("list of grid_position coordinates must be length 2, "
                                          f"but this is the list: {gp_list}")
-            grid_position = tuple(gp_list)
+            grid_position = (gp_list[0], gp_list[1])
 
         major_tick_distance = json_map.get(major_tick_distance_key)
         major_ticks = json_map.get(major_ticks_key)
@@ -1315,6 +1324,8 @@ class Helix(_JSONSerializable):
         overrides :py:data:`Helix.major_tick_distance`, which overrides
         `default_major_tick_distance` from :any:`Design`.
         """
+        if self.max_offset is None:
+            raise ValueError('cannot calculate major ticks if max_offset is not specified')
         if self.major_tick_start is None:
             raise AssertionError('major_tick_start should never be None')
         if self.major_ticks is not None:
@@ -1335,7 +1346,7 @@ class Helix(_JSONSerializable):
             return list(range(self.major_tick_start, self.max_offset + 1, distance))
 
     @property
-    def domains(self):
+    def domains(self) -> List['Domain']:
         """
         Return :any:`Domain`'s on this :any:`Helix`.
         Assigned when a :any:`Design` is created using this :any:`Helix`.
@@ -1365,8 +1376,12 @@ def _is_close(x1: float, x2: float) -> bool:
     return abs(x1 - x2) < 0.00000001
 
 
+DomainLabel = TypeVar('DomainLabel')
+StrandLabel = TypeVar('StrandLabel')
+
+
 @dataclass
-class Domain(_JSONSerializable):
+class Domain(_JSONSerializable, Generic[DomainLabel]):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
@@ -1418,7 +1433,7 @@ class Domain(_JSONSerializable):
     
     This is used to interoperate with the dsd DNA sequence design package."""
 
-    label: Any = None
+    label: Optional[DomainLabel] = None
     """
     Generic "label" object to associate to this :any:`Domain`.
 
@@ -1430,14 +1445,15 @@ class Domain(_JSONSerializable):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
         self._check_start_end()
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> Union[NoIndent, dict]:
-        dct = OrderedDict()
+    def to_json_serializable(self, suppress_indent: bool = True,
+                             **kwargs: Any) -> Union[NoIndent, Dict[str, Any]]:
+        dct: Dict[str, Any] = OrderedDict()
         if self.name is not None:
             dct[domain_name_key] = self.name
         dct[helix_idx_key] = self.helix
@@ -1453,7 +1469,7 @@ class Domain(_JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Domain':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'Domain':  # remove quotes when Py3.6 support dropped
         helix = mandatory_field(Domain, json_map, helix_idx_key)
         forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
         start = mandatory_field(Domain, json_map, start_key)
@@ -1489,39 +1505,44 @@ class Domain(_JSONSerializable):
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
 
-    def strand(self) -> 'Strand':  # remove quotes when Python 3.6 support dropped
+    def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
 
     def set_name(self, name: str) -> None:
         """Sets name of this :any:`Domain`."""
         self.name = name
 
-    def set_label(self, label) -> None:  # type: ignore
+    def set_label(self, label: DomainLabel) -> None:
         """Sets label of this :any:`Domain`."""
         self.label = label
 
     def _check_start_end(self) -> None:
         if self.start >= self.end:
+            if self._parent_strand is None:
+                raise ValueError(f'start = {self.start} must be less than end = {self.end}\n'
+                                 f'_parent_strand has not yet been set')
             raise StrandError(self._parent_strand,
                               f'start = {self.start} must be less than end = {self.end}')
 
-    @staticmethod
-    def is_loopout() -> bool:
-        """Indicates if this is a :any:`Loopout` (always false)
-        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-        return False
+    # @staticmethod
+    # def is_loopout() -> bool:
+    #     """Indicates if this is a :any:`Loopout` (always false)
+    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
+    #     return False
+    #
+    # @staticmethod
+    # def is_domain() -> bool:
+    #     """Indicates if this is a :any:`Domain` (always true)
+    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
+    #     return True
 
-    @staticmethod
-    def is_domain() -> bool:
-        """Indicates if this is a :any:`Domain` (always true)
-        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-        return True
-
-    def set_start(self, new_start: int):
+    def set_start(self, new_start: int) -> None:
         self.start = new_start
         self._check_start_end()
 
-    def set_end(self, new_end: int):
+    def set_end(self, new_end: int) -> None:
         self.end = new_end
         self._check_start_end()
 
@@ -1549,7 +1570,7 @@ class Domain(_JSONSerializable):
         then it contains the offset 7 even though there is no base 7 positions from the start."""
         return self.start <= offset < self.end
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Same as :meth:`Domain.dna_length`.
 
         See also :meth:`Domain.visual_length`."""
@@ -1684,7 +1705,7 @@ class Domain(_JSONSerializable):
 
     # The type hint 'Domain' must be in quotes since Domain is not yet defined.
     # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     # def overlaps(self, other: Domain) -> bool:
     def overlaps(self, other: 'Domain') -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
@@ -1700,9 +1721,9 @@ class Domain(_JSONSerializable):
                 self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     # def overlaps_illegally(self, other: Domain):
-    def overlaps_illegally(self, other: 'Domain'):
+    def overlaps_illegally(self, other: 'Domain') -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -1716,7 +1737,7 @@ class Domain(_JSONSerializable):
                 self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     # def compute_overlap(self, other: Domain) -> Tuple[int, int]:
     def compute_overlap(self, other: 'Domain') -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Domain and `other`.
@@ -1732,21 +1753,6 @@ class Domain(_JSONSerializable):
     def insertion_offsets(self) -> List[int]:
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
-
-
-'''
-    var forward = util.get_value(json_map, constants.forward_key, name);
-    var helix = util.get_value(json_map, constants.helix_idx_key, name);
-    var start = util.get_value(json_map, constants.start_key, name);
-    var end = util.get_value(json_map, constants.end_key, name);
-//    List<int> deletions =
-//        json_map.containsKey(constants.deletions_key) ? List<int>.from(json_map[constants.deletions_key]) : [];
-//    List<Tuple2<int, int>> insertions =
-//        json_map.containsKey(constants.insertions_key) ? parse_json_insertions(json_map[constants.insertions_key]) : [];
-    var deletions = List<int>.from(util.get_value_with_default(json_map, constants.deletions_key, []));
-    var insertions =
-        parse_json_insertions(util.get_value_with_default(json_map, constants.insertions_key, []));
-'''
 
 
 @dataclass
@@ -1797,11 +1803,12 @@ class Loopout(_JSONSerializable):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Python 3.6 support dropped
-    _parent_strand: 'Strand' = field(init=False, repr=False, compare=False, default=None)
+    # remove quotes when Py3.6 support dropped
+    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: dict) -> Union[dict, NoIndent]:
-        dct = {loopout_key: self.length}
+    def to_json_serializable(self, suppress_indent: bool = True,
+                             **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
+        dct: Dict[str, Any] = {loopout_key: self.length}
         if self.name is not None:
             dct[domain_name_key] = self.name
         if self.label is not None:
@@ -1809,7 +1816,7 @@ class Loopout(_JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Loopout':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> 'Loopout':  # remove quotes when Py3.6 support dropped
         # XXX: this should never fail since we detect whether to call this from_json by the presence
         # of a length key in json_map
         length_str = mandatory_field(Loopout, json_map, loopout_key)
@@ -1822,7 +1829,7 @@ class Loopout(_JSONSerializable):
         return f'Loopout(' + \
                (f'{self.name}, ' if self.name is not None else '') + \
                f'{self.length}, ' + \
-               ((f'{self.label}, ' if self.label is not None else '')) + \
+               (f'{self.label}, ' if self.label is not None else '') + \
                f')'
 
     def __str__(self) -> str:
@@ -1836,19 +1843,19 @@ class Loopout(_JSONSerializable):
         """Sets label of this :any:`Loopout`."""
         self.label = label
 
-    @staticmethod
-    def is_loopout() -> bool:
-        """Indicates if this is a :any:`Loopout` (always true).
-        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-        return True
+    # @staticmethod
+    # def is_loopout() -> bool:
+    #     """Indicates if this is a :any:`Loopout` (always true).
+    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
+    #     return True
+    #
+    # @staticmethod
+    # def is_domain() -> bool:
+    #     """Indicates if this is a :any:`Domain` (always false)
+    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
+    #     return False
 
-    @staticmethod
-    def is_domain() -> bool:
-        """Indicates if this is a :any:`Domain` (always false)
-        Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-        return False
-
-    def __len__(self):
+    def __len__(self) -> int:
         """Same as :any:`Loopout.dna_length`"""
         return self.dna_length()
 
@@ -1859,6 +1866,8 @@ class Loopout(_JSONSerializable):
     def dna_sequence(self) -> Optional[str]:
         """Return DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned
         to the :any:`Strand` of this :any:`Loopout`."""
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not been set')
         strand_seq = self._parent_strand.dna_sequence
         if strand_seq is None:
             return None
@@ -1871,6 +1880,8 @@ class Loopout(_JSONSerializable):
     def get_seq_start_idx(self) -> int:
         """Starting DNA subsequence index for first base of this :any:`Loopout` on its
         :any:`Strand`'s DNA sequence."""
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not been set')
         domains = self._parent_strand.domains
         # index of self in parent strand's list of domains
         self_domain_idx = domains.index(self)
@@ -1931,7 +1942,7 @@ class IDTFields(_JSONSerializable):
     Optional field, but non-optional if :py:data:`IDTField.plate` is not ``None``.
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         _check_idt_string_not_none_or_empty(self.name, 'name')
         _check_idt_string_not_none_or_empty(self.scale, 'scale')
         _check_idt_string_not_none_or_empty(self.purification, 'purification')
@@ -1942,8 +1953,9 @@ class IDTFields(_JSONSerializable):
             raise IllegalDesignError(f'IDTFields.well cannot be None if IDTFields.plate is not None\n'
                                      f'IDTFields.plate = {self.plate}')
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
-        dct = self.__dict__
+    def to_json_serializable(self, suppress_indent: bool = True,
+                             **kwargs: Any) -> Union[NoIndent, Dict[str, Any]]:
+        dct: Dict[str, Any] = self.__dict__
         if self.plate is None:
             del dct['plate']
         if self.well is None:
@@ -1951,14 +1963,14 @@ class IDTFields(_JSONSerializable):
         return NoIndent(dct)
 
 
-def _check_idt_string_not_none_or_empty(value: str, field_name: str):
+def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
     if value is None:
         raise IllegalDesignError(f'field {field_name} in IDTFields cannot be None')
     if len(value) == 0:
         raise IllegalDesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
-class StrandBuilder:
+class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
@@ -1973,24 +1985,25 @@ class StrandBuilder:
     of method chaining described above, or else errors could result.
     """
 
-    # remove quotes when Python 3.6 support dropped
-    def __init__(self, design: 'Design', helix: int, offset: int):
-        self.design: Design = design
+    # remove quotes when Py3.6 support dropped
+    def __init__(self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int):
+        self.design: Design[StrandLabel, DomainLabel] = design
         self.current_helix: int = helix
         self.current_offset: int = offset
         # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand] = None
+        self._strand: Optional[Strand[StrandLabel]] = None
         self.just_moved_to_helix: bool = True
-        self.last_domain: Optional[Domain] = None
+        self.last_domain: Optional[Domain[DomainLabel]] = None
 
     @property
-    def strand(self) -> 'Strand':
+    def strand(self) -> 'Strand[StrandLabel]':
         if self._strand is None:
-            raise ValueError('no strand has been created yet')
+            raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
 
-    # remove quotes when Python 3.6 support dropped
-    def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
 
@@ -2004,6 +2017,8 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         if move is not None and offset is not None:
             raise IllegalDesignError('move and offset cannot both be specified:\n'
                                      f'move:   {move}\n'
@@ -2016,9 +2031,9 @@ class StrandBuilder:
             self.current_offset += move
         return self
 
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
-            -> 'StrandBuilder':
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
 
@@ -2033,11 +2048,14 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def move(self, delta: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
         plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
@@ -2059,7 +2077,8 @@ class StrandBuilder:
         """
         return self.to(self.current_offset + delta)
 
-    def to(self, offset: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
         which adds a new :any:`Domain` to the :any:`Strand` being built. This is an
@@ -2098,7 +2117,7 @@ class StrandBuilder:
         else:
             raise IllegalDesignError(f'offset {offset} cannot be equal to current offset')
 
-        domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        domain: Domain[DomainLabel] = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
         self.last_domain = domain
         if self._strand is not None:
             self.design.append_domain(self._strand, domain)
@@ -2110,7 +2129,8 @@ class StrandBuilder:
 
         return self
 
-    def update_to(self, offset: int) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
@@ -2142,40 +2162,47 @@ class StrandBuilder:
 
         return self
 
-    def as_scaffold(self) -> 'StrandBuilder':  # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Makes Strand being built a scaffold.
 
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_scaffold(True)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_modification_5p(self, mod: Modification5Prime) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_modification_5p(self, mod: Modification5Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given 5' modification.
 
         :param mod: 5' modification
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_modification_5p(mod)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_modification_3p(self, mod: Modification3Prime) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_modification_3p(self, mod: Modification3Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given 3' modification.
 
         :param mod: 3' modification
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_modification_3p(mod)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_modification_internal(self, idx: int, mod: ModificationInternal,
-                                   warn_on_no_dna: bool) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given internal modification.
 
@@ -2184,22 +2211,27 @@ class StrandBuilder:
         :param warn_on_no_dna: whether to print warning to screen if DNA has not been assigned
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_modification_internal(idx, mod, warn_on_no_dna)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_color(self, color: Color) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_color(self, color: Color) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Sets Strand being built to have given color.
 
         :param color: color to set for Strand
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_color(color)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_sequence(self, sequence: str, assign_complement: bool = True) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_sequence(self, sequence: str, assign_complement: bool = True) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
         This should be done after the :any:`Strand`'s structure is done being built, e.g.,
@@ -2214,11 +2246,14 @@ class StrandBuilder:
             :py:meth:`Design.assign_dna`.
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         self.design.assign_dna(strand=self._strand, sequence=sequence, assign_complement=assign_complement)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2241,13 +2276,15 @@ class StrandBuilder:
             :py:meth:`Design.assign_dna`.
         :return: self
         """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         self.design.assign_dna(strand=self._strand, sequence=sequence, domain=last_domain,
                                assign_complement=assign_complement)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_name(self, name: str) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `name` as name of the :any:`Strand` being built.
 
@@ -2259,12 +2296,12 @@ class StrandBuilder:
         :return: self
         """
         if self._strand is None:
-            raise AssertionError('_strand cannot be None')
+            raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_name(name)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_label(self, label) -> 'StrandBuilder':  # type: ignore
+    # remove quotes when Py3.6 support dropped
+    def with_label(self, label: StrandLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the :any:`Strand` being built.
 
@@ -2280,8 +2317,8 @@ class StrandBuilder:
         self._strand.set_label(label)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_domain_name(self, name: str) -> 'StrandBuilder':
+    # remove quotes when Py3.6 support dropped
+    def with_domain_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2299,13 +2336,13 @@ class StrandBuilder:
         :return: self
         """
         if self._strand is None:
-            raise AssertionError('_strand cannot be None')
+            raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         last_domain.set_name(name)
         return self
 
-    # remove quotes when Python 3.6 support dropped
-    def with_domain_label(self, label) -> 'StrandBuilder':  # type: ignore
+    # remove quotes when Py3.6 support dropped
+    def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2326,14 +2363,14 @@ class StrandBuilder:
         :return: self
         """
         if self._strand is None:
-            raise AssertionError('_strand cannot be None')
+            raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
         return self
 
 
 @dataclass
-class Strand(_JSONSerializable):
+class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
     Represents a single strand of DNA.
 
@@ -2370,7 +2407,7 @@ class Strand(_JSONSerializable):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain, Loopout]]
+    domains: List[Union[Domain[DomainLabel], Loopout]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2432,7 +2469,7 @@ class Strand(_JSONSerializable):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Any = None
+    label: Optional[DomainLabel] = None
     """Generic "label" object to associate to this :any:`Strand`.
     
     Useful for associating extra information with the Strand that will be serialized, for example,
@@ -2442,25 +2479,25 @@ class Strand(_JSONSerializable):
     """
 
     # not serialized; efficient way to see a list of all domains on a given helix
-    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
-        init=False, repr=False, compare=False, default=None)
+    _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
+        init=False, repr=False, compare=False, default_factory=dict)
 
     def __post_init__(self) -> None:
         self._helix_idx_domain_map = defaultdict(list)
 
         for domain in self.domains:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 self._helix_idx_domain_map[domain.helix].append(domain)
 
         for domain in self.domains:
             domain._parent_strand = self
 
         if len(self.domains) == 1:
-            if self.first_domain().is_loopout():
+            if isinstance(self.domains[0], Loopout):
                 raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
 
         for domain1, domain2 in _pairwise(self.domains):
-            if domain1.is_loopout() and domain2.is_loopout():
+            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
                 raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
 
         if self.use_default_idt:
@@ -2469,8 +2506,8 @@ class Strand(_JSONSerializable):
         self._ensure_modifications_legal()
         self._ensure_domains_nonoverlapping()
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs) -> dict:
-        dct = OrderedDict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = OrderedDict()
         if self.name is not None:
             dct[strand_name_key] = self.name
         if self.color is not None:
@@ -2494,17 +2531,17 @@ class Strand(_JSONSerializable):
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         if self.label is not None:
-            dct[strand_label_key] = self.label
+            dct[strand_label_key] = NoIndent(self.label) if suppress_indent else self.label
 
         return dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Strand':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
         domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
         if len(domain_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        domains = []
+        domains: List[Union[Domain, Loopout]] = []
         for domain_json in domain_jsons:
             if loopout_key in domain_json:
                 domains.append(Loopout.from_json(domain_json))
@@ -2524,7 +2561,7 @@ class Strand(_JSONSerializable):
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):
             def decimal_int_to_hex(d: int) -> str:
-                return "#" + "{0:#08x}".format(d, 8)[2:]
+                return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
 
             color_str = decimal_int_to_hex(color_str)
         color = Color(hex_string=color_str)
@@ -2542,7 +2579,7 @@ class Strand(_JSONSerializable):
             label=label,
         )
 
-    def __eq__(self, other: 'Strand') -> bool:  # remove quotes when Python 3.6 support dropped
+    def __eq__(self, other: Any) -> bool:  # remove quotes when Py3.6 support dropped
         if not isinstance(other, Strand):
             return False
         return self.domains == other.domains
@@ -2552,6 +2589,29 @@ class Strand(_JSONSerializable):
 
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
+
+    def rotate_domains(self, rotation: int, forward: bool = True) -> None:
+        """
+        "Rotates" the strand by replacing domains with a circular rotation, e.g., if the domains are
+
+        A, B, C, D, E, F
+
+        then ``strand.rotate(2)`` makes the :any:`Strand` have the same domains, but in this order:
+        
+        C, D, E, F, A, B
+        
+        and  ``strand.rotate(2, forward=False)`` makes 
+        
+        E, F, A, B, C, D
+
+        :param rotation:
+            Amount to rotate domains.
+        :param forward:
+            Whether to move domains forward (wrapping off 3' end back to 5' end) or backward (wrapping off
+            5' end back to 3' end).
+        """
+        idx = rotation if not forward else len(self.domains) - rotation
+        self.domains = self.domains[idx:] + self.domains[:idx]
 
     def set_scaffold(self, is_scaf: bool = True) -> None:
         """Sets this :any:`Strand` as a scaffold. Alters color to default scaffold color.
@@ -2565,7 +2625,7 @@ class Strand(_JSONSerializable):
         """Sets name of this :any:`Strand`."""
         self.name = name
 
-    def set_label(self, label) -> None:
+    def set_label(self, label: Any) -> None:
         """Sets label of this :any:`Strand`."""
         self.label = label
 
@@ -2587,23 +2647,24 @@ class Strand(_JSONSerializable):
         else:
             self.idt = None
 
-    def set_modification_5p(self, mod: Modification5Prime = None):
+    def set_modification_5p(self, mod: Modification5Prime = None) -> None:
         """Sets 5' modification to be `mod`."""
         self.modification_5p = mod
 
-    def set_modification_3p(self, mod: Modification3Prime = None):
+    def set_modification_3p(self, mod: Modification3Prime = None) -> None:
         """Sets 3' modification to be `mod`."""
         self.modification_3p = mod
 
-    def remove_modification_5p(self):
+    def remove_modification_5p(self) -> None:
         """Removes 5' modification."""
         self.modification_5p = None
 
-    def remove_modification_3p(self):
+    def remove_modification_3p(self) -> None:
         """Removes 3' modification."""
         self.modification_3p = None
 
-    def set_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool = True):
+    def set_modification_internal(self, idx: int, mod: ModificationInternal,
+                                  warn_on_no_dna: bool = True) -> None:
         """Adds internal modification `mod` at given DNA index `idx`."""
         if idx < 0:
             raise IllegalDesignError('idx of modification must be nonnegative')
@@ -2621,20 +2682,26 @@ class Strand(_JSONSerializable):
                   'modification were not done. To be safe, first assign DNA, then add the modifications.')
         self.modifications_int[idx] = mod
 
-    def remove_modification_internal(self, idx: int):
+    def remove_modification_internal(self, idx: int) -> None:
         """Removes internal modification at given DNA index `idx`."""
         if idx in self.modifications_int:
             del self.modifications_int[idx]
 
-    def first_domain(self) -> Union[Domain, Loopout]:
-        """First domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
-        return self.domains[0]
+    def first_domain(self) -> Domain:
+        """First domain on this :any:`Strand`."""
+        domain = self.domains[0]
+        if isinstance(domain, Loopout):
+            raise StrandError(self, 'cannot have loopout as first domain on strand')
+        return domain
 
-    def last_domain(self) -> Union[Domain, Loopout]:
-        """Last domain (of type either :any:`Domain` or :any:`Loopout`) on this :any:`Strand`."""
-        return self.domains[-1]
+    def last_domain(self) -> Domain:
+        """Last domain on this :any:`Strand`."""
+        domain = self.domains[-1]
+        if isinstance(domain, Loopout):
+            raise StrandError(self, 'cannot have loopout as last domain on strand')
+        return domain
 
-    def set_dna_sequence(self, sequence: str):
+    def set_dna_sequence(self, sequence: str) -> None:
         """Set this :any:`Strand`'s DNA sequence to `seq`
         WITHOUT checking for complementarity with overlapping
         :any:`Strand`'s or automatically assigning their sequences.
@@ -2666,7 +2733,7 @@ class Strand(_JSONSerializable):
 
     def bound_domains(self) -> List[Domain]:
         """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
-        return [domain for domain in self.domains if domain.is_domain()]
+        return [domain for domain in self.domains if isinstance(domain, Domain)]
 
     def offset_5p(self) -> int:
         """5' offset of this entire :any:`Strand`, INCLUSIVE."""
@@ -2676,7 +2743,7 @@ class Strand(_JSONSerializable):
         """3' offset of this entire :any:`Strand`, INCLUSIVE."""
         return self.last_domain().offset_3p()
 
-    def overlaps(self, other: 'Strand') -> bool:  # remove quotes when Python 3.6 support dropped
+    def overlaps(self, other: 'Strand') -> bool:  # remove quotes when Py3.6 support dropped
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
         by `self` has nonempty intersection with those occupied by `other_strand`."""
         for domain_self in self.bound_domains():
@@ -2685,7 +2752,7 @@ class Strand(_JSONSerializable):
                     return True
         return False
 
-    def assign_dna_complement_from(self, other: 'Strand'):  # remove quotes when Python 3.6 support dropped
+    def assign_dna_complement_from(self, other: 'Strand') -> None:  # remove quotes when Py3.6 support dropped
         """Assuming a DNA sequence has been assigned to `other`, assign its Watson-Crick
         complement to the portions of this Strand that are bound to `other`.
 
@@ -2705,17 +2772,20 @@ class Strand(_JSONSerializable):
         already_assigned = self.dna_sequence is not None
 
         # put DNA sequences to assign to domains in List, one position per domain
-        strand_complement_builder = []
+        strand_complement_builder: List[str] = []
         if already_assigned:
             for domain in self.domains:
-                strand_complement_builder.append(domain.dna_sequence())
+                domain_seq = domain.dna_sequence()
+                if domain_seq is None:
+                    raise ValueError(f'no DNA sequence has been assigned to {self}')
+                strand_complement_builder.append(domain_seq)
         else:
             for domain in self.domains:
                 wildcards = DNA_base_wildcard * domain.dna_length()
                 strand_complement_builder.append(wildcards)
 
         for (domain_idx, domain_self) in enumerate(self.domains):
-            if domain_self.is_loopout():
+            if isinstance(domain_self, Loopout):
                 domain_self_dna_sequence = DNA_base_wildcard * domain_self.dna_length()
             else:
                 helix = domain_self.helix
@@ -2740,6 +2810,8 @@ class Strand(_JSONSerializable):
                     wildcards = DNA_base_wildcard * num_wildcard_bases
 
                     other_seq = domain_other.dna_sequence_in(overlap_left, overlap_right - 1)
+                    if other_seq is None:
+                        raise ValueError(f'no DNA sequence has been assigned to strand {other}')
                     overlap_complement = wc(other_seq)
                     domain_complement_builder.append(wildcards)
                     domain_complement_builder.append(overlap_complement)
@@ -2790,11 +2862,11 @@ class Strand(_JSONSerializable):
         self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
-    def insert_domain(self, order, domain):
+    def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.insert_domain
         self.domains.insert(order, domain)
         domain._parent_strand = self
-        if domain.is_domain():
+        if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].append(domain)
         if self.use_default_idt:
             self.set_default_idt()
@@ -2808,7 +2880,7 @@ class Strand(_JSONSerializable):
             new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
             self.dna_sequence = prefix + new_wildcards + suffix
 
-    def remove_domain(self, domain: Union[Domain, Loopout]):
+    def remove_domain(self, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.remove_domain
 
         # remove relevant portion of DNA sequence to maintain its length
@@ -2821,12 +2893,12 @@ class Strand(_JSONSerializable):
 
         self.domains.remove(domain)
         domain._parent_strand = None
-        if domain.is_domain():
+        if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].remove(domain)
         if self.use_default_idt:
             self.set_default_idt()
 
-    def dna_index_start_domain(self, domain: Domain):
+    def dna_index_start_domain(self, domain: Union[Domain, Loopout]) -> int:
         """
         Returns index in DNA sequence of domain, e.g., if there are five domains
 
@@ -2844,7 +2916,7 @@ class Strand(_JSONSerializable):
 
     def contains_loopouts(self) -> bool:
         for domain in self.domains:
-            if domain.is_loopout():
+            if isinstance(domain, Loopout):
                 return True
         return False
 
@@ -2855,8 +2927,9 @@ class Strand(_JSONSerializable):
         domain as :py:meth:`Strand.first_domain`, but in case an initial or final :any:`Loopout` is
         supported in the future, this method is provided."""
         for domain in self.domains:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 return domain
+        raise StrandError(self, 'should not be able to have a Strand with no (bound) Domains')
 
     def last_bound_domain(self) -> Domain:
         """Last :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
@@ -2867,10 +2940,11 @@ class Strand(_JSONSerializable):
         domain_rev = list(self.domains)
         domain_rev.reverse()
         for domain in domain_rev:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 return domain
+        raise AssertionError('should not be able to have a Strand with no (bound) Domains')
 
-    def reverse(self):
+    def reverse(self) -> None:
         """
         Reverses "polarity" of this :any:`Strand`.
 
@@ -2882,7 +2956,7 @@ class Strand(_JSONSerializable):
         for domain in self.bound_domains():
             domain.forward = not domain.forward
 
-    def _ensure_modifications_legal(self, check_offsets_legal=False):
+    def _ensure_modifications_legal(self, check_offsets_legal: bool = False) -> None:
         if check_offsets_legal:
             if self.dna_sequence is None:
                 raise IllegalDesignError(f"must assign DNA sequence first")
@@ -2897,50 +2971,57 @@ class Strand(_JSONSerializable):
                                          f"{len(self.dna_sequence)}: "
                                          f"{self.modifications_int}")
 
-    def _ensure_domains_nonoverlapping(self):
+    def _ensure_domains_nonoverlapping(self) -> None:
         for d1, d2 in itertools.combinations(self.domains, 2):
             if isinstance(d1, Domain) and isinstance(d2, Domain) and d1.overlaps_illegally(d2):
                 raise StrandError(self, f'two domains on strand overlap:'
                                         f'\n{d1}'
                                         f'\n{d2}')
 
-    def idt_dna_sequence(self):
+    def idt_dna_sequence(self) -> str:
         self._ensure_modifications_legal(check_offsets_legal=True)
 
-        ret_list = []
-        if self.modification_5p is not None:
+        if self.dna_sequence is None:
+            raise ValueError('DNA sequence has not been assigned yet')
+
+        ret_list: List[str] = []
+        if self.modification_5p is not None and self.modification_5p.idt_text is not None:
             ret_list.append(self.modification_5p.idt_text)
 
         for offset, base in enumerate(self.dna_sequence):
             ret_list.append(base)
             if offset in self.modifications_int:  # if internal mod attached to base, replace base
                 mod = self.modifications_int[offset]
-                if mod.allowed_bases is not None:
-                    if base not in mod.allowed_bases:
-                        msg = f'internal modification {mod} can only replace one of these bases: ' \
-                              f'{",".join(mod.allowed_bases)}, but the base at offset {offset} is {base}'
-                        raise IllegalDesignError(msg)
-                    ret_list[-1] = mod.idt_text  # replace base with modified base
-                else:
-                    ret_list.append(mod.idt_text)  # append modification between two bases
+                if mod.idt_text is not None:
+                    if mod.allowed_bases is not None:
+                        if base not in mod.allowed_bases:
+                            msg = f'internal modification {mod} can only replace one of these bases: ' \
+                                  f'{",".join(mod.allowed_bases)}, but the base at offset {offset} is {base}'
+                            raise IllegalDesignError(msg)
+                        ret_list[-1] = mod.idt_text  # replace base with modified base
+                    else:
+                        ret_list.append(mod.idt_text)  # append modification between two bases
 
-        if self.modification_3p is not None:
+        if self.modification_3p is not None and self.modification_3p.idt_text is not None:
             ret_list.append(self.modification_3p.idt_text)
 
         return ''.join(ret_list)
 
-    def unmodified_version(self):
+    def no_modifications_version(self) -> 'Strand':
+        """
+        :return: version of this :any:`Strand` with no DNA modifications.
+        """
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
 
 
-def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0):
+def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0) -> str:
     sequence = _remove_whitespace_and_uppercase(sequence)
     padded_sequence = _pad_dna(sequence, strand.dna_length(), start)
     return padded_sequence
 
 
-def _remove_whitespace_and_uppercase(sequence):
+def _remove_whitespace_and_uppercase(sequence: str) -> str:
     sequence = re.sub(r'\s*', '', sequence)
     sequence = sequence.upper()
     return sequence
@@ -2999,11 +3080,11 @@ def _string_merge_wildcard(s1: str, s2: str, wildcard: str) -> str:
 class IllegalDesignError(ValueError):
     """Indicates that some aspect of the :any:`Design` object is illegal."""
 
-    def __init__(self, the_cause: str):
+    def __init__(self, the_cause: str) -> None:
         self.cause = the_cause
 
     # __str__ is to print() the value
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self.cause)
 
 
@@ -3012,29 +3093,38 @@ class StrandError(IllegalDesignError):
     Information about the :any:`Strand` is embedded in the error message when this exception is
     raised that helps to identify which :any:`Strand` caused the problem."""
 
-    def __init__(self, strand: Strand, the_cause: str):
-        first_domain = strand.first_bound_domain()
-        last_domain = strand.last_bound_domain()
+    def __init__(self, strand: Strand, the_cause: str) -> None:
+        # need to avoid calling first_bound_domain here to avoid infinite mutual recursion
+        first_domain: Optional[Domain]
+        last_domain: Optional[Domain]
+        if len(strand.domains) > 0 and isinstance(strand.domains[0], Domain):
+            first_domain = strand.domains[0]
+        else:
+            first_domain = None
+        if len(strand.domains) > 0 and isinstance(strand.domains[-1], Domain):
+            last_domain = strand.domains[-1]
+        else:
+            last_domain = None
 
-        msg = (f'{the_cause}\n'
-               f'strand length        =  {strand.dna_length()}\n'
-               f'DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}\n'
-               f'DNA sequence         =  {strand.dna_sequence}'
-               f"strand 5' helix      =  {first_domain.helix if first_domain else 'N/A'}\n"
-               f"strand 5' end offset =  {first_domain.offset_5p() if first_domain else 'N/A'}\n"
-               f"strand 3' helix      =  {last_domain.helix if last_domain else 'N/A'}\n"
-               f"strand 3' end offset =  {last_domain.offset_3p() if last_domain else 'N/A'}\n")
+        msg = (f'''{the_cause}
+    strand length        =  {strand.dna_length()}
+    DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}
+    DNA sequence         =  {strand.dna_sequence}
+    strand 5' helix      =  {first_domain.helix if first_domain is not None else 'N/A'}
+    strand 5' end offset =  {first_domain.offset_5p() if first_domain is not None else 'N/A'}
+    strand 3' helix      =  {last_domain.helix if last_domain is not None else 'N/A'}
+    strand 3' end offset =  {last_domain.offset_3p() if last_domain is not None else 'N/A'}\n''')
 
         super().__init__(msg)
         # super(IllegalDesignError, self).__init__(msg)
 
 
-def _plates(idt_strands):
-    plates = set()
-    for strand in idt_strands:
-        if strand.idt is not None and strand.idt.plate is not None:
-            plates.add(strand.idt.plate)
-    return list(plates)
+# def _plates(idt_strands) -> List[str]:
+#     plates: Set[str] = set()
+#     for strand in idt_strands:
+#         if strand.idt is not None and strand.idt.plate is not None:
+#             plates.add(strand.idt.plate)
+#     return list(plates)
 
 
 _96WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -3065,13 +3155,13 @@ class PlateType(int, enum.Enum):
 
 class _PlateCoordinate:
 
-    def __init__(self, plate_type: PlateType):
+    def __init__(self, plate_type: PlateType) -> None:
         self._plate_type = plate_type
         self._plate: int = 1
         self._row_idx: int = 0
         self._col_idx: int = 0
 
-    def increment(self):
+    def increment(self) -> None:
         self._row_idx += 1
         if self._row_idx == len(self._plate_type.rows()):
             self._row_idx = 0
@@ -3093,7 +3183,7 @@ class _PlateCoordinate:
         return f'{self.row()}{self.col()}'
 
 
-def remove_helix_idxs_if_default(helices: List[Dict]):
+def remove_helix_idxs_if_default(helices: List[Dict]) -> None:
     # removes indices from each helix if they are the default (order of appearance in list)
     default = True
     for expected_idx, helix in enumerate(helices):
@@ -3112,7 +3202,7 @@ def add_quotes(string: str) -> str:
     return f'"{string}"'
 
 
-def mandatory_field(ret_type: Type, json_map: dict, main_key: str, *legacy_keys: str):
+def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
     # should be called from function whose return type is the type being constructed from JSON, e.g.,
     # Design or Strand, given by ret_type. This helps give a useful error message
     for key in (main_key,) + legacy_keys:
@@ -3128,7 +3218,7 @@ def mandatory_field(ret_type: Type, json_map: dict, main_key: str, *legacy_keys:
     raise IllegalDesignError(msg)
 
 
-def optional_field(default_value, json_map: dict, main_key: str, *legacy_keys: str):
+def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
     # like dict.get, except that it checks for multiple keys
     for key in (main_key,) + legacy_keys:
         if key in json_map:
@@ -3158,11 +3248,11 @@ class Geometry(_JSONSerializable):
     def distance_between_helices(self) -> float:
         return 2 * self.helix_radius + self.inter_helix_gap
 
-    def is_default(self):
+    def is_default(self) -> bool:
         return self == _default_geometry
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Python 3.6 support dropped
+    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
         geometry = Geometry()
         geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
                                                      rise_per_base_pair_key, *legacy_rise_per_base_pair_keys)
@@ -3188,8 +3278,8 @@ class Geometry(_JSONSerializable):
     def default_values() -> List[float]:
         return _default_geometry.values()
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
-        dct = OrderedDict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = OrderedDict()
         for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
             if val != val_default:
                 dct[name] = val
@@ -3209,7 +3299,7 @@ def _check_helices_view_order_and_return(
     return helices_view_order
 
 
-def _check_helices_grid_legal(grid: Grid, helices: Iterable[Helix]):
+def _check_helices_grid_legal(grid: Grid, helices: Iterable[Helix]) -> None:
     for helix in helices:
         if grid == Grid.none and helix.grid_position is not None:
             raise IllegalDesignError(
@@ -3219,7 +3309,7 @@ def _check_helices_grid_legal(grid: Grid, helices: Iterable[Helix]):
                 f'grid is not none, but Helix {helix.idx} has position = ${helix.position}')
 
 
-def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_idxs: Iterable[int]):
+def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_idxs: Iterable[int]) -> None:
     if not (sorted(helices_view_order) == sorted(helix_idxs)):
         raise IllegalDesignError(
             f"The specified helices view order: {helices_view_order}\n "
@@ -3227,10 +3317,10 @@ def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_
 
 
 @dataclass
-class Design(_JSONSerializable):
+class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
 
-    strands: List[Strand]
+    strands: List[Strand[StrandLabel, DomainLabel]]
     """All of the :any:`Strand`'s in this :any:`Design`.
     
     Required field."""
@@ -3265,7 +3355,7 @@ class Design(_JSONSerializable):
                  strands: List[Strand] = None,
                  grid: Optional[Grid] = None,
                  helices_view_order: List[int] = None,
-                 geometry: Geometry = None):
+                 geometry: Geometry = None) -> None:
         """
         :param helices: List of :any:`Helix`'s; if missing, set based on `strands`.
         :param groups: Dict mapping group name to :any:`HelixGroup`.
@@ -3274,9 +3364,6 @@ class Design(_JSONSerializable):
             keys of this dict.
         :param strands: List of :any:`Strand`'s. If missing, will be empty.
         :param grid: :any:`Grid` to use.
-        :param major_tick_distance: regularly spaced major ticks between all helices.
-            :any:`Helix.major_tick_distance` overrides this value for any :any:`Helix` in which it is
-            specified.
         :param helices_view_order: order in which to view helices from top to bottom in web interface
             main view.
             Mutually exclusive with `groups`.
@@ -3342,14 +3429,15 @@ class Design(_JSONSerializable):
                 grid_for_group = group.grid
             group.helices_view_order = _check_helices_view_order_and_return(helices_view_order_for_group,
                                                                             helix_idxs_in_group)
-            if grid_for_group is None: raise AssertionError()
+            if grid_for_group is None:
+                raise AssertionError()
             group.grid = grid_for_group
             helices_in_group = [self.helices[idx] for idx in helix_idxs_in_group]
             _check_helices_grid_legal(group.grid, helices_in_group)
 
         self.__post_init__()
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # XXX: exact order of these calls is important
         self._ensure_helices_distinct_objects()
         self._ensure_strands_distinct_objects()
@@ -3372,6 +3460,8 @@ class Design(_JSONSerializable):
         :return: helices_view_order of this :any:`Design`
         """
         group = self._get_default_group()
+        if group.helices_view_order is None:
+            raise ValueError(f'group {group} does not have helices_view_order defined')
         return group.helices_view_order
 
     @property
@@ -3385,7 +3475,7 @@ class Design(_JSONSerializable):
         group = self._get_default_group()
         return group.grid
 
-    def _get_default_group(self):
+    def _get_default_group(self) -> HelixGroup:
         # Gets default group and raise exception if default group is not being used
         if not self._has_default_groups():
             raise ValueError('The default group is not being used for this design.')
@@ -3404,13 +3494,13 @@ class Design(_JSONSerializable):
         """
         return [idx for idx, helix in self.helices.items() if helix.group == group_name]
 
-    def _assign_colors_to_strands(self):
+    def _assign_colors_to_strands(self) -> None:
         # if color not specified, pick one by cycling through list of staple colors,
         # unless caller specified not to
         for strand in self.strands:
             self._assign_color_to_strand(strand)
 
-    def _assign_color_to_strand(self, strand: Strand):
+    def _assign_color_to_strand(self, strand: Strand) -> None:
         if strand.color is None and self.automatically_assign_color:
             if strand.is_scaffold:
                 strand.color = default_scaffold_color
@@ -3418,7 +3508,7 @@ class Design(_JSONSerializable):
                 strand.color = next(self.color_cycler)
 
     @staticmethod
-    def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Python 3.6 support dropped
+    def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the file with the given name.
 
@@ -3430,7 +3520,7 @@ class Design(_JSONSerializable):
         return Design.from_scadnano_json_str(json_str)
 
     @staticmethod
-    def from_scadnano_json_str(json_str: str) -> 'Design':  # remove quotes when Python 3.6 support dropped
+    def from_scadnano_json_str(json_str: str) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the given JSON string.
 
@@ -3445,7 +3535,7 @@ class Design(_JSONSerializable):
             raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {e}')
 
     @staticmethod
-    def _check_mutually_exclusive_fields(json_map: dict):
+    def _check_mutually_exclusive_fields(json_map: dict) -> None:
         exclusive_pairs = [
             (grid_key, groups_key),
             (helices_view_order_key, groups_key),
@@ -3456,7 +3546,7 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def from_scadnano_json_map(
-            json_map: dict) -> 'Design':  # remove quotes when Python 3.6 support dropped
+            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
@@ -3541,7 +3631,7 @@ class Design(_JSONSerializable):
             geometry=geometry,
         )
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs):
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Any = OrderedDict()
         dct[version_key] = __version__
 
@@ -3593,9 +3683,11 @@ class Design(_JSONSerializable):
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
         for helix_list_order, helix in enumerate(self.helices.values()):
-            helix_json = dct[helices_key][helix_list_order]
-            if suppress_indent and hasattr(helix_json, 'value'):
-                helix_json = helix_json.value  # get past NoIndent surrounding helix, if it is there
+            helix_json_maybe: Union[NoIndent, Dict[str, Any]] = dct[helices_key][helix_list_order]
+            if isinstance(helix_json_maybe, NoIndent):
+                helix_json = helix_json_maybe.value  # get past NoIndent surrounding helix, if it is there
+            else:
+                helix_json = helix_json_maybe
             # XXX: no need to check here because key was already deleted by Helix.to_json_serializable
             # max_offset still needs to be checked here since it requires global knowledge of Strands
             # if 0 == helix_json[min_offset_key]:
@@ -3617,7 +3709,7 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def _normalize_helices_as_dict(helices: Union[List[Helix], Dict[int, Helix]]) -> Dict[int, Helix]:
-        def idx_of(helix: Helix, order: int):
+        def idx_of(helix: Helix, order: int) -> int:
             return order if helix.idx is None else helix.idx
 
         if isinstance(helices, list):
@@ -3636,24 +3728,24 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def assign_modifications_to_strands(strands: List[Strand], strand_jsons: List[dict],
-                                        all_mods: Dict[str, Modification]):
+                                        all_mods: Dict[str, Modification]) -> None:
         for strand, strand_json in zip(strands, strand_jsons):
             if modification_5p_key in strand_json:
                 mod_name = strand_json[modification_5p_key]
-                strand.modification_5p = all_mods[mod_name]
+                strand.modification_5p = cast(Modification5Prime, all_mods[mod_name])
             if modification_3p_key in strand_json:
                 mod_name = strand_json[modification_3p_key]
-                strand.modification_3p = all_mods[mod_name]
+                strand.modification_3p = cast(Modification3Prime, all_mods[mod_name])
             if modifications_int_key in strand_json:
                 mod_names_by_offset = strand_json[modifications_int_key]
                 for offset_str, mod_name in mod_names_by_offset.items():
                     offset = int(offset_str)
-                    strand.modifications_int[offset] = all_mods[mod_name]
+                    strand.modifications_int[offset] = cast(ModificationInternal, all_mods[mod_name])
 
     @staticmethod
-    def _cadnano_v2_import_find_5_end(vstrands, strand_type: str, helix_num: int, base_id: int,
+    def _cadnano_v2_import_find_5_end(vstrands: VStrands, strand_type: str, helix_num: int, base_id: int,
                                       id_from: int,
-                                      base_from: int):
+                                      base_from: int) -> Tuple[int, int]:
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
         """
@@ -3666,11 +3758,13 @@ class Design(_JSONSerializable):
         return id_from_before, base_from_before
 
     @staticmethod
-    def _cadnano_v2_import_find_strand_color(vstrands, strand_type: str, strand_5_end_base: int,
-                                             strand_5_end_helix: int):
-        """ Routines which finds the color of a cadnano v2 strand. """
-        color = default_scaffold_color
+    def _cadnano_v2_import_find_strand_color(vstrands: VStrands, strand_type: str, strand_5_end_base: int,
+                                             strand_5_end_helix: int) -> Color:
+        """Routine that finds the color of a cadnano v2 strand."""
+        color: Color = default_scaffold_color
         if strand_type == 'stap':
+            base_id: int
+            stap_color: int
             for base_id, stap_color in vstrands[strand_5_end_helix]['stap_colors']:
                 if base_id == strand_5_end_base:
                     color = Color.from_cadnano_v2_int_hex(stap_color)
@@ -3678,30 +3772,33 @@ class Design(_JSONSerializable):
         return color
 
     @staticmethod
-    def _cadnano_v2_import_extract_deletions(skip_table, start, end):
+    def _cadnano_v2_import_extract_deletions(skip_table: Dict[int, Any], start: int, end: int) -> List[int]:
         """ Routines which converts cadnano skips to scadnano deletions """
-        to_return = []
+        to_return: List[int] = []
         for base_id in range(start, end):
             if skip_table[base_id] == -1:
                 to_return.append(base_id)
         return to_return
 
     @staticmethod
-    def _cadnano_v2_import_extract_insertions(loop_table, start, end):
+    def _cadnano_v2_import_extract_insertions(loop_table: Dict[int, Any],
+                                              start: int, end: int) -> List[Tuple[int, int]]:
         """ Routines which converts cadnano skips to scadnano insertions """
-        to_return = []
+        to_return: List[Tuple[int, int]] = []
         for base_id in range(start, end):
             if loop_table[base_id] != 0:
-                to_return.append([base_id, loop_table[base_id]])
+                to_return.append((base_id, loop_table[base_id]))
         return to_return
 
     @staticmethod
-    def _cadnano_v2_import_explore_domains(vstrands, seen, strand_type: str, strand_5_end_base: int,
-                                           strand_5_end_helix: int):
+    def _cadnano_v2_import_explore_domains(vstrands: VStrands, seen: Dict[Tuple[int, int], bool],
+                                           strand_type: str,
+                                           strand_5_end_base: int,
+                                           strand_5_end_helix: int) -> List[Domain]:
         """Finds all domains of a cadnano v2 strand. """
         curr_helix = strand_5_end_helix
         curr_base = strand_5_end_base
-        domains = []
+        domains: List[Domain] = []
 
         direction_forward = (strand_type == 'scaf' and curr_helix % 2 == 0) or (
             (strand_type == 'stap' and curr_helix % 2 == 1))
@@ -3743,9 +3840,10 @@ class Design(_JSONSerializable):
         return domains
 
     @staticmethod
-    def _cadnano_v2_import_explore_strand(vstrands, strand_type: str, seen,
+    def _cadnano_v2_import_explore_strand(vstrands: VStrands,
+                                          strand_type: str, seen: Dict[Tuple[int, int], bool],
                                           helix_num: int,
-                                          base_id: int):
+                                          base_id: int) -> Optional[Strand]:
         """ Routine that will follow a cadnano v2 strand accross helices and create
             cadnano domains and strand accordingly.
         """
@@ -3765,27 +3863,32 @@ class Design(_JSONSerializable):
         strand_color = Design._cadnano_v2_import_find_strand_color(vstrands, strand_type,
                                                                    strand_5_end_base,
                                                                    strand_5_end_helix)
-        domains = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
-                                                            strand_5_end_base,
-                                                            strand_5_end_helix)
-        strand = Strand(domains=domains, is_scaffold=(strand_type == 'scaf'), color=strand_color)
+        domains: Sequence[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
+                                                                              strand_5_end_base,
+                                                                              strand_5_end_helix)
+        domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
+                                domains)  # type: ignore
+        strand = Strand(domains=domains_loopouts, is_scaffold=(strand_type == 'scaf'), color=strand_color)
 
         return strand
 
-    # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_cadnano_v2(directory: str = None, filename: str = None, json_dict: dict = None) -> 'Design':
+    def from_cadnano_v2(directory: Optional[str] = None, filename: Optional[str] = None,
+                        json_dict: Optional[dict] = None) -> 'Design':
         """
         Creates a Design from a cadnano v2 file.
         """
 
-        if json_dict is None:
+        if json_dict is None and filename is not None and directory is not None:
             file_path = os.path.join(directory, filename)
             f = open(file_path, 'r')
             cadnano_v2_design = json.load(f)
             f.close()
-        else:
+        elif json_dict is not None:
             cadnano_v2_design = json_dict
+        else:
+            raise ValueError('must have json_dict None and filename/directory not None, or vice versa')
 
         num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
         grid_type = Grid.square
@@ -3808,7 +3911,7 @@ class Design(_JSONSerializable):
             helices[num] = helix
 
         # We do a DFS on strands
-        seen = {'scaf': {}, 'stap': {}}
+        seen: Dict[str, dict] = {'scaf': {}, 'stap': {}}
         strands: List[Strand] = []
         cadnano_helices = OrderedDict({})
         for cadnano_helix in cadnano_v2_design['vstrands']:
@@ -3907,7 +4010,7 @@ class Design(_JSONSerializable):
         """
         return StrandBuilder(self, helix, offset)
 
-    def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249):
+    def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
@@ -3921,13 +4024,14 @@ class Design(_JSONSerializable):
                     scaffold = strand
         if num_scafs == 0:
             raise IllegalDesignError(
-                'Tried to assign DNA to scaffold, but there is no scaffold strand. '
+                'Tried to assign DNA to scaffold, but there is no scaffold strand.\n'
                 'You must set strand.is_scaffold to True for exactly one strand.')
         elif num_scafs > 1:
             raise IllegalDesignError(
-                'Tried to assign DNA to scaffold, but there are multiple scaffold '
-                'strands. You must set strand.is_scaffold to True for exactly one '
-                'strand.')
+                'Tried to assign DNA to scaffold, but there are multiple scaffold strands.\n'
+                'You must set strand.is_scaffold to True for exactly one strand.')
+        if scaffold is None:
+            raise AssertionError('we counted; there is exactly one scaffold')
         self.assign_dna(scaffold, m13(rotation, variant))
 
     @staticmethod
@@ -3935,7 +4039,7 @@ class Design(_JSONSerializable):
         return y if y % x == 0 else y + (x - y % x)
 
     @staticmethod
-    def _cadnano_v2_place_strand_segment(helix_dct, domain: Domain,
+    def _cadnano_v2_place_strand_segment(helix_dct: Dict[str, Any], domain: Domain,
                                          strand_type: str = 'scaf') -> None:
         """Converts a strand region with no crossover to cadnano v2.
         """
@@ -3971,7 +4075,7 @@ class Design(_JSONSerializable):
         return
 
     @staticmethod
-    def _cadnano_v2_place_crossover(helix_from_dct: dict, helix_to_dct: dict,
+    def _cadnano_v2_place_crossover(helix_from_dct: Dict[str, Any], helix_to_dct: Dict[str, Any],
                                     domain_from: Domain, domain_to: Domain,
                                     strand_type: str = 'scaf') -> None:
         """Converts a crossover to cadnano v2 format.
@@ -4007,34 +4111,41 @@ class Design(_JSONSerializable):
             strand_type = 'scaf'
 
         for i, domain in enumerate(strand.domains):
+            if isinstance(domain, Loopout):
+                raise ValueError(f'cannot convert Strand {strand} to cadnanov2 format, since it has Loopouts')
+
             which_helix_id = helices_ids_reverse[domain.helix]
             which_helix = dct['vstrands'][which_helix_id]
 
             if strand_type == 'stap':
-                which_helix['stap_colors'].append(self._cadnano_v2_color_of_stap(strand.color, domain))
+                color = strand.color if strand.color is not None else Color(0, 0, 0)
+                which_helix['stap_colors'].append(self._cadnano_v2_color_of_stap(color, domain))
 
             self._cadnano_v2_place_strand_segment(which_helix, domain, strand_type)
 
             if i != len(strand.domains) - 1:
                 next_domain = strand.domains[i + 1]
+                if isinstance(next_domain, Loopout):
+                    raise ValueError(
+                        f'cannot convert Strand {strand} to cadnanov2 format, since it has Loopouts')
                 next_helix_id = helices_ids_reverse[next_domain.helix]
                 next_helix = dct['vstrands'][next_helix_id]
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int) -> dict:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) ->  Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
         for i, helix in self.helices.items():
-            helix_dct = OrderedDict()
+            helix_dct: Dict[str, Any] = OrderedDict()
             helix_dct['num'] = helix.idx
 
-            if self.grid == Grid.square:
+            if design_grid == Grid.square:
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
 
-            if self.grid == Grid.honeycomb:
+            if design_grid == Grid.honeycomb:
                 helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
@@ -4056,16 +4167,29 @@ class Design(_JSONSerializable):
             dct['vstrands'].append(helix_dct)
         return helices_ids_reverse
 
-    def to_cadnano_v2(self):
+    def to_cadnano_v2(self) -> Dict[str, Any]:
         """Converts the design to the cadnano v2 format.
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
         """
-        dct = OrderedDict()
+        dct: Dict[str, Any] = OrderedDict()
         dct['vstrands'] = []
 
-        if self.__class__ != Design:
-            raise ValueError(
-                'Please export DNAOrigamiDesign only as we need to know which strand is the scaffold.')
+        '''Check if helix group are used or if only one grid is used'''
+        design_grid = None
+        if self._has_default_groups():
+            design_grid = self.grid
+        else:
+            gridUsed = {}
+            grid_type = None
+            for group_name in self.groups:
+                gridUsed[self.groups[group_name].grid] = True
+                grid_type = self.groups[group_name].grid
+            if len(gridUsed) > 1:
+                raise ValueError('Designs using helix groups can be exported to cadnano v2 \
+                    only if all groups share the same grid type.')
+            else:
+                design_grid = grid_type
+                
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -4075,11 +4199,13 @@ class Design(_JSONSerializable):
         '''
         num_bases = 0
         for helix in self.helices.values():
+            if helix.max_offset is None:
+                raise ValueError('must have helix.max_offset set')
             num_bases = max(num_bases, helix.max_offset)
 
-        if self.grid == Grid.square:
+        if design_grid == Grid.square:
             num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
-        elif self.grid == Grid.honeycomb:
+        elif design_grid == Grid.honeycomb:
             num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
         else:
             raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
@@ -4092,17 +4218,17 @@ class Design(_JSONSerializable):
         for strand in self.strands:
             if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
                 for domain in strand.domains:
-                    if type(domain) == Loopout:
+                    if isinstance(domain, Loopout):
                         raise ValueError(
                             'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
                     if domain.helix % 2 != int(not domain.forward):
-                        raise ValueError('We can only convert designs where even helices have the scaffold \
-                                              going forward and odd helices have the scaffold going backward see the spec v2.txt Note 4. {}'.format(
-                            domain))
+                        raise ValueError('We can only convert designs where even helices have the scaffold'
+                                         'going forward and odd helices have the scaffold going backward see '
+                                         f'the spec v2.txt Note 4. {domain}')
 
         '''Filling the helices with blank.
         '''
-        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases)
+        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases, design_grid)
         '''Putting the scaffold in place.
         '''
 
@@ -4111,7 +4237,7 @@ class Design(_JSONSerializable):
 
         return dct
 
-    def set_helices_view_order(self, helices_view_order: List[int]):
+    def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
         Sets helices_view_order.
 
@@ -4172,17 +4298,20 @@ class Design(_JSONSerializable):
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that begin (have their 5' end)
         on the :any:`Helix` with index `helix`."""
-        return [strand for strand in self.strands if strand.domains[0].helix == helix]
+        return [strand for strand in self.strands
+                if isinstance(strand.domains[0], Domain) and strand.domains[0].helix == helix]
 
     def strands_ending_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that finish (have their 3' end)
         on the :any:`Helix` with index `helix`."""
-        return [strand for strand in self.strands if strand.domains[-1].helix == helix]
+        return [strand for strand in self.strands
+                if isinstance(strand.domains[-1], Domain) and strand.domains[-1].helix == helix]
 
     def _check_legal_design(self) -> None:
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
+        self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
         self._warn_if_strand_names_not_unique()
 
@@ -4197,7 +4326,7 @@ class Design(_JSONSerializable):
                           f'helix.max_offset = {helix.max_offset}'
                 raise IllegalDesignError(err_msg)
 
-    def _check_strands_overlap_legally(self, domain_to_check: Domain = None):
+    def _check_strands_overlap_legally(self, domain_to_check: Optional[Domain] = None) -> None:
         """If `Domain_to_check` is None, check all.
         Otherwise only check pairs where one is domain_to_check."""
 
@@ -4245,52 +4374,59 @@ class Design(_JSONSerializable):
                         if d_first.forward == d_second.forward:
                             raise IllegalDesignError(err_msg(d_first, d_second, helix_idx))
 
-    def _check_loopouts_not_consecutive_or_singletons_or_zero_length(self):
+    def _check_loopouts_not_consecutive_or_singletons_or_zero_length(self) -> None:
         for strand in self.strands:
             Design._check_loopout_not_singleton(strand)
             Design._check_two_consecutive_loopouts(strand)
             Design._check_loopouts_length(strand)
 
+    def _check_loopouts_not_first_or_last_substrand(self) -> None:
+        for strand in self.strands:
+            if isinstance(strand.first_domain(), Loopout):
+                raise StrandError(strand, 'strand cannot have a Loopout as its first domain')
+            if isinstance(strand.last_domain(), Loopout):
+                raise StrandError(strand, 'strand cannot have a Loopout as its last domain')
+
     @staticmethod
-    def _check_loopout_not_singleton(strand: Strand):
-        if len(strand.domains) == 1 and strand.first_domain().is_loopout():
+    def _check_loopout_not_singleton(strand: Strand) -> None:
+        if len(strand.domains) == 1 and isinstance(strand.first_domain(), Loopout):
             raise StrandError(strand, 'strand cannot have a single Loopout as its only domain')
 
     @staticmethod
-    def _check_two_consecutive_loopouts(strand: Strand):
+    def _check_two_consecutive_loopouts(strand: Strand) -> None:
         for domain1, domain2 in _pairwise(strand.domains):
-            if domain1.is_loopout() and domain2.is_loopout():
+            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
                 raise StrandError(strand, 'cannot have two consecutive Loopouts in a strand')
 
     @staticmethod
-    def _check_loopouts_length(strand: Strand):
+    def _check_loopouts_length(strand: Strand) -> None:
         for loopout in strand.domains:
-            if loopout.is_loopout() and loopout.length <= 0:
+            if isinstance(loopout, Loopout) and loopout.length <= 0:
                 raise StrandError(strand, f'loopout length must be positive but is {loopout.length}')
 
-    def _check_strands_reference_helices_legally(self):
+    def _check_strands_reference_helices_legally(self) -> None:
         # ensure each strand refers to an existing helix
         for strand in self.strands:
             self._check_strand_references_legal_helices(strand)
             self._check_strand_has_legal_offsets_in_helices(strand)
 
-    def _check_strand_references_legal_helices(self, strand: Strand):
+    def _check_strand_references_legal_helices(self, strand: Strand) -> None:
         for domain in strand.domains:
-            if domain.is_domain() and domain.helix not in self.helices:
+            if isinstance(domain, Domain) and domain.helix not in self.helices:
                 err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
                           f"here is the list of valid helices: {self._helices_to_string()}"
                 raise StrandError(strand, err_msg)
 
-    def _check_strand_has_legal_offsets_in_helices(self, strand: Strand):
+    def _check_strand_has_legal_offsets_in_helices(self, strand: Strand) -> None:
         for domain in strand.domains:
-            if domain.is_domain():
+            if isinstance(domain, Domain):
                 helix = self.helices[domain.helix]
-                if domain.start < helix.min_offset:
+                if helix.min_offset is not None and domain.start < helix.min_offset:
                     err_msg = f"domain {domain} has start offset {domain.start}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
                     raise StrandError(strand, err_msg)
-                if domain.end > helix.max_offset:
+                if helix.max_offset is not None and domain.end > helix.max_offset:
                     err_msg = f"domain {domain} has end offset {domain.end}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
@@ -4298,12 +4434,12 @@ class Design(_JSONSerializable):
 
         # ensure helix_idx's are never negative twice in a row
         for domain1, domain2 in _pairwise(strand.domains):
-            if domain1.is_loopout() and domain2.is_loopout():
+            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
                 err_msg = f"Loopouts {domain1} and {domain2} are consecutive on strand {strand}. " \
                           f"At least one of any consecutive pair must be a Domain, not a Loopout."
                 raise StrandError(strand, err_msg)
 
-    def set_helix_idx(self, old_idx: int, new_idx: int):
+    def set_helix_idx(self, old_idx: int, new_idx: int) -> None:
         if new_idx in self.helices:
             raise IllegalDesignError(f'cannot assign idx {new_idx} to helix {old_idx}; '
                                      'another helix already has that index')
@@ -4314,7 +4450,7 @@ class Design(_JSONSerializable):
         for domain in helix.domains:
             domain.helix = new_idx
 
-    def domain_at(self, helix: int, offset: int, forward: bool):
+    def domain_at(self, helix: int, offset: int, forward: bool) -> Optional[Domain]:
         """
         Return :any:`Domain` that overlaps `offset` on helix with idx `helix` and has
         :py:data:`Domain.forward` = ``True``, or ``None`` if there is no such :any:`Domain`.
@@ -4343,7 +4479,7 @@ class Design(_JSONSerializable):
         return domains_on_helix
 
     # TODO: add_strand and insert_domain should check for existing deletions/insertion parallel strands
-    def add_strand(self, strand: Strand):
+    def add_strand(self, strand: Strand) -> None:
         """Add `strand` to this design."""
         self._check_strand_references_legal_helices(strand)
         self.strands.append(strand)
@@ -4354,14 +4490,14 @@ class Design(_JSONSerializable):
         if self.automatically_assign_color:
             self._assign_color_to_strand(strand)
 
-    def remove_strand(self, strand: Strand):
+    def remove_strand(self, strand: Strand) -> None:
         """Remove `strand` from this design."""
         self.strands.remove(strand)
         for domain in strand.domains:
             if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
-    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
         """
         Same as :any:`Design.insert_domain`, but inserts at end.
 
@@ -4370,11 +4506,11 @@ class Design(_JSONSerializable):
         """
         self.insert_domain(strand, len(strand.domains), domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]):
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]) -> None:
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``design.insert_domain(strand, domain, 0)``
         inserts ``domain`` as the new first :any:`Domain`."""
-        if domain.is_domain() and domain.helix not in self.helices:
+        if isinstance(domain, Domain) and domain.helix not in self.helices:
             err_msg = f"domain {domain} refers to nonexistent Helix index {domain.helix}; " \
                       f"here is the list of valid helices: {self._helices_to_string()}"
             raise StrandError(strand, err_msg)
@@ -4383,23 +4519,23 @@ class Design(_JSONSerializable):
         strand.insert_domain(order, domain)
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
-        if domain.is_domain():
+        if isinstance(domain, Domain):
             self.helices[domain.helix].domains.append(domain)
             self._check_strands_overlap_legally(domain_to_check=domain)
 
-    def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]):
+    def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
         """Remove `Domain` from `strand`."""
         assert strand in self.strands
         strand.remove_domain(domain)
-        if domain.is_domain():
+        if isinstance(domain, Domain):
             self.helices[domain.helix].domains.remove(domain)
 
-    def _build_domains_on_helix_lists(self):
+    def _build_domains_on_helix_lists(self) -> None:
         for helix in self.helices.values():
             helix._domains = []
         for strand in self.strands:
             for domain in strand.domains:
-                if domain.is_domain():
+                if isinstance(domain, Domain):
                     if domain.helix in self.helices:
                         self.helices[domain.helix].domains.append(domain)
                     else:
@@ -4407,7 +4543,7 @@ class Design(_JSONSerializable):
                               f"is the list of helix indices: {self._helices_to_string()}"
                         raise StrandError(strand=strand, the_cause=msg)
 
-    def _helices_to_string(self):
+    def _helices_to_string(self) -> str:
         return ', '.join(map(str, self.helices.keys()))
 
     @_docstring_parameter(default_extension=default_scadnano_file_extension)
@@ -4434,7 +4570,7 @@ class Design(_JSONSerializable):
     #  on the helix at that position, as well as updating the end offset of the domain (and subsequent
     #  domains on the same helix)
 
-    def add_deletion(self, helix: int, offset: int):
+    def add_deletion(self, helix: int, offset: int) -> None:
         """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""
         domains = self.domains_at(helix, offset)
         if len(domains) == 0:
@@ -4443,7 +4579,7 @@ class Design(_JSONSerializable):
             if domain.contains_offset(offset):
                 domain.deletions.append(offset)
 
-    def add_insertion(self, helix: int, offset: int, length: int):
+    def add_insertion(self, helix: int, offset: int, length: int) -> None:
         """Adds an insertion with the given length to every :class:`scadnano.Strand`
         at the given helix and base offset, with the given length."""
         domains = self.domains_at(helix, offset)
@@ -4453,36 +4589,36 @@ class Design(_JSONSerializable):
             if domain.contains_offset(offset):
                 domain.insertions.append((offset, length))
 
-    def set_start(self, domain: Domain, start: int):
+    def set_start(self, domain: Domain, start: int) -> None:
         """Sets ``Domain.start`` to `start`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_start(start)
         self._check_strands_overlap_legally(domain)
 
-    def set_end(self, domain: Domain, end: int):
+    def set_end(self, domain: Domain, end: int) -> None:
         """Sets ``Domain.end`` to `end`."""
         assert domain in (domain for strand in self.strands for domain in strand.domains)
         domain.set_end(end)
         self._check_strands_overlap_legally(domain)
 
-    def move_strand_offsets(self, delta: int):
+    def move_strand_offsets(self, delta: int) -> None:
         """Moves all strands backward (if `delta` < 0) or forward (if `delta` > 0) by `delta`."""
         for strand in self.strands:
-            for domain in strand.domains:
+            for domain in strand.bound_domains():
                 domain.start += delta
                 domain.end += delta
         self._check_strands_overlap_legally()
 
-    def move_strands_on_helices(self, delta: int):
+    def move_strands_on_helices(self, delta: int) -> None:
         """Moves all strands up (if `delta` < 0) or down (if `delta` > 0) by the number of helices given by
         `delta`."""
         for strand in self.strands:
-            for domain in strand.domains:
+            for domain in strand.bound_domains():
                 domain.helix += delta
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout] = None, check_length: bool = False):
+                   domain: Union[Domain, Loopout] = None, check_length: bool = False) -> None:
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -4580,7 +4716,9 @@ class Design(_JSONSerializable):
             # allow a partial assignment to one domain to automatically assign the complement to the
             # bound domain.
             # However, if there are no wildcards in the assigned sequence we can safely skip strand.
-            if strand == other_strand and DNA_base_wildcard not in strand.dna_sequence:
+            if strand == other_strand \
+                    and strand.dna_sequence is not None \
+                    and DNA_base_wildcard not in strand.dna_sequence:
                 continue
             if other_strand.overlaps(strand):
                 # we do this even if other_strand has a complete DNA sequence,
@@ -4611,10 +4749,13 @@ class Design(_JSONSerializable):
         added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
                                           export_non_modified_strand_version)
 
-        idt_lines = [
-            delimiter.join(
-                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification])
-            for strand in added_strands.values()]
+        idt_lines: List[str] = []
+        for strand in added_strands.values():
+            if strand.idt is None:
+                raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
+            idt_lines.append(delimiter.join(
+                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification]
+            ))
 
         idt_string = '\n'.join(idt_lines)
         return idt_string
@@ -4627,6 +4768,9 @@ class Design(_JSONSerializable):
                 name = strand.idt.name
                 if name in added_strands:
                     existing_strand = added_strands[name]
+                    if existing_strand.idt is None:
+                        raise ValueError(f'cannot export strand {existing_strand} '
+                                         f'to IDT because it has no IDT field')
                     assert existing_strand.idt.name == name
                     domain = strand.first_domain()
                     existing_domain = existing_strand.first_domain()
@@ -4662,7 +4806,7 @@ class Design(_JSONSerializable):
                             f'{existing_domain.offset_5p()}\n')
                 added_strands[name] = strand
                 if export_non_modified_strand_version:
-                    added_strands[name + '_nomods'] = strand.unmodified_version()
+                    added_strands[name + '_nomods'] = strand.no_modifications_version()
             elif warn_on_non_idt_strands and not strand.is_scaffold:
                 print(f"WARNING: strand with 5' end at (helix, offset) "
                       f"({strand.first_domain().helix}, {strand.first_domain().offset_5p()}) "
@@ -4672,7 +4816,7 @@ class Design(_JSONSerializable):
     def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, extension: str = None,
                                   delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
-                                  export_non_modified_strand_version: bool = False):
+                                  export_non_modified_strand_version: bool = False) -> None:
         """Write ``.idt`` text file encoding the strands of this :any:`Design` with the field
         :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
@@ -4709,7 +4853,7 @@ class Design(_JSONSerializable):
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
                                    use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
-                                   export_non_modified_strand_version: bool = False):
+                                   export_non_modified_strand_version: bool = False) -> None:
         """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
         :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
@@ -4753,7 +4897,7 @@ class Design(_JSONSerializable):
                                        warn_using_default_plates=warn_using_default_plates)
 
     def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: Optional[str],
-                                                       idt_strands: List[Strand]):
+                                                       idt_strands: List[Strand]) -> None:
         plates = list({strand.idt.plate for strand in idt_strands if strand.idt is not None if
                        strand.idt.plate is not None})
         if len(plates) == 0:
@@ -4770,9 +4914,11 @@ class Design(_JSONSerializable):
             strands_in_plate = [strand for strand in idt_strands if
                                 strand.idt is not None and strand.idt.plate == plate]
 
-            strands_in_plate.sort(key=lambda s: (int(s.idt.well[1:]), s.idt.well[0]))
+            strands_in_plate.sort(key=lambda s: (int(s.idt.well[1:]), s.idt.well[0]))  # type: ignore
 
             for row, strand in enumerate(strands_in_plate):
+                if strand.idt is None:
+                    raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
                 worksheet.write(row + 1, 0, strand.idt.well)
                 worksheet.write(row + 1, 1, strand.idt.name)
                 worksheet.write(row + 1, 2, strand.idt_dna_sequence())
@@ -4780,7 +4926,7 @@ class Design(_JSONSerializable):
             workbook.save(filename_plate)
 
     @staticmethod
-    def _add_new_excel_plate_sheet(plate_name: str, workbook):
+    def _add_new_excel_plate_sheet(plate_name: str, workbook: Any) -> Any:
         worksheet = workbook.add_sheet(plate_name)
         worksheet.write(0, 0, 'Well Position')
         worksheet.write(0, 1, 'Name')
@@ -4788,8 +4934,8 @@ class Design(_JSONSerializable):
         return worksheet
 
     @staticmethod
-    def _setup_excel_file(directory: str, filename: Optional[str]):
-        import xlwt
+    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, Any]:
+        import xlwt  # type: ignore
         plate_extension = f'xls'
         if filename is None:
             filename_plate = _get_filename_same_name_as_running_python_script(
@@ -4801,7 +4947,7 @@ class Design(_JSONSerializable):
 
     def _write_plates_default(self, directory: str, filename: Optional[str], idt_strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
-                              warn_using_default_plates: bool = True):
+                              warn_using_default_plates: bool = True) -> None:
         plate_coord = _PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
@@ -4809,6 +4955,8 @@ class Design(_JSONSerializable):
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
         for strand in idt_strands:
+            if strand.idt is None:
+                raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
             if warn_using_default_plates and strand.idt.plate is not None:
                 print(
                     f"WARNING: strand {strand} has plate entry {strand.idt.plate}, which is being ignored "
@@ -4834,7 +4982,7 @@ class Design(_JSONSerializable):
         workbook.save(filename_plate)
 
     @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None):
+    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None) -> None:
         """Write ``.{default_extension}`` file representing this :any:`Design`,
         suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to
@@ -4857,6 +5005,7 @@ class Design(_JSONSerializable):
         :param extension: extension for filename (default: ``.{default_extension}``)
             Mutually exclusive with `filename`
         """
+        self._check_legal_design()
         contents = self.to_json()
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
@@ -4864,7 +5013,7 @@ class Design(_JSONSerializable):
             extension = default_scadnano_file_extension
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def export_cadnano_v2(self, directory: str = '.', filename=None):
+    def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2,
         with the output file having the same name as the running script but with ``.py`` changed to ``.json``,
         unless `filename` is explicitly specified.
@@ -4887,7 +5036,7 @@ class Design(_JSONSerializable):
 
         _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
 
-    def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True):
+    def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
         in direction given by `forward`, at offset `offset`. The two :any:`Domain`'s created by this nick
         will have 5'/3' ends at offsets `offset` and `offset-1`.
@@ -4941,39 +5090,45 @@ class Design(_JSONSerializable):
             domain_to_add_before = domain_right
             domain_to_add_after = domain_left
 
-        if strand.dna_sequence:
-            dna_sequence_before: str = ''.join(
-                domain.dna_sequence() for domain in domains_before)  # ignore: typing
-            dna_sequence_after: str = ''.join(
-                domain.dna_sequence() for domain in domains_after)  # ignore: typing
-            dna_sequence_on_domain_left = domain_to_remove.dna_sequence_in(
+        seq_before_whole: Optional[str]
+        seq_after_whole: Optional[str]
+        if strand.dna_sequence is not None:
+            seq_before: str = ''.join(domain.dna_sequence() for domain in domains_before)  # type: ignore
+            seq_after: str = ''.join(domain.dna_sequence() for domain in domains_after)  # type: ignore
+            seq_on_domain_left: str = domain_to_remove.dna_sequence_in(  # type: ignore
                 domain_to_remove.start,
                 offset - 1)
-            dna_sequence_on_domain_right = domain_to_remove.dna_sequence_in(offset,
-                                                                            domain_to_remove.end - 1)
+            seq_on_domain_right: str = domain_to_remove.dna_sequence_in(offset,  # type: ignore
+                                                                        domain_to_remove.end - 1)
             if domain_to_remove.forward:
-                dna_sequence_on_domain_before = dna_sequence_on_domain_left
-                dna_sequence_on_domain_after = dna_sequence_on_domain_right
+                seq_on_domain_before = seq_on_domain_left
+                seq_on_domain_after = seq_on_domain_right
             else:
-                dna_sequence_on_domain_before = dna_sequence_on_domain_right
-                dna_sequence_on_domain_after = dna_sequence_on_domain_left
-            dna_sequence_before_whole = dna_sequence_before + dna_sequence_on_domain_before
-            dna_sequence_after_whole = dna_sequence_on_domain_after + dna_sequence_after
+                seq_on_domain_before = seq_on_domain_right
+                seq_on_domain_after = seq_on_domain_left
+            seq_before_whole = seq_before + seq_on_domain_before
+            seq_after_whole = seq_on_domain_after + seq_after
         else:
-            dna_sequence_before_whole = None
-            dna_sequence_after_whole = None
+            seq_before_whole = None
+            seq_after_whole = None
 
         self.strands.remove(strand)
 
         idt_present = strand.idt is not None
-        strand_before = Strand(domains=domains_before + [domain_to_add_before],
-                               dna_sequence=dna_sequence_before_whole,
-                               color=strand.color, idt=strand.idt if idt_present else None)
+        strand_before = Strand(
+            domains=domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before]),  # noqa
+            dna_sequence=seq_before_whole,
+            color=strand.color,
+            idt=strand.idt if idt_present else None,
+        )
 
         color_after = next(self.color_cycler) if new_color else strand.color
-        strand_after = Strand(domains=[domain_to_add_after] + domains_after,
-                              dna_sequence=dna_sequence_after_whole,
-                              color=color_after, use_default_idt=idt_present)
+        strand_after = Strand(
+            domains=cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after,  # noqa
+            dna_sequence=seq_after_whole,
+            color=color_after,
+            use_default_idt=idt_present,
+        )
 
         self.helices[helix].domains.remove(domain_to_remove)
         self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
@@ -4981,7 +5136,7 @@ class Design(_JSONSerializable):
         self.strands.extend([strand_before, strand_after])
 
     def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
-                           offset2: int = None, forward2: bool = None):
+                           offset2: int = None, forward2: bool = None) -> None:
         """
         Add a half crossover from helix `helix` at offset `offset` to `helix2`, on the strand
         with :py:data:`Strand.forward` = `forward`.
@@ -5055,7 +5210,7 @@ class Design(_JSONSerializable):
         self.strands.append(new_strand)
 
     def add_full_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
-                           offset2: int = None, forward2: bool = None):
+                           offset2: int = None, forward2: bool = None) -> None:
         """
         Adds two half-crossovers, one at `offset` and another at `offset`-1.
         Other arguments have the same meaning as in :py:meth:`Design.add_half_crossover`.
@@ -5083,7 +5238,8 @@ class Design(_JSONSerializable):
         self.add_half_crossover(helix=helix, helix2=helix2, offset=offset, offset2=offset2,
                                 forward=forward, forward2=forward2)
 
-    def add_crossovers(self, crossovers: List['Crossover']):  # remove quotes when Python 3.6 support dropped
+    # remove quotes when Py3.6 support dropped
+    def add_crossovers(self, crossovers: List['Crossover']) -> None:
         """
         Adds a list of :any:`Crossover`'s in batch.
 
@@ -5115,7 +5271,7 @@ class Design(_JSONSerializable):
                                         forward=crossover.forward, forward2=crossover.forward2,
                                         offset=crossover.offset, offset2=crossover.offset2)
 
-    def _prepare_nicks_for_full_crossover(self, helix, forward, offset):
+    def _prepare_nicks_for_full_crossover(self, helix: int, forward: bool, offset: int) -> None:
         domain_right = self.domain_at(helix, offset, forward)
         if domain_right is None:
             raise IllegalDesignError(f'You tried to create a full crossover at '
@@ -5131,7 +5287,7 @@ class Design(_JSONSerializable):
         else:
             assert domain_left.end == domain_right.start
 
-    def inline_deletions_insertions(self):
+    def inline_deletions_insertions(self) -> None:
         """
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
         and their domains have their lengths altered. Also, major tick marks on the helices will be
@@ -5159,7 +5315,7 @@ class Design(_JSONSerializable):
         for helix in self.helices.values():
             self._inline_deletions_insertions_on_helix(helix)
 
-    def _inline_deletions_insertions_on_helix(self, helix: Helix):
+    def _inline_deletions_insertions_on_helix(self, helix: Helix) -> None:
         ###################################################
         # first gather information before changing anything
 
@@ -5188,7 +5344,9 @@ class Design(_JSONSerializable):
         ###################################################
         # now that info is gathered, start changing things
 
-        helix.max_offset += delta_length
+        if helix.max_offset is not None:
+            helix.max_offset += delta_length
+
         if len(major_ticks) > 0:
             major_tick_idx = 0
             delta_acc = 0  # accumulated delta; insertions add to this and deletions subtract from it
@@ -5215,7 +5373,7 @@ class Design(_JSONSerializable):
             domain.deletions = []
             domain.insertions = []
 
-    def reverse_all(self):
+    def reverse_all(self) -> None:
         """
         Reverses "polarity" of every :any:`Strand` in this :any:`Design`.
 
@@ -5226,38 +5384,39 @@ class Design(_JSONSerializable):
         for strand in self.strands:
             strand.reverse()
 
-    def set_major_tick_distance(self, major_tick_distance: int):
-        self.major_tick_distance = major_tick_distance
+    def set_major_tick_distance(self, major_tick_distance: int) -> None:
+        for helix in self.helices.values():
+            helix.major_tick_distance = major_tick_distance
 
-    def _ensure_helices_distinct_objects(self):
+    def _ensure_helices_distinct_objects(self) -> None:
         pair = _find_index_pair_same_object(self.helices)
-        if pair:
+        if pair is not None:
             i, j = pair
             raise IllegalDesignError('helices must all be distinct objects, but those at indices '
                                      f'{i} and {j} are the same object')
 
-    def _ensure_strands_distinct_objects(self):
+    def _ensure_strands_distinct_objects(self) -> None:
         pair = _find_index_pair_same_object(self.strands)
-        if pair:
+        if pair is not None:
             i, j = pair
             raise IllegalDesignError('strands must all be distinct objects, but those at indices '
                                      f'{i} and {j} are the same object')
 
-    def _ensure_helix_groups_exist(self):
+    def _ensure_helix_groups_exist(self) -> None:
         for helix in self.helices.values():
             if helix.group not in self.groups.keys():
                 raise IllegalDesignError(f'helix {helix.idx} has group {helix.group}, which does not '
                                          f'exist in the design. The valid groups are '
                                          f'{", ".join(self.groups.keys())}')
 
-    def _has_default_groups(self):
+    def _has_default_groups(self) -> bool:
         return len(self.groups) == 1 and default_group_name in self.groups
 
-    def _assign_default_helices_view_orders_to_groups(self):
+    def _assign_default_helices_view_orders_to_groups(self) -> None:
         for name, group in self.groups.items():
             if group.helices_view_order is None:
-                helices_in_group = {idx: helix for idx, helix in self.helices if helix.group == name}
-                group._assign_default_helices_view_order(helices_in_group)
+                helices_in_group = {idx: helix for idx, helix in self.helices.items() if helix.group == name}
+                group._assign_default_helices_view_order(helices_in_group)  # noqa
 
     def _warn_if_strand_names_not_unique(self) -> None:
         names = [strand.name for strand in self.strands if strand.name is not None]
@@ -5295,20 +5454,21 @@ def _name_of_this_script() -> str:
 
 
 def _write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                   filename=None):
+                                                   filename: Optional[str] = None) -> None:
     relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
-def _get_filename_same_name_as_running_python_script(directory, extension, filename):
+def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
+                                                     filename: Optional[str]) -> str:
     if filename is None:
         filename = _name_of_this_script() + f'.{extension}'
     relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
 
-def _create_directory_and_set_filename(directory, filename):
+def _create_directory_and_set_filename(directory: str, filename: str) -> str:
     if not os.path.exists(directory):
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
@@ -5341,13 +5501,13 @@ class Crossover:
     forward: bool
     """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
-    offset2: Optional[int] = None
+    offset2: int
     """
     offset on `helix2` at which to add half crossover. 
     If not specified, defaults to `offset`
     """
 
-    forward2: Optional[bool] = None
+    forward2: bool
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
     If not specified, defaults to the negation of `forward`
@@ -5359,7 +5519,7 @@ class Crossover:
     If not specified, defaults to ``False``.
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.offset2 is None:
             self.offset2 = self.offset
         if self.forward2 is None:
