@@ -51,5 +51,8 @@ setup(name='scadnano',
       url="https://github.com/UC-Davis-molecular-computing/scadnano-python-package",
       long_description=long_description,
       long_description_content_type='text/markdown; variant=GFM',
-      requires=['xlwt']
-      )
+      requires=['xlwt'],
+      install_requires=[
+        'dataclasses>=0.6;python_version<"3.7"'
+      ]
+)
