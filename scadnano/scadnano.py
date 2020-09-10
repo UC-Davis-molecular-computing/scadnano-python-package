@@ -4133,7 +4133,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> dict:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) ->  Dict[int, int]::
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
