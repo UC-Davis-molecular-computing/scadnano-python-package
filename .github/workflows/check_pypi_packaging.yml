@@ -7,7 +7,6 @@ on:
 
 jobs:
   check_pypi_packaging:
-    name: "Release"
     runs-on: "ubuntu-latest"
 
     steps:
