@@ -818,7 +818,7 @@ class Modification(_JSONSerializable):
 
     def __post_init__(self):
         if self.id == _default_modification_id and self.idt_text is not None:
-            object.__setattr__(self, 'id', self.id)
+            object.__setattr__(self, 'id', self.idt_text)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = {mod_display_text_key: self.display_text}
