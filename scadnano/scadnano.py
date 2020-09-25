@@ -783,7 +783,6 @@ mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 
-
 # end keys
 ##################
 
@@ -793,6 +792,8 @@ mod_allowed_bases_key = 'allowed_bases'
 
 ##########################################################################
 # modification abstract base classes
+
+_default_modification_id = "WARNING: no id assigned to modification"
 
 
 @dataclass(frozen=True, eq=True)
@@ -805,12 +806,19 @@ class Modification(_JSONSerializable):
     """Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
 
-    id: str = "WARNING: no id assigned to modification"
-    """Short representation as a string; used to write in :any:`Strand` json representation,
-    while the full description of the modification is written under a global key in the :any:`Design`."""
+    id: str = _default_modification_id
+    """
+    Representation as a string; used to write in :any:`Strand` json representation,
+    while the full description of the modification is written under a global key in the :any:`Design`.
+    If not specified, but :py:data:`Modification.idt_text` is specified, then it will be set equal to that.
+    """
 
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
+
+    def __post_init__(self):
+        if self.id == _default_modification_id and self.idt_text is not None:
+            object.__setattr__(self, 'id', self.id)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = {mod_display_text_key: self.display_text}
@@ -4133,7 +4141,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) ->  Dict[int, int]:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
@@ -4189,7 +4197,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     only if all groups share the same grid type.')
             else:
                 design_grid = grid_type
-                
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
