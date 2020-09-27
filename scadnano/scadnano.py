@@ -934,7 +934,7 @@ class Position3D(_JSONSerializable):
     Increasing `z` moves right in the side view and out of the screen in the main view."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
-        dct: Dict[str, Any] = self.__dict__
+        dct: Dict[str, Any] = dict(self.__dict__)
         # return NoIndent(dct) if suppress_indent else dct
         return dct
 
@@ -1963,7 +1963,7 @@ class IDTFields(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True,
                              **kwargs: Any) -> Union[NoIndent, Dict[str, Any]]:
-        dct: Dict[str, Any] = self.__dict__
+        dct: Dict[str, Any] = dict(self.__dict__)
         if self.plate is None:
             del dct['plate']
         if self.well is None:
@@ -2647,11 +2647,25 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             return
         self.use_default_idt = use_default_idt
         if use_default_idt:
-            start_helix = self.first_bound_domain().helix
-            end_helix = self.last_bound_domain().helix
-            start_offset = self.first_bound_domain().offset_5p()
-            end_offset = self.last_bound_domain().offset_3p()
-            self.idt = IDTFields(name=f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]')
+            if self.name is None:
+                start_helix = self.first_bound_domain().helix
+                end_helix = self.last_bound_domain().helix
+                start_offset = self.first_bound_domain().offset_5p()
+                end_offset = self.last_bound_domain().offset_3p()
+                name = f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]'
+            else:
+                name = self.name
+
+            if ((self.modification_5p is not None and self.modification_5p.idt_text != '/5Biosg/')
+                    or self.modification_3p is not None
+                    or len(self.modifications_int) > 0):
+                purification = 'PAGE'
+                scale = '100nm'
+            else:
+                purification = 'STD'
+                scale = '25nm'
+
+            self.idt = IDTFields(name=name, purification=purification, scale=scale)
         else:
             self.idt = None
 
