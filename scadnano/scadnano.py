@@ -2567,7 +2567,12 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
-        idt = json_map.get(idt_key)
+        idt_dict = json_map.get(idt_key)
+        if idt_dict is not None:
+            idt = IDTFields(**idt_dict)
+        else:
+            idt = None
+
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):
