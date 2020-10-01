@@ -816,7 +816,7 @@ class Modification(_JSONSerializable):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.id == _default_modification_id and self.idt_text is not None:
             object.__setattr__(self, 'id', self.idt_text)
 
@@ -1793,10 +1793,13 @@ class Loopout(_JSONSerializable):
     """
 
     length: int
-    """Length (in DNA bases) of this Loopout."""
+    """Length (in DNA bases) of this :any:`Loopout`."""
 
     name: Optional[str] = None
     """
+    Optional name to give this :any:`Loopout`.
+
+    This is used to interoperate with the dsd DNA sequence design package.
     """
 
     label: Any = None
@@ -1999,12 +2002,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.current_helix: int = helix
         self.current_offset: int = offset
         # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand[StrandLabel]] = None
+        self._strand: Optional[Strand[StrandLabel, DomainLabel]] = None
         self.just_moved_to_helix: bool = True
         self.last_domain: Optional[Domain[DomainLabel]] = None
 
     @property
-    def strand(self) -> 'Strand[StrandLabel]':
+    def strand(self) -> 'Strand[StrandLabel, DomainLabel]':
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
@@ -2641,8 +2644,21 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
-    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True) -> None:
-        """Sets idt field to be the default given the Domain data of this :any:`Strand`."""
+    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
+                        unique_names: bool = False) -> None:
+        """
+        Sets idt field to be the default given the Domain data of this :any:`Strand`.
+
+        Assigns name to be :py:data:`Strand.name` if it is not None, otherwise uses cadnano's naming
+        convention of, for example ST2[5]4[10] to indicate a strand that starts at helix 2, offset 5,
+        and ends at helix 4, offset 10. Note that this naming convention is not unique: two strands in 
+        the system could share this name. To ensure it is unique, set the parameter `unique_names` to True,
+        which will modify the name with forward/reverse information from the first domain that uniquely 
+        identifies the strand, e.g., ST2[5]F4[10] or ST2[5]R4[10].
+
+        Assigns purification = "STD" and scale = "25nm" if no modifications are present, or if the
+        modification has idt_text "/5Biosg/", otherwise sets purification = "PAGE" and scale = "100nm".
+        """
         if skip_scaffold and self.is_scaffold:
             return
         self.use_default_idt = use_default_idt
@@ -2652,7 +2668,10 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 end_helix = self.last_bound_domain().helix
                 start_offset = self.first_bound_domain().offset_5p()
                 end_offset = self.last_bound_domain().offset_3p()
-                name = f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]'
+                forward_str = 'F' if self.first_bound_domain().forward else 'R'
+                if not unique_names:
+                    forward_str = ''
+                name = f'ST{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
             else:
                 name = self.name
 
@@ -3890,7 +3909,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                                               strand_5_end_helix)
         domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
                                 domains)  # type: ignore
-        strand = Strand(domains=domains_loopouts, is_scaffold=(strand_type == 'scaf'), color=strand_color)
+        strand: Strand = Strand(domains=domains_loopouts,
+                                is_scaffold=(strand_type == 'scaf'), color=strand_color)
 
         return strand
 
@@ -3954,7 +3974,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     if strand is not None:
                         strands.append(strand)
 
-        design = Design(grid=grid_type, helices=helices, strands=strands)
+        design: Design = Design(grid=grid_type, helices=helices, strands=strands)
         # DD: Tristan, I commented this out because I think it's unnecessary given the way the Design
         # constructor works, and because I'm now implementing this feature:
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/121
@@ -4163,12 +4183,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helix_dct: Dict[str, Any] = OrderedDict()
             helix_dct['num'] = helix.idx
 
-            if design_grid == Grid.square:
+            if design_grid == Grid.square or design_grid == Grid.honeycomb:
+                assert helix.grid_position is not None
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
-
-            if design_grid == Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
             helix_dct['stap'] = []
@@ -4197,16 +4215,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         dct['vstrands'] = []
 
         '''Check if helix group are used or if only one grid is used'''
-        design_grid = None
         if self._has_default_groups():
             design_grid = self.grid
         else:
-            gridUsed = {}
-            grid_type = None
+            grid_used = {}
+            assert len(self.groups) > 0
+            grid_type = Grid.none
             for group_name in self.groups:
-                gridUsed[self.groups[group_name].grid] = True
+                grid_used[self.groups[group_name].grid] = True
                 grid_type = self.groups[group_name].grid
-            if len(gridUsed) > 1:
+            if len(grid_used) > 1:
                 raise ValueError('Designs using helix groups can be exported to cadnano v2 \
                     only if all groups share the same grid type.')
             else:
@@ -4307,14 +4325,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt: bool = True) -> None:
+    def set_default_idt(self, use_default_idt: bool = True, unique_names: bool = False) -> None:
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
         :any:`Design` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
         default idt field.
 
-        If ``False``, removes IDT field from each :any:`Strand`."""
+        If ``False``, removes IDT field from each :any:`Strand`.
+
+        See documentation for :py:meth:`Strand.set_default_idt` for an explanation of its function and
+        the meaning of the parameters."""
         for strand in self.strands:
-            strand.set_default_idt(use_default_idt)
+            strand.set_default_idt(use_default_idt, unique_names)
 
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that begin (have their 5' end)
@@ -5101,8 +5122,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         order = domains.index(domain_to_remove)
         domains_before = domains[:order]
         domains_after = domains[order + 1:]
-        domain_left = Domain(helix, forward, domain_to_remove.start, offset)
-        domain_right = Domain(helix, forward, offset, domain_to_remove.end)
+        domain_left: Domain[DomainLabel] = Domain(helix, forward, domain_to_remove.start, offset)
+        domain_right: Domain[DomainLabel] = Domain(helix, forward, offset, domain_to_remove.end)
 
         if domain_to_remove.forward:
             domain_to_add_before = domain_left
@@ -5136,7 +5157,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.strands.remove(strand)
 
         idt_present = strand.idt is not None
-        strand_before = Strand(
+        strand_before: Strand[StrandLabel, DomainLabel] = Strand(
             domains=domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before]),  # noqa
             dna_sequence=seq_before_whole,
             color=strand.color,
@@ -5144,7 +5165,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         )
 
         color_after = next(self.color_cycler) if new_color else strand.color
-        strand_after = Strand(
+        strand_after: Strand[StrandLabel, DomainLabel] = Strand(
             domains=cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after,  # noqa
             dna_sequence=seq_after_whole,
             color=color_after,
@@ -5223,8 +5244,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError(
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
-        new_strand = Strand(domains=new_domains, color=strand_first.color, dna_sequence=new_dna,
-                            idt=strand_first.idt)
+        new_strand: Strand[StrandLabel, DomainLabel] = Strand(domains=new_domains, color=strand_first.color,
+                                                              dna_sequence=new_dna, idt=strand_first.idt)
 
         self.strands.remove(strand_first)
         self.strands.remove(strand_last)
