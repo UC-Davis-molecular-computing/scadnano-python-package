@@ -2657,7 +2657,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         identifies the strand, e.g., ST2[5]F4[10] or ST2[5]R4[10].
 
         Assigns purification = "STD" and scale = "25nm" if no modifications are present, or if the
-        modification has idt_text "/5Biosg/", otherwise sets purification = "PAGE" and scale = "100nm".
+        modification has idt_text "/5Biosg/", otherwise sets purification = "HPLC" and scale = "100nm".
         """
         if skip_scaffold and self.is_scaffold:
             return
@@ -2678,7 +2678,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if ((self.modification_5p is not None and self.modification_5p.idt_text != '/5Biosg/')
                     or self.modification_3p is not None
                     or len(self.modifications_int) > 0):
-                purification = 'PAGE'
+                purification = 'HPLC'
                 scale = '100nm'
             else:
                 purification = 'STD'
