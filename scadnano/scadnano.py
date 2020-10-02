@@ -783,6 +783,14 @@ mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 
+# IDT keys
+idt_name_key = 'name'
+idt_scale_key = 'scale'
+idt_purification_key = 'purification'
+idt_plate_key = 'plate'
+idt_well_key = 'well'
+
+
 # end keys
 ##################
 
@@ -1973,6 +1981,15 @@ class IDTFields(_JSONSerializable):
             del dct['well']
         return NoIndent(dct)
 
+    @staticmethod
+    def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
+        name = mandatory_field(IDTFields, json_map, idt_name_key)
+        scale = mandatory_field(IDTFields, json_map, idt_scale_key)
+        purification = mandatory_field(IDTFields, json_map, idt_purification_key)
+        plate = json_map.get(idt_plate_key)
+        well = json_map.get(idt_well_key)
+        return IDTFields(name=name, scale=scale, purification=purification, plate=plate, well=well)
+
 
 def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
     if value is None:
@@ -2567,7 +2584,9 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
-        idt = json_map.get(idt_key)
+        idt_dict = json_map.get(idt_key)
+        idt = None if idt_dict is None else IDTFields.from_json(idt_dict)
+
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):

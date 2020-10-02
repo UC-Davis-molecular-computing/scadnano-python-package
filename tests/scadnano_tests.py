@@ -2749,6 +2749,25 @@ class TestJSON(unittest.TestCase):
         self.assertDictEqual(strand0_expected.label, strand0.label)
         self.assertDictEqual(strand1_expected.label, strand1.label)
 
+    def test_strand_idt(self) -> None:
+        helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], idt=sc.IDTFields(name='strand1',
+                                                                                   scale='25nm',
+                                                                                   purification='HPLC',
+                                                                                   plate='plate1',
+                                                                                   well='A2'))
+        strands = [strand0_expected]
+        design = sc.Design(helices=helices, strands=strands, grid=sc.square)
+        json_str = design.to_json()
+        design_from_json = sc.Design.from_scadnano_json_str(json_str)
+        strand0 = design_from_json.strands[0]
+        self.assertEqual(strand0_expected.idt, strand0.idt)
+        self.assertEqual('strand1', strand0.idt.name)
+        self.assertEqual('25nm', strand0.idt.scale)
+        self.assertEqual('HPLC', strand0.idt.purification)
+        self.assertEqual('plate1', strand0.idt.plate)
+        self.assertEqual('A2', strand0.idt.well)
+
     def test_domain_labels(self) -> None:
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         dom00_expected = sc.Domain(0, True, 0, 10, label='domain 00')
