@@ -1,9 +1,7 @@
 name: "Check PyPI Packaging"
 
 on:
-  push:
-    branches-ignore:
-      - "master"
+  pull_request:
 
 jobs:
   check_pypi_packaging:
