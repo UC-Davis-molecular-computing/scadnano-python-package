@@ -177,7 +177,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Running the code above produces the `.sc` JSON file shown above. The [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology) explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
+Running the code above produces a `.sc` file that, if loaded into scadnano, should appear as in the screenshot above. The [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology) explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
 
 
 ## abbreviated syntax with chained methods
