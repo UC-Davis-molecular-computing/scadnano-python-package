@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.12.2"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -930,7 +930,7 @@ class Position3D(_JSONSerializable):
 
     x: float = 0
     """x-coordinate of position. 
-    Increasing `x` moves right in the main view and into the screen in the side view."""
+    Increasing `x` moves right in the side view and out of the screen in the main view."""
 
     y: float = 0
     """y-coordinate of position.
@@ -939,7 +939,7 @@ class Position3D(_JSONSerializable):
 
     z: float = 0
     """z-coordinate of position.
-    Increasing `z` moves right in the side view and out of the screen in the main view."""
+    Increasing `z` moves right in the main view and into the screen in the side view."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Dict[str, Any] = dict(self.__dict__)
