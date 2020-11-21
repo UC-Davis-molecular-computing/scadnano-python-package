@@ -935,7 +935,8 @@ class Position3D(_JSONSerializable):
     y: float = 0
     """y-coordinate of position.
     Increasing `y` moves down in the side and main views, i.e., "screen coordinates".
-    (though this can be inverted to Cartesian coordinates, to agree with codenano)"""
+    (though this can be rotated to Cartesian coordinates, where y goes up, 
+    by selecting "invert y/z axes" in the View menu of scadnano.)"""
 
     z: float = 0
     """z-coordinate of position.
