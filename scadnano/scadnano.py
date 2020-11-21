@@ -2089,7 +2089,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
-        plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
+        plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built unless immediately
+        preceded by another call to :py:meth:`StrandBuilder.move` or :py:meth:`StrandBuilder.to`. This is a
         "relative move", whereas :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to`
         are "absolute moves".
 
