@@ -2010,8 +2010,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
 
-    :any:`StrandBuilder` should generally not be created directly or manipulated in ways other than the kind
-    of method chaining described above, or else errors could result.
+    :any:`StrandBuilder` should generally not be created directly.
+    Although it is convenient to use chained method calls, it is also sometimes useful to assign the
+    :any:`StrandBuilder` object into a variable and then call the methods on that variable.
     """
 
     # remove quotes when Py3.6 support dropped
@@ -2034,7 +2035,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
+        Add crossover. To have any effect, must be followed by call to :py:meth:`StrandBuilder.to`
+        or :py:meth:`StrandBuilder.move`.
 
         :param helix: :any:`Helix` to crossover to
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
