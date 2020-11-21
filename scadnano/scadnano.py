@@ -2099,7 +2099,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         If two instances of :py:meth:`StrandBuilder.move` are chained together, this creates two domains
         on the same helix. The two offsets must move in the same direction. In other words, if we call
-        ``.move(o1).to(o2)``, then ``o1`` and ``o2`` must be either both negative or both positive.
+        ``.move(o1).move(o2)``, then ``o1`` and ``o2`` must be either both negative or both positive.
 
         :param delta:
             Distance to new offset to extend to, compared to current offset.
