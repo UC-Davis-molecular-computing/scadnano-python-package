@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.12.2"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC
@@ -783,6 +783,13 @@ mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 
+# IDT keys
+idt_name_key = 'name'
+idt_scale_key = 'scale'
+idt_purification_key = 'purification'
+idt_plate_key = 'plate'
+idt_well_key = 'well'
+
 
 # end keys
 ##################
@@ -793,6 +800,8 @@ mod_allowed_bases_key = 'allowed_bases'
 
 ##########################################################################
 # modification abstract base classes
+
+_default_modification_id = "WARNING: no id assigned to modification"
 
 
 @dataclass(frozen=True, eq=True)
@@ -805,12 +814,19 @@ class Modification(_JSONSerializable):
     """Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
 
-    id: str = "WARNING: no id assigned to modification"
-    """Short representation as a string; used to write in :any:`Strand` json representation,
-    while the full description of the modification is written under a global key in the :any:`Design`."""
+    id: str = _default_modification_id
+    """
+    Representation as a string; used to write in :any:`Strand` json representation,
+    while the full description of the modification is written under a global key in the :any:`Design`.
+    If not specified, but :py:data:`Modification.idt_text` is specified, then it will be set equal to that.
+    """
 
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
+
+    def __post_init__(self) -> None:
+        if self.id == _default_modification_id and self.idt_text is not None:
+            object.__setattr__(self, 'id', self.idt_text)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = {mod_display_text_key: self.display_text}
@@ -914,19 +930,20 @@ class Position3D(_JSONSerializable):
 
     x: float = 0
     """x-coordinate of position. 
-    Increasing `x` moves right in the main view and into the screen in the side view."""
+    Increasing `x` moves right in the side view and out of the screen in the main view."""
 
     y: float = 0
     """y-coordinate of position.
     Increasing `y` moves down in the side and main views, i.e., "screen coordinates".
-    (though this can be inverted to Cartesian coordinates, to agree with codenano)"""
+    (though this can be rotated to Cartesian coordinates, where y goes up, 
+    by selecting "invert y/z axes" in the View menu of scadnano.)"""
 
     z: float = 0
     """z-coordinate of position.
-    Increasing `z` moves right in the side view and out of the screen in the main view."""
+    Increasing `z` moves right in the main view and into the screen in the side view."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
-        dct: Dict[str, Any] = self.__dict__
+        dct: Dict[str, Any] = dict(self.__dict__)
         # return NoIndent(dct) if suppress_indent else dct
         return dct
 
@@ -1785,10 +1802,13 @@ class Loopout(_JSONSerializable):
     """
 
     length: int
-    """Length (in DNA bases) of this Loopout."""
+    """Length (in DNA bases) of this :any:`Loopout`."""
 
     name: Optional[str] = None
     """
+    Optional name to give this :any:`Loopout`.
+
+    This is used to interoperate with the dsd DNA sequence design package.
     """
 
     label: Any = None
@@ -1955,12 +1975,21 @@ class IDTFields(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True,
                              **kwargs: Any) -> Union[NoIndent, Dict[str, Any]]:
-        dct: Dict[str, Any] = self.__dict__
+        dct: Dict[str, Any] = dict(self.__dict__)
         if self.plate is None:
             del dct['plate']
         if self.well is None:
             del dct['well']
         return NoIndent(dct)
+
+    @staticmethod
+    def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
+        name = mandatory_field(IDTFields, json_map, idt_name_key)
+        scale = mandatory_field(IDTFields, json_map, idt_scale_key)
+        purification = mandatory_field(IDTFields, json_map, idt_purification_key)
+        plate = json_map.get(idt_plate_key)
+        well = json_map.get(idt_well_key)
+        return IDTFields(name=name, scale=scale, purification=purification, plate=plate, well=well)
 
 
 def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
@@ -1981,8 +2010,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
 
-    :any:`StrandBuilder` should generally not be created directly or manipulated in ways other than the kind
-    of method chaining described above, or else errors could result.
+    :any:`StrandBuilder` should generally not be created directly.
+    Although it is convenient to use chained method calls, it is also sometimes useful to assign the
+    :any:`StrandBuilder` object into a variable and then call the methods on that variable.
     """
 
     # remove quotes when Py3.6 support dropped
@@ -1991,12 +2021,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.current_helix: int = helix
         self.current_offset: int = offset
         # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand[StrandLabel]] = None
+        self._strand: Optional[Strand[StrandLabel, DomainLabel]] = None
         self.just_moved_to_helix: bool = True
         self.last_domain: Optional[Domain[DomainLabel]] = None
 
     @property
-    def strand(self) -> 'Strand[StrandLabel]':
+    def strand(self) -> 'Strand[StrandLabel, DomainLabel]':
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
@@ -2005,7 +2035,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Add crossover. Must be followed by call to :py:meth:`StrandBuilder.to` to have any effect.
+        Add crossover. To have any effect, must be followed by call to :py:meth:`StrandBuilder.to`
+        or :py:meth:`StrandBuilder.move`.
 
         :param helix: :any:`Helix` to crossover to
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
@@ -2068,7 +2099,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         If two instances of :py:meth:`StrandBuilder.move` are chained together, this creates two domains
         on the same helix. The two offsets must move in the same direction. In other words, if we call
-        ``.move(o1).to(o2)``, then ``o1`` and ``o2`` must be either both negative or both positive.
+        ``.move(o1).move(o2)``, then ``o1`` and ``o2`` must be either both negative or both positive.
 
         :param delta:
             Distance to new offset to extend to, compared to current offset.
@@ -2556,7 +2587,9 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
-        idt = json_map.get(idt_key)
+        idt_dict = json_map.get(idt_key)
+        idt = None if idt_dict is None else IDTFields.from_json(idt_dict)
+
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):
@@ -2633,17 +2666,47 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
-    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True) -> None:
-        """Sets idt field to be the default given the Domain data of this :any:`Strand`."""
+    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
+                        unique_names: bool = False) -> None:
+        """
+        Sets idt field to be the default given the Domain data of this :any:`Strand`.
+
+        Assigns name to be :py:data:`Strand.name` if it is not None, otherwise uses cadnano's naming
+        convention of, for example ST2[5]4[10] to indicate a strand that starts at helix 2, offset 5,
+        and ends at helix 4, offset 10. Note that this naming convention is not unique: two strands in 
+        the system could share this name. To ensure it is unique, set the parameter `unique_names` to True,
+        which will modify the name with forward/reverse information from the first domain that uniquely 
+        identifies the strand, e.g., ST2[5]F4[10] or ST2[5]R4[10].
+
+        Assigns purification = "STD" and scale = "25nm" if no modifications are present, or if the
+        modification has idt_text "/5Biosg/", otherwise sets purification = "HPLC" and scale = "100nm".
+        """
         if skip_scaffold and self.is_scaffold:
             return
         self.use_default_idt = use_default_idt
         if use_default_idt:
-            start_helix = self.first_bound_domain().helix
-            end_helix = self.last_bound_domain().helix
-            start_offset = self.first_bound_domain().offset_5p()
-            end_offset = self.last_bound_domain().offset_3p()
-            self.idt = IDTFields(name=f'ST{start_helix}[{start_offset}]{end_helix}[{end_offset}]')
+            if self.name is None:
+                start_helix = self.first_bound_domain().helix
+                end_helix = self.last_bound_domain().helix
+                start_offset = self.first_bound_domain().offset_5p()
+                end_offset = self.last_bound_domain().offset_3p()
+                forward_str = 'F' if self.first_bound_domain().forward else 'R'
+                if not unique_names:
+                    forward_str = ''
+                name = f'ST{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
+            else:
+                name = self.name
+
+            if ((self.modification_5p is not None and self.modification_5p.idt_text != '/5Biosg/')
+                    or self.modification_3p is not None
+                    or len(self.modifications_int) > 0):
+                purification = 'HPLC'
+                scale = '100nm'
+            else:
+                purification = 'STD'
+                scale = '25nm'
+
+            self.idt = IDTFields(name=name, purification=purification, scale=scale)
         else:
             self.idt = None
 
@@ -3868,7 +3931,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                                               strand_5_end_helix)
         domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
                                 domains)  # type: ignore
-        strand = Strand(domains=domains_loopouts, is_scaffold=(strand_type == 'scaf'), color=strand_color)
+        strand: Strand = Strand(domains=domains_loopouts,
+                                is_scaffold=(strand_type == 'scaf'), color=strand_color)
 
         return strand
 
@@ -3932,7 +3996,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     if strand is not None:
                         strands.append(strand)
 
-        design = Design(grid=grid_type, helices=helices, strands=strands)
+        design: Design = Design(grid=grid_type, helices=helices, strands=strands)
         # DD: Tristan, I commented this out because I think it's unnecessary given the way the Design
         # constructor works, and because I'm now implementing this feature:
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/121
@@ -4133,7 +4197,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
-    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) ->  Dict[int, int]:
+    def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
@@ -4141,12 +4205,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helix_dct: Dict[str, Any] = OrderedDict()
             helix_dct['num'] = helix.idx
 
-            if design_grid == Grid.square:
+            if design_grid == Grid.square or design_grid == Grid.honeycomb:
+                assert helix.grid_position is not None
                 helix_dct['row'] = helix.grid_position[1]
                 helix_dct['col'] = helix.grid_position[0]
-
-            if design_grid == Grid.honeycomb:
-                helix_dct['row'], helix_dct['col'] = helix.grid_position[1], helix.grid_position[0]
 
             helix_dct['scaf'] = []
             helix_dct['stap'] = []
@@ -4175,21 +4237,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         dct['vstrands'] = []
 
         '''Check if helix group are used or if only one grid is used'''
-        design_grid = None
         if self._has_default_groups():
             design_grid = self.grid
         else:
-            gridUsed = {}
-            grid_type = None
+            grid_used = {}
+            assert len(self.groups) > 0
+            grid_type = Grid.none
             for group_name in self.groups:
-                gridUsed[self.groups[group_name].grid] = True
+                grid_used[self.groups[group_name].grid] = True
                 grid_type = self.groups[group_name].grid
-            if len(gridUsed) > 1:
+            if len(grid_used) > 1:
                 raise ValueError('Designs using helix groups can be exported to cadnano v2 \
                     only if all groups share the same grid type.')
             else:
                 design_grid = grid_type
-                
 
         '''Figuring out the type of grid.
         In cadnano v2, all helices have the same max offset 
@@ -4286,14 +4347,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt: bool = True) -> None:
+    def set_default_idt(self, use_default_idt: bool = True, unique_names: bool = False) -> None:
         """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
         :any:`Design` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
         default idt field.
 
-        If ``False``, removes IDT field from each :any:`Strand`."""
+        If ``False``, removes IDT field from each :any:`Strand`.
+
+        See documentation for :py:meth:`Strand.set_default_idt` for an explanation of its function and
+        the meaning of the parameters."""
         for strand in self.strands:
-            strand.set_default_idt(use_default_idt)
+            strand.set_default_idt(use_default_idt, unique_names)
 
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that begin (have their 5' end)
@@ -5080,8 +5144,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         order = domains.index(domain_to_remove)
         domains_before = domains[:order]
         domains_after = domains[order + 1:]
-        domain_left = Domain(helix, forward, domain_to_remove.start, offset)
-        domain_right = Domain(helix, forward, offset, domain_to_remove.end)
+        domain_left: Domain[DomainLabel] = Domain(helix, forward, domain_to_remove.start, offset)
+        domain_right: Domain[DomainLabel] = Domain(helix, forward, offset, domain_to_remove.end)
 
         if domain_to_remove.forward:
             domain_to_add_before = domain_left
@@ -5115,7 +5179,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.strands.remove(strand)
 
         idt_present = strand.idt is not None
-        strand_before = Strand(
+        strand_before: Strand[StrandLabel, DomainLabel] = Strand(
             domains=domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before]),  # noqa
             dna_sequence=seq_before_whole,
             color=strand.color,
@@ -5123,7 +5187,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         )
 
         color_after = next(self.color_cycler) if new_color else strand.color
-        strand_after = Strand(
+        strand_after: Strand[StrandLabel, DomainLabel] = Strand(
             domains=cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after,  # noqa
             dna_sequence=seq_after_whole,
             color=color_after,
@@ -5202,8 +5266,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError(
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
-        new_strand = Strand(domains=new_domains, color=strand_first.color, dna_sequence=new_dna,
-                            idt=strand_first.idt)
+        new_strand: Strand[StrandLabel, DomainLabel] = Strand(domains=new_domains, color=strand_first.color,
+                                                              dna_sequence=new_dna, idt=strand_first.idt)
 
         self.strands.remove(strand_first)
         self.strands.remove(strand_last)
