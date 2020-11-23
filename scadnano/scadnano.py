@@ -47,7 +47,7 @@ so the user must take care not to set them.
 __version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABC, ABCMeta
 import json
 import enum
 import itertools
@@ -55,7 +55,7 @@ import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
-    TypeVar, Generic
+    TypeVar, Generic, Callable
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -789,7 +789,6 @@ idt_scale_key = 'scale'
 idt_purification_key = 'purification'
 idt_plate_key = 'plate'
 idt_well_key = 'well'
-
 
 # end keys
 ##################
@@ -2196,13 +2195,38 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     # remove quotes when Py3.6 support dropped
     def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Makes Strand being built a scaffold.
+        Makes :any:`Strand` being built a scaffold.
 
         :return: self
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_scaffold(True)
+        return self
+
+    def with_idt(self, name: str, scale: str = default_idt_scale,
+                 purification: str = default_idt_purification,
+                 plate: Optional[str] = None, well: Optional[str] = None):
+        """
+        Gives :any:`IDTFields` value to :any:`Strand` being built.
+        Only a name is required; other field have reasonable default values.
+
+        :param name:
+            name of strand; required field
+        :param scale:
+            see :py:data:`IDTFields.scale`
+        :param purification:
+            see :py:data:`IDTFields.purification`
+        :param plate:
+            see :py:data:`IDTFields.plate`
+        :param well:
+            see :py:data:`IDTFields.well`
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        self._strand.idt = IDTFields(name=name, scale=scale, purification=purification,
+                                     plate=plate, well=well)
         return self
 
     # remove quotes when Py3.6 support dropped
@@ -3076,6 +3100,94 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
+
+
+# for defining comparables for strongly typed sorting
+class Comparable(metaclass=ABCMeta):
+    @abstractmethod
+    def __lt__(self, other: Any) -> bool: ...
+
+
+T = TypeVar('T')
+# CT = TypeVar('CT', bound=Comparable)
+
+# KeyFunction = Callable[[T], CT]
+KeyFunction = Callable[[T], Any]
+
+
+class StrandOrder(enum.Enum):
+    """
+    Which part of a :any:`Strand` to use for sorting in the
+    `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_
+    returned by :py:meth:`strand_order_key_function`.
+    """
+    five_prime = 0
+    """5' end of the strand"""
+
+    three_prime = 1
+    """3' end of the strand"""
+
+    five_or_three_prime = 2
+    """Either 5' end or 3' end is used, whichever is first according to the sort order."""
+
+    top_left_domain = 3
+    """The start offset of the "top-left" :any:`Domain` of the :any:`Strand`: the :any:`Domain` whose
+    :py:data:`Domain.helix` is minimal, and, among all such :any:`Domain`'s, the one with 
+    minimal :py:data:`Domain.start`."""
+
+
+def strand_order_key_function(*, column_major: bool = True, strand_order: StrandOrder) -> KeyFunction[Strand]:
+    """
+    Returns a `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_
+    indicating a sorted order for :any:`Strand`'s. Useful as a parameter for
+    :py:meth:`Design.`.
+
+    :param column_major:
+        If true, column major order is used: ordered by base offset first, then by helix.
+        Otherwise row-major order is used: ordered by helix first, then by base offset.
+    :param strand_order:
+        Which part of the strand to use as a key for the sorted order.
+        See :any:`StrandOrder` for definitions.
+    :return:
+        A `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ that can be
+        passed to :py:meth:`Design.` to specify a sorted order for the :any:`Strand`'s.
+    """
+
+    def key(strand: Strand) -> Tuple[int, int]:
+        # we'll return a tuple (helix_idx, offset) for row-major or (offset, helix_idx) for col-major.
+        helix_idx: int
+        offset: int
+
+        if strand_order == StrandOrder.five_prime:
+            helix_idx = strand.first_bound_domain().helix
+            offset = strand.first_bound_domain().offset_5p()
+        elif strand_order == StrandOrder.three_prime:
+            helix_idx = strand.last_bound_domain().helix
+            offset = strand.last_bound_domain().offset_3p()
+        elif strand_order == StrandOrder.five_or_three_prime:
+            helix_idx_5p = strand.first_bound_domain().helix
+            offset_5p = strand.first_bound_domain().offset_5p()
+            helix_idx_3p = strand.last_bound_domain().helix
+            offset_3p = strand.last_bound_domain().offset_3p()
+            if column_major:
+                offset, helix_idx = min((offset_5p, helix_idx_5p), (offset_3p, helix_idx_3p))
+            else:
+                helix_idx, offset = min((helix_idx_5p, offset_5p), (helix_idx_3p, offset_3p))
+        elif strand_order == StrandOrder.top_left_domain:
+            helix_idx = strand.first_bound_domain().helix
+            offset = strand.first_bound_domain().start
+            for domain in strand.bound_domains():
+                if (helix_idx, offset) > (domain.helix, domain.start):
+                    helix_idx, offset = domain.helix, domain.start
+        else:
+            raise ValueError(f'{strand_order} is not a valid StrandOrder')
+
+        if column_major:
+            return offset, helix_idx
+        else:
+            return helix_idx, offset
+
+    return key
 
 
 def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0) -> str:
@@ -4223,7 +4335,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             helix_dct['stap_colors'] = []
             helix_dct['scafLoop'] = []
-            helix_dct['stapLoop'] = []
+            helix_dct['stap_loop'] = []
 
             helices_ids_reverse[helix_dct['num']] = i
             dct['vstrands'].append(helix_dct)
@@ -4789,43 +4901,58 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 # because we get complementarity checks this way
                 other_strand.assign_dna_complement_from(strand)
 
-    def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
+    def to_idt_bulk_input_format(self,
+                                 delimiter: str = ',',
+                                 key: Optional[KeyFunction[Strand]] = None,
+                                 warn_duplicate_name: bool = False,
                                  warn_on_non_idt_strands: bool = False,
                                  export_non_modified_strand_version: bool = False) -> str:
-        """Return string that is written to the file in the method
-        :py:meth:`Design.write_idt_bulk_input_file`.
+        """Called by :py:meth:`Design.write_idt_bulk_input_file` to determine what string to write to
+        the file. This function can be used to get the string directly without creating a file.
 
-        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
-        scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
-
-        `export_non_modified_strand_version` specifies whether, for each strand that has modifications,
-        to also output a version of the strand with no modifications, but otherwise having the same data.
+        :param delimiter:
+             the symbol to delimit the four IDT fields name,sequence,scale,purification.
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param warn_duplicate_name:
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
+            scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+        :param export_non_modified_strand_version:
+            specifies whether, for each strand that has modifications,
+            to also output a version of the strand with no modifications, but otherwise having the same data.
+        :return:
+            string that is written to the file in the method :py:meth:`Design.write_idt_bulk_input_file`.
         """
-        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
-                                          export_non_modified_strand_version)
+        added_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
+                                          warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                          export_non_modified_strand_version=export_non_modified_strand_version)
 
         idt_lines: List[str] = []
-        for strand in added_strands.values():
+        for strand in added_strands:
             if strand.idt is None:
                 raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
             idt_lines.append(delimiter.join(
-                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification]
+                [strand.idt.name if strand.idt.name is not None else strand.name, strand.idt_dna_sequence(),
+                 strand.idt.scale, strand.idt.purification]
             ))
 
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
-    def _idt_strands(self, warn_duplicate_name: bool, warn_on_non_idt_strands: bool,
-                     export_non_modified_strand_version: bool = False) -> Dict[str, Strand]:
+    def _idt_strands(self, *,
+                     key: Optional[KeyFunction[Strand]] = None,
+                     warn_duplicate_name: bool,
+                     warn_on_non_idt_strands: bool,
+                     export_non_modified_strand_version: bool = False) -> List[Strand]:
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
             if strand.idt is not None:
@@ -4875,9 +5002,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 print(f"WARNING: strand with 5' end at (helix, offset) "
                       f"({strand.first_domain().helix}, {strand.first_domain().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
-        return added_strands
 
-    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, extension: str = None,
+        strands = list(added_strands.values())
+        if key is not None:
+            strands.sort(key=key)
+        return strands
+
+    def write_idt_bulk_input_file(self, *, directory: str = '.', filename: str = None,
+                                  key: Optional[KeyFunction[Strand]] = None,
+                                  extension: Optional[str] = None,
                                   delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False) -> None:
@@ -4891,29 +5024,46 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         If `filename` is not specified but `extension` is, then that extension is used instead of ``idt``.
         At least one of `filename` or `extension` must be ``None``.
 
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
-        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be output into the file.
-
         The string written is that returned by :meth:`Design.to_idt_bulk_input_format`.
+
+        :param directory:
+            specifies a directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+        :param filename:
+            optinoal custom filename to use (instead of currently running script)
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param extension:
+            alternate filename extension to use (instead of idt)
+        :param delimiter:
+            is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+        :param warn_duplicate_name:
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :any:`Strand.idt`. Such strands will not be output into the file.
+        :param export_non_modified_strand_version:
+            For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
+            without any modifications. The name for this :any:`Strand` is the original name with
+            '_nomods' appended to it.
         """
-        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
-                                                 export_non_modified_strand_version)
+        contents = self.to_idt_bulk_input_format(delimiter=delimiter,
+                                                 key=key,
+                                                 warn_duplicate_name=warn_duplicate_name,
+                                                 warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                                 export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
             extension = 'idt'
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_idt_plate_excel_file(self, directory: str = '.', filename: str = None,
+    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
+                                   key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
                                    use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
@@ -4928,30 +5078,44 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xls``.
 
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
-        for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
-
-        `warn_using_default_plates` specifies whether to print a warning for strands whose
-        :py:data:`Strand.idt` have the fields
-
-        `plate_type` is a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
-        if the `use_default_plates` parameter is ``True``.
-        Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
-        by the user, who is free to use coordinates for either plate type.
+        :param directory:
+            specifies a directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+        :param filename:
+            custom filename if default (explained above) is not desired
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param warn_duplicate_name:
+             if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
+            for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+        :param use_default_plates:
+            Use default values for plate and well (ignoring those in idt fields, which may be None).
+        :param warn_using_default_plates:
+            specifies whether to print a warning for strands whose
+            :py:data:`Strand.idt` have the fields
+        :param plate_type:
+            a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
+            if the `use_default_plates` parameter is ``True``.
+            Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
+            by the user, who is free to use coordinates for either plate type.
+        :param export_non_modified_strand_version:
+            For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
+            without any modifications. The name for this :any:`Strand` is the original name with
+            '_nomods' appended to it.
         """
 
-        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
-                                             export_non_modified_strand_version).values())
+        idt_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
+                                        warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                        export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
             self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
