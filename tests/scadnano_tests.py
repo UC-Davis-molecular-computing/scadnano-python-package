@@ -649,33 +649,33 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         self.design_6h: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         d = self.design_6h
 
-        d.strand(1, 0).move(16).cross(0).move(-16).with_idt('A')  # A
-        d.strand(3, 0).move(16).cross(2).move(-16).with_idt('B')  # B
-        d.strand(5, 0).move(16).cross(4).move(-16).with_idt('C')  # C
+        d.strand(1, 0).move(16).cross(0).move(-16).with_idt('A')
+        d.strand(3, 0).move(16).cross(2).move(-16).with_idt('B')
+        d.strand(5, 0).move(16).cross(4).move(-16).with_idt('C')
 
-        d.strand(0, 40).move(-24).cross(1).move(8).with_idt('D')  # D
+        d.strand(0, 40).move(-24).cross(1).move(8).with_idt('D')
 
-        d.strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_idt('E')  # E
-        d.strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_idt('F')  # F
+        d.strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_idt('E')
+        d.strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_idt('F')
 
-        d.strand(0, 72).move(-32).with_idt('G')  # G
+        d.strand(0, 72).move(-32).with_idt('G')
 
-        d.strand(2, 40).move(-8).cross(1).move(24).with_idt('H')  # H
-        d.strand(1, 56).move(8).cross(2).move(-24).with_idt('I')  # I
+        d.strand(2, 40).move(-8).cross(1).move(24).with_idt('H')
+        d.strand(1, 56).move(8).cross(2).move(-24).with_idt('I')
 
-        d.strand(4, 40).move(-8).cross(3).move(24).with_idt('J')  # J
-        d.strand(3, 56).move(8).cross(4).move(-24).with_idt('K')  # K
+        d.strand(4, 40).move(-8).cross(3).move(24).with_idt('J')
+        d.strand(3, 56).move(8).cross(4).move(-24).with_idt('K')
 
-        d.strand(5, 24).move(32).with_idt('L')  # L
+        d.strand(5, 24).move(32).with_idt('L')
 
-        d.strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_idt('M')  # M
-        d.strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_idt('N')  # N
+        d.strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_idt('M')
+        d.strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_idt('N')
 
-        d.strand(5, 56).move(24).cross(4).move(-8).with_idt('O')  # O
+        d.strand(5, 56).move(24).cross(4).move(-8).with_idt('O')
 
-        d.strand(0, 96).move(-16).cross(1).move(16).with_idt('P')  # P
-        d.strand(2, 96).move(-16).cross(3).move(16).with_idt('Q')  # Q
-        d.strand(4, 96).move(-16).cross(5).move(16).with_idt('R')  # R
+        d.strand(0, 96).move(-16).cross(1).move(16).with_idt('P')
+        d.strand(2, 96).move(-16).cross(3).move(16).with_idt('Q')
+        d.strand(4, 96).move(-16).cross(5).move(16).with_idt('R')
 
         for strand in d.strands:
             d.assign_dna(strand, 'A' * 32, assign_complement=False)
