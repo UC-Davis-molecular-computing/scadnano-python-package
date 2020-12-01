@@ -1167,7 +1167,7 @@ class Helix(_JSONSerializable):
     In the case of the hexagonal lattice, 
     The convention is that incrementing `v` moves down and to the right if h is even, 
     and moves down and to the left if `h` is odd.
-    This is the "odd-r horizontal layout" coordinate system here: 
+    This is the "odd-q" coordinate system here: 
     https://www.redblobgames.com/grids/hexagons/)
     However, the default y position in the main view for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
