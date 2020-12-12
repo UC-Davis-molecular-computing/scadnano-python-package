@@ -309,10 +309,11 @@ class Grid(str, enum.Enum):
 
     hex = "hex"
     """
-    Hexagonal lattice. Uses the *"odd-r horizontal layout"* coordinate system described here: 
+    Hexagonal lattice. Uses the *"odd-q horizontal layout"* coordinate system described here: 
     https://www.redblobgames.com/grids/hexagons/. 
-    Incrementing `v` moves down and to the right if `h` is even, 
-    and moves down and to the left if `h` is odd.
+    Incrementing `v` moves down.
+    Incrementing `h` moves down and to the right if `h` is even, 
+    and moves up and to the right if `h` is odd.
     """
 
     honeycomb = "honeycomb"
