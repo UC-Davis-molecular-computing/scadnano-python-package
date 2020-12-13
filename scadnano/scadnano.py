@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.13.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -749,6 +749,7 @@ position_origin_key = 'origin'
 
 # Strand keys
 strand_name_key = 'name'
+circular_key = 'circular'
 color_key = 'color'
 dna_sequence_key = 'sequence'
 legacy_dna_sequence_keys = ['dna_sequence']  # support legacy names for these ideas
@@ -2201,6 +2202,17 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
+    def as_circular(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Makes :any:`Strand` being built circular.
+
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        self._strand.set_circular()
+        return self
+
     # remove quotes when Py3.6 support dropped
     def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
@@ -2477,6 +2489,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     and could be either single-stranded or double-stranded, 
     whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
 
+    circular: bool = False
+    """If True, this :any:`Strand` is circular and has no 5' or 3' end. Although there is still a 
+    first and last :any:`Domain`, we interpret there to be a crossover from the 3' end of the last domain
+    to the 5' end of the first domain, and any circular permutation of :py:data:`Strand.domains` 
+    should result in a functionally equivalent :any:`Strand`. It is illegal to have a 
+    :any:`Modification5Prime` or :any:`Modification3Prime` on a circular :any:`Strand`."""
+
     dna_sequence: Optional[str] = None
     """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
     (for complementarity checking) or :any:`Strand.set_dna_sequence` 
@@ -2509,10 +2528,16 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     :any:`Design` is a scaffold, then the design is considered a DNA origami design."""
 
     modification_5p: Optional[Modification5Prime] = None
-    """5' modification; None if there is no 5' modification."""
+    """
+    5' modification; None if there is no 5' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
+    """
 
     modification_3p: Optional[Modification3Prime] = None
-    """3' modification; None if there is no 5' modification."""
+    """
+    3' modification; None if there is no 3' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
+    """
 
     modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
     """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). Maps offset to 
@@ -2574,6 +2599,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         dct: Dict[str, Any] = OrderedDict()
         if self.name is not None:
             dct[strand_name_key] = self.name
+        if self.circular:
+            dct[circular_key] = self.circular
         if self.color is not None:
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
@@ -2617,6 +2644,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
+        circular = json_map.get(circular_key, False)
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
@@ -2638,6 +2666,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return Strand(
             domains=domains,
             dna_sequence=dna_sequence,
+            circular=circular,
             color=color,
             idt=idt,
             is_scaffold=is_scaffold,
@@ -2699,6 +2728,28 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
+    def set_circular(self, circular: bool = True) -> None:
+        """
+        Sets this to be a circular :any:`Strand` (or non-circular if optional parameter is False.
+
+        :param circular:
+            whether to make this :any:`Strand` circular (True) or linear (False)
+        :raises StrandError:
+            if this :any:`Strand` has a 5' or 3' modification
+        """
+        if circular and self.modification_5p is not None:
+            raise StrandError(self, "cannot have a 5' modification on a circular strand")
+        if circular and self.modification_3p is not None:
+            raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        self.circular = circular
+
+    def set_linear(self) -> None:
+        """
+        Makes this a linear (non-circular) :any:`Strand`. Equivalent to calling
+        `self.set_circular(False)`.
+        """
+        self.set_circular(False)
+
     def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
                         unique_names: bool = False) -> None:
         """
@@ -2744,11 +2795,15 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self.idt = None
 
     def set_modification_5p(self, mod: Modification5Prime = None) -> None:
-        """Sets 5' modification to be `mod`."""
+        """Sets 5' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
+        if self.circular and mod is not None:
+            raise StrandError(self, "cannot have a 5' modification on a circular strand")
         self.modification_5p = mod
 
     def set_modification_3p(self, mod: Modification3Prime = None) -> None:
-        """Sets 3' modification to be `mod`."""
+        """Sets 3' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
+        if self.circular and mod is not None:
+            raise StrandError(self, "cannot have a 3' modification on a circular strand")
         self.modification_3p = mod
 
     def remove_modification_5p(self) -> None:

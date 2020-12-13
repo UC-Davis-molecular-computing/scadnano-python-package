@@ -3601,6 +3601,46 @@ def set_colors_black(*strands) -> None:
         strand.set_color(sc.Color(r=0, g=0, b=0))
 
 
+class TestCircularStrands(unittest.TestCase):
+
+    def setUp(self) -> None:
+        helices = [sc.Helix(max_offset=10) for _ in range(2)]
+        self.design = sc.Design(helices=helices, strands=[])
+        self.design.strand(0, 0).move(10).cross(1).move(-10)
+        self.strand = self.design.strands[0]
+        r'''
+        0  [--------\
+                    |
+        1  <--------/
+        '''
+
+    def test_can_add_internal_mod_to_circular_strand(self) -> None:
+        self.strand.set_circular()
+        self.assertEqual(True, self.strand.circular)
+        self.strand.set_modification_internal(2, mod.biotin_int)
+        self.assertEqual(1, len(self.strand.modifications_int))
+
+    def test_cannot_make_strand_circular_if_5p_mod(self) -> None:
+        self.strand.set_modification_5p(mod.biotin_5p)
+        with self.assertRaises(sc.StrandError):
+            self.strand.set_circular(True)
+
+    def test_cannot_make_strand_circular_if_3p_mod(self) -> None:
+        self.strand.set_modification_3p(mod.biotin_3p)
+        with self.assertRaises(sc.StrandError):
+            self.strand.set_circular(True)
+
+    def test_add_5p_mod_to_circular_strand(self) -> None:
+        self.strand.set_circular(True)
+        with self.assertRaises(sc.StrandError):
+            self.strand.set_modification_5p(mod.biotin_5p)
+
+    def test_add_3p_mod_to_circular_strand(self) -> None:
+        self.strand.set_circular(True)
+        with self.assertRaises(sc.StrandError):
+            self.strand.set_modification_3p(mod.biotin_3p)
+
+
 class TestAddStrand(unittest.TestCase):
 
     def test_add_strand__with_loopout(self) -> None:
