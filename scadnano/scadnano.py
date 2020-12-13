@@ -1779,12 +1779,11 @@ class Loopout(_JSONSerializable):
     One could think of a :any:`Loopout` as a type of :any:`Domain`, but none of the fields of
     :any:`Domain` make sense for :any:`Loopout`, so they are not related to each other in the type
     hierarchy. It is interpreted that a :any:`Loopout` is a single-stranded region bridging two
-    :any:`Domain`'s that are connected to :any:`Helix`'s, or if it occurs on the end of a :any:`Strand`,
-    then it is a single-stranded extension. It is illegal for two consecutive :any:`Domain`'s to both
-    be :any:`Loopout`'s, and for a :any:`Strand` to have only one element of :any:`Strand.domains`
-    that is a :any:`Loopout`.
-
-    Loopout has only a single field :py:data:`Loopout.length` that specifies the length of the loopout.
+    :any:`Domain`'s that are connected to :any:`Helix`'s.
+    It is illegal for two consecutive :any:`Domain`'s to both
+    be :any:`Loopout`'s,
+    or for a :any:`Loopout` to occur on either end of the :any:`Strand`
+    (i.e., each :any:`Strand` must begin and end with a :any:`Domain`).
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -1799,6 +1798,15 @@ class Loopout(_JSONSerializable):
         loop = sc.Loopout(length=5)
         domain_r = sc.Domain(helix=0, forward=False, start=0, end=10)
         hairpin = sc.Strand([domain_f, loop, domain_r])
+
+    It can also be created with chained method calls
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=10)])
+        design.strand(0,0).move(10).loopout(0,5).move(-10)
     """
 
     length: int
@@ -5069,7 +5077,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                    use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False) -> None:
-        """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
+        """
+        Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
         :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
         to describe a 96-well or 384-well plate
@@ -5089,7 +5098,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             order in which to output strand sequences. Some useful defaults are provided by
             :py:meth:`strand_order_key_function`
         :param warn_duplicate_name:
-             if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
             :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
