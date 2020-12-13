@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.13.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -2529,12 +2529,14 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     modification_5p: Optional[Modification5Prime] = None
     """
-    5' modification; None if there is no 5' modification. Illegal to have if :py:`Strand.circular` is True.
+    5' modification; None if there is no 5' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
     """
 
     modification_3p: Optional[Modification3Prime] = None
     """
-    3' modification; None if there is no 3' modification. Illegal to have if :py:`Strand.circular` is True.
+    3' modification; None if there is no 3' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
     """
 
     modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
