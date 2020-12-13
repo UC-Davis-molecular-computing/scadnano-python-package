@@ -5353,6 +5353,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :py:data:`Domain.start` = ``5``,
         :py:data:`Domain.end` = ``10``.
 
+        If the :any:`Strand` is circular, then it will be made linear with the 5' and 3' ends at the
+        nick position, modified in place. Otherwise, this :any:`Strand` will be deleted from the design,
+        and two new :any:`Strand`'s will be added.
+
         :param helix: index of helix where nick will occur
         :param offset: offset to nick (nick will be between offset and offset-1)
         :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
@@ -5376,6 +5380,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         domain_left: Domain[DomainLabel] = Domain(helix, forward, domain_to_remove.start, offset)
         domain_right: Domain[DomainLabel] = Domain(helix, forward, offset, domain_to_remove.end)
 
+        # "before" and "after" mean in the 5' --> 3' direction, i.e., if a reverse domain:
+        # <--------]
+        # nicked like this:
+        # <---]<---]
+        # The before domain is on the right and the after domain is on the left.
+        #
+        # If nicking a forward domain:
+        # [-------->
+        # nicked like this:
+        # [--->[--->
+        # The before domain is on the left and the after domain is on the right.
         if domain_to_remove.forward:
             domain_to_add_before = domain_left
             domain_to_add_after = domain_right
@@ -5405,28 +5420,45 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             seq_before_whole = None
             seq_after_whole = None
 
-        self.strands.remove(strand)
+        domains_before = domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before])  # noqa
+        domains_after = cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after  # noqa
 
-        idt_present = strand.idt is not None
-        strand_before: Strand[StrandLabel, DomainLabel] = Strand(
-            domains=domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before]),  # noqa
-            dna_sequence=seq_before_whole,
-            color=strand.color,
-            idt=strand.idt if idt_present else None,
-        )
+        if strand.circular:
+            # if strand is circular, we modify its domains in place
+            domains = domains_after + domains_before
+            strand.domains = domains
 
-        color_after = next(self.color_cycler) if new_color else strand.color
-        strand_after: Strand[StrandLabel, DomainLabel] = Strand(
-            domains=cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after,  # noqa
-            dna_sequence=seq_after_whole,
-            color=color_after,
-            use_default_idt=idt_present,
-        )
+            # DNA sequence was rotated, so re-assign it
+            if seq_before_whole is not None and seq_after_whole is not None:
+                seq = seq_before_whole + seq_after_whole
+                strand.set_dna_sequence(seq)
 
-        self.helices[helix].domains.remove(domain_to_remove)
-        self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
+            strand.set_circular(False)
 
-        self.strands.extend([strand_before, strand_after])
+        else:
+            # if strand is not circular, we delete it and create two new strands
+            self.strands.remove(strand)
+
+            idt_present = strand.idt is not None
+            strand_before: Strand[StrandLabel, DomainLabel] = Strand(
+                domains=domains_before,
+                dna_sequence=seq_before_whole,
+                color=strand.color,
+                idt=strand.idt if idt_present else None,
+            )
+
+            color_after = next(self.color_cycler) if new_color else strand.color
+            strand_after: Strand[StrandLabel, DomainLabel] = Strand(
+                domains=domains_after,
+                dna_sequence=seq_after_whole,
+                color=color_after,
+                use_default_idt=idt_present,
+            )
+
+            self.helices[helix].domains.remove(domain_to_remove)
+            self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
+
+            self.strands.extend([strand_before, strand_after])
 
     def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None) -> None:
@@ -5437,6 +5469,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Unlike :py:meth:`Design.add_full_crossover`, which automatically adds a nick between the two
         half-crossovers, to call this method, there must *already* be nicks adjacent to the given
         offsets on the given helices. (either on the left or right side)
+
+        If the crossover is within a :any:`Strand`, i.e., between its 5' and ' ends, the :any:`Strand`
+        will simply be made circular, modifying it in place. Otherwise, the old two :any:`Strand`'s will be
+        deleted, and a new :any:`Strand` added.
 
         :param helix: index of one helix of half crossover
         :param helix2: index of other helix of half crossover
@@ -5465,15 +5501,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand2 = domain2.strand()
 
         if strand1 == strand2:
-            raise IllegalDesignError(f"Cannot add crossover from "
-                                     f"(helix={helix}, offset={offset}) to "
-                                     f"(helix={helix2}, offset={offset2}) "
-                                     f"because that would join two Domains "
-                                     f"already on the same Strand! "
-                                     f"Currently circular Strands are not supported. "
-                                     f"Instead, try adding nicks first, or rearrange the order of "
-                                     f"crossover addition, to ensure that all strands are "
-                                     f"non-circular, even in intermediate stages.")
+            strand1.set_circular()
+            return
+            # raise IllegalDesignError(f"Cannot add crossover from "
+            #                          f"(helix={helix}, offset={offset}) to "
+            #                          f"(helix={helix2}, offset={offset2}) "
+            #                          f"because that would join two Domains "
+            #                          f"already on the same Strand! "
+            #                          f"Currently circular Strands are not supported. "
+            #                          f"Instead, try adding nicks first, or rearrange the order of "
+            #                          f"crossover addition, to ensure that all strands are "
+            #                          f"non-circular, even in intermediate stages.")
 
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1

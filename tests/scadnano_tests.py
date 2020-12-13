@@ -3601,7 +3601,10 @@ def set_colors_black(*strands) -> None:
         strand.set_color(sc.Color(r=0, g=0, b=0))
 
 
-class TestCircularStrands(unittest.TestCase):
+class TestCircularStrandsLegalMods(unittest.TestCase):
+    '''
+    Tests that circular strands cannot have 5' or 3' mods.
+    '''
 
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=10) for _ in range(2)]
@@ -3616,7 +3619,7 @@ class TestCircularStrands(unittest.TestCase):
 
     def test_can_add_internal_mod_to_circular_strand(self) -> None:
         self.strand.set_circular()
-        self.assertEqual(True, self.strand.circular)
+        self.assertTrue(self.strand.circular)
         self.strand.set_modification_internal(2, mod.biotin_int)
         self.assertEqual(1, len(self.strand.modifications_int))
 
@@ -3639,6 +3642,62 @@ class TestCircularStrands(unittest.TestCase):
         self.strand.set_circular(True)
         with self.assertRaises(sc.StrandError):
             self.strand.set_modification_3p(mod.biotin_3p)
+
+
+class TestCircularStrandEdits(unittest.TestCase):
+    '''
+    Tests that circular strand edits (nicking, ligating, adding crossovers/loopouts)
+    works properly with circular strands.
+    '''
+
+    def setUp(self) -> None:
+        helices = [sc.Helix(max_offset=10) for _ in range(2)]
+        self.design = sc.Design(helices=helices, strands=[])
+        self.design.strand(0, 0).move(10).cross(1).move(-10)
+        self.design.strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
+        self.design.strand(0, 20).move(10)
+        self.design.strand(1, 30).move(-10)
+        self.design.strand(0, 30).move(10).loopout(1, 5).move(-10)
+        self.design.strand(0, 40).move(10).cross(1).move(-10).as_circular()
+        self.num_strands = len(self.design.strands)
+        r'''
+           0          10         20         30         40
+            strand 0   strand 1   strand 2   strand 4   strand 5
+        0  [--------\ /--->[---\ [--------> [--------\ /--------\
+                    | |        |                     ) |        |
+        1  <--------/ \--------/ <--------] <--------/ \--------/
+                                  strand 3
+        '''
+
+    def test_add_crossover_from_linear_strand_to_itself_makes_it_circular(self) -> None:
+        self.design.add_half_crossover(0, 1, 0, True)
+        self.assertTrue(self.design.strands[0].circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+    def test_add_nick_to_circular_strand_makes_it_linear(self) -> None:
+        self.design.add_nick(0, 45, True)
+        self.assertFalse(self.design.strands[5].circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+        strand = self.design.strands[5]
+        self.assertEqual(3, len(strand.domains))
+        self.assertEqual(3, len(strand.bound_domains()))
+
+        d0, d1, d2 = strand.bound_domains()
+        self.assertEqual(0, d0.helix)
+        self.assertEqual(True, d0.forward)
+        self.assertEqual(45, d0.start)
+        self.assertEqual(50, d0.end)
+
+        self.assertEqual(1, d1.helix)
+        self.assertEqual(False, d1.forward)
+        self.assertEqual(40, d1.start)
+        self.assertEqual(50, d1.end)
+
+        self.assertEqual(0, d2.helix)
+        self.assertEqual(True, d2.forward)
+        self.assertEqual(40, d2.start)
+        self.assertEqual(45, d2.end)
 
 
 class TestAddStrand(unittest.TestCase):
