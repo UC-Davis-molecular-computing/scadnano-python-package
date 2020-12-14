@@ -3794,13 +3794,13 @@ class TestCircularStrandEdits(unittest.TestCase):
     '''
 
     def setUp(self) -> None:
-        helices = [sc.Helix(max_offset=10) for _ in range(2)]
+        helices = [sc.Helix(max_offset=10) for _ in range(3)]
         self.design = sc.Design(helices=helices, strands=[])
         self.design.strand(0, 0).move(10).cross(1).move(-10)
         self.design.strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
         self.design.strand(0, 20).move(10)
         self.design.strand(1, 30).move(-10)
-        self.design.strand(0, 30).move(10).loopout(1, 5).move(-10)
+        self.design.strand(0, 30).move(10).loopout(1, 5).move(-10).cross(2).move(10).as_circular()
         self.design.strand(0, 40).move(10).cross(1).move(-10).as_circular()
         self.num_strands = len(self.design.strands)
         r'''
@@ -3808,17 +3808,37 @@ class TestCircularStrandEdits(unittest.TestCase):
             strand 0   strand 1   strand 2   strand 4   strand 5
         0  [--------\ /--->[---\ [--------> [--------\ /--------\
                     | |        |                     ) |        |
-        1  <--------/ \--------/ <--------] <--------/ \--------/
-                                  strand 3
+        1  <--------/ \--------/ <--------] /--------/ \--------/
+                                  strand 3  |
+        2                                   \-------->cross to 5' end here
         '''
 
     def test_add_crossover_from_linear_strand_to_itself_makes_it_circular(self) -> None:
         # add crossover to strand 0
+        r'''
+           0
+            strand 0
+        0  /--------\
+           |        |
+        1  \--------/
+        '''
+        self.assertEqual(2, len(self.design.strands[0].domains))
+        self.assertFalse(self.design.strands[0].circular)
         self.design.add_half_crossover(0, 1, 0, True)
         self.assertTrue(self.design.strands[0].circular)
         self.assertEqual(self.num_strands, len(self.design.strands))
+        self.assertEqual(2, len(self.design.strands[0].domains))
 
-    def test_add_nick_to_circular_strand_makes_it_linear(self) -> None:
+    def test_add_nick_to_2_domain_circular_strand_makes_it_linear_nick_first_domain(self) -> None:
+        r'''
+           40
+            strand 5
+        0  /--->[---\
+           |        |
+        1  \--------/
+        '''
+        self.assertTrue(self.design.strands[5].circular)
+
         # nick strand 5
         self.design.add_nick(0, 45, True)
         self.assertFalse(self.design.strands[5].circular)
@@ -3844,14 +3864,176 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(40, d2.start)
         self.assertEqual(45, d2.end)
 
+    def test_add_nick_to_2_domain_circular_strand_makes_it_linear_nick_second_domain(self) -> None:
+        # nick strand 5
+        r'''
+           40
+            strand 5
+        0  /--------\
+           |        |
+        1  \---]<---/
+        '''
+        self.design.add_nick(1, 45, False)
+        strand = self.design.strands[5]
+        self.assertFalse(strand.circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+        self.assertEqual(3, len(strand.domains))
+        self.assertEqual(3, len(strand.bound_domains()))
+
+        d0, d1, d2 = strand.bound_domains()
+        self.assertEqual(1, d0.helix)
+        self.assertEqual(False, d0.forward)
+        self.assertEqual(40, d0.start)
+        self.assertEqual(45, d0.end)
+
+        self.assertEqual(0, d1.helix)
+        self.assertEqual(True, d1.forward)
+        self.assertEqual(40, d1.start)
+        self.assertEqual(50, d1.end)
+
+        self.assertEqual(1, d2.helix)
+        self.assertEqual(False, d2.forward)
+        self.assertEqual(45, d2.start)
+        self.assertEqual(50, d2.end)
+
+    def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_first_domain(self) -> None:
+        # nick strand 4
+        r'''
+           30         40
+            strand 4
+        0  [--->[---\
+                     ) loopout
+        1  /--------/
+           |
+        2  \-------->cross to 5' end here
+        '''
+        self.design.add_nick(0, 35, True)
+        strand = self.design.strands[4]
+        self.assertFalse(strand.circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+        self.assertEqual(5, len(strand.domains))
+        self.assertEqual(4, len(strand.bound_domains()))
+
+        d0, loopout, d1, d2, d3 = strand.domains
+        self.assertIsInstance(loopout, sc.Loopout)
+
+        self.assertEqual(0, d0.helix)
+        self.assertEqual(True, d0.forward)
+        self.assertEqual(35, d0.start)
+        self.assertEqual(40, d0.end)
+
+        self.assertEqual(1, d1.helix)
+        self.assertEqual(False, d1.forward)
+        self.assertEqual(30, d1.start)
+        self.assertEqual(40, d1.end)
+
+        self.assertEqual(2, d2.helix)
+        self.assertEqual(True, d2.forward)
+        self.assertEqual(30, d2.start)
+        self.assertEqual(40, d2.end)
+
+        self.assertEqual(0, d3.helix)
+        self.assertEqual(True, d3.forward)
+        self.assertEqual(30, d3.start)
+        self.assertEqual(35, d3.end)
+
+    def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_middle_domain(self) -> None:
+        # nick strand 4
+        r'''
+           30         40
+            strand 4
+        0  [--------\
+                     ) loopout
+        1  /---]<---/
+           |
+        2  \-------->cross to 5' end here
+        '''
+        self.design.add_nick(1, 35, False)
+        strand = self.design.strands[4]
+        self.assertFalse(strand.circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+        self.assertEqual(5, len(strand.domains))
+        self.assertEqual(4, len(strand.bound_domains()))
+
+        d0, d1, d2, loopout, d3 = strand.domains
+        self.assertIsInstance(loopout, sc.Loopout)
+
+        self.assertEqual(1, d0.helix)
+        self.assertEqual(False, d0.forward)
+        self.assertEqual(30, d0.start)
+        self.assertEqual(35, d0.end)
+
+        self.assertEqual(2, d1.helix)
+        self.assertEqual(True, d1.forward)
+        self.assertEqual(30, d1.start)
+        self.assertEqual(40, d1.end)
+
+        self.assertEqual(0, d2.helix)
+        self.assertEqual(True, d2.forward)
+        self.assertEqual(30, d2.start)
+        self.assertEqual(40, d2.end)
+
+        self.assertEqual(1, d3.helix)
+        self.assertEqual(False, d3.forward)
+        self.assertEqual(35, d3.start)
+        self.assertEqual(40, d3.end)
+
+    def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_last_domain(self) -> None:
+        # nick strand 4
+        r'''
+           30         40
+            strand 4
+        0  [--------\
+                     ) loopout
+        1  /--------/
+           |
+        2  \--->[--->cross to 5' end here
+        '''
+        self.design.add_nick(2, 35, True)
+        strand = self.design.strands[4]
+        self.assertFalse(strand.circular)
+        self.assertEqual(self.num_strands, len(self.design.strands))
+
+        self.assertEqual(5, len(strand.domains))
+        self.assertEqual(4, len(strand.bound_domains()))
+
+        d0, d1, loopout, d2, d3 = strand.domains
+        self.assertIsInstance(loopout, sc.Loopout)
+
+        self.assertEqual(2, d0.helix)
+        self.assertEqual(True, d0.forward)
+        self.assertEqual(35, d0.start)
+        self.assertEqual(40, d0.end)
+
+        self.assertEqual(0, d1.helix)
+        self.assertEqual(True, d1.forward)
+        self.assertEqual(30, d1.start)
+        self.assertEqual(40, d1.end)
+
+        self.assertEqual(1, d2.helix)
+        self.assertEqual(False, d2.forward)
+        self.assertEqual(30, d2.start)
+        self.assertEqual(40, d2.end)
+
+        self.assertEqual(2, d3.helix)
+        self.assertEqual(True, d3.forward)
+        self.assertEqual(30, d3.start)
+        self.assertEqual(35, d3.end)
+
     def test_ligate_linear_strand_to_itself_makes_it_circular(self) -> None:
+        self.assertFalse(self.design.strands[1].circular)
         self.assertEqual(3, len(self.design.strands[1].domains))
+
         self.design.ligate(0, 15, True)
+
         self.assertEqual(self.num_strands, len(self.design.strands))
         self.assertTrue(self.design.strands[1].circular)
         self.assertEqual(2, len(self.design.strands[1].domains))
 
-    #TODO: add functionality for removing crossovers and loopouts and ligating, and test that here
+    #TODO: add functionality for removing crossovers and loopouts, and test that here
 
 
 class TestAddStrand(unittest.TestCase):
