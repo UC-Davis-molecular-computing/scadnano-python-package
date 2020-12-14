@@ -5433,7 +5433,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 seq = seq_before_whole + seq_after_whole
                 strand.set_dna_sequence(seq)
 
-            strand.set_circular(False)
+            strand.set_linear()
 
         else:
             # if strand is not circular, we delete it and create two new strands
@@ -5455,10 +5455,138 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 use_default_idt=idt_present,
             )
 
-            self.helices[helix].domains.remove(domain_to_remove)
-            self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
-
             self.strands.extend([strand_before, strand_after])
+
+        helix_domains = self.helices[helix].domains
+        idx_domain_to_remove = helix_domains.index(domain_to_remove)
+        helix_domains[idx_domain_to_remove] = domain_left
+        helix_domains.insert(idx_domain_to_remove + 1, domain_right)
+
+    def ligate(self, helix: int, offset: int, forward: bool) -> None:
+        """
+        Reverse operation of :py:meth:`Design.add_nick`.
+        "Ligates" a nick between two adjacent :any:`Domain`'s in the same direction on a :any:`Helix`
+        with index `helix`,
+        in direction given by `forward`, at offset `offset`.
+
+        For example, if there are a :any:`Domain`'s with
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``5``,
+        (recall that :py:data:`Domain.end` is exclusive, meaning that the largest offset on this
+        :any:`Domain` is 4 = ``offset-1``)
+        and the other domain having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``5``,
+        :py:data:`Domain.end` = ``10``.
+        then calling ``ligate(helix=0, offset=5, forward=True)`` will combine them into one :any:`Domain`,
+        having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``10``.
+
+        If the :any:`Domain`'s are on the same :any:`Strand` (i.e., they are the 5' and 3' ends of that
+        :any:`Strand`, which is necessarily linear), then the :any:`Strand` is made is circular in place,
+        Otherwise, the two :any:`Strand`'s of each :any:`Domain` will be joined into one,
+        replacing the previous strand on the 5'-most side of the nick (i.e., the one whose 3' end
+        terminated at the nick), and deleting the other strand.
+
+        :param helix: index of helix where nick will be ligated
+        :param offset: offset to ligate (nick to ligate must be between offset and offset-1)
+        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
+        """
+        for dom_right in self.domains_at(helix, offset):
+            if dom_right.forward == forward:
+                break
+        else:
+            raise IllegalDesignError(f'no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} at offset {offset}')
+        for dom_left in self.domains_at(helix, offset - 1):
+            if dom_left.forward == forward:
+                break
+        else:
+            raise IllegalDesignError(f'no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} at offset {offset}')
+        if dom_right.start != offset:
+            raise IllegalDesignError(f'to ligate at offset {offset}, it must be the start offset of a domain,'
+                                     f'but there is no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} with start offset = {offset}')
+        if dom_left.end != offset:
+            raise IllegalDesignError(f'to ligate at offset {offset}, it must be the end offset of a domain,'
+                                     f'but there is no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} with end offset = {offset}')
+
+        strand_left = dom_left.strand()
+        strand_right = dom_right.strand()
+
+        dom_new = Domain(helix=helix, forward=forward, start=dom_left.start, end=dom_right.end,
+                         deletions=dom_left.deletions + dom_right.deletions,
+                         insertions=dom_left.insertions + dom_right.insertions,
+                         name=dom_left.name, label=dom_left.label)
+
+        # normalize 5'/3' distinction; below refers to which Strand has the 5'/3' end that will be ligated
+        # So strand_5p is the one whose 3' end will be the 3' end of the whole new Strand
+        # strand_5p and dom_5p are the ones on the 5' side of the nick,
+        # CAUTION: they are on the 3' side of the nick,
+        # i.e., the 3' end of strand_5p will be the 3' end of the new strand
+        # e.g.,
+        #
+        #  strand_3p  strand_5p
+        # [--------->[--------->
+        #    dom_3p     dom_5p
+        #
+        # or
+        #
+        #  strand_5p  strand_3p
+        # <---------]<---------]
+        #    dom_5p     dom_3p
+        if not forward:
+            dom_5p = dom_left
+            dom_3p = dom_right
+            strand_5p = strand_left
+            strand_3p = strand_right
+        else:
+            dom_5p = dom_right
+            dom_3p = dom_left
+            strand_5p = strand_right
+            strand_3p = strand_left
+
+        if strand_left is strand_right:
+            # join domains and make strand circular
+            strand = strand_left
+            assert strand.first_bound_domain() is dom_5p
+            assert strand.last_bound_domain() is dom_3p
+            strand.domains[0] = dom_new  # set first domain equal to new joined domain
+            strand.domains.pop()  # remove last domain
+            strand.set_circular()
+            for domain in strand.domains:
+                domain._parent_strand = strand
+
+        else:
+            # join strands
+            strand_3p.domains.pop()
+            strand_3p.domains.append(dom_new)
+            strand_3p.domains.extend(strand_5p.domains[1:])
+            strand_3p.is_scaffold = strand_left.is_scaffold or strand_right.is_scaffold
+            strand_3p.set_modification_3p(strand_5p.modification_3p)
+            for idx, mod in strand_5p.modifications_int.items():
+                new_idx = idx + strand_3p.dna_length()
+                strand_3p.set_modification_internal(new_idx, mod)
+            if strand_3p.dna_sequence is not None and strand_5p.dna_sequence is not None:
+                strand_3p.dna_sequence += strand_5p.dna_sequence
+            if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
+                strand_3p.set_color(strand_5p.color)
+            self.strands.remove(strand_5p)
+            for domain in strand_3p.domains:
+                domain._parent_strand = strand_3p
+
+        helix_domains = self.helices[helix].domains
+        idx_domain_to_remove_left = helix_domains.index(dom_left)
+        helix_domains[idx_domain_to_remove_left] = dom_new
+        helix_domains.remove(dom_right)
 
     def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None) -> None:
