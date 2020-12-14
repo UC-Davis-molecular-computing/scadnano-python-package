@@ -3903,7 +3903,7 @@ class TestCircularStrandEdits(unittest.TestCase):
            30         40
             strand 4
         0  [--->[---\
-                     ) loopout
+                     ) loopout length 5
         1  /--------/
            |
         2  \-------->cross to 5' end here
@@ -3945,7 +3945,7 @@ class TestCircularStrandEdits(unittest.TestCase):
            30         40
             strand 4
         0  [--------\
-                     ) loopout
+                     ) loopout length 5
         1  /---]<---/
            |
         2  \-------->cross to 5' end here
@@ -3987,7 +3987,7 @@ class TestCircularStrandEdits(unittest.TestCase):
            30         40
             strand 4
         0  [--------\
-                     ) loopout
+                     ) loopout length 5
         1  /--------/
            |
         2  \--->[--->cross to 5' end here
