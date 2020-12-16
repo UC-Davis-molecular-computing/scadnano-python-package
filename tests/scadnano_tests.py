@@ -3496,10 +3496,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             sc.Strand([ss1, ss2, ss3])
 
-        strand = sc.Strand([ss1, ss2])
-        strand.domains.append(ss3)
-        with self.assertRaises(sc.IllegalDesignError):
-            sc.Design(helices=helices, strands=[strand], grid=sc.square)
+        #XXX: we used to allow Strands to violate the loopout rules and caught it only at the design level
+        # now the Strand constructor checks, so that means we can't set up a bad Strand for the Design check
+        # strand = sc.Strand([ss1, ss2])
+        # strand.domains.append(ss3)
+        # with self.assertRaises(sc.IllegalDesignError):
+        #     sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_singleton_loopout(self) -> None:
         helices = [sc.Helix(max_offset=10)]
@@ -3507,10 +3509,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.StrandError):
             sc.Strand([loopout])
 
-        strand = sc.Strand([])
-        strand.domains.append(loopout)
-        with self.assertRaises(sc.StrandError):
-            sc.Design(helices=helices, strands=[strand], grid=sc.square)
+        # XXX: we used to allow Strands to violate the loopout rules and caught it only at the design level
+        # now the Strand constructor checks, so that means we can't set up a bad Strand for the Design check
+        # strand = sc.Strand([])
+        # strand.domains.append(loopout)
+        # with self.assertRaises(sc.StrandError):
+        #     sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_strand_offset_beyond_maxbases(self) -> None:
         helices = [sc.Helix(max_offset=10)]
@@ -3864,6 +3868,9 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(40, d2.start)
         self.assertEqual(45, d2.end)
 
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
+
     def test_add_nick_to_2_domain_circular_strand_makes_it_linear_nick_second_domain(self) -> None:
         # nick strand 5
         r'''
@@ -3896,6 +3903,9 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(False, d2.forward)
         self.assertEqual(45, d2.start)
         self.assertEqual(50, d2.end)
+
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
 
     def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_first_domain(self) -> None:
         # nick strand 4
@@ -3939,6 +3949,9 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(30, d3.start)
         self.assertEqual(35, d3.end)
 
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
+
     def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_middle_domain(self) -> None:
         # nick strand 4
         r'''
@@ -3980,6 +3993,9 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(False, d3.forward)
         self.assertEqual(35, d3.start)
         self.assertEqual(40, d3.end)
+
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
 
     def test_add_nick_to_3_domain_circular_strand_makes_it_linear_nick_last_domain(self) -> None:
         # nick strand 4
@@ -4023,15 +4039,22 @@ class TestCircularStrandEdits(unittest.TestCase):
         self.assertEqual(30, d3.start)
         self.assertEqual(35, d3.end)
 
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
+
     def test_ligate_linear_strand_to_itself_makes_it_circular(self) -> None:
         self.assertFalse(self.design.strands[1].circular)
         self.assertEqual(3, len(self.design.strands[1].domains))
 
         self.design.ligate(0, 15, True)
 
+        strand = self.design.strands[1]
         self.assertEqual(self.num_strands, len(self.design.strands))
-        self.assertTrue(self.design.strands[1].circular)
-        self.assertEqual(2, len(self.design.strands[1].domains))
+        self.assertTrue(strand.circular)
+        self.assertEqual(2, len(strand.domains))
+
+        for domain in strand.domains:
+            self.assertIs(strand, domain.strand())
 
     #TODO: add functionality for removing crossovers and loopouts, and test that here
 

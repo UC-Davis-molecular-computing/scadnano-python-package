@@ -1524,6 +1524,9 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         return repr(self) if self.name is None else self.name
 
     def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+        """
+        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        """
         if self._parent_strand is None:
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
@@ -1853,6 +1856,14 @@ class Loopout(_JSONSerializable):
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
         return Loopout(length=length, name=name, label=label)
+
+    def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+        """
+        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        """
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not yet been set')
+        return self._parent_strand
 
     def __repr__(self) -> str:
         return f'Loopout(' + \
@@ -2574,20 +2585,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def __post_init__(self) -> None:
         self._helix_idx_domain_map = defaultdict(list)
 
-        for domain in self.domains:
-            if isinstance(domain, Domain):
-                self._helix_idx_domain_map[domain.helix].append(domain)
-
-        for domain in self.domains:
-            domain._parent_strand = self
-
-        if len(self.domains) == 1:
-            if isinstance(self.domains[0], Loopout):
-                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
-
-        for domain1, domain2 in _pairwise(self.domains):
-            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
-                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+        self.set_domains(self.domains)
 
         if self.use_default_idt:
             self.set_default_idt(True)
@@ -2749,6 +2747,44 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         `self.set_circular(False)`.
         """
         self.set_circular(False)
+
+    def set_domains(self, domains: Iterable[Union[Domain[DomainLabel], Loopout]]) -> None:
+        """
+        Sets the :any:`Domain`'s/:any:`Loopout`'s of this :any:`Strand` to be `domains`,
+        which can contain a mix of :any:`Domain`'s and :any:`Loopout`'s,
+        just like the field :py:data:`Strand.domains`.
+
+        :param domains:
+            The new sequence of :any:`Domain`'s/:any:`Loopout`'s to use for this :any:`Strand`.
+        :raises StrandError:
+            if domains has two consecutive :any:`Loopout`'s, consists of just a single :any:`Loopout`'s,
+            or starts or ends with a :any:`Loopout`
+        """
+        self.domains = domains
+
+        for domain in self.domains:
+            if isinstance(domain, Domain):
+                self._helix_idx_domain_map[domain.helix].append(domain)
+
+        for domain in self.domains:
+            domain._parent_strand = self
+
+        if len(self.domains) == 1:
+            if isinstance(self.domains[0], Loopout):
+                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
+
+        if len(self.domains) == 0:
+            raise StrandError(self, 'domains cannot be empty')
+
+        for domain1, domain2 in _pairwise(self.domains):
+            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
+                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+
+        if isinstance(self.domains[0], Loopout):
+            raise StrandError(self, 'strand cannot begin with a loopout')
+
+        if isinstance(self.domains[-1], Loopout):
+            raise StrandError(self, 'strand cannot end with a loopout')
 
     def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
                         unique_names: bool = False) -> None:
@@ -5426,7 +5462,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if strand.circular:
             # if strand is circular, we modify its domains in place
             domains = domains_after + domains_before
-            strand.domains = domains
+            strand.set_domains(domains)
 
             # DNA sequence was rotated, so re-assign it
             if seq_before_whole is not None and seq_after_whole is not None:
@@ -5960,13 +5996,13 @@ class Crossover:
     forward: bool
     """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
-    offset2: int
+    offset2: Optional[int] = None
     """
     offset on `helix2` at which to add half crossover. 
     If not specified, defaults to `offset`
     """
 
-    forward2: bool
+    forward2: Optional[bool] = None
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
     If not specified, defaults to the negation of `forward`
