@@ -12,11 +12,12 @@
     {"grid_position": [0, 7]}
   ],
   "modifications_in_design": {
-    "/iCy3/": {
-      "display_text": "Cy3",
-      "idt_text": "/iCy3/",
+    "/iBiodT/": {
+      "display_text": "B",
+      "idt_text": "/iBiodT/",
       "display_connector": false,
-      "location": "internal"
+      "location": "internal",
+      "allowed_bases": ["T"]
     },
     "/5Biosg/": {
       "display_text": "B",
@@ -24,12 +25,11 @@
       "display_connector": false,
       "location": "5'"
     },
-    "/iBiodT/": {
-      "display_text": "B",
-      "idt_text": "/iBiodT/",
+    "/iCy3/": {
+      "display_text": "Cy3",
+      "idt_text": "/iCy3/",
       "display_connector": false,
-      "location": "internal",
-      "allowed_bases": ["T"]
+      "location": "internal"
     },
     "/3Cy3Sp/": {
       "display_text": "Cy3",
