@@ -5,7 +5,7 @@ Installation instructions are at the
 `GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_.
 
 This module is used to write Python scripts creating files readable
-by `scadnano <https://web.cs.ucdavis.edu/~doty/scadnano/>`_, a web application useful for displaying
+by `scadnano <https://scadnano.org/>`_, a web application useful for displaying
 and manually editing synthetic DNA nanostructures.
 The purpose of this module is to help automate some of the task of creating DNA designs,
 as well as making large-scale changes to them that are easier to describe programmatically than
@@ -17,6 +17,12 @@ If you find scadnano useful in a scientific project, please cite its associated 
  | David Doty, Benjamin L Lee, and Tristan Stérin.
  | DNA 2020: *Proceedings of the 26th International Conference on DNA Computing and Molecular Programming*
  | [ `paper <https://doi.org/10.4230/LIPIcs.DNA.2020.9>`_ | `BibTeX <https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib>`_ ]
+
+This document describes the API for the scadnano Python package,
+see the `repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_
+for additional documentation, such as installation instructions.
+There is separate documentation for the
+`scadnano web interface <https://github.com/UC-Davis-molecular-computing/scadnano>`_.
 
 This library uses typing hints from the Python typing library.
 (https://docs.python.org/3/library/typing.html)
