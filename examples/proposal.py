@@ -16,7 +16,6 @@ def create_design() -> sc.Design:
     add_twist_correct_deletions(design)
     add_angle_inducing_insertions_deletions(design)
     design.set_helices_view_order(list(reversed(range(16))))
-    design.set_default_idt()
 
     design.assign_m13_to_scaffold()
 
@@ -24,7 +23,7 @@ def create_design() -> sc.Design:
 
 
 def adjust_helix_grid_and_positions(design: sc.Design):
-    design.grid = sc.Grid.none
+    design.set_grid(sc.Grid.none)
     for helix in design.helices.values():
         helix.grid_position = None
         position3d = idx_to_position(helix.idx)

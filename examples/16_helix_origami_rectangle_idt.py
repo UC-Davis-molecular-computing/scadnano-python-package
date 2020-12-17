@@ -3,7 +3,7 @@ import scadnano as sc
 
 
 def create_design():
-    design = rect.create(num_helices=16, num_cols=26, use_idt_defaults=True)
+    design = rect.create(num_helices=16, num_cols=26)
     return design
 
 

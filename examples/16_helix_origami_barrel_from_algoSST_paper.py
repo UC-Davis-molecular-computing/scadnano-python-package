@@ -6,7 +6,7 @@ def create_design():
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2,
                          num_flanking_helices=2, edge_staples=False,
-                         scaffold_nick_offset=102, use_idt_defaults=True)
+                         scaffold_nick_offset=102)
 
     # # need this to match original design, but doesn't leave room for left-side adapters
     # design.move_strand_offsets(8)

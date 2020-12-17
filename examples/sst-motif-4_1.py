@@ -8,7 +8,7 @@ def create_design():
     green = sc.Color(r=0, g=150, b=0)
     cols = 8
     rows = 8
-    # helices = [sc.Helix(major_tick_distance=10) for _ in range(rows+1)]
+    helices = [sc.Helix(major_tick_distance=10) for _ in range(rows+1)]
     strands = []
     for col in range(cols):
         for row in range(rows):
@@ -29,8 +29,7 @@ def create_design():
             strand = sc.Strand([ss1, ss2], color=color)
             strands.append(strand)
 
-    # design = sc.Design(helices=helices, strands=strands, grid=sc.square)
-    design = sc.Design(major_tick_distance=10, strands=strands, grid=sc.square)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
     return design
 

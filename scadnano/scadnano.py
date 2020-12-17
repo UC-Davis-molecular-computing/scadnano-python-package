@@ -44,7 +44,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.13.4"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.14.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -2238,7 +2238,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     def with_idt(self, name: str, scale: str = default_idt_scale,
                  purification: str = default_idt_purification,
-                 plate: Optional[str] = None, well: Optional[str] = None):
+                 plate: Optional[str] = None, well: Optional[str] = None) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Gives :any:`IDTFields` value to :any:`Strand` being built.
         Only a name is required; other field have reasonable default values.
@@ -2527,13 +2528,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
     or 384-well plates."""
 
-    use_default_idt: bool = False
-    """If ``True``, assigns an :any:`IDTFields` to this :any:`Strand` with same naming convention as
-    cadnano, i.e., :py:data:`IDTFields.name` = "ST{h5}[{s}]{h3}[{e}]", where {h5} and {h3} are the 
-    :any:`Helix`'s of the 5' and 3' ends, respectively, of the :any:`Strand`, 
-    and {s} and {e} are the respective start and end offsets on those helices.
-    """
-
     is_scaffold: bool = False
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
     :any:`Design` is a scaffold, then the design is considered a DNA origami design."""
@@ -2586,9 +2580,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self._helix_idx_domain_map = defaultdict(list)
 
         self.set_domains(self.domains)
-
-        if self.use_default_idt:
-            self.set_default_idt(True)
 
         self._ensure_modifications_legal()
         self._ensure_domains_nonoverlapping()
@@ -2760,7 +2751,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if domains has two consecutive :any:`Loopout`'s, consists of just a single :any:`Loopout`'s,
             or starts or ends with a :any:`Loopout`
         """
-        self.domains = domains
+        self.domains = domains if isinstance(domains, list) else list(domains)
 
         for domain in self.domains:
             if isinstance(domain, Domain):
@@ -2786,49 +2777,40 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if isinstance(self.domains[-1], Loopout):
             raise StrandError(self, 'strand cannot end with a loopout')
 
-    def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
-                        unique_names: bool = False) -> None:
+    def default_export_name(self, unique_names: bool = False) -> str:
         """
-        Sets idt field to be the default given the Domain data of this :any:`Strand`.
-
-        Assigns name to be :py:data:`Strand.name` if it is not None, otherwise uses cadnano's naming
-        convention of, for example ST2[5]4[10] to indicate a strand that starts at helix 2, offset 5,
-        and ends at helix 4, offset 10. Note that this naming convention is not unique: two strands in 
+        Returns a default name to use when exporting the DNA sequence.
+        Uses cadnano's naming
+        convention of, for example `'ST2[5]4[10]'` to indicate a strand that starts at helix 2, offset 5,
+        and ends at helix 4, offset 10. Note that this naming convention is not unique: two strands in
         the system could share this name. To ensure it is unique, set the parameter `unique_names` to True,
-        which will modify the name with forward/reverse information from the first domain that uniquely 
-        identifies the strand, e.g., ST2[5]F4[10] or ST2[5]R4[10].
+        which will modify the name with forward/reverse information from the first domain that uniquely
+        identifies the strand, e.g., `'ST2[5]F4[10]'` or `'ST2[5]R4[10]'`.
 
-        Assigns purification = "STD" and scale = "25nm" if no modifications are present, or if the
-        modification has idt_text "/5Biosg/", otherwise sets purification = "HPLC" and scale = "100nm".
+        If the strand is a scaffold (i.e., if :py:data:`Strand.is_scaffold` is True),
+        then the name will begin with `'SCAF'` instead of `'ST'`.
+
+        :param unique_names:
+            If True, enforces that strand names must be unique by encoding the forward/reverse Boolean
+            into the name.
+            If False (the default), uses cadnano's exact naming convention, which allows two strands
+            to have the same default name, if they begin and end at the same (helix,offset) pair (but
+            point in opposite directions at each).
+        :return:
+            default name to export
+            (used, for example, by idt DNA export methods :py:meth:`Design.write_idt_plate_excel_file`
+            and :py:meth:`Design.write_idt_bulk_input_file`
+            if :py:data:`Strand.name` and :py:data:`Strand.idt.name` are both not set)
         """
-        if skip_scaffold and self.is_scaffold:
-            return
-        self.use_default_idt = use_default_idt
-        if use_default_idt:
-            if self.name is None:
-                start_helix = self.first_bound_domain().helix
-                end_helix = self.last_bound_domain().helix
-                start_offset = self.first_bound_domain().offset_5p()
-                end_offset = self.last_bound_domain().offset_3p()
-                forward_str = 'F' if self.first_bound_domain().forward else 'R'
-                if not unique_names:
-                    forward_str = ''
-                name = f'ST{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
-            else:
-                name = self.name
-
-            if ((self.modification_5p is not None and self.modification_5p.idt_text != '/5Biosg/')
-                    or self.modification_3p is not None
-                    or len(self.modifications_int) > 0):
-                purification = 'HPLC'
-                scale = '100nm'
-            else:
-                purification = 'STD'
-                scale = '25nm'
-
-            self.idt = IDTFields(name=name, purification=purification, scale=scale)
-        else:
-            self.idt = None
+        start_helix = self.first_bound_domain().helix
+        end_helix = self.last_bound_domain().helix
+        start_offset = self.first_bound_domain().offset_5p()
+        end_offset = self.last_bound_domain().offset_3p()
+        forward_str = 'F' if self.first_bound_domain().forward else 'R'
+        if not unique_names:
+            forward_str = ''
+        name = f'{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
+        return f'SCAF{name}' if self.is_scaffold else f'ST{name}'
 
     def set_modification_5p(self, mod: Modification5Prime = None) -> None:
         """Sets 5' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
@@ -3055,8 +3037,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         domain._parent_strand = self
         if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].append(domain)
-        if self.use_default_idt:
-            self.set_default_idt()
 
         # add wildcard symbols to DNA sequence to maintain its length
         if self.dna_sequence is not None:
@@ -3082,8 +3062,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         domain._parent_strand = None
         if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].remove(domain)
-        if self.use_default_idt:
-            self.set_default_idt()
 
     def dna_index_start_domain(self, domain: Union[Domain, Loopout]) -> int:
         """
@@ -3749,6 +3727,18 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         group = self._get_default_group()
         return group.grid
+
+    def set_grid(self, grid: Grid) -> None:
+        """
+        Sets the grid of the only :any:`HelixGroup`, if there is only one,
+        otherwise raises an exception.
+        :param grid:
+            new grid to set for the (only) :any:`HelixGroup` in this :any:`Design`
+        :raises IllegalDesignError:
+            if there is more than one :any:`HelixGroup` in this :any:`Design`
+        """
+        group = self._get_default_group()
+        group.grid = grid
 
     def _get_default_group(self) -> HelixGroup:
         # Gets default group and raise exception if default group is not being used
@@ -4559,18 +4549,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     min_offset = 0
                 helix.min_offset = min_offset
 
-    def set_default_idt(self, use_default_idt: bool = True, unique_names: bool = False) -> None:
-        """If ``True``, sets :py:data:`Strand.use_default_idt` to ``True`` for every :any:`Strand` in this
-        :any:`Design` and calls :py:meth:`Strand.set_default_idt` on each of them to assign a
-        default idt field.
-
-        If ``False``, removes IDT field from each :any:`Strand`.
-
-        See documentation for :py:meth:`Strand.set_default_idt` for an explanation of its function and
-        the meaning of the parameters."""
-        for strand in self.strands:
-            strand.set_default_idt(use_default_idt, unique_names)
-
     def strands_starting_on_helix(self, helix: int) -> List[Strand]:
         """Return list of :any:`Strand`'s that begin (have their 5' end)
         on the :any:`Helix` with index `helix`."""
@@ -4915,7 +4893,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param strand:
             :any:`Strand` to assign DNA sequence to
         :param sequence:
-            String of DNA bases to assign
+            string of DNA bases to assign
         :param assign_complement:
             Whether to assign the complement DNA sequence to any :any:`Strand` that
             is bound to this one (default True)
@@ -5005,39 +4983,24 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                  delimiter: str = ',',
                                  key: Optional[KeyFunction[Strand]] = None,
                                  warn_duplicate_name: bool = False,
-                                 warn_on_non_idt_strands: bool = False,
+                                 only_strands_with_idt: bool = False,
+                                 export_scaffold: bool = False,
                                  export_non_modified_strand_version: bool = False) -> str:
         """Called by :py:meth:`Design.write_idt_bulk_input_file` to determine what string to write to
         the file. This function can be used to get the string directly without creating a file.
 
-        :param delimiter:
-             the symbol to delimit the four IDT fields name,sequence,scale,purification.
-        :param key:
-            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
-            order in which to output strand sequences. Some useful defaults are provided by
-            :py:meth:`strand_order_key_function`
-        :param warn_duplicate_name:
-            if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-            raised (regardless of the value of this parameter)
-            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-            purifications.
-        :param warn_on_non_idt_strands:
-            specifies whether to print a warning for strands that lack the field
-            :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
-            scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
-        :param export_non_modified_strand_version:
-            specifies whether, for each strand that has modifications,
-            to also output a version of the strand with no modifications, but otherwise having the same data.
+        Parameters have the same meaning as in :py:meth:`Design.write_idt_bulk_input_file`.
+
         :return:
             string that is written to the file in the method :py:meth:`Design.write_idt_bulk_input_file`.
         """
-        added_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
-                                          warn_on_non_idt_strands=warn_on_non_idt_strands,
-                                          export_non_modified_strand_version=export_non_modified_strand_version)
+        strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
+                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        export_scaffold=export_scaffold,
+                                                        export_non_modified_strand_version=export_non_modified_strand_version)
 
         idt_lines: List[str] = []
-        for strand in added_strands:
+        for strand in strands_to_export:
             if strand.idt is None:
                 raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
             idt_lines.append(delimiter.join(
@@ -5048,71 +5011,98 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
-    def _idt_strands(self, *,
-                     key: Optional[KeyFunction[Strand]] = None,
-                     warn_duplicate_name: bool,
-                     warn_on_non_idt_strands: bool,
-                     export_non_modified_strand_version: bool = False) -> List[Strand]:
+    def _idt_strands_to_export(self, *,
+                               key: Optional[KeyFunction[Strand]] = None,  # for sorting strands
+                               warn_duplicate_name: bool,
+                               only_strands_with_idt: bool = False,
+                               export_scaffold: bool = False,
+                               export_non_modified_strand_version: bool = False) -> List[Strand]:
+        # gets list of strands to export for IDT export functions
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
+            # skip scaffold unless requested to export
+            if strand.is_scaffold and not export_scaffold:
+                continue
+
+            # figure out what name to export
             if strand.idt is not None:
                 name = strand.idt.name
-                if name in added_strands:
-                    existing_strand = added_strands[name]
-                    if existing_strand.idt is None:
-                        raise ValueError(f'cannot export strand {existing_strand} '
-                                         f'to IDT because it has no IDT field')
-                    assert existing_strand.idt.name == name
-                    domain = strand.first_domain()
-                    existing_domain = existing_strand.first_domain()
-                    if strand.dna_sequence != existing_strand.dna_sequence:
-                        raise IllegalDesignError(
-                            f'two strands with same IDT name {name} but different sequences:\n'
-                            f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
-                            f'sequence: {strand.dna_sequence}\n'
-                            f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
-                            f'{existing_domain.offset_5p()}, '
-                            f'sequence: {existing_strand.dna_sequence}\n')
-                    elif strand.idt.scale != existing_strand.idt.scale:
-                        raise IllegalDesignError(
-                            f'two strands with same IDT name {name} but different IDT scales:\n'
-                            f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
-                            f'scale: {strand.idt.scale}\n'
-                            f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
-                            f'{existing_domain.offset_5p()}, '
-                            f'scale: {existing_strand.idt.scale}\n')
-                    elif strand.idt.purification != existing_strand.idt.purification:
-                        raise IllegalDesignError(
-                            f'two strands with same IDT name {name} but different purifications:\n'
-                            f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
-                            f'purification: {strand.idt.purification}\n'
-                            f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
-                            f'{existing_domain.offset_5p()}, '
-                            f'purification: {existing_strand.idt.purification}\n')
-                    elif warn_duplicate_name:
-                        print(
-                            f'WARNING: two strands with same IDT name {name}:\n'
-                            f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}\n'
-                            f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
-                            f'{existing_domain.offset_5p()}\n')
-                added_strands[name] = strand
-                if export_non_modified_strand_version:
-                    added_strands[name + '_nomods'] = strand.no_modifications_version()
-            elif warn_on_non_idt_strands and not strand.is_scaffold:
-                print(f"WARNING: strand with 5' end at (helix, offset) "
-                      f"({strand.first_domain().helix}, {strand.first_domain().offset_5p()}) "
-                      f"does not have a field idt, so will not be part of IDT output.")
+            else:
+                if only_strands_with_idt:  # skip strands with no IDT field unless requested to export
+                    continue
+                if strand.name is not None:
+                    name = strand.name
+                else:
+                    name = strand.default_export_name()
+
+            if name in added_strands:
+                existing_strand = added_strands[name]
+                self._check_strands_with_same_name_agree_on_other_idt_fields(strand, existing_strand, name,
+                                                                             warn_duplicate_name)
+
+            added_strands[name] = strand
+            if export_non_modified_strand_version:
+                added_strands[name + '_nomods'] = strand.no_modifications_version()
 
         strands = list(added_strands.values())
         if key is not None:
             strands.sort(key=key)
         return strands
 
+    @staticmethod
+    def _check_strands_with_same_name_agree_on_other_idt_fields(strand: Strand, existing_strand: Strand,
+                                                                name: str, warn_duplicate_name: bool) -> None:
+        # Handle the case that two strands being exported, strand and existing_strand
+        # (the latter was encountered first) have the same name
+        # This is allowed in case one wants to draw multiple copies of the same strand
+        # in scadnano without having to worry about setting their idt fields differently.
+        # But then we need to check that they agree on everything being exported.
+        if existing_strand.idt is not None:
+            assert existing_strand.idt.name == name
+        elif existing_strand.name is not None:
+            assert existing_strand.name == name
+        domain = strand.first_domain()
+        existing_domain = existing_strand.first_domain()
+        if warn_duplicate_name:
+            print(
+                f'WARNING: two strands with same IDT name {name}:\n'
+                f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}\n'
+                f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
+                f'{existing_domain.offset_5p()}\n')
+        if strand.dna_sequence != existing_strand.dna_sequence:
+            raise IllegalDesignError(
+                f'two strands with same IDT name {name} but different sequences:\n'
+                f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
+                f'sequence: {strand.dna_sequence}\n'
+                f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
+                f'{existing_domain.offset_5p()}, '
+                f'sequence: {existing_strand.dna_sequence}\n')
+        elif strand.idt is not None \
+                and existing_strand.idt is not None:
+            if strand.idt.scale != existing_strand.idt.scale:
+                raise IllegalDesignError(
+                    f'two strands with same IDT name {name} but different IDT scales:\n'
+                    f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
+                    f'scale: {strand.idt.scale}\n'
+                    f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
+                    f'{existing_domain.offset_5p()}, '
+                    f'scale: {existing_strand.idt.scale}\n')
+            elif strand.idt.purification != existing_strand.idt.purification:
+                raise IllegalDesignError(
+                    f'two strands with same IDT name {name} but different purifications:\n'
+                    f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
+                    f'purification: {strand.idt.purification}\n'
+                    f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
+                    f'{existing_domain.offset_5p()}, '
+                    f'purification: {existing_strand.idt.purification}\n')
+
     def write_idt_bulk_input_file(self, *, directory: str = '.', filename: str = None,
                                   key: Optional[KeyFunction[Strand]] = None,
                                   extension: Optional[str] = None,
                                   delimiter: str = ',',
-                                  warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
+                                  warn_duplicate_name: bool = True,
+                                  only_strands_with_idt: bool = False,
+                                  export_scaffold: bool = False,
                                   export_non_modified_strand_version: bool = False) -> None:
         """Write ``.idt`` text file encoding the strands of this :any:`Design` with the field
         :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
@@ -5145,9 +5135,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param warn_on_non_idt_strands:
-            specifies whether to print a warning for strands that lack the field
-            :any:`Strand.idt`. Such strands will not be output into the file.
+        :param only_strands_with_idt:
+            If False (the default), all non-scaffold sequences are output
+            (though scaffold is included if `export_scaffold` is True).
+            If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+        :param export_scaffold:
+            If False (the default), scaffold sequences are not exported.
+            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.idt` and
+            `only_strands_with_idt` is True).
         :param export_non_modified_strand_version:
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
             without any modifications. The name for this :any:`Strand` is the original name with
@@ -5156,7 +5152,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         contents = self.to_idt_bulk_input_format(delimiter=delimiter,
                                                  key=key,
                                                  warn_duplicate_name=warn_duplicate_name,
-                                                 warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                                 only_strands_with_idt=only_strands_with_idt,
+                                                 export_scaffold=export_scaffold,
                                                  export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
             extension = 'idt'
@@ -5164,7 +5161,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
                                    key: Optional[KeyFunction[Strand]] = None,
-                                   warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
+                                   warn_duplicate_name: bool = False,
+                                   only_strands_with_idt: bool = False,
+                                   export_scaffold: bool = False,
                                    use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False) -> None:
@@ -5194,10 +5193,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param warn_on_non_idt_strands:
-            specifies whether to print a warning for strands that lack the field
-            :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
-            for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+        :param only_strands_with_idt:
+            If False (the default), all non-scaffold sequences are output
+            (though scaffold is included if `export_scaffold` is True).
+            If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+        :param export_scaffold:
+            If False (the default), scaffold sequences are not exported.
+            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.idt` and
+            `only_strands_with_idt` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
         :param warn_using_default_plates:
@@ -5214,14 +5218,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             '_nomods' appended to it.
         """
 
-        idt_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
-                                        warn_on_non_idt_strands=warn_on_non_idt_strands,
-                                        export_non_modified_strand_version=export_non_modified_strand_version)
+        strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
+                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        export_scaffold=export_scaffold,
+                                                        export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
-            self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
+            self._write_plates_assuming_explicit_in_each_strand(directory, filename, strands_to_export)
         else:
-            self._write_plates_default(directory=directory, filename=filename, idt_strands=idt_strands,
+            self._write_plates_default(directory=directory, filename=filename, idt_strands=strands_to_export,
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
@@ -5488,7 +5493,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 domains=domains_after,
                 dna_sequence=seq_after_whole,
                 color=color_after,
-                use_default_idt=idt_present,
             )
 
             self.strands.extend([strand_before, strand_after])
@@ -5558,10 +5562,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand_left = dom_left.strand()
         strand_right = dom_right.strand()
 
-        dom_new = Domain(helix=helix, forward=forward, start=dom_left.start, end=dom_right.end,
-                         deletions=dom_left.deletions + dom_right.deletions,
-                         insertions=dom_left.insertions + dom_right.insertions,
-                         name=dom_left.name, label=dom_left.label)
+        dom_new: Domain[DomainLabel] = Domain(helix=helix, forward=forward, start=dom_left.start,
+                                              end=dom_right.end,
+                                              deletions=dom_left.deletions + dom_right.deletions,
+                                              insertions=dom_left.insertions + dom_right.insertions,
+                                              name=dom_left.name, label=dom_left.label)
 
         # normalize 5'/3' distinction; below refers to which Strand has the 5'/3' end that will be ligated
         # So strand_5p is the one whose 3' end will be the 3' end of the whole new Strand
@@ -5733,39 +5738,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.add_half_crossover(helix=helix, helix2=helix2, offset=offset, offset2=offset2,
                                 forward=forward, forward2=forward2)
 
-    # remove quotes when Py3.6 support dropped
-    def add_crossovers(self, crossovers: List['Crossover']) -> None:
-        """
-        Adds a list of :any:`Crossover`'s in batch.
-
-        This helps to avoid problems where adding them one at a time using
-        :py:meth:`Design.add_half_crossover`
-        or
-        :py:meth:`Design.add_full_crossover`
-        creates an intermediate design with circular strands.
-
-        :param crossovers: list of :any:`Crossover`'s to add. Its fields have the same meaning as in
-            :py:meth:`Design.add_half_crossover`
-            and
-            :py:meth:`Design.add_full_crossover`,
-            with the extra field `Crossover.half` indicating whether it represents a half or full crossover.
-        """
-        for crossover in crossovers:
-            if not crossover.half:
-                for helix, forward, offset in [(crossover.helix, crossover.forward, crossover.offset),
-                                               (crossover.helix2, crossover.forward2, crossover.offset2)]:
-                    self._prepare_nicks_for_full_crossover(helix, forward, offset)
-
-        for crossover in crossovers:
-            if crossover.half:
-                self.add_half_crossover(helix=crossover.helix, helix2=crossover.helix2,
-                                        forward=crossover.forward, forward2=crossover.forward2,
-                                        offset=crossover.offset, offset2=crossover.offset2)
-            else:
-                self.add_full_crossover(helix=crossover.helix, helix2=crossover.helix2,
-                                        forward=crossover.forward, forward2=crossover.forward2,
-                                        offset=crossover.offset, offset2=crossover.offset2)
-
     def _prepare_nicks_for_full_crossover(self, helix: int, forward: bool, offset: int) -> None:
         domain_right = self.domain_at(helix, offset, forward)
         if domain_right is None:
@@ -5802,6 +5774,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             0     7         17    23    29
             |-----|---------|-----|------
+
+        Similarly, if there are insertions (in the example below, the "2" represents an insertion of length 2,
+        which represents 3 total bases), they are expanded
+
+        .. code-block:: none
+
+            0      8         18    24    30
+            |--2---|---------|-----|------
+
+        then the domain is lengthened by 3:
+
+        .. code-block:: none
+
+            0        10        20    26    32
+            |--------|---------|-----|------
+
+        And it works if there are both insertions and deletions:
+
+        .. code-block:: none
+
+            0      8         18    24    30
+            |--2---|---------|--X--|------
+
+        then the domain is lengthened by 3:
+
+        .. code-block:: none
+
+            0        10        20   25    31
+            |--------|---------|----|------
 
         We assume that a major tick mark appears just to the LEFT of the offset it encodes,
         so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
@@ -5968,54 +5969,3 @@ def _create_directory_and_set_filename(directory: str, filename: str) -> str:
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
     return relative_filename
-
-
-@dataclass
-class Crossover:
-    """
-    A :any:`Crossover` object represents the parameters to the methods
-    :py:meth:`Design.add_half_crossover`
-    and
-    :py:meth:`Design.add_full_crossover`,
-    with one more field :py:data:`Crossover.half` to identify whether it is a half or full crossover.
-
-    It is used in conjection with :py:meth:`Design.add_crossovers` to add many crossovers in batch.
-    This helps avoid the issue that adding crossovers one at a time can lead to an intermediate
-    :any:`Design` with circular strands, which are currently unsupported.
-    """
-
-    helix: int
-    """index of one helix of half crossover"""
-
-    helix2: int
-    """index of other helix of half crossover"""
-
-    offset: int
-    """offset on `helix` at which to add half crossover"""
-
-    forward: bool
-    """direction of :any:`Strand` on `helix` to which to add half crossover"""
-
-    offset2: Optional[int] = None
-    """
-    offset on `helix2` at which to add half crossover. 
-    If not specified, defaults to `offset`
-    """
-
-    forward2: Optional[bool] = None
-    """
-    direction of :any:`Strand` on `helix2` to which to add half crossover. 
-    If not specified, defaults to the negation of `forward`
-    """
-
-    half: bool = False
-    """
-    Indicates whether this is a half or full crossover.
-    If not specified, defaults to ``False``.
-    """
-
-    def __post_init__(self) -> None:
-        if self.offset2 is None:
-            self.offset2 = self.offset
-        if self.forward2 is None:
-            self.forward2 = not self.forward
