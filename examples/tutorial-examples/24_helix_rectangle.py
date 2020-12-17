@@ -3,12 +3,12 @@ import scadnano as sc
 
 def main() -> None:
     design = create_design()
-    design.write_idt_plate_excel_file(use_default_plates=True)
+    design.write_idt_plate_excel_file()
     design.write_scadnano_file()
 
 
 def create_design() -> sc.Design:
-    design = helices_only()
+    design = create_design_with_helices_only()
 
     add_scaffold_precursors(design)
     add_scaffold_crossovers(design)
@@ -23,7 +23,7 @@ def create_design() -> sc.Design:
     return design
 
 
-def helices_only() -> sc.Design:
+def create_design_with_helices_only() -> sc.Design:
     helices = [sc.Helix(max_offset=288) for _ in range(24)]
     return sc.Design(helices=helices, grid=sc.square)
 
@@ -73,8 +73,6 @@ def add_twist_correction_deletions(design: sc.Design) -> None:
     for helix in range(24):
         for offset in range(19, 286, 48):
             design.add_deletion(helix, offset)
-
-
 
 
 if __name__ == '__main__':

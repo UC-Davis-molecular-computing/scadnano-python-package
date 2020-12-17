@@ -3754,8 +3754,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def set_grid(self, grid: Grid) -> None:
         """
-        Sets the grid of the only :any:`HelixGroup`, if there is only one,
+        Sets the grid of the default :any:`HelixGroup`, if the default is being used,
         otherwise raises an exception.
+
         :param grid:
             new grid to set for the (only) :any:`HelixGroup` in this :any:`Design`
         :raises IllegalDesignError:
@@ -5228,8 +5229,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             If False, each Strand to export must have the field :py:data:`Strand.idt`, so in particular
             the parameter `only_strands_with_idt` must be True.
         :param warn_using_default_plates:
-            specifies whether to print a warning for strands whose
-            :py:data:`Strand.idt` have the fields
+            specifies whether, if `use_default_plates` is True, to print a warning for strands whose
+            :py:data:`Strand.idt` has the fields :py:data:`IDTFields.plate` and :py:data:`IDTFields.well`,
+            since `use_default_plates` directs these fields to be ignored.
         :param plate_type:
             a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
             if the `use_default_plates` parameter is ``True``.
