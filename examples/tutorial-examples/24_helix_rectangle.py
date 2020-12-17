@@ -3,12 +3,13 @@ import scadnano as sc
 
 def main() -> None:
     design = create_design()
-    design.write_idt_plate_excel_file()
     design.write_scadnano_file()
+    design.write_idt_plate_excel_file()
 
 
 def create_design() -> sc.Design:
-    design = create_design_with_helices_only()
+    helices = [sc.Helix(max_offset=288) for _ in range(24)]
+    design = sc.Design(helices=helices, grid=sc.square)
 
     add_scaffold_precursors(design)
     add_scaffold_crossovers(design)
@@ -23,18 +24,13 @@ def create_design() -> sc.Design:
     return design
 
 
-def create_design_with_helices_only() -> sc.Design:
-    helices = [sc.Helix(max_offset=288) for _ in range(24)]
-    return sc.Design(helices=helices, grid=sc.square)
-
-
 def add_scaffold_precursors(design: sc.Design) -> None:
     for helix in range(0, 23, 2):  # scaffold goes forward on even helices
         design.strand(helix, 0).move(288).as_scaffold()
     for helix in range(1, 23, 2):  # scaffold goes reverse on odd helices
         design.strand(helix, 288).move(-288).as_scaffold()
-    design.strand(23, 288).move(-144).as_scaffold()
-    design.strand(23, 144).move(-144).as_scaffold()
+    design.strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
+    design.strand(23, 144).move(-144).as_scaffold()  #
 
 
 def add_scaffold_crossovers(design: sc.Design) -> None:
