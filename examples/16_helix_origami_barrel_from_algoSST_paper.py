@@ -2,7 +2,7 @@ import origami_rectangle as rect
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2,
                          num_flanking_helices=2, edge_staples=False,
@@ -26,7 +26,7 @@ def create_design():
     return design
 
 
-def set_helix_major_tickets(design):
+def set_helix_major_tickets(design: sc.Design) -> None:
     major_ticks = [11, 22, 32]
     for tick in range(40, 481, 8):
         major_ticks.append(tick)
@@ -36,7 +36,7 @@ def set_helix_major_tickets(design):
         helix.major_ticks = list(major_ticks)
 
 
-def add_twist_correct_deletions(design: sc.Design):
+def add_twist_correct_deletions(design: sc.Design) -> None:
     # I choose between 3 and 4 offset arbitrarily for twist-correction deletions for some reason,
     # so they have to be hard-coded.
     for col, offset in zip(range(4, 29, 3), [4, 3, 3, 4, 3, 3, 3, 3, 3]):
@@ -44,7 +44,7 @@ def add_twist_correct_deletions(design: sc.Design):
             design.add_deletion(helix, 16 * col + offset)
 
 
-def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design):
+def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design) -> None:
     top_staples = design.strands_starting_on_helix(2)
     bot_staples = design.strands_starting_on_helix(17)
     bot_staples.remove(design.scaffold)
@@ -58,7 +58,7 @@ def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design):
         design.set_start(bot_staple.domains[0], current_start + 8)
 
 
-def add_domains_for_barrel_seam(design):
+def add_domains_for_barrel_seam(design: sc.Design) -> None:
     top_staples_5p = design.strands_starting_on_helix(2)
     top_staples_3p = design.strands_ending_on_helix(2)
     bot_staples_5p = design.strands_starting_on_helix(17)
@@ -84,7 +84,7 @@ def add_domains_for_barrel_seam(design):
         design.insert_domain(top_5p, 0, ss_bot)
 
 
-def add_toeholds_for_seam_displacement(design: sc.Design):
+def add_toeholds_for_seam_displacement(design: sc.Design) -> None:
     for helix in [2, 17]:
         staples_5p = design.strands_starting_on_helix(helix)
 
@@ -100,7 +100,7 @@ def add_toeholds_for_seam_displacement(design: sc.Design):
             design.insert_domain(stap_5p, 0, toe_ss)
 
 
-def add_adapters(design):
+def add_adapters(design: sc.Design) -> None:
     # left adapters
     left_inside_seed = 48
     left_outside_seed = left_inside_seed - 26
@@ -153,7 +153,7 @@ tile_dna_seqs = [''.join(line.split(',')[1]) for line_no, line in enumerate(seq_
 # print(tile_dna_seqs)
 
 
-def add_tiles_and_assign_dna(design):
+def add_tiles_and_assign_dna(design: sc.Design) -> None:
     # left tiles
     left_left = 11
     left_right = 32
@@ -185,7 +185,7 @@ def add_tiles_and_assign_dna(design):
         design.assign_dna(tile, seq)
 
 
-def add_angle_inducing_insertions_deletions(design):
+def add_angle_inducing_insertions_deletions(design) -> None:
     # insertion followed by deletion
     start = 59
     end = start + (32 * 12)
@@ -233,7 +233,7 @@ TCCCTATA
 
 # above is in order from right to left on helix 1, followed by left to right on helix 18
 
-def assign_dna_to_unzipper_toeholds(design):
+def assign_dna_to_unzipper_toeholds(design: sc.Design) -> None:
     uz_toes = [sc.wc(seq) for seq in uz_toes_wc]
 
     strands_h1 = design.strands_starting_on_helix(1)
@@ -249,7 +249,7 @@ def assign_dna_to_unzipper_toeholds(design):
 
 
 if __name__ == '__main__':
-    the_design = create_design()
-    the_design.write_scadnano_file(directory='output_designs')
-    the_design.write_idt_bulk_input_file(directory='idt')
-    # the_design.write_idt_plate_excel_file(directory='idt', export_non_modified_strand_version=True)
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')
+    d.write_idt_bulk_input_file(directory='idt')
+    # d.write_idt_plate_excel_file(directory='idt', export_non_modified_strand_version=True)

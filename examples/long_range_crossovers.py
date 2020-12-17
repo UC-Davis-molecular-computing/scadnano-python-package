@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     num_helices = 16
     bases = 48
     helices = [sc.Helix() for _ in range(num_helices)]
@@ -30,5 +30,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

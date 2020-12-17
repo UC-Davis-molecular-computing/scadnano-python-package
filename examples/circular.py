@@ -2,7 +2,7 @@ import scadnano as sc
 import modifications as mod
 import dataclasses
 
-def create_design():
+def create_design() -> sc.Design:
     helices = [sc.Helix(max_offset=24) for _ in range(2)]
     design = sc.Design(helices=helices, grid=sc.square)
 
@@ -14,5 +14,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

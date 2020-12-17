@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     blue = sc.Color(r=0, g=0, b=255)
     black = sc.Color(r=0, g=0, b=0)
     red = sc.Color(r=255, g=0, b=0)
@@ -35,5 +35,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

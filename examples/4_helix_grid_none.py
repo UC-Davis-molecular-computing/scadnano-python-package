@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     length = 10
     helices = [
         sc.Helix(max_offset=length, position=sc.Position3D(x=0, y=0, z=2.5), pitch=0, roll=0, yaw=0),
@@ -20,5 +20,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

@@ -2,7 +2,7 @@ import math
 
 import scadnano as sc
 
-def create_design():
+def create_design() -> sc.Design:
     length = 9
     helices = [sc.Helix(max_offset=length, roll=90)]
     stap_ss = sc.Domain(0, True, 0, length)
@@ -16,5 +16,5 @@ def create_design():
     return design
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

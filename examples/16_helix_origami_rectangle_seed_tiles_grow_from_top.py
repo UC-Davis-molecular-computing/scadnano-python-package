@@ -2,7 +2,7 @@ import origami_rectangle as rect
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     design = rect.create(num_helices=16, num_cols=28, seam_left_column=12, assign_seq=False,
                          num_flanking_columns=2, num_flanking_helices=2, edge_staples=False,
                          scaffold_nick_offset=102)
@@ -21,7 +21,7 @@ def create_design():
     return design
 
 
-def set_helix_major_ticks(design):
+def set_helix_major_ticks(design: sc.Design) -> None:
     major_ticks = [11, 22, 32]
     for tick in range(40, 481, 8):
         major_ticks.append(tick)
@@ -41,7 +41,7 @@ def set_helix_major_ticks(design):
         helix.major_ticks = ticks
 
 
-def add_twist_correct_deletions(design: sc.Design):
+def add_twist_correct_deletions(design: sc.Design) -> None:
     # I choose between 3 and 4 offset arbitrarily for twist-correction deletions for some reason,
     # so they have to be hard-coded.
     for col, offset in zip(range(4, 29, 3), [4, 3, 3, 4, 3, 3, 3, 3, 3]):
@@ -49,7 +49,7 @@ def add_twist_correct_deletions(design: sc.Design):
             design.add_deletion(helix, 16 * col + offset)
 
 
-def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design):
+def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design) -> None:
     top_staples = design.strands_starting_on_helix(2)
     bot_staples = design.strands_starting_on_helix(17)
     bot_staples.remove(design.scaffold)
@@ -63,7 +63,7 @@ def move_top_and_bottom_staples_within_column_boundaries(design: sc.Design):
         design.set_start(bot_staple.domains[0], current_start + 8)
 
 
-def add_adapters(design):
+def add_adapters(design: sc.Design) -> None:
     # left adapters
     left_inside_seed = 48
     left_outside_seed = left_inside_seed - 26
@@ -144,8 +144,12 @@ tile_dna_seqs = [''.join(line.split(',')[1]) for line_no, line in enumerate(seq_
 #         design.assign_dna(tile, seq)
 
 
-if __name__ == '__main__':
+def main() -> None:
     design = create_design()
     design.write_scadnano_file(directory='output_designs')
     design.write_idt_bulk_input_file(directory='idt')
     design.write_idt_plate_excel_file(directory='idt', use_default_plates=True)
+
+
+if __name__ == '__main__':
+    main()
