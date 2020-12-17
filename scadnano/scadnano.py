@@ -2777,6 +2777,30 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if isinstance(self.domains[-1], Loopout):
             raise StrandError(self, 'strand cannot end with a loopout')
 
+    def idt_export_name(self, unique_names: bool = False) -> str:
+        """
+        :param unique_names:
+            If True and default name is used,
+            enforces that strand names must be unique by encoding the forward/reverse Boolean
+            into the name.
+            If False (the default), uses cadnano's exact naming convention, which allows two strands
+            to have the same default name, if they begin and end at the same (helix,offset) pair (but
+            point in opposite directions at each).
+            Has no effect if :py:data:`Strand.idt` or :py:data:`Strand.name` are defined;
+            if those are used, they must be explicitly set to be unique.
+        :return:
+            If :py:data:`Strand.idt` is not None, return :py:data:`Strand.idt.name`,
+            otherwise, if :py:data:`Strand.name` is not None, return :py:data:`Strand.name`,
+            otherwise return the result of :py:meth:`Strand.default_export_name`
+            with parameter `unique_names`.
+        """
+        if self.idt is not None:
+            return self.idt.name
+        elif self.name is not None:
+            return self.name
+        else:
+            return self.default_export_name(unique_names)
+
     def default_export_name(self, unique_names: bool = False) -> str:
         """
         Returns a default name to use when exporting the DNA sequence.
@@ -5004,7 +5028,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if strand.idt is None:
                 raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
             idt_lines.append(delimiter.join(
-                [strand.idt.name if strand.idt.name is not None else strand.name, strand.idt_dna_sequence(),
+                [strand.idt_export_name(), strand.idt_dna_sequence(),
                  strand.idt.scale, strand.idt.purification]
             ))
 
@@ -5024,16 +5048,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if strand.is_scaffold and not export_scaffold:
                 continue
 
+            # skip strands with no IDT field unless requested to export
+            if strand.idt is None and only_strands_with_idt:
+                continue
+
             # figure out what name to export
-            if strand.idt is not None:
-                name = strand.idt.name
-            else:
-                if only_strands_with_idt:  # skip strands with no IDT field unless requested to export
-                    continue
-                if strand.name is not None:
-                    name = strand.name
-                else:
-                    name = strand.default_export_name()
+            name = strand.idt_export_name()
 
             if name in added_strands:
                 existing_strand = added_strands[name]
@@ -5164,7 +5184,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                    warn_duplicate_name: bool = False,
                                    only_strands_with_idt: bool = False,
                                    export_scaffold: bool = False,
-                                   use_default_plates: bool = False, warn_using_default_plates: bool = True,
+                                   use_default_plates: bool = True, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False) -> None:
         """
@@ -5197,6 +5217,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             If False (the default), all non-scaffold sequences are output
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+            If False, then `use_default_plates` must be True.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
             If True, scaffold sequences on strands output according to `only_strands_with_idt`
@@ -5204,6 +5225,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             `only_strands_with_idt` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
+            If False, each Strand to export must have the field :py:data:`Strand.idt`, so in particular
+            the parameter `only_strands_with_idt` must be True.
         :param warn_using_default_plates:
             specifies whether to print a warning for strands whose
             :py:data:`Strand.idt` have the fields
@@ -5224,15 +5247,18 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
-            self._write_plates_assuming_explicit_in_each_strand(directory, filename, strands_to_export)
+            if not only_strands_with_idt:
+                raise ValueError('parameters use_default_plates and only_strands_with_idt '
+                                 'cannot both be False')
+            self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
-            self._write_plates_default(directory=directory, filename=filename, idt_strands=strands_to_export,
+            self._write_plates_default(directory=directory, filename=filename, strands_to_export=strands_to_export,
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
-    def _write_plates_assuming_explicit_in_each_strand(self, directory: str, filename: Optional[str],
-                                                       idt_strands: List[Strand]) -> None:
-        plates = list({strand.idt.plate for strand in idt_strands if strand.idt is not None if
+    def _write_plates_assuming_explicit_plates_in_each_strand(self, directory: str, filename: Optional[str],
+                                                              strands_to_export: List[Strand]) -> None:
+        plates = list({strand.idt.plate for strand in strands_to_export if strand.idt is not None if
                        strand.idt.plate is not None})
         if len(plates) == 0:
             raise ValueError('Cannot write a a plate file since no plate data exists in any Strands '
@@ -5245,7 +5271,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for plate in plates:
             worksheet = self._add_new_excel_plate_sheet(plate, workbook)
 
-            strands_in_plate = [strand for strand in idt_strands if
+            strands_in_plate = [strand for strand in strands_to_export if
                                 strand.idt is not None and strand.idt.plate == plate]
 
             strands_in_plate.sort(key=lambda s: (int(s.idt.well[1:]), s.idt.well[0]))  # type: ignore
@@ -5279,7 +5305,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         workbook = xlwt.Workbook()
         return filename_plate, workbook
 
-    def _write_plates_default(self, directory: str, filename: Optional[str], idt_strands: List[Strand],
+    def _write_plates_default(self, directory: str, filename: Optional[str], strands_to_export: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True) -> None:
         plate_coord = _PlateCoordinate(plate_type=plate_type)
@@ -5288,21 +5314,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         filename_plate, workbook = self._setup_excel_file(directory, filename)
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
-        for strand in idt_strands:
-            if strand.idt is None:
-                raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
-            if warn_using_default_plates and strand.idt.plate is not None:
-                print(
-                    f"WARNING: strand {strand} has plate entry {strand.idt.plate}, which is being ignored "
-                    f"since we are using default plate/well addressing")
-            if warn_using_default_plates and strand.idt.well is not None:
-                print(
-                    f"WARNING: strand {strand} has well entry {strand.idt.well}, which is being ignored "
-                    f"since we are using default plate/well addressing")
+        for strand in strands_to_export:
+            if strand.idt is not None:
+                if warn_using_default_plates and strand.idt.plate is not None:
+                    print(
+                        f"WARNING: strand {strand} has plate entry {strand.idt.plate}, "
+                        f"which is being ignored since we are using default plate/well addressing")
+                if warn_using_default_plates and strand.idt.well is not None:
+                    print(
+                        f"WARNING: strand {strand} has well entry {strand.idt.well}, "
+                        f"which is being ignored since we are using default plate/well addressing")
 
             well = plate_coord.well()
             worksheet.write(excel_row, 0, well)
-            worksheet.write(excel_row, 1, strand.idt.name)
+            worksheet.write(excel_row, 1, strand.idt_export_name())
             worksheet.write(excel_row, 2, strand.idt_dna_sequence())
             plate_coord.increment()
             if plate != plate_coord.plate():
@@ -5703,11 +5728,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
         new_strand: Strand[StrandLabel, DomainLabel] = Strand(domains=new_domains, color=strand_first.color,
-                                                              dna_sequence=new_dna, idt=strand_first.idt)
+                                                              dna_sequence=new_dna, idt=strand_first.idt,
+                                                              is_scaffold=strand1.is_scaffold or strand2.is_scaffold)
 
-        self.strands.remove(strand_first)
+        # put new strand in place where strand_first was
+        strand_first_idx = self.strands.index(strand_first)
+        self.strands[strand_first_idx] = new_strand
         self.strands.remove(strand_last)
-        self.strands.append(new_strand)
 
     def add_full_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None) -> None:

@@ -3,7 +3,7 @@ import scadnano as sc
 
 def main() -> None:
     design = create_design()
-    export_idt_plate_file(design)
+    design.write_idt_plate_excel_file(use_default_plates=True)
     design.write_scadnano_file()
 
 
@@ -75,11 +75,6 @@ def add_twist_correction_deletions(design: sc.Design) -> None:
             design.add_deletion(helix, offset)
 
 
-def export_idt_plate_file(design: sc.Design) -> None:
-    for strand in design.strands:
-        if strand != design.scaffold:
-            strand.set_default_idt(use_default_idt=True)
-    design.write_idt_plate_excel_file(use_default_plates=True)
 
 
 if __name__ == '__main__':
