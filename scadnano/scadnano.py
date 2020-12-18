@@ -2725,7 +2725,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def set_circular(self, circular: bool = True) -> None:
         """
-        Sets this to be a circular :any:`Strand` (or non-circular if optional parameter is False.
+        Sets this to be a circular :any:`Strand` (or non-circular if optional parameter is False).
 
         :param circular:
             whether to make this :any:`Strand` circular (True) or linear (False)
