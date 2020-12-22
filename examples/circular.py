@@ -1,5 +1,4 @@
 import scadnano as sc
-import modifications as mod
 import dataclasses
 
 def create_design():
