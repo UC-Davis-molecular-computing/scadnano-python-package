@@ -283,7 +283,7 @@ default_scaffold_color = Color(0, 102, 204)
 default_strand_color = Color(0, 0, 0)
 """Default color for non-scaffold strand(s)."""
 
-
+default_cadnano_strand_color = Color(hex_string='#BFBFBF')
 #
 # END Colors
 ##############################################################################
@@ -4024,22 +4024,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
         """
-        id_from_before = helix_num
+        id_from_before = helix_num # 'id' stands for helix id
         base_from_before = base_id
+
+        circular_seen = {}
+        is_circular = False
+
         while not (id_from == -1 and base_from == -1):
+            if (id_from,base_from) in circular_seen:
+                is_circular = True
+                break
+            circular_seen[(id_from,base_from)] = True
             id_from_before = id_from
             base_from_before = base_from
             id_from, base_from, _, _ = vstrands[id_from][strand_type][base_from]
-        return id_from_before, base_from_before
+        return id_from_before, base_from_before, is_circular
 
     @staticmethod
     def _cadnano_v2_import_find_strand_color(vstrands: VStrands, strand_type: str, strand_5_end_base: int,
                                              strand_5_end_helix: int) -> Color:
         """Routine that finds the color of a cadnano v2 strand."""
-        color: Color = default_scaffold_color
+        color: Color = default_cadnano_strand_color
+
+        if strand_type == 'scaf':
+            return default_scaffold_color
+
         if strand_type == 'stap':
             base_id: int
             stap_color: int
+
             for base_id, stap_color in vstrands[strand_5_end_helix]['stap_colors']:
                 if base_id == strand_5_end_base:
                     color = Color.from_cadnano_v2_int_hex(stap_color)
@@ -4083,15 +4096,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         else:
             end = curr_base
 
+        circular_seen = {}
         while not (curr_helix == -1 and curr_base == -1):
+            if (curr_helix,curr_base) in circular_seen:
+                break
+            circular_seen[(curr_helix,curr_base)] = True
+
             old_helix = curr_helix
             old_base = curr_base
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
             # We have a crossover when we jump helix or when order is broken on same helix
+            # Or circular strand
             if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
-                    direction_forward and curr_base < old_base):
+                    direction_forward and curr_base < old_base) or (curr_helix == strand_5_end_helix and curr_base == strand_5_end_base):
+                
                 if direction_forward:
                     end = old_base
                 else:
@@ -4115,6 +4135,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return domains
 
     @staticmethod
+    def _cadnano_v2_import_circular_strands_merge_first_last_domains(domains: Sequence[Domain]) -> None:
+        """ When we create domains for circular strands in the cadnano import routine, we may end up
+            with a fake crossover if first and last domain are on same helix, we have to merge them 
+            if it is the case.
+        """
+        if domains[0].helix != domains[-1].helix:
+            return
+        
+        domains[0].start = min(domains[0].start,domains[-1].start)
+        domains[0].end = max(domains[0].end,domains[-1].end)
+
+        del domains[-1]
+
+    @staticmethod
     def _cadnano_v2_import_explore_strand(vstrands: VStrands,
                                           strand_type: str, seen: Dict[Tuple[int, int], bool],
                                           helix_num: int,
@@ -4128,23 +4162,27 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
-
-        strand_5_end_helix, strand_5_end_base = Design._cadnano_v2_import_find_5_end(vstrands,
+        
+        strand_5_end_helix, strand_5_end_base, is_circular = Design._cadnano_v2_import_find_5_end(vstrands,
                                                                                      strand_type,
                                                                                      helix_num,
                                                                                      base_id,
                                                                                      id_from,
                                                                                      base_from)
+
         strand_color = Design._cadnano_v2_import_find_strand_color(vstrands, strand_type,
                                                                    strand_5_end_base,
                                                                    strand_5_end_helix)
         domains: Sequence[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
                                                                               strand_5_end_base,
                                                                               strand_5_end_helix)
+        # merge first and last domain if circular
+        if is_circular:
+            Design._cadnano_v2_import_circular_strands_merge_first_last_domains(domains)
         domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
                                 domains)  # type: ignore
         strand: Strand = Strand(domains=domains_loopouts,
-                                is_scaffold=(strand_type == 'scaf'), color=strand_color)
+                                is_scaffold=(strand_type == 'scaf'), color=strand_color, circular=is_circular)
 
         return strand
 
@@ -4155,7 +4193,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         Creates a Design from a cadnano v2 file.
         """
-
+        
         if json_dict is None and filename is not None and directory is not None:
             file_path = os.path.join(directory, filename)
             f = open(file_path, 'r')
@@ -4191,6 +4229,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strands: List[Strand] = []
         cadnano_helices = OrderedDict({})
         for cadnano_helix in cadnano_v2_design['vstrands']:
+            
             helix_num = cadnano_helix['num']
             cadnano_helices[helix_num] = cadnano_helix
 

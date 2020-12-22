@@ -595,6 +595,20 @@ class TestImportCadnanoV2(unittest.TestCase):
         design.write_scadnano_file(directory=self.output_path,
                                    filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
+    def test_circular_auto_staple(self) -> None:
+        file_name = "test_circular_auto_staple"
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+
+    def test_circular_auto_staple_hex(self) -> None:
+        file_name = "test_circular_auto_staple_hex"
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+
 
 class TestExportDNASequences(unittest.TestCase):
 
@@ -960,6 +974,17 @@ class TestExportCadnanoV2(unittest.TestCase):
                                    filename=f'test_16_helix_origami_rectangle_no_twist.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_16_helix_origami_rectangle_no_twist.json')
+
+    def test_circular_strand(self) -> None:
+        # TODO: not working
+        helices = [sc.Helix(max_offset=24) for _ in range(2)]
+        design = sc.Design(helices=helices, grid=sc.square)
+
+        design.strand(0,0).move(8).cross(1).move(-8).as_circular()
+        design.write_scadnano_file(directory=self.input_path,
+                                   filename=f'test_circular_strand.{self.ext}')
+        design.export_cadnano_v2(directory=self.output_path,
+                                 filename='test_circular_strand.json')
 
     def test_bad_cases(self) -> None:
         """ We do not handle Loopouts and design where the parity of the helix
