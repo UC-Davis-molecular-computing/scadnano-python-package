@@ -1783,7 +1783,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
 
 @dataclass
-class Loopout(_JSONSerializable):
+class Loopout(_JSONSerializable, Generic[DomainLabel]):
     """Represents a single-stranded loopout on a :any:`Strand`.
 
     One could think of a :any:`Loopout` as a type of :any:`Domain`, but none of the fields of
@@ -1829,7 +1829,7 @@ class Loopout(_JSONSerializable):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Any = None
+    label: Optional[DomainLabel] = None
     """
     Generic "label" object to associate to this :any:`Loopout`.
 
@@ -1885,21 +1885,9 @@ class Loopout(_JSONSerializable):
         """Sets name of this :any:`Loopout`."""
         self.name = name
 
-    def set_label(self, label: Any) -> None:
+    def set_label(self, label: Optional[DomainLabel]) -> None:
         """Sets label of this :any:`Loopout`."""
         self.label = label
-
-    # @staticmethod
-    # def is_loopout() -> bool:
-    #     """Indicates if this is a :any:`Loopout` (always true).
-    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-    #     return True
-    #
-    # @staticmethod
-    # def is_domain() -> bool:
-    #     """Indicates if this is a :any:`Domain` (always false)
-    #     Useful when object could be either :any:`Loopout` or :any:`Domain`."""
-    #     return False
 
     def __len__(self) -> int:
         """Same as :any:`Loopout.dna_length`"""
@@ -2501,7 +2489,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout]]
+    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2569,7 +2557,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Optional[DomainLabel] = None
+    label: Optional[StrandLabel] = None
     """Generic "label" object to associate to this :any:`Strand`.
     
     Useful for associating extra information with the Strand that will be serialized, for example,
@@ -2745,7 +2733,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         self.set_circular(False)
 
-    def set_domains(self, domains: Iterable[Union[Domain[DomainLabel], Loopout]]) -> None:
+    def set_domains(self, domains: Iterable[Union[Domain[DomainLabel], Loopout[DomainLabel]]]) -> None:
         """
         Sets the :any:`Domain`'s/:any:`Loopout`'s of this :any:`Strand` to be `domains`,
         which can contain a mix of :any:`Domain`'s and :any:`Loopout`'s,
