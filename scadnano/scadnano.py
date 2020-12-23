@@ -4448,6 +4448,36 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
+        # if the strand is circular, we need to close the loop
+        if strand.circular:
+            first_domain = strand.domains[0]
+            first_helix = dct['vstrands'][first_domain.helix]
+            first_start, first_end, first_forward = first_domain.start, first_domain.end, first_domain.forward
+
+            last_domain = strand.domains[-1]
+            last_helix = dct['vstrands'][last_domain.helix]
+            last_start, last_end, last_forward = last_domain.start, last_domain.end, last_domain.forward
+
+            the_base_from = last_end-1
+            the_base_to = first_start
+
+            if not last_forward:
+                the_base_from = last_start
+
+            if not first_forward:
+                the_base_to = first_end-1
+            
+            if first_helix[strand_type][the_base_to][:2] == [-1,-1]:
+                first_helix[strand_type][the_base_to][:2] = [last_helix['num'],the_base_from]
+            else: 
+                first_helix[strand_type][the_base_to][2:] = [last_helix['num'],the_base_from]
+
+            if last_helix[strand_type][the_base_from][:2] == [-1,-1]:
+                last_helix[strand_type][the_base_from][:2] = [first_helix['num'],the_base_to]
+            else:
+                last_helix[strand_type][the_base_from][2:] = [first_helix['num'],the_base_to]
+
+
     def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
@@ -4527,16 +4557,21 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         have the scaffold go backward.
 
         '''
-        for strand in self.strands:
-            if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                for domain in strand.domains:
-                    if isinstance(domain, Loopout):
-                        raise ValueError(
-                            'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                    if domain.helix % 2 != int(not domain.forward):
-                        raise ValueError('We can only convert designs where even helices have the scaffold'
-                                         'going forward and odd helices have the scaffold going backward see '
-                                         f'the spec v2.txt Note 4. {domain}')
+        for strand in self.strands:    
+            for domain in strand.domains:
+                if isinstance(domain, Loopout):
+                    raise ValueError(
+                        'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
+                right_direction = False
+                if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
+                    right_direction = ( domain.helix % 2 == int(not domain.forward) )
+                else:
+                    right_direction = not ( domain.helix % 2 == int(not domain.forward) )
+
+                if not right_direction:
+                    raise ValueError('We can only convert designs where even helices have the scaffold'
+                                        'going forward and odd helices have the scaffold going backward see '
+                                        f'the spec v2.txt Note 4. {domain}')
 
         '''Filling the helices with blank.
         '''

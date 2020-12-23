@@ -976,15 +976,26 @@ class TestExportCadnanoV2(unittest.TestCase):
                                  filename='test_16_helix_origami_rectangle_no_twist.json')
 
     def test_circular_strand(self) -> None:
-        # TODO: not working
         helices = [sc.Helix(max_offset=24) for _ in range(2)]
         design = sc.Design(helices=helices, grid=sc.square)
 
-        design.strand(0,0).move(8).cross(1).move(-8).as_circular()
+        design.strand(1,0).move(8).cross(0).move(-8).as_circular()
         design.write_scadnano_file(directory=self.input_path,
                                    filename=f'test_circular_strand.{self.ext}')
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_circular_strand.json')
+
+    def test_big_circular_staples_hex(self) -> None:
+        design = sc.Design.from_scadnano_file(
+            os.path.join(self.input_path, f'test_big_circular_staples_hex.{self.ext}'))
+        design.export_cadnano_v2(directory=self.output_path,
+                                 filename='test_big_circular_staples_hex.json')
+
+    def test_big_circular_staples(self) -> None:
+        design = sc.Design.from_scadnano_file(
+            os.path.join(self.input_path, f'test_big_circular_staples.{self.ext}'))
+        design.export_cadnano_v2(directory=self.output_path,
+                                 filename='test_big_circular_staples.json')
 
     def test_bad_cases(self) -> None:
         """ We do not handle Loopouts and design where the parity of the helix
