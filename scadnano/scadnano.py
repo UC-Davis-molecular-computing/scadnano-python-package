@@ -4920,7 +4920,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             :any:`Domain` on `strand` to assign. If ``None``, then the whole :any:`Strand` is
             given a DNA sequence. Otherwise, only `domain` is assigned, and the rest of the :any:`Domain`'s
             on `strand` are left alone (either keeping their DNA sequence, or being assigned
-            :py:const:`DNA_case_wildcard` if no DNA sequence was previously assigned.)
+            :py:const:`DNA_base_wildcard` if no DNA sequence was previously assigned.)
             If `domain` is specified, then ``len(sequence)`` must be least than or equal to the number
             of bases on `domain`. (i.e., ``domain.dna_length()``)
         :param check_length:
