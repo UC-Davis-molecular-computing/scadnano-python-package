@@ -2674,13 +2674,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         A, B, C, D, E, F
 
-        then ``strand.rotate(2)`` makes the :any:`Strand` have the same domains, but in this order:
-        
-        C, D, E, F, A, B
-        
-        and  ``strand.rotate(2, forward=False)`` makes 
+        then ``strand.rotate_domains(2)`` makes the :any:`Strand` have the same domains, but in this order:
         
         E, F, A, B, C, D
+        
+        and  ``strand.rotate_domains(2, forward=False)`` makes
+        
+        C, D, E, F, A, B
 
         :param rotation:
             Amount to rotate domains.
