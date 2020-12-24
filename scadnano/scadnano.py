@@ -54,7 +54,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
     TypeVar, Generic, Callable
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -282,6 +282,8 @@ default_scaffold_color = Color(0, 102, 204)
 
 default_strand_color = Color(0, 0, 0)
 """Default color for non-scaffold strand(s)."""
+
+default_cadnano_strand_color = Color(hex_string='#BFBFBF')
 
 
 #
@@ -4020,26 +4022,39 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     @staticmethod
     def _cadnano_v2_import_find_5_end(vstrands: VStrands, strand_type: str, helix_num: int, base_id: int,
                                       id_from: int,
-                                      base_from: int) -> Tuple[int, int]:
+                                      base_from: int) -> Tuple[int, int, bool]:
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
         """
-        id_from_before = helix_num
+        id_from_before = helix_num  # 'id' stands for helix id
         base_from_before = base_id
+
+        circular_seen = {}
+        is_circular = False
+
         while not (id_from == -1 and base_from == -1):
+            if (id_from, base_from) in circular_seen:
+                is_circular = True
+                break
+            circular_seen[(id_from, base_from)] = True
             id_from_before = id_from
             base_from_before = base_from
             id_from, base_from, _, _ = vstrands[id_from][strand_type][base_from]
-        return id_from_before, base_from_before
+        return id_from_before, base_from_before, is_circular
 
     @staticmethod
     def _cadnano_v2_import_find_strand_color(vstrands: VStrands, strand_type: str, strand_5_end_base: int,
                                              strand_5_end_helix: int) -> Color:
         """Routine that finds the color of a cadnano v2 strand."""
-        color: Color = default_scaffold_color
+        color: Color = default_cadnano_strand_color
+
+        if strand_type == 'scaf':
+            return default_scaffold_color
+
         if strand_type == 'stap':
             base_id: int
             stap_color: int
+
             for base_id, stap_color in vstrands[strand_5_end_helix]['stap_colors']:
                 if base_id == strand_5_end_base:
                     color = Color.from_cadnano_v2_int_hex(stap_color)
@@ -4083,15 +4098,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         else:
             end = curr_base
 
+        circular_seen = {}
         while not (curr_helix == -1 and curr_base == -1):
+            if (curr_helix, curr_base) in circular_seen:
+                break
+            circular_seen[(curr_helix, curr_base)] = True
+
             old_helix = curr_helix
             old_base = curr_base
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
             # We have a crossover when we jump helix or when order is broken on same helix
+            # Or circular strand
             if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
-                    direction_forward and curr_base < old_base):
+                    direction_forward and curr_base < old_base) or (
+                    curr_helix == strand_5_end_helix and curr_base == strand_5_end_base):
+
                 if direction_forward:
                     end = old_base
                 else:
@@ -4115,6 +4138,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return domains
 
     @staticmethod
+    def _cadnano_v2_import_circular_strands_merge_first_last_domains(domains: List[Domain]) -> None:
+        """ When we create domains for circular strands in the cadnano import routine, we may end up
+            with a fake crossover if first and last domain are on same helix, we have to merge them 
+            if it is the case.
+        """
+        if domains[0].helix != domains[-1].helix:
+            return
+
+        domains[0].start = min(domains[0].start, domains[-1].start)
+        domains[0].end = max(domains[0].end, domains[-1].end)
+
+        del domains[-1]
+
+    @staticmethod
     def _cadnano_v2_import_explore_strand(vstrands: VStrands,
                                           strand_type: str, seen: Dict[Tuple[int, int], bool],
                                           helix_num: int,
@@ -4129,22 +4166,26 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
 
-        strand_5_end_helix, strand_5_end_base = Design._cadnano_v2_import_find_5_end(vstrands,
-                                                                                     strand_type,
-                                                                                     helix_num,
-                                                                                     base_id,
-                                                                                     id_from,
-                                                                                     base_from)
+        strand_5_end_helix, strand_5_end_base, is_circular = Design._cadnano_v2_import_find_5_end(vstrands,
+                                                                                                  strand_type,
+                                                                                                  helix_num,
+                                                                                                  base_id,
+                                                                                                  id_from,
+                                                                                                  base_from)
+
         strand_color = Design._cadnano_v2_import_find_strand_color(vstrands, strand_type,
                                                                    strand_5_end_base,
                                                                    strand_5_end_helix)
-        domains: Sequence[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
-                                                                              strand_5_end_base,
-                                                                              strand_5_end_helix)
+        domains: List[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
+                                                                          strand_5_end_base,
+                                                                          strand_5_end_helix)
+        # merge first and last domain if circular
+        if is_circular:
+            Design._cadnano_v2_import_circular_strands_merge_first_last_domains(domains)
         domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
                                 domains)  # type: ignore
         strand: Strand = Strand(domains=domains_loopouts,
-                                is_scaffold=(strand_type == 'scaf'), color=strand_color)
+                                is_scaffold=(strand_type == 'scaf'), color=strand_color, circular=is_circular)
 
         return strand
 
@@ -4409,6 +4450,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
+        # if the strand is circular, we need to close the loop
+        if strand.circular:
+            first_domain = strand.first_bound_domain()
+            first_helix = dct['vstrands'][first_domain.helix]
+            first_start, first_end, first_forward = first_domain.start, first_domain.end, first_domain.forward
+
+            last_domain = strand.last_bound_domain()
+            last_helix = dct['vstrands'][last_domain.helix]
+            last_start, last_end, last_forward = last_domain.start, last_domain.end, last_domain.forward
+
+            the_base_from = last_end - 1
+            the_base_to = first_start
+
+            if not last_forward:
+                the_base_from = last_start
+
+            if not first_forward:
+                the_base_to = first_end - 1
+
+            if first_helix[strand_type][the_base_to][:2] == [-1, -1]:
+                first_helix[strand_type][the_base_to][:2] = [last_helix['num'], the_base_from]
+            else:
+                first_helix[strand_type][the_base_to][2:] = [last_helix['num'], the_base_from]
+
+            if last_helix[strand_type][the_base_from][:2] == [-1, -1]:
+                last_helix[strand_type][the_base_from][:2] = [first_helix['num'], the_base_to]
+            else:
+                last_helix[strand_type][the_base_from][2:] = [first_helix['num'], the_base_to]
+
     def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
@@ -4489,15 +4559,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         '''
         for strand in self.strands:
-            if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                for domain in strand.domains:
-                    if isinstance(domain, Loopout):
-                        raise ValueError(
-                            'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                    if domain.helix % 2 != int(not domain.forward):
-                        raise ValueError('We can only convert designs where even helices have the scaffold'
-                                         'going forward and odd helices have the scaffold going backward see '
-                                         f'the spec v2.txt Note 4. {domain}')
+            for domain in strand.domains:
+                if isinstance(domain, Loopout):
+                    raise ValueError(
+                        'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
+                right_direction: bool
+                if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
+                    right_direction = (domain.helix % 2 == int(not domain.forward))
+                else:
+                    right_direction = not (domain.helix % 2 == int(not domain.forward))
+
+                if not right_direction:
+                    raise ValueError('We can only convert designs where even helices have the scaffold'
+                                     'going forward and odd helices have the scaffold going backward see '
+                                     f'the spec v2.txt Note 4. {domain}')
 
         '''Filling the helices with blank.
         '''
