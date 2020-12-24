@@ -1,9 +1,9 @@
 {
-  "version": "0.11.0",
+  "version": "0.14.0",
   "grid": "square",
   "helices": [
-    {"grid_position": [0, 0]},
-    {"grid_position": [0, 1]},
+    {"max_offset": 8, "grid_position": [0, 0]},
+    {"max_offset": 8, "grid_position": [0, 1]},
     {"grid_position": [0, 2]}
   ],
   "strands": [

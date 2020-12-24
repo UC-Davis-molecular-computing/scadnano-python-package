@@ -1,6 +1,6 @@
 import scadnano as sc
 
-def create_design():
+def create_design() -> sc.Design:
     ss1_r = sc.Domain(0, True, 0, 4)
     ss2_r = sc.Domain(0, True, 4, 8)
     ss3_r = sc.Domain(0, True, 8, 12)
@@ -20,5 +20,5 @@ def create_design():
     return design
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_idt_bulk_input_file(directory='idt')
+    d = create_design()
+    d.write_idt_bulk_input_file(directory='idt')

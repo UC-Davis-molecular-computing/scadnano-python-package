@@ -1,14 +1,14 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     blue = sc.Color(r=0, g=0, b=255)
     black = sc.Color(r=0, g=0, b=0)
     red = sc.Color(r=255, g=0, b=0)
     green = sc.Color(r=0, g=150, b=0)
     cols = 8
     rows = 8
-    # helices = [sc.Helix(major_tick_distance=10) for _ in range(rows+1)]
+    helices = [sc.Helix(major_tick_distance=10) for _ in range(rows+1)]
     strands = []
     for col in range(cols):
         for row in range(rows):
@@ -29,12 +29,11 @@ def create_design():
             strand = sc.Strand([ss1, ss2], color=color)
             strands.append(strand)
 
-    # design = sc.Design(helices=helices, strands=strands, grid=sc.square)
-    design = sc.Design(major_tick_distance=10, strands=strands, grid=sc.square)
+    design = sc.Design(helices=helices, strands=strands, grid=sc.square)
 
     return design
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

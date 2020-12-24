@@ -3,7 +3,7 @@ import scadnano as sc
 
 # If running in scadnano, define a function called main() that returns design.
 # It will be displayed in the browser by scadnano.
-def create_design():
+def create_design() -> sc.Design:
     # multiple-domain
     ss0_1 = sc.Domain(helix=0, forward=False, start=0, end=4)
     ss1 = sc.Domain(helix=1, forward=True, start=0, end=8)
@@ -22,5 +22,5 @@ def create_design():
 
 # If running from the command line, call main() manually and write design to scadnano file.
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

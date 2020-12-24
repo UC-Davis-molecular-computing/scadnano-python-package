@@ -1,23 +1,11 @@
 {
-  "version": "0.11.0",
+  "version": "0.14.0",
   "grid": "square",
   "helices": [
     {"grid_position": [0, 0]},
     {"grid_position": [0, 1]}
   ],
   "modifications_in_design": {
-    "/3Cy3Sp/": {
-      "display_text": "Cy3",
-      "idt_text": "/3Cy3Sp/",
-      "display_connector": false,
-      "location": "3'"
-    },
-    "/iCy5/": {
-      "display_text": "Cy5",
-      "idt_text": "/iCy5/",
-      "display_connector": false,
-      "location": "internal"
-    },
     "/iBiodT/": {
       "display_text": "B",
       "idt_text": "/iBiodT/",
@@ -25,9 +13,15 @@
       "location": "internal",
       "allowed_bases": ["T"]
     },
-    "/5Cy5/": {
+    "/iCy5/": {
       "display_text": "Cy5",
-      "idt_text": "/5Cy5/",
+      "idt_text": "/iCy5/",
+      "display_connector": false,
+      "location": "internal"
+    },
+    "/5Biosg/": {
+      "display_text": "B",
+      "idt_text": "/5Biosg/",
       "display_connector": false,
       "location": "5'"
     },
@@ -43,11 +37,17 @@
       "display_connector": false,
       "location": "3'"
     },
-    "/5Biosg/": {
-      "display_text": "B",
-      "idt_text": "/5Biosg/",
+    "/5Cy5/": {
+      "display_text": "Cy5",
+      "idt_text": "/5Cy5/",
       "display_connector": false,
       "location": "5'"
+    },
+    "/3Cy3Sp/": {
+      "display_text": "Cy3",
+      "idt_text": "/3Cy3Sp/",
+      "display_connector": false,
+      "location": "3'"
     }
   },
   "strands": [

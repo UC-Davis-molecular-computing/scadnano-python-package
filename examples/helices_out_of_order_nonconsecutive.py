@@ -2,7 +2,7 @@ import scadnano as sc
 from scadnano import origami_rectangle as rect
 
 
-def create_design():
+def create_design() -> sc.Design:
     helices = [
         sc.Helix(idx=2, max_offset=20),
         sc.Helix(idx=3, max_offset=20),
@@ -16,5 +16,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')
