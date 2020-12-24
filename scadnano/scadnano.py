@@ -44,18 +44,18 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.13.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.13.4"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABC, ABCMeta
 import json
 import enum
 import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
-    TypeVar, Generic
+from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+    TypeVar, Generic, Callable
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -283,6 +283,8 @@ default_scaffold_color = Color(0, 102, 204)
 default_strand_color = Color(0, 0, 0)
 """Default color for non-scaffold strand(s)."""
 
+default_cadnano_strand_color = Color(hex_string='#BFBFBF')
+
 
 #
 # END Colors
@@ -309,10 +311,11 @@ class Grid(str, enum.Enum):
 
     hex = "hex"
     """
-    Hexagonal lattice. Uses the *"odd-r horizontal layout"* coordinate system described here: 
+    Hexagonal lattice. Uses the *"odd-q horizontal layout"* coordinate system described here: 
     https://www.redblobgames.com/grids/hexagons/. 
-    Incrementing `v` moves down and to the right if `h` is even, 
-    and moves down and to the left if `h` is odd.
+    Incrementing `v` moves down.
+    Incrementing `h` moves down and to the right if `h` is even, 
+    and moves up and to the right if `h` is odd.
     """
 
     honeycomb = "honeycomb"
@@ -748,6 +751,7 @@ position_origin_key = 'origin'
 
 # Strand keys
 strand_name_key = 'name'
+circular_key = 'circular'
 color_key = 'color'
 dna_sequence_key = 'sequence'
 legacy_dna_sequence_keys = ['dna_sequence']  # support legacy names for these ideas
@@ -789,7 +793,6 @@ idt_scale_key = 'scale'
 idt_purification_key = 'purification'
 idt_plate_key = 'plate'
 idt_well_key = 'well'
-
 
 # end keys
 ##################
@@ -1168,7 +1171,7 @@ class Helix(_JSONSerializable):
     In the case of the hexagonal lattice, 
     The convention is that incrementing `v` moves down and to the right if h is even, 
     and moves down and to the left if `h` is odd.
-    This is the "odd-r horizontal layout" coordinate system here: 
+    This is the "odd-q" coordinate system here: 
     https://www.redblobgames.com/grids/hexagons/)
     However, the default y position in the main view for helices does not otherwise depend on grid_position.
     The default is to list the y-coordinates in order by helix idx.
@@ -1523,6 +1526,9 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         return repr(self) if self.name is None else self.name
 
     def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+        """
+        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        """
         if self._parent_strand is None:
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
@@ -1779,12 +1785,11 @@ class Loopout(_JSONSerializable):
     One could think of a :any:`Loopout` as a type of :any:`Domain`, but none of the fields of
     :any:`Domain` make sense for :any:`Loopout`, so they are not related to each other in the type
     hierarchy. It is interpreted that a :any:`Loopout` is a single-stranded region bridging two
-    :any:`Domain`'s that are connected to :any:`Helix`'s, or if it occurs on the end of a :any:`Strand`,
-    then it is a single-stranded extension. It is illegal for two consecutive :any:`Domain`'s to both
-    be :any:`Loopout`'s, and for a :any:`Strand` to have only one element of :any:`Strand.domains`
-    that is a :any:`Loopout`.
-
-    Loopout has only a single field :py:data:`Loopout.length` that specifies the length of the loopout.
+    :any:`Domain`'s that are connected to :any:`Helix`'s.
+    It is illegal for two consecutive :any:`Domain`'s to both
+    be :any:`Loopout`'s,
+    or for a :any:`Loopout` to occur on either end of the :any:`Strand`
+    (i.e., each :any:`Strand` must begin and end with a :any:`Domain`).
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -1799,6 +1804,15 @@ class Loopout(_JSONSerializable):
         loop = sc.Loopout(length=5)
         domain_r = sc.Domain(helix=0, forward=False, start=0, end=10)
         hairpin = sc.Strand([domain_f, loop, domain_r])
+
+    It can also be created with chained method calls
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=10)])
+        design.strand(0,0).move(10).loopout(0,5).move(-10)
     """
 
     length: int
@@ -1844,6 +1858,14 @@ class Loopout(_JSONSerializable):
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
         return Loopout(length=length, name=name, label=label)
+
+    def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+        """
+        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        """
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not yet been set')
+        return self._parent_strand
 
     def __repr__(self) -> str:
         return f'Loopout(' + \
@@ -2193,16 +2215,52 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
+    def as_circular(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Makes :any:`Strand` being built circular.
+
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        self._strand.set_circular()
+        return self
+
     # remove quotes when Py3.6 support dropped
     def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Makes Strand being built a scaffold.
+        Makes :any:`Strand` being built a scaffold.
 
         :return: self
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         self._strand.set_scaffold(True)
+        return self
+
+    def with_idt(self, name: str, scale: str = default_idt_scale,
+                 purification: str = default_idt_purification,
+                 plate: Optional[str] = None, well: Optional[str] = None):
+        """
+        Gives :any:`IDTFields` value to :any:`Strand` being built.
+        Only a name is required; other field have reasonable default values.
+
+        :param name:
+            name of strand; required field
+        :param scale:
+            see :py:data:`IDTFields.scale`
+        :param purification:
+            see :py:data:`IDTFields.purification`
+        :param plate:
+            see :py:data:`IDTFields.plate`
+        :param well:
+            see :py:data:`IDTFields.well`
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        self._strand.idt = IDTFields(name=name, scale=scale, purification=purification,
+                                     plate=plate, well=well)
         return self
 
     # remove quotes when Py3.6 support dropped
@@ -2444,6 +2502,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     and could be either single-stranded or double-stranded, 
     whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
 
+    circular: bool = False
+    """If True, this :any:`Strand` is circular and has no 5' or 3' end. Although there is still a 
+    first and last :any:`Domain`, we interpret there to be a crossover from the 3' end of the last domain
+    to the 5' end of the first domain, and any circular permutation of :py:data:`Strand.domains` 
+    should result in a functionally equivalent :any:`Strand`. It is illegal to have a 
+    :any:`Modification5Prime` or :any:`Modification3Prime` on a circular :any:`Strand`."""
+
     dna_sequence: Optional[str] = None
     """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
     (for complementarity checking) or :any:`Strand.set_dna_sequence` 
@@ -2476,10 +2541,16 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     :any:`Design` is a scaffold, then the design is considered a DNA origami design."""
 
     modification_5p: Optional[Modification5Prime] = None
-    """5' modification; None if there is no 5' modification."""
+    """
+    5' modification; None if there is no 5' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
+    """
 
     modification_3p: Optional[Modification3Prime] = None
-    """3' modification; None if there is no 5' modification."""
+    """
+    3' modification; None if there is no 3' modification. 
+    Illegal to have if :py:data:`Strand.circular` is True.
+    """
 
     modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
     """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). Maps offset to 
@@ -2516,20 +2587,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def __post_init__(self) -> None:
         self._helix_idx_domain_map = defaultdict(list)
 
-        for domain in self.domains:
-            if isinstance(domain, Domain):
-                self._helix_idx_domain_map[domain.helix].append(domain)
-
-        for domain in self.domains:
-            domain._parent_strand = self
-
-        if len(self.domains) == 1:
-            if isinstance(self.domains[0], Loopout):
-                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
-
-        for domain1, domain2 in _pairwise(self.domains):
-            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
-                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+        self.set_domains(self.domains)
 
         if self.use_default_idt:
             self.set_default_idt(True)
@@ -2541,6 +2599,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         dct: Dict[str, Any] = OrderedDict()
         if self.name is not None:
             dct[strand_name_key] = self.name
+        if self.circular:
+            dct[circular_key] = self.circular
         if self.color is not None:
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
@@ -2584,6 +2644,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
+        circular = json_map.get(circular_key, False)
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
@@ -2605,6 +2666,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return Strand(
             domains=domains,
             dna_sequence=dna_sequence,
+            circular=circular,
             color=color,
             idt=idt,
             is_scaffold=is_scaffold,
@@ -2666,6 +2728,66 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Sets color of this :any:`Strand`."""
         self.color = color
 
+    def set_circular(self, circular: bool = True) -> None:
+        """
+        Sets this to be a circular :any:`Strand` (or non-circular if optional parameter is False.
+
+        :param circular:
+            whether to make this :any:`Strand` circular (True) or linear (False)
+        :raises StrandError:
+            if this :any:`Strand` has a 5' or 3' modification
+        """
+        if circular and self.modification_5p is not None:
+            raise StrandError(self, "cannot have a 5' modification on a circular strand")
+        if circular and self.modification_3p is not None:
+            raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        self.circular = circular
+
+    def set_linear(self) -> None:
+        """
+        Makes this a linear (non-circular) :any:`Strand`. Equivalent to calling
+        `self.set_circular(False)`.
+        """
+        self.set_circular(False)
+
+    def set_domains(self, domains: Iterable[Union[Domain[DomainLabel], Loopout]]) -> None:
+        """
+        Sets the :any:`Domain`'s/:any:`Loopout`'s of this :any:`Strand` to be `domains`,
+        which can contain a mix of :any:`Domain`'s and :any:`Loopout`'s,
+        just like the field :py:data:`Strand.domains`.
+
+        :param domains:
+            The new sequence of :any:`Domain`'s/:any:`Loopout`'s to use for this :any:`Strand`.
+        :raises StrandError:
+            if domains has two consecutive :any:`Loopout`'s, consists of just a single :any:`Loopout`'s,
+            or starts or ends with a :any:`Loopout`
+        """
+        self.domains = domains
+
+        for domain in self.domains:
+            if isinstance(domain, Domain):
+                self._helix_idx_domain_map[domain.helix].append(domain)
+
+        for domain in self.domains:
+            domain._parent_strand = self
+
+        if len(self.domains) == 1:
+            if isinstance(self.domains[0], Loopout):
+                raise StrandError(self, 'strand cannot have a single Loopout as its only domain')
+
+        if len(self.domains) == 0:
+            raise StrandError(self, 'domains cannot be empty')
+
+        for domain1, domain2 in _pairwise(self.domains):
+            if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):
+                raise StrandError(self, 'cannot have two consecutive Loopouts in a strand')
+
+        if isinstance(self.domains[0], Loopout):
+            raise StrandError(self, 'strand cannot begin with a loopout')
+
+        if isinstance(self.domains[-1], Loopout):
+            raise StrandError(self, 'strand cannot end with a loopout')
+
     def set_default_idt(self, use_default_idt: bool = True, skip_scaffold: bool = True,
                         unique_names: bool = False) -> None:
         """
@@ -2711,11 +2833,15 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self.idt = None
 
     def set_modification_5p(self, mod: Modification5Prime = None) -> None:
-        """Sets 5' modification to be `mod`."""
+        """Sets 5' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
+        if self.circular and mod is not None:
+            raise StrandError(self, "cannot have a 5' modification on a circular strand")
         self.modification_5p = mod
 
     def set_modification_3p(self, mod: Modification3Prime = None) -> None:
-        """Sets 3' modification to be `mod`."""
+        """Sets 3' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
+        if self.circular and mod is not None:
+            raise StrandError(self, "cannot have a 3' modification on a circular strand")
         self.modification_3p = mod
 
     def remove_modification_5p(self) -> None:
@@ -3076,6 +3202,94 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         strand_nomods = replace(self, modification_3p=None, modification_5p=None, modifications_int={})
         return strand_nomods
+
+
+# for defining comparables for strongly typed sorting
+class Comparable(metaclass=ABCMeta):
+    @abstractmethod
+    def __lt__(self, other: Any) -> bool: ...
+
+
+T = TypeVar('T')
+# CT = TypeVar('CT', bound=Comparable)
+
+# KeyFunction = Callable[[T], CT]
+KeyFunction = Callable[[T], Any]
+
+
+class StrandOrder(enum.Enum):
+    """
+    Which part of a :any:`Strand` to use for sorting in the
+    `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_
+    returned by :py:meth:`strand_order_key_function`.
+    """
+    five_prime = 0
+    """5' end of the strand"""
+
+    three_prime = 1
+    """3' end of the strand"""
+
+    five_or_three_prime = 2
+    """Either 5' end or 3' end is used, whichever is first according to the sort order."""
+
+    top_left_domain = 3
+    """The start offset of the "top-left" :any:`Domain` of the :any:`Strand`: the :any:`Domain` whose
+    :py:data:`Domain.helix` is minimal, and, among all such :any:`Domain`'s, the one with 
+    minimal :py:data:`Domain.start`."""
+
+
+def strand_order_key_function(*, column_major: bool = True, strand_order: StrandOrder) -> KeyFunction[Strand]:
+    """
+    Returns a `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_
+    indicating a sorted order for :any:`Strand`'s. Useful as a parameter for
+    :py:meth:`Design.`.
+
+    :param column_major:
+        If true, column major order is used: ordered by base offset first, then by helix.
+        Otherwise row-major order is used: ordered by helix first, then by base offset.
+    :param strand_order:
+        Which part of the strand to use as a key for the sorted order.
+        See :any:`StrandOrder` for definitions.
+    :return:
+        A `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ that can be
+        passed to :py:meth:`Design.` to specify a sorted order for the :any:`Strand`'s.
+    """
+
+    def key(strand: Strand) -> Tuple[int, int]:
+        # we'll return a tuple (helix_idx, offset) for row-major or (offset, helix_idx) for col-major.
+        helix_idx: int
+        offset: int
+
+        if strand_order == StrandOrder.five_prime:
+            helix_idx = strand.first_bound_domain().helix
+            offset = strand.first_bound_domain().offset_5p()
+        elif strand_order == StrandOrder.three_prime:
+            helix_idx = strand.last_bound_domain().helix
+            offset = strand.last_bound_domain().offset_3p()
+        elif strand_order == StrandOrder.five_or_three_prime:
+            helix_idx_5p = strand.first_bound_domain().helix
+            offset_5p = strand.first_bound_domain().offset_5p()
+            helix_idx_3p = strand.last_bound_domain().helix
+            offset_3p = strand.last_bound_domain().offset_3p()
+            if column_major:
+                offset, helix_idx = min((offset_5p, helix_idx_5p), (offset_3p, helix_idx_3p))
+            else:
+                helix_idx, offset = min((helix_idx_5p, offset_5p), (helix_idx_3p, offset_3p))
+        elif strand_order == StrandOrder.top_left_domain:
+            helix_idx = strand.first_bound_domain().helix
+            offset = strand.first_bound_domain().start
+            for domain in strand.bound_domains():
+                if (helix_idx, offset) > (domain.helix, domain.start):
+                    helix_idx, offset = domain.helix, domain.start
+        else:
+            raise ValueError(f'{strand_order} is not a valid StrandOrder')
+
+        if column_major:
+            return offset, helix_idx
+        else:
+            return helix_idx, offset
+
+    return key
 
 
 def _pad_and_remove_whitespace_and_uppercase(sequence: str, strand: Strand, start: int = 0) -> str:
@@ -3808,26 +4022,39 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     @staticmethod
     def _cadnano_v2_import_find_5_end(vstrands: VStrands, strand_type: str, helix_num: int, base_id: int,
                                       id_from: int,
-                                      base_from: int) -> Tuple[int, int]:
+                                      base_from: int) -> Tuple[int, int, bool]:
         """ Routine which finds the 5' end of a strand in a cadnano v2 import. It returns the
         helix and the base of the 5' end.
         """
-        id_from_before = helix_num
+        id_from_before = helix_num  # 'id' stands for helix id
         base_from_before = base_id
+
+        circular_seen = {}
+        is_circular = False
+
         while not (id_from == -1 and base_from == -1):
+            if (id_from, base_from) in circular_seen:
+                is_circular = True
+                break
+            circular_seen[(id_from, base_from)] = True
             id_from_before = id_from
             base_from_before = base_from
             id_from, base_from, _, _ = vstrands[id_from][strand_type][base_from]
-        return id_from_before, base_from_before
+        return id_from_before, base_from_before, is_circular
 
     @staticmethod
     def _cadnano_v2_import_find_strand_color(vstrands: VStrands, strand_type: str, strand_5_end_base: int,
                                              strand_5_end_helix: int) -> Color:
         """Routine that finds the color of a cadnano v2 strand."""
-        color: Color = default_scaffold_color
+        color: Color = default_cadnano_strand_color
+
+        if strand_type == 'scaf':
+            return default_scaffold_color
+
         if strand_type == 'stap':
             base_id: int
             stap_color: int
+
             for base_id, stap_color in vstrands[strand_5_end_helix]['stap_colors']:
                 if base_id == strand_5_end_base:
                     color = Color.from_cadnano_v2_int_hex(stap_color)
@@ -3871,15 +4098,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         else:
             end = curr_base
 
+        circular_seen = {}
         while not (curr_helix == -1 and curr_base == -1):
+            if (curr_helix, curr_base) in circular_seen:
+                break
+            circular_seen[(curr_helix, curr_base)] = True
+
             old_helix = curr_helix
             old_base = curr_base
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
             # We have a crossover when we jump helix or when order is broken on same helix
+            # Or circular strand
             if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
-                    direction_forward and curr_base < old_base):
+                    direction_forward and curr_base < old_base) or (
+                    curr_helix == strand_5_end_helix and curr_base == strand_5_end_base):
+
                 if direction_forward:
                     end = old_base
                 else:
@@ -3903,6 +4138,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return domains
 
     @staticmethod
+    def _cadnano_v2_import_circular_strands_merge_first_last_domains(domains: List[Domain]) -> None:
+        """ When we create domains for circular strands in the cadnano import routine, we may end up
+            with a fake crossover if first and last domain are on same helix, we have to merge them 
+            if it is the case.
+        """
+        if domains[0].helix != domains[-1].helix:
+            return
+
+        domains[0].start = min(domains[0].start, domains[-1].start)
+        domains[0].end = max(domains[0].end, domains[-1].end)
+
+        del domains[-1]
+
+    @staticmethod
     def _cadnano_v2_import_explore_strand(vstrands: VStrands,
                                           strand_type: str, seen: Dict[Tuple[int, int], bool],
                                           helix_num: int,
@@ -3917,22 +4166,26 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if (id_from, base_from, id_to, base_to) == (-1, -1, -1, -1):
             return None
 
-        strand_5_end_helix, strand_5_end_base = Design._cadnano_v2_import_find_5_end(vstrands,
-                                                                                     strand_type,
-                                                                                     helix_num,
-                                                                                     base_id,
-                                                                                     id_from,
-                                                                                     base_from)
+        strand_5_end_helix, strand_5_end_base, is_circular = Design._cadnano_v2_import_find_5_end(vstrands,
+                                                                                                  strand_type,
+                                                                                                  helix_num,
+                                                                                                  base_id,
+                                                                                                  id_from,
+                                                                                                  base_from)
+
         strand_color = Design._cadnano_v2_import_find_strand_color(vstrands, strand_type,
                                                                    strand_5_end_base,
                                                                    strand_5_end_helix)
-        domains: Sequence[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
-                                                                              strand_5_end_base,
-                                                                              strand_5_end_helix)
+        domains: List[Domain] = Design._cadnano_v2_import_explore_domains(vstrands, seen, strand_type,
+                                                                          strand_5_end_base,
+                                                                          strand_5_end_helix)
+        # merge first and last domain if circular
+        if is_circular:
+            Design._cadnano_v2_import_circular_strands_merge_first_last_domains(domains)
         domains_loopouts = cast(List[Union[Domain, Loopout]],  # noqa
                                 domains)  # type: ignore
         strand: Strand = Strand(domains=domains_loopouts,
-                                is_scaffold=(strand_type == 'scaf'), color=strand_color)
+                                is_scaffold=(strand_type == 'scaf'), color=strand_color, circular=is_circular)
 
         return strand
 
@@ -4197,6 +4450,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
 
+        # if the strand is circular, we need to close the loop
+        if strand.circular:
+            first_domain = strand.first_bound_domain()
+            first_helix = dct['vstrands'][first_domain.helix]
+            first_start, first_end, first_forward = first_domain.start, first_domain.end, first_domain.forward
+
+            last_domain = strand.last_bound_domain()
+            last_helix = dct['vstrands'][last_domain.helix]
+            last_start, last_end, last_forward = last_domain.start, last_domain.end, last_domain.forward
+
+            the_base_from = last_end - 1
+            the_base_to = first_start
+
+            if not last_forward:
+                the_base_from = last_start
+
+            if not first_forward:
+                the_base_to = first_end - 1
+
+            if first_helix[strand_type][the_base_to][:2] == [-1, -1]:
+                first_helix[strand_type][the_base_to][:2] = [last_helix['num'], the_base_from]
+            else:
+                first_helix[strand_type][the_base_to][2:] = [last_helix['num'], the_base_from]
+
+            if last_helix[strand_type][the_base_from][:2] == [-1, -1]:
+                last_helix[strand_type][the_base_from][:2] = [first_helix['num'], the_base_to]
+            else:
+                last_helix[strand_type][the_base_from][2:] = [first_helix['num'], the_base_to]
+
     def _cadnano_v2_fill_blank(self, dct: dict, num_bases: int, design_grid: Grid) -> Dict[int, int]:
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
@@ -4223,7 +4505,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             helix_dct['stap_colors'] = []
             helix_dct['scafLoop'] = []
-            helix_dct['stapLoop'] = []
+            helix_dct['stap_loop'] = []
 
             helices_ids_reverse[helix_dct['num']] = i
             dct['vstrands'].append(helix_dct)
@@ -4277,15 +4559,20 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         '''
         for strand in self.strands:
-            if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                for domain in strand.domains:
-                    if isinstance(domain, Loopout):
-                        raise ValueError(
-                            'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                    if domain.helix % 2 != int(not domain.forward):
-                        raise ValueError('We can only convert designs where even helices have the scaffold'
-                                         'going forward and odd helices have the scaffold going backward see '
-                                         f'the spec v2.txt Note 4. {domain}')
+            for domain in strand.domains:
+                if isinstance(domain, Loopout):
+                    raise ValueError(
+                        'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
+                right_direction: bool
+                if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
+                    right_direction = (domain.helix % 2 == int(not domain.forward))
+                else:
+                    right_direction = not (domain.helix % 2 == int(not domain.forward))
+
+                if not right_direction:
+                    raise ValueError('We can only convert designs where even helices have the scaffold'
+                                     'going forward and odd helices have the scaffold going backward see '
+                                     f'the spec v2.txt Note 4. {domain}')
 
         '''Filling the helices with blank.
         '''
@@ -4789,43 +5076,58 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 # because we get complementarity checks this way
                 other_strand.assign_dna_complement_from(strand)
 
-    def to_idt_bulk_input_format(self, delimiter: str = ',', warn_duplicate_name: bool = False,
+    def to_idt_bulk_input_format(self,
+                                 delimiter: str = ',',
+                                 key: Optional[KeyFunction[Strand]] = None,
+                                 warn_duplicate_name: bool = False,
                                  warn_on_non_idt_strands: bool = False,
                                  export_non_modified_strand_version: bool = False) -> str:
-        """Return string that is written to the file in the method
-        :py:meth:`Design.write_idt_bulk_input_file`.
+        """Called by :py:meth:`Design.write_idt_bulk_input_file` to determine what string to write to
+        the file. This function can be used to get the string directly without creating a file.
 
-        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
-        scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
-
-        `export_non_modified_strand_version` specifies whether, for each strand that has modifications,
-        to also output a version of the strand with no modifications, but otherwise having the same data.
+        :param delimiter:
+             the symbol to delimit the four IDT fields name,sequence,scale,purification.
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param warn_duplicate_name:
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :any:`Strand.idt`. Such strands will not be part of the output. No warning is ever issued for the
+            scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+        :param export_non_modified_strand_version:
+            specifies whether, for each strand that has modifications,
+            to also output a version of the strand with no modifications, but otherwise having the same data.
+        :return:
+            string that is written to the file in the method :py:meth:`Design.write_idt_bulk_input_file`.
         """
-        added_strands = self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
-                                          export_non_modified_strand_version)
+        added_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
+                                          warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                          export_non_modified_strand_version=export_non_modified_strand_version)
 
         idt_lines: List[str] = []
-        for strand in added_strands.values():
+        for strand in added_strands:
             if strand.idt is None:
                 raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
             idt_lines.append(delimiter.join(
-                [strand.idt.name, strand.idt_dna_sequence(), strand.idt.scale, strand.idt.purification]
+                [strand.idt.name if strand.idt.name is not None else strand.name, strand.idt_dna_sequence(),
+                 strand.idt.scale, strand.idt.purification]
             ))
 
         idt_string = '\n'.join(idt_lines)
         return idt_string
 
-    def _idt_strands(self, warn_duplicate_name: bool, warn_on_non_idt_strands: bool,
-                     export_non_modified_strand_version: bool = False) -> Dict[str, Strand]:
+    def _idt_strands(self, *,
+                     key: Optional[KeyFunction[Strand]] = None,
+                     warn_duplicate_name: bool,
+                     warn_on_non_idt_strands: bool,
+                     export_non_modified_strand_version: bool = False) -> List[Strand]:
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
             if strand.idt is not None:
@@ -4875,9 +5177,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 print(f"WARNING: strand with 5' end at (helix, offset) "
                       f"({strand.first_domain().helix}, {strand.first_domain().offset_5p()}) "
                       f"does not have a field idt, so will not be part of IDT output.")
-        return added_strands
 
-    def write_idt_bulk_input_file(self, directory: str = '.', filename: str = None, extension: str = None,
+        strands = list(added_strands.values())
+        if key is not None:
+            strands.sort(key=key)
+        return strands
+
+    def write_idt_bulk_input_file(self, *, directory: str = '.', filename: str = None,
+                                  key: Optional[KeyFunction[Strand]] = None,
+                                  extension: Optional[str] = None,
                                   delimiter: str = ',',
                                   warn_duplicate_name: bool = True, warn_on_non_idt_strands: bool = True,
                                   export_non_modified_strand_version: bool = False) -> None:
@@ -4891,34 +5199,52 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         If `filename` is not specified but `extension` is, then that extension is used instead of ``idt``.
         At least one of `filename` or `extension` must be ``None``.
 
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
-        `delimiter` is the symbol to delimit the four IDT fields name,sequence,scale,purification.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :any:`Strand.idt`. Such strands will not be output into the file.
-
         The string written is that returned by :meth:`Design.to_idt_bulk_input_format`.
+
+        :param directory:
+            specifies a directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+        :param filename:
+            optinoal custom filename to use (instead of currently running script)
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param extension:
+            alternate filename extension to use (instead of idt)
+        :param delimiter:
+            is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+        :param warn_duplicate_name:
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :any:`Strand.idt`. Such strands will not be output into the file.
+        :param export_non_modified_strand_version:
+            For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
+            without any modifications. The name for this :any:`Strand` is the original name with
+            '_nomods' appended to it.
         """
-        contents = self.to_idt_bulk_input_format(delimiter, warn_duplicate_name, warn_on_non_idt_strands,
-                                                 export_non_modified_strand_version)
+        contents = self.to_idt_bulk_input_format(delimiter=delimiter,
+                                                 key=key,
+                                                 warn_duplicate_name=warn_duplicate_name,
+                                                 warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                                 export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
             extension = 'idt'
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_idt_plate_excel_file(self, directory: str = '.', filename: str = None,
+    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
+                                   key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False, warn_on_non_idt_strands: bool = False,
                                    use_default_plates: bool = False, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False) -> None:
-        """Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
+        """
+        Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
         :py:data:`Strand.idt`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
         to describe a 96-well or 384-well plate
@@ -4928,30 +5254,44 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xls``.
 
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
-        `warn_duplicate_name` if ``True`` prints a warning when two different :any:`Strand`'s have the same
-        :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
-        raised (regardless of the value of this parameter)
-        if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
-        purifications.
-
-        `warn_on_non_idt_strands` specifies whether to print a warning for strands that lack the field
-        :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
-        for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
-
-        `warn_using_default_plates` specifies whether to print a warning for strands whose
-        :py:data:`Strand.idt` have the fields
-
-        `plate_type` is a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
-        if the `use_default_plates` parameter is ``True``.
-        Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
-        by the user, who is free to use coordinates for either plate type.
+        :param directory:
+            specifies a directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+        :param filename:
+            custom filename if default (explained above) is not desired
+        :param key:
+            `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
+            order in which to output strand sequences. Some useful defaults are provided by
+            :py:meth:`strand_order_key_function`
+        :param warn_duplicate_name:
+            if ``True`` prints a warning when two different :any:`Strand`'s have the same
+            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            raised (regardless of the value of this parameter)
+            if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
+            purifications.
+        :param warn_on_non_idt_strands:
+            specifies whether to print a warning for strands that lack the field
+            :py:data:`Strand.idt`. Such strands will not be output into the file. No warning is ever issued
+            for the scaffold (regardless of the value of the parameter `warn_on_non_idt_strands`).
+        :param use_default_plates:
+            Use default values for plate and well (ignoring those in idt fields, which may be None).
+        :param warn_using_default_plates:
+            specifies whether to print a warning for strands whose
+            :py:data:`Strand.idt` have the fields
+        :param plate_type:
+            a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
+            if the `use_default_plates` parameter is ``True``.
+            Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
+            by the user, who is free to use coordinates for either plate type.
+        :param export_non_modified_strand_version:
+            For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
+            without any modifications. The name for this :any:`Strand` is the original name with
+            '_nomods' appended to it.
         """
 
-        idt_strands = list(self._idt_strands(warn_duplicate_name, warn_on_non_idt_strands,
-                                             export_non_modified_strand_version).values())
+        idt_strands = self._idt_strands(key=key, warn_duplicate_name=warn_duplicate_name,
+                                        warn_on_non_idt_strands=warn_on_non_idt_strands,
+                                        export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
             self._write_plates_assuming_explicit_in_each_strand(directory, filename, idt_strands)
@@ -5124,6 +5464,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :py:data:`Domain.start` = ``5``,
         :py:data:`Domain.end` = ``10``.
 
+        If the :any:`Strand` is circular, then it will be made linear with the 5' and 3' ends at the
+        nick position, modified in place. Otherwise, this :any:`Strand` will be deleted from the design,
+        and two new :any:`Strand`'s will be added.
+
         :param helix: index of helix where nick will occur
         :param offset: offset to nick (nick will be between offset and offset-1)
         :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
@@ -5147,6 +5491,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         domain_left: Domain[DomainLabel] = Domain(helix, forward, domain_to_remove.start, offset)
         domain_right: Domain[DomainLabel] = Domain(helix, forward, offset, domain_to_remove.end)
 
+        # "before" and "after" mean in the 5' --> 3' direction, i.e., if a reverse domain:
+        # <--------]
+        # nicked like this:
+        # <---]<---]
+        # The before domain is on the right and the after domain is on the left.
+        #
+        # If nicking a forward domain:
+        # [-------->
+        # nicked like this:
+        # [--->[--->
+        # The before domain is on the left and the after domain is on the right.
         if domain_to_remove.forward:
             domain_to_add_before = domain_left
             domain_to_add_after = domain_right
@@ -5176,28 +5531,173 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             seq_before_whole = None
             seq_after_whole = None
 
-        self.strands.remove(strand)
+        domains_before = domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before])  # noqa
+        domains_after = cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after  # noqa
 
-        idt_present = strand.idt is not None
-        strand_before: Strand[StrandLabel, DomainLabel] = Strand(
-            domains=domains_before + cast(List[Union[Domain, Loopout]], [domain_to_add_before]),  # noqa
-            dna_sequence=seq_before_whole,
-            color=strand.color,
-            idt=strand.idt if idt_present else None,
-        )
+        if strand.circular:
+            # if strand is circular, we modify its domains in place
+            domains = domains_after + domains_before
+            strand.set_domains(domains)
 
-        color_after = next(self.color_cycler) if new_color else strand.color
-        strand_after: Strand[StrandLabel, DomainLabel] = Strand(
-            domains=cast(List[Union[Domain, Loopout]], [domain_to_add_after]) + domains_after,  # noqa
-            dna_sequence=seq_after_whole,
-            color=color_after,
-            use_default_idt=idt_present,
-        )
+            # DNA sequence was rotated, so re-assign it
+            if seq_before_whole is not None and seq_after_whole is not None:
+                seq = seq_before_whole + seq_after_whole
+                strand.set_dna_sequence(seq)
 
-        self.helices[helix].domains.remove(domain_to_remove)
-        self.helices[helix].domains.extend([domain_to_add_before, domain_to_add_after])
+            strand.set_linear()
 
-        self.strands.extend([strand_before, strand_after])
+        else:
+            # if strand is not circular, we delete it and create two new strands
+            self.strands.remove(strand)
+
+            idt_present = strand.idt is not None
+            strand_before: Strand[StrandLabel, DomainLabel] = Strand(
+                domains=domains_before,
+                dna_sequence=seq_before_whole,
+                color=strand.color,
+                idt=strand.idt if idt_present else None,
+            )
+
+            color_after = next(self.color_cycler) if new_color else strand.color
+            strand_after: Strand[StrandLabel, DomainLabel] = Strand(
+                domains=domains_after,
+                dna_sequence=seq_after_whole,
+                color=color_after,
+                use_default_idt=idt_present,
+            )
+
+            self.strands.extend([strand_before, strand_after])
+
+        helix_domains = self.helices[helix].domains
+        idx_domain_to_remove = helix_domains.index(domain_to_remove)
+        helix_domains[idx_domain_to_remove] = domain_left
+        helix_domains.insert(idx_domain_to_remove + 1, domain_right)
+
+    def ligate(self, helix: int, offset: int, forward: bool) -> None:
+        """
+        Reverse operation of :py:meth:`Design.add_nick`.
+        "Ligates" a nick between two adjacent :any:`Domain`'s in the same direction on a :any:`Helix`
+        with index `helix`,
+        in direction given by `forward`, at offset `offset`.
+
+        For example, if there are a :any:`Domain`'s with
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``5``,
+        (recall that :py:data:`Domain.end` is exclusive, meaning that the largest offset on this
+        :any:`Domain` is 4 = ``offset-1``)
+        and the other domain having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``5``,
+        :py:data:`Domain.end` = ``10``.
+        then calling ``ligate(helix=0, offset=5, forward=True)`` will combine them into one :any:`Domain`,
+        having the fields
+        :py:data:`Domain.helix` = ``0``,
+        :py:data:`Domain.forward` = ``True``,
+        :py:data:`Domain.start` = ``0``,
+        :py:data:`Domain.end` = ``10``.
+
+        If the :any:`Domain`'s are on the same :any:`Strand` (i.e., they are the 5' and 3' ends of that
+        :any:`Strand`, which is necessarily linear), then the :any:`Strand` is made is circular in place,
+        Otherwise, the two :any:`Strand`'s of each :any:`Domain` will be joined into one,
+        replacing the previous strand on the 5'-most side of the nick (i.e., the one whose 3' end
+        terminated at the nick), and deleting the other strand.
+
+        :param helix: index of helix where nick will be ligated
+        :param offset: offset to ligate (nick to ligate must be between offset and offset-1)
+        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
+        """
+        for dom_right in self.domains_at(helix, offset):
+            if dom_right.forward == forward:
+                break
+        else:
+            raise IllegalDesignError(f'no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} at offset {offset}')
+        for dom_left in self.domains_at(helix, offset - 1):
+            if dom_left.forward == forward:
+                break
+        else:
+            raise IllegalDesignError(f'no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} at offset {offset}')
+        if dom_right.start != offset:
+            raise IllegalDesignError(f'to ligate at offset {offset}, it must be the start offset of a domain,'
+                                     f'but there is no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} with start offset = {offset}')
+        if dom_left.end != offset:
+            raise IllegalDesignError(f'to ligate at offset {offset}, it must be the end offset of a domain,'
+                                     f'but there is no domain at helix {helix} in direction '
+                                     f'{"forward" if forward else "reverse"} with end offset = {offset}')
+
+        strand_left = dom_left.strand()
+        strand_right = dom_right.strand()
+
+        dom_new = Domain(helix=helix, forward=forward, start=dom_left.start, end=dom_right.end,
+                         deletions=dom_left.deletions + dom_right.deletions,
+                         insertions=dom_left.insertions + dom_right.insertions,
+                         name=dom_left.name, label=dom_left.label)
+
+        # normalize 5'/3' distinction; below refers to which Strand has the 5'/3' end that will be ligated
+        # So strand_5p is the one whose 3' end will be the 3' end of the whole new Strand
+        # strand_5p and dom_5p are the ones on the 5' side of the nick,
+        # CAUTION: they are on the 3' side of the nick,
+        # i.e., the 3' end of strand_5p will be the 3' end of the new strand
+        # e.g.,
+        #
+        #  strand_3p  strand_5p
+        # [--------->[--------->
+        #    dom_3p     dom_5p
+        #
+        # or
+        #
+        #  strand_5p  strand_3p
+        # <---------]<---------]
+        #    dom_5p     dom_3p
+        if not forward:
+            dom_5p = dom_left
+            dom_3p = dom_right
+            strand_5p = strand_left
+            strand_3p = strand_right
+        else:
+            dom_5p = dom_right
+            dom_3p = dom_left
+            strand_5p = strand_right
+            strand_3p = strand_left
+
+        if strand_left is strand_right:
+            # join domains and make strand circular
+            strand = strand_left
+            assert strand.first_bound_domain() is dom_5p
+            assert strand.last_bound_domain() is dom_3p
+            strand.domains[0] = dom_new  # set first domain equal to new joined domain
+            strand.domains.pop()  # remove last domain
+            strand.set_circular()
+            for domain in strand.domains:
+                domain._parent_strand = strand
+
+        else:
+            # join strands
+            strand_3p.domains.pop()
+            strand_3p.domains.append(dom_new)
+            strand_3p.domains.extend(strand_5p.domains[1:])
+            strand_3p.is_scaffold = strand_left.is_scaffold or strand_right.is_scaffold
+            strand_3p.set_modification_3p(strand_5p.modification_3p)
+            for idx, mod in strand_5p.modifications_int.items():
+                new_idx = idx + strand_3p.dna_length()
+                strand_3p.set_modification_internal(new_idx, mod)
+            if strand_3p.dna_sequence is not None and strand_5p.dna_sequence is not None:
+                strand_3p.dna_sequence += strand_5p.dna_sequence
+            if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
+                strand_3p.set_color(strand_5p.color)
+            self.strands.remove(strand_5p)
+            for domain in strand_3p.domains:
+                domain._parent_strand = strand_3p
+
+        helix_domains = self.helices[helix].domains
+        idx_domain_to_remove_left = helix_domains.index(dom_left)
+        helix_domains[idx_domain_to_remove_left] = dom_new
+        helix_domains.remove(dom_right)
 
     def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
                            offset2: int = None, forward2: bool = None) -> None:
@@ -5208,6 +5708,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Unlike :py:meth:`Design.add_full_crossover`, which automatically adds a nick between the two
         half-crossovers, to call this method, there must *already* be nicks adjacent to the given
         offsets on the given helices. (either on the left or right side)
+
+        If the crossover is within a :any:`Strand`, i.e., between its 5' and ' ends, the :any:`Strand`
+        will simply be made circular, modifying it in place. Otherwise, the old two :any:`Strand`'s will be
+        deleted, and a new :any:`Strand` added.
 
         :param helix: index of one helix of half crossover
         :param helix2: index of other helix of half crossover
@@ -5236,15 +5740,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand2 = domain2.strand()
 
         if strand1 == strand2:
-            raise IllegalDesignError(f"Cannot add crossover from "
-                                     f"(helix={helix}, offset={offset}) to "
-                                     f"(helix={helix2}, offset={offset2}) "
-                                     f"because that would join two Domains "
-                                     f"already on the same Strand! "
-                                     f"Currently circular Strands are not supported. "
-                                     f"Instead, try adding nicks first, or rearrange the order of "
-                                     f"crossover addition, to ensure that all strands are "
-                                     f"non-circular, even in intermediate stages.")
+            strand1.set_circular()
+            return
+            # raise IllegalDesignError(f"Cannot add crossover from "
+            #                          f"(helix={helix}, offset={offset}) to "
+            #                          f"(helix={helix2}, offset={offset2}) "
+            #                          f"because that would join two Domains "
+            #                          f"already on the same Strand! "
+            #                          f"Currently circular Strands are not supported. "
+            #                          f"Instead, try adding nicks first, or rearrange the order of "
+            #                          f"crossover addition, to ensure that all strands are "
+            #                          f"non-circular, even in intermediate stages.")
 
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
@@ -5565,13 +6071,13 @@ class Crossover:
     forward: bool
     """direction of :any:`Strand` on `helix` to which to add half crossover"""
 
-    offset2: int
+    offset2: Optional[int] = None
     """
     offset on `helix2` at which to add half crossover. 
     If not specified, defaults to `offset`
     """
 
-    forward2: bool
+    forward2: Optional[bool] = None
     """
     direction of :any:`Strand` on `helix2` to which to add half crossover. 
     If not specified, defaults to the negation of `forward`

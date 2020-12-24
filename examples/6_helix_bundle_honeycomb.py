@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     m13_rotation = 6702
     m13_variant = sc.M13Variant.p7560
     # print(sc.m13(m13_rotation, m13_variant))
@@ -16,10 +16,9 @@ def create_design():
     return design
 
 
-def initial_design():
+def initial_design() -> sc.Design:
     max_offset = 1295
     helices = [
-
         # below uses cadnano honeycomb coordinates
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/master/misc/cadnano-format-specs/v2.txt
         sc.Helix(grid_position=(1, 1), max_offset=max_offset),
@@ -28,38 +27,6 @@ def initial_design():
         sc.Helix(grid_position=(1, 2), max_offset=max_offset),
         sc.Helix(grid_position=(2, 2), max_offset=max_offset),
         sc.Helix(grid_position=(2, 1), max_offset=max_offset),
-
-        # below uses original mistaken convention from mistaken cadnano specs
-        # sc.Helix(grid_position=(1, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(1, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 0, 0), max_offset=max_offset),
-
-        # # below uses odd-q coordinates:
-        # sc.Helix(grid_position=(1, -1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(1, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 0, 0), max_offset=max_offset),
-
-        # below uses even-q coordinates:
-        # sc.Helix(grid_position=(1, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(1, 2, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 0, 0), max_offset=max_offset),
-
-        # below uses odd-r coordinates:
-        # sc.Helix(grid_position=(1, 0, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(0, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(1, 2, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 2, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 1, 0), max_offset=max_offset),
-        # sc.Helix(grid_position=(2, 0, 0), max_offset=max_offset),
     ]
     scafs = [
         sc.Strand([sc.Domain(helix=0, forward=True, start=16, end=1276)]),
@@ -81,7 +48,7 @@ def initial_design():
     return sc.Design(helices=helices, strands=strands, grid=sc.honeycomb)
 
 
-def add_nicks(design: sc.Design):
+def add_nicks(design: sc.Design) -> None:
     design.add_nick(helix=5, offset=399, forward=False)  # scaffold
     for offset in range(56, 1246, 42):
         design.add_nick(helix=0, offset=offset, forward=False)
@@ -94,7 +61,7 @@ def add_nicks(design: sc.Design):
         design.add_nick(helix=5, offset=offset, forward=True)
 
 
-def add_crossovers(design: sc.Design):
+def add_crossovers(design: sc.Design) -> None:
     # staples interior
     for offset in range(84, 1246, 42):
         design.add_full_crossover(helix=0, helix2=1, offset=offset, forward=False)
@@ -115,27 +82,28 @@ def add_crossovers(design: sc.Design):
     design.add_half_crossover(helix=2, helix2=3, offset=1245, forward=False)
 
     # scaffold interior
-    crossovers = []
     for offset in range(58, 1250, 42):
-        crossovers.append(sc.Crossover(helix=0, helix2=1, offset=offset, forward=True))
+        design.add_full_crossover(helix=0, helix2=1, offset=offset, forward=True)
     for offset in range(30, 1250, 42):
-        crossovers.append(sc.Crossover(helix=1, helix2=2, offset=offset, forward=False))
+        design.add_full_crossover(helix=1, helix2=2, offset=offset, forward=False)
     for offset in range(54, 1250, 42):
-        crossovers.append(sc.Crossover(helix=2, helix2=3, offset=offset, forward=True))
+        design.add_full_crossover(helix=2, helix2=3, offset=offset, forward=True)
     for offset in range(26, 1250, 42):
-        crossovers.append(sc.Crossover(helix=3, helix2=4, offset=offset, forward=False))
+        design.add_full_crossover(helix=3, helix2=4, offset=offset, forward=False)
 
     # scaffold edges
-    crossovers.append(sc.Crossover(helix=0, helix2=1, offset=16, forward=True, half=True))
-    crossovers.append(sc.Crossover(helix=2, helix2=3, offset=12, forward=True, half=True))
-    crossovers.append(sc.Crossover(helix=4, helix2=5, offset=19, forward=True, half=True))
-    crossovers.append(sc.Crossover(helix=0, helix2=1, offset=1275, forward=True, half=True))
-    crossovers.append(sc.Crossover(helix=2, helix2=3, offset=1271, forward=True, half=True))
-    crossovers.append(sc.Crossover(helix=4, helix2=5, offset=1278, forward=True, half=True))
+    design.add_half_crossover(helix=0, helix2=1, offset=16, forward=True)
+    design.add_half_crossover(helix=2, helix2=3, offset=12, forward=True)
+    design.add_half_crossover(helix=4, helix2=5, offset=19, forward=True)
+    design.add_half_crossover(helix=0, helix2=1, offset=1275, forward=True)
+    design.add_half_crossover(helix=2, helix2=3, offset=1271, forward=True)
+    design.add_half_crossover(helix=4, helix2=5, offset=1278, forward=True)
 
-    design.add_crossovers(crossovers)
+
+def main() -> None:
+    design = create_design()
+    design.write_scadnano_file(directory='output_designs')
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    main()
