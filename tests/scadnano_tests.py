@@ -1739,6 +1739,14 @@ class TestNickLigateAndCrossover(unittest.TestCase):
 
 5   [------- -------- -------- -------- -------- -------- -------- -------- -------- -------- -------- ------->
     <------- -------- -------- -------- -------- -------- -------- -------- -------- -------- -------- -------]
+    
+    two_strand_design:    
+    0        8        16
+    
+0   [------- ------->
+    
+   
+1   <------- -------]        
     """
 
     def setUp(self) -> None:
@@ -1784,6 +1792,10 @@ class TestNickLigateAndCrossover(unittest.TestCase):
             scafs.append(scaf)
             staps.append(stap)
         self.origami: sc.Design = sc.Design(strands=scafs + staps, grid=sc.square)
+
+        self.two_strand_design = sc.Design(helices=[sc.Helix(max_offset=100) for _ in range(2)])
+        self.two_strand_design.strand(0, 0).move(16)
+        self.two_strand_design.strand(1, 16).move(-16)
 
     def test_add_nick__twice_on_same_domain(self) -> None:
         """
@@ -1896,7 +1908,6 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         strand = strand_matching(design.strands, 1, False, 8, 16)
         self.assertEqual(remove_whitespace('GGCCCAAA'), strand.dna_sequence)
 
-
     def test_add_nick__small_design_H0_forward(self) -> None:
         """
         0        8        16
@@ -1933,7 +1944,6 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         strand = strand_matching(design.strands, 1, False, 0, 16)
         self.assertEqual(remove_whitespace('GGCCCAAA CCGGGTTT'), strand.dna_sequence)
 
-
     def test_ligate__small_nicked_design_ligate_all(self) -> None:
         """
         0        8        16
@@ -1966,7 +1976,6 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertEqual(remove_whitespace('AAACCCGG TTTGGGCC'), strand.dna_sequence)
         strand = strand_matching(design.strands, 1, False, 0, 16)
         self.assertEqual(remove_whitespace('GGCCCAAA CCGGGTTT'), strand.dna_sequence)
-
 
     def test_add_nick__small_design_H0_reverse(self) -> None:
         """
@@ -2192,6 +2201,74 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertEqual(remove_whitespace('AAACCCGG'), strand.dna_sequence)
         strand = strand_matching(design.strands, 1, False, 0, 16)
         self.assertEqual(remove_whitespace('GGCCCAAA CCGGGTTT'), strand.dna_sequence)
+
+    def test_add_half_crossover__both_scaffolds_preserved(self) -> None:
+        """
+        0       8        16
+
+    0   [------- -------> scaffold
+
+
+    1   <------- -------] scaffold
+
+        """
+        design: sc.Design = self.two_strand_design
+        design.strands[0].set_scaffold(True)
+        design.strands[1].set_scaffold(True)
+        design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+        self.assertEqual(1, len(design.strands))
+        self.assertTrue(design.strands[0].is_scaffold)
+        self.assertIsNotNone(design.scaffold)
+
+    def test_add_half_crossover__first_scaffold_preserved(self) -> None:
+        """
+        0       8        16
+
+    0   [------- -------> scaffold
+
+
+    1   <------- -------]
+
+        """
+        design: sc.Design = self.two_strand_design
+        design.strands[0].set_scaffold(True)
+        design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+        self.assertEqual(1, len(design.strands))
+        self.assertTrue(design.strands[0].is_scaffold)
+        self.assertIsNotNone(design.scaffold)
+
+    def test_add_half_crossover__second_scaffold_preserved(self) -> None:
+        """
+        0       8        16
+
+    0   [------- ------->
+
+
+    1   <------- -------] scaffold
+
+        """
+        design: sc.Design = self.two_strand_design
+        design.strands[1].set_scaffold(True)
+        design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+        self.assertEqual(1, len(design.strands))
+        self.assertTrue(design.strands[0].is_scaffold)
+        self.assertIsNotNone(design.scaffold)
+
+    def test_add_half_crossover__neither_scaffold_preserved(self) -> None:
+        """
+        0       8        16
+
+    0   [------- ------->
+
+
+    1   <------- -------]
+
+        """
+        design: sc.Design = self.two_strand_design
+        design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+        self.assertEqual(1, len(design.strands))
+        self.assertFalse(design.strands[0].is_scaffold)
+        self.assertIsNone(design.scaffold)
 
     def test_add_half_crossover__small_design_H0_reverse_0(self) -> None:
         """
@@ -3532,7 +3609,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             sc.Strand([ss1, ss2, ss3])
 
-        #XXX: we used to allow Strands to violate the loopout rules and caught it only at the design level
+        # XXX: we used to allow Strands to violate the loopout rules and caught it only at the design level
         # now the Strand constructor checks, so that means we can't set up a bad Strand for the Design check
         # strand = sc.Strand([ss1, ss2])
         # strand.domains.append(ss3)
@@ -4092,7 +4169,7 @@ class TestCircularStrandEdits(unittest.TestCase):
         for domain in strand.domains:
             self.assertIs(strand, domain.strand())
 
-    #TODO: add functionality for removing crossovers and loopouts, and test that here
+    # TODO: add functionality for removing crossovers and loopouts, and test that here
 
 
 class TestAddStrand(unittest.TestCase):

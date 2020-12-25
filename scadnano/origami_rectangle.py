@@ -67,8 +67,8 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
            twist_correction_deletion_offset: int = -1,
            num_flanking_columns: int = 1, num_flanking_helices: int = 0,
            custom_scaffold: str = None, edge_staples: bool = True,
-           scaffold_nick_offset: int = -1, use_idt_defaults: bool = False) -> sc.Design:
-    """
+           scaffold_nick_offset: int = -1) -> sc.Design:
+    """    
     Creates a DNA origami rectangle with a given number of helices and "columns" 
     (16-base-wide region in each helix). 
     The columns include the 16-base regions on the end where potential "edge staples" go, 
@@ -142,45 +142,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     Prints warning if number of bases exceeds 7249 (length of standard M13 scaffold strand),
     but does not otherwise cause an error.
 
-    `num_cols` must be even and at least 4.
     
-    `seam_left_column` specifies the location of the seam. (i.e., scaffold crossovers in the middle of the
-    origami.) 
-    If positive, the seam occupies two columns, and `seam_left_column` specifies the column on the left.
-    To make the crossover geometry work out, a nonnegative `seam_left_column` must be even,
-    greater than 0, and less than `num_helices` - 2. 
-    If negative, it is calculated automatically to be roughly in the middle.  
-
-    If `twist_correction_deletion_spacing` > 0, adds deletions between crossovers in one out of
-    every `twist_correction_deletion_spacing` columns. (TODO: cite Sungwook's paper)
-    
-    `twist_correction_start_col` is ignored if `twist_correction_deletion_spacing` <= 0, otherwise
-    it indicates the column at which to put the first deletions. Default = 1.
-    
-    `twist_correction_deletion_offset` is the *relative* offset of the deletion, relative to the left side
-    of the column.
-
-    `num_flanking_columns` is the number of empty columns on the helix on each side of the origami.
-
-    `num_flanking_helices` is the number of empty helices above and below the origami.
-
-    `nick_pattern` describes whether nicks between staples should be "staggered" or not.
-    See :class:`origami_rectangle.NickPattern` for details.
-    
-    `custom_scaffold` is the scaffold sequence to use. 
-    If set to ``None``, the standard 7249-base M13 is used: :py:func:`scadnano.m13`.
-    
-    `edge_staples` indicates whether to include the edge staples. (Leaving them out prevents multiple
-    origami rectangles from polymerizing in solution due to base stacking interactions on the left and
-    right edges of the origami rectangle.)
-    
-    `scaffold_nick_offset` is the position of the "nick" on the scaffold (the M13 scaffold is circular,
-    so for such a scaffold this really represents where any unused and undepicted bases of the scaffold will
-    form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
-    
-    `use_idt_defaults`, if ``True``, creates an :py:class:`IDTFields` in each staple strand suitable for 
-    calling :py:meth:`Design.write_idt_file` or :py:meth:`Design.write_idt_plate_excel_file` .
-
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
     (By default the output file name is the same as the script calling 
@@ -195,9 +157,56 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
         design = rect.create(num_helices=16, num_cols=24, nick_pattern=rect.staggered)
         design.write_scadnano_file()
 
+    
     However, we caution that :py:func:`create` is not intended to be very
     extensible for creating many different types of DNA origami. It is more intended as an
     example whose source code can be an efficient reference to learn the :mod:`scadnano` API.
+    
+    :param num_helices: 
+        number of helices. must be even.
+    :param num_cols: 
+        number of "columns" as defined above. must be even and at least 4.
+    :param assign_seq:
+        whether to assign a DNA sequence to the scaffold. If True, uses `custom_scaffold` if it is not None,
+        or M13 otherwise.
+    :param seam_left_column:
+        specifies the location of the seam. (i.e., scaffold crossovers in the middle of the origami.) 
+        If positive, the seam occupies two columns, and `seam_left_column` specifies the column on the left.
+        To make the crossover geometry work out, a nonnegative `seam_left_column` must be even,
+        greater than 0, and less than `num_helices` - 2. 
+        If negative, it is calculated automatically to be roughly in the middle.  
+    :param nick_pattern:
+        describes whether nicks between staples should be "staggered" or not.
+        See :class:`origami_rectangle.NickPattern` for details.
+    :param twist_correction_deletion_spacing:
+        If `twist_correction_deletion_spacing` > 0, adds deletions between crossovers in one out of
+        every `twist_correction_deletion_spacing` columns. 
+        See this paper for an explanation of twist correction in DNA origami:
+        *Programmable molecular recognition based on the geometry of DNA nanostructures*, 
+        Sungwook Woo and Paul W. K. Rothemund, Nature Chemistry, volume 3, pages 620–627 (2011) 
+        https://doi.org/10.1038/nchem.1070 
+    :param twist_correction_start_col:
+        ignored if `twist_correction_deletion_spacing` <= 0, otherwise
+        it indicates the column at which to put the first deletions. Default = 1.
+    :param twist_correction_deletion_offset:
+        the *relative* offset of the deletion, relative to the left side of the column.
+    :param num_flanking_columns:
+        the number of empty columns on the helix on each side of the origami.
+    :param num_flanking_helices:
+        the number of empty helices above and below the origami.
+    :param custom_scaffold:
+        the scaffold sequence to use. 
+        If set to ``None``, the standard 7249-base M13 is used: :py:func:`scadnano.m13`.
+    :param edge_staples:
+        indicates whether to include the edge staples. (Leaving them out prevents multiple
+        origami rectangles from polymerizing in solution due to base stacking interactions on the left and
+        right edges of the origami rectangle.)
+    :param scaffold_nick_offset:
+        the position of the "nick" on the scaffold (the M13 scaffold is circular, so for such a scaffold 
+        this really represents where any unused and undepicted bases of the scaffold will
+        form a loop-out). If negative (default value) then it will be chosen to be along the origami seam.
+    :return: 
+        a :any:`Design` representing a DNA origami rectangle
     """  # noqa (This line is here to suppress a PEP warning about long lines in the source code)
 
     if num_cols < 4:
@@ -249,10 +258,6 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     if assign_seq:
         scaffold_seq = sc.m13() if custom_scaffold is None else custom_scaffold
         design.assign_dna(scaffold, scaffold_seq)
-
-    if use_idt_defaults:
-        design.set_default_idt(True)
-        scaffold.set_default_idt(False)
 
     return design
 

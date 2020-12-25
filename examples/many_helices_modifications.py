@@ -2,7 +2,7 @@ import scadnano as sc
 import modifications as mod
 import dataclasses
 
-def create_design():
+def create_design() -> sc.Design:
     NUM_HELICES = 8
     WIDTH = 16
     doms = [sc.Domain(h, h%2==0, 0,WIDTH) for h in range(NUM_HELICES)]
@@ -24,5 +24,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

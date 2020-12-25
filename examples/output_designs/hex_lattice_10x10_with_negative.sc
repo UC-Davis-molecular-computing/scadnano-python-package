@@ -1,5 +1,5 @@
 {
-  "version": "0.11.0",
+  "version": "0.14.0",
   "grid": "hex",
   "helices": [
     {"max_offset": 16, "grid_position": [-4, -4]},

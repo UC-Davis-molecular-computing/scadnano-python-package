@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design():
+def create_design() -> sc.Design:
     ss_f0 = sc.Domain(helix=0, forward=True, start=0, end=8)
     hairpin0 = sc.Loopout(length=5)
     ss_r0 = sc.Domain(helix=0, forward=False, start=0, end=8)
@@ -41,5 +41,5 @@ def create_design():
 
 
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

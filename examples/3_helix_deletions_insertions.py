@@ -3,7 +3,7 @@ import scadnano as sc
 
 # If running in scadnano, define a function called main() that returns design.
 # It will be displayed in the browser by scadnano.
-def create_design():
+def create_design() -> sc.Design:
     helices = [sc.Helix(max_offset=64), sc.Helix(max_offset=64), sc.Helix(max_offset=64)]
 
     # left staple
@@ -68,5 +68,5 @@ def create_design():
 
 # If running from the command line, call main() manually and write design to .dna file.
 if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
+    d = create_design()
+    d.write_scadnano_file(directory='output_designs')

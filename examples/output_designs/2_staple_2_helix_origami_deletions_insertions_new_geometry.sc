@@ -1,10 +1,9 @@
 {
-  "version": "0.11.0",
+  "version": "0.14.0",
   "grid": "square",
   "geometry": {
     "rise_per_base_pair": 0.2,
-    "helix_radius": 1.2,
-    "inter_helix_gap": 1.0
+    "helix_radius": 1.2
   },
   "helices": [
     {"max_offset": 48, "grid_position": [0, 0]},
