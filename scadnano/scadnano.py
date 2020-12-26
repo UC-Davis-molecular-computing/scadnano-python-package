@@ -2028,7 +2028,17 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     :any:`StrandBuilder` should generally not be created directly.
     Although it is convenient to use chained method calls, it is also sometimes useful to assign the
-    :any:`StrandBuilder` object into a variable and then call the methods on that variable.
+    :any:`StrandBuilder` object into a variable and then call the methods on that variable. For example,
+    this code is equivalent to the above line:
+
+    .. code-block:: Python
+
+        strand_builder = design.strand(0, 0)
+        strand_builder.to(10)
+        strand_builder.cross(1)
+        strand_builder.to(5)
+        strand_builder.with_modification_5p(mod.biotin_5p)
+        strand_builder.as_scaffold()
     """
 
     # remove quotes when Py3.6 support dropped
@@ -2238,7 +2248,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Gives :any:`IDTFields` value to :any:`Strand` being built.
-        Only a name is required; other field have reasonable default values.
+        Only a name is required; other fields are given reasonable default values.
 
         :param name:
             name of strand; required field
