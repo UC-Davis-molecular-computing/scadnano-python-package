@@ -499,7 +499,7 @@ The design now looks like it did at the top:
 
 Finally, we complete the design by assigning a DNA sequence to the scaffold, which will assign the complementary sequence to the appropriate staples. This is, in a sense, the primary function of [cadnano](https://cadnano.org/) and scadnano: to translate a desired abstract strand design, together with knowledge of a concrete DNA sequence for the scaffold, into the appropriate sequences for the staples to enable them to bind to the scaffold where we want. 
 
-If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method:
+If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has exactly one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method [Design.assign_m13_to_scaffold](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_m13_to_scaffold):
 
 ```python
 def create_design() -> sc.Design:
@@ -519,7 +519,7 @@ def create_design() -> sc.Design:
     return design
 ```
 
-If we load this design and check "show DNA" in the menu, we can see the full DNA sequence assigned:
+If we load this design and check the menu item View&rarr;Show DNA, we can see the full DNA sequence assigned:
 
 ![](images/complete_design_with_DNA.png)
 
@@ -538,7 +538,8 @@ for strand in design.strands:
 
 Or you could use Python's I/O library to write them to a file in a format of your choosing.
 
-scadnano provides utility methods `write_idt_bulk_input_file` (for ordering in test tubes) and `write_idt_plate_excel_file` (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). 
+scadnano provides utility methods 
+[`Design.write_idt_bulk_input_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_plate_excel_file) (for ordering in test tubes) and [`Design.write_idt_plate_excel_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_bulk_input_file) (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). 
 
 Since this doesn't change the design, we put the code to export the IDT plate file outside of the `create_design()` function, in our `main()` function:
 
@@ -551,12 +552,7 @@ def main() -> None:
 
 This will write an Excel file named `24_helix_rectangle.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
 
-To customize, one can write to the field `Strand.idt`.
-There are many options to customize how the strands are exported and what information goes into the `idt` field (e.g., purification, synthesis scale); see the API documentation for the 
-[export IDT plate function](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_plate_excel_file),
-[export IDT bulk input function](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_bulk_input_file),
-and the 
-[Strand.idt field](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields).
+To customize further (e.g., purification, synthesis scale), one can write to the field `Strand.idt`, of type [IDTFields]([Strand.idt field](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields)).
 
 
 
