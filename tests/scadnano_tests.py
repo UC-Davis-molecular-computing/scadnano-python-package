@@ -1,9 +1,11 @@
 import os
-# import sys
+import sys
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import unittest
+import unittest.mock as mock
 import re
 import json
+import io
 from typing import Iterable, Union, Dict, Any
 
 import scadnano as sc
@@ -663,33 +665,33 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         self.design_6h: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         d = self.design_6h
 
-        d.strand(1, 0).move(16).cross(0).move(-16).with_idt('A')
-        d.strand(3, 0).move(16).cross(2).move(-16).with_idt('B')
-        d.strand(5, 0).move(16).cross(4).move(-16).with_idt('C')
+        d.strand(1, 0).move(16).cross(0).move(-16).with_name('A')
+        d.strand(3, 0).move(16).cross(2).move(-16).with_name('B')
+        d.strand(5, 0).move(16).cross(4).move(-16).with_name('C')
 
-        d.strand(0, 40).move(-24).cross(1).move(8).with_idt('D')
+        d.strand(0, 40).move(-24).cross(1).move(8).with_name('D')
 
-        d.strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_idt('E')
-        d.strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_idt('F')
+        d.strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_name('E')
+        d.strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_name('F')
 
-        d.strand(0, 72).move(-32).with_idt('G')
+        d.strand(0, 72).move(-32).with_name('G')
 
-        d.strand(2, 40).move(-8).cross(1).move(24).with_idt('H')
-        d.strand(1, 56).move(8).cross(2).move(-24).with_idt('I')
+        d.strand(2, 40).move(-8).cross(1).move(24).with_name('H')
+        d.strand(1, 56).move(8).cross(2).move(-24).with_name('I')
 
-        d.strand(4, 40).move(-8).cross(3).move(24).with_idt('J')
-        d.strand(3, 56).move(8).cross(4).move(-24).with_idt('K')
+        d.strand(4, 40).move(-8).cross(3).move(24).with_name('J')
+        d.strand(3, 56).move(8).cross(4).move(-24).with_name('K')
 
-        d.strand(5, 24).move(32).with_idt('L')
+        d.strand(5, 24).move(32).with_name('L')
 
-        d.strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_idt('M')
-        d.strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_idt('N')
+        d.strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_name('M')
+        d.strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_name('N')
 
-        d.strand(5, 56).move(24).cross(4).move(-8).with_idt('O')
+        d.strand(5, 56).move(24).cross(4).move(-8).with_name('O')
 
-        d.strand(0, 96).move(-16).cross(1).move(16).with_idt('P')
-        d.strand(2, 96).move(-16).cross(3).move(16).with_idt('Q')
-        d.strand(4, 96).move(-16).cross(5).move(16).with_idt('R')
+        d.strand(0, 96).move(-16).cross(1).move(16).with_name('P')
+        d.strand(2, 96).move(-16).cross(3).move(16).with_name('Q')
+        d.strand(4, 96).move(-16).cross(5).move(16).with_name('R')
 
         for strand in d.strands:
             d.assign_dna(strand, 'A' * 32, assign_complement=False)
@@ -754,9 +756,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r'))
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r'))
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields('s_l'))
+        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(), name='s1_r')
+        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(), name='s1_r')
+        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -773,9 +775,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r'))
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r'))
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields('s_l'))
+        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(), name='s1_r')
+        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(), name='s1_r')
+        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -792,9 +794,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r', scale='25nm'))
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r', scale='100nm'))
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields('s_l'))
+        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(scale='25nm'), name='s1_r')
+        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(scale='100nm'), name='s1_r')
+        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -806,14 +808,16 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         with self.assertRaises(sc.IllegalDesignError):
             design.to_idt_bulk_input_format()
 
+    # https://stackoverflow.com/a/46307456/5339430
+    # @mock.patch('sys.stdout', new_callable=io.StringIO)
     def test_to_idt_bulk_input_format__duplicate_names_different_purifications(self) -> None:
         ss1_r = sc.Domain(0, True, 0, 4)
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields('s1_r', purification='STD'))
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields('s1_r', purification='HPLC'))
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields('s_l'))
+        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(purification='STD'), name='s1_r')
+        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(purification='HPLC'), name='s1_r')
+        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -823,7 +827,11 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         design.assign_dna(s2_r, 'AACT')
 
         with self.assertRaises(sc.IllegalDesignError):
-            design.to_idt_bulk_input_format()
+            design.to_idt_bulk_input_format(warn_duplicate_name=True)
+        # printed = mock_print.getvalue()
+        # self.assertIn('two strands with same IDT name', printed)
+        # self.assertIn('s1_r', printed)
+
 
 
 class TestExportCadnanoV2(unittest.TestCase):
@@ -3100,6 +3108,69 @@ class TestNames(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
+    def test_legacy_idt_name_import__no_strand_name(self) -> None:
+        # tests proper importing of old format when name was a subfield of idt;
+        # ensures if that exists and no Strand.name field exists, the idt.name is used as Strand.name
+        json_str = '''
+    {
+      "version": "0.14.0",
+      "grid": "square",
+      "helices": [
+        {"grid_position": [0, 0]},
+        {"grid_position": [0, 1]}
+      ],
+      "strands": [
+        {
+          "color": "#f74308",
+          "sequence": "TATTATAGTCTTACCCTGAC",
+          "idt": {"name": "staple1", "scale": "100nm", "purification": "HPLC", "plate": "plate1", "well": "A1"},
+          "domains": [
+            {"helix": 0, "forward": true, "start": 0, "end": 10},
+            {"helix": 1, "forward": false, "start": 0, "end": 10}
+          ]
+        }
+      ]
+    }
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual('staple1', strand.name)
+        self.assertEqual('100nm', strand.idt.scale)
+        self.assertEqual('HPLC', strand.idt.purification)
+        self.assertEqual('plate1', strand.idt.plate)
+        self.assertEqual('A1', strand.idt.well)
+
+    def test_legacy_idt_name_import__strand_name_exists(self) -> None:
+        # tests proper importing of old format when name was a subfield of idt;
+        # ensures if both exist, we use Strand.name
+        json_str = '''
+    {
+      "version": "0.14.0",
+      "grid": "square",
+      "helices": [
+        {"grid_position": [0, 0]},
+        {"grid_position": [0, 1]}
+      ],
+      "strands": [
+        {
+          "name": "staple1 strand level",
+          "color": "#f74308",
+          "sequence": "TATTATAGTCTTACCCTGAC",
+          "idt": {"name": "staple1", "scale": "100nm", "purification": "HPLC", "plate": "plate1", "well": "A1"},
+          "domains": [
+            {"helix": 0, "forward": true, "start": 0, "end": 10},
+            {"helix": 1, "forward": false, "start": 0, "end": 10}
+          ]
+        }
+      ]
+    }
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual('staple1 strand level', strand.name)
+
     def test_Helix_major_tick_start_default_min_offset(self) -> None:
         helices = [
             sc.Helix(min_offset=10, max_offset=100),
@@ -3222,18 +3293,15 @@ class TestJSON(unittest.TestCase):
 
     def test_strand_idt(self) -> None:
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
-        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], idt=sc.IDTFields(name='strand1',
-                                                                                   scale='25nm',
-                                                                                   purification='HPLC',
-                                                                                   plate='plate1',
-                                                                                   well='A2'))
+        idt = sc.IDTFields(scale='25nm', purification='HPLC', plate='plate1', well='A2')
+        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], name='strand1', idt=idt)
         strands = [strand0_expected]
         design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         json_str = design.to_json()
         design_from_json = sc.Design.from_scadnano_json_str(json_str)
         strand0 = design_from_json.strands[0]
         self.assertEqual(strand0_expected.idt, strand0.idt)
-        self.assertEqual('strand1', strand0.idt.name)
+        self.assertEqual('strand1', strand0.idt_export_name())
         self.assertEqual('25nm', strand0.idt.scale)
         self.assertEqual('HPLC', strand0.idt.purification)
         self.assertEqual('plate1', strand0.idt.plate)
