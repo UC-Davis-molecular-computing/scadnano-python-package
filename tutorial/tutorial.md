@@ -15,6 +15,26 @@ Before going further in this tutorial, please read through the help for the web 
 
 It will also be helpful to have available the [API documentation](https://scadnano-python-package.readthedocs.io). In this tutorial, we won't explain the full details of every function and method we use. If you wonder how it works, consult the API documentation.
 
+If you do know Python but haven't used the (somewhat recently developed) [type hints](https://docs.python.org/3/library/typing.html), then some of the syntax of function declarations may look strange. They are declaring argument (input) and return (output) types, for instance
+
+```python
+def f(x, n):
+    return len(x) / n
+```
+
+can be annotated as follows to declare that it takes a string and an integer as input and returns a floating-point number:
+
+```python
+def f(x: str, n: int) -> float:
+    return len(x) / n
+```
+
+Functions with no return type return `None`:
+
+```python
+def g(x: int) -> None:
+    print(x*2)
+```
 
 
 
