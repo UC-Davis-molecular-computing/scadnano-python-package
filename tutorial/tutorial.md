@@ -326,6 +326,9 @@ def add_scaffold_crossovers(design: sc.Design) -> None:
         design.add_half_crossover(helix=helix, helix2=helix + 1, offset=287, forward=True) # offset inclusive
 ```
 
+
+If you inspect carefully, you'll see that we are adding some crossovers (the "interior" crossovers) at offsets where nicks, i.e., 5'/3' ends of strands, do not exist already; the nicks are automatically created when calling `add_full_crossover`. This only works for `add_full_crossover`; the method `add_half_crossover` can only be given offsets corresponding to 5'/3' ends of strands.
+
 Now the design should look like this:
 
 ![](images/scaffold_complete.png)
@@ -343,7 +346,7 @@ For the staple precursor strands we do this to show how it works.
 
 Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
-boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
+Boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
 integer `start` and `end` offsets.
 
 
@@ -387,7 +390,7 @@ The design should now look like this:
 
 The staple crossovers are spaced fairly regularly between any two pairs of adjacent helices, the only complications being 
 1) the leftmost crossover is at offset 16 or 32 depending on the parity of the two helix indices, and
-2) We leave omit staple crossovers at the seam.
+2) We omit staple crossovers at the seam.
 
 ```python
 def create_design() -> sc.Design:
@@ -411,7 +414,6 @@ def add_staple_crossovers(design: sc.Design) -> None:
                                           forward=helix % 2 == 1)
 ```
 
-If you inspect carefully, you'll see that we are adding crossovers at offsets where nicks, i.e., 5'/3' ends of strands, do not exist already; the nicks are automatically created when calling `add_full_crossover`. This only works for `add_full_crossover`; the method `add_half_crossover` can only be given offsets corresponding to 5'/3' ends of strands.
 
 The design should now look like this:
 
