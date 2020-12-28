@@ -268,7 +268,7 @@ The design should look like this:
 
 ## Aside: offsets are inclusive on the left and exclusive on the right
 
-Note that each domain has a `start` (left) and `end` (right) offset. These follow the standard programming convention of being inclusive for `start` and exclusive for `end`. In other words, for each of these strands, which all have `start`=8 and `end`=296, the set of offsets that each occupies is {8, 9, 10, ..., 294, 295}. This can be confusing, but it often makes code easier to think about. For example, setting the `end` of one strand to be equal to the `start` of another means that they are adjacent (i.e., appear to be one strand with a "nick" at the shared offset). If you find the two scaffold precursor strands on helix 23 in the `24_helix_rectangle.sc`, you can see this:
+Note that each domain has a `start` (left) and `end` (right) offset. These follow the standard programming convention of being inclusive for `start` and exclusive for `end`. In other words, for each of these strands, which all have `start`=0 and `end`=288, the set of offsets that each occupies is {0, 1, 2, ..., 286, 287}. This can be confusing, but it often makes code easier to think about. For example, setting the `end` of one strand to be equal to the `start` of another means that they are adjacent (i.e., appear to be one strand with a "nick" at the shared offset). If you find the two scaffold precursor strands on helix 23 in the file `24_helix_rectangle.sc`, you can see this:
 
 ```json
   {
@@ -302,7 +302,9 @@ This contrasts a so-called *half crossover*, depicted here:
 
 ![a half crossover](images/half_crossover.png)
 
-We add full crossovers at the seam and half crossovers at the left and right edges of the helices. Note that the offset specified for a full crossover is that of the half crossover on the right side.
+We add full crossovers at the seam and half crossovers at the left and right edges of the helices. 
+Note that the offset specified for a full crossover is that of the half crossover on the right side. 
+Note also that when specifying the offset of a half crossover, it is inclusive, even if it occurs on the `end` offset of a domain, e.g., the half crossover at offset 287 (inclusive) joins two domains whose `end` offsets are 288 (exclusive).
 
 
 ```python
@@ -315,13 +317,13 @@ def create_design() -> sc.Design:
 
     return design
 
-def add_scaffold_precursors(design: sc.Design) -> None:
-    for helix in range(0, 23, 2):  # scaffold goes forward on even helices
-        design.strand(helix, 0).move(288).as_scaffold()
-    for helix in range(1, 23, 2):  # scaffold goes reverse on odd helices
-        design.strand(helix, 288).move(-288).as_scaffold()
-    design.strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
-    design.strand(23, 144).move(-144).as_scaffold()  #
+def add_scaffold_crossovers(design: sc.Design) -> None:
+    for helix in range(1, 23, 2):  # scaffold interior crossovers
+        design.add_full_crossover(helix=helix, helix2=helix + 1, offset=144, forward=False)
+
+    for helix in range(0, 23, 2):  # scaffold edges crossovers
+        design.add_half_crossover(helix=helix, helix2=helix + 1, offset=0, forward=True)
+        design.add_half_crossover(helix=helix, helix2=helix + 1, offset=287, forward=True) # offset inclusive
 ```
 
 Now the design should look like this:
