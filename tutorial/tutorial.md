@@ -73,7 +73,7 @@ if __name__ == '__main__':
 ```
 
 The line `design = create_design()` creates an empty design with no helices and no strands, using no grid.
-The line `design.write_scadnano_file()`.
+The line `design.write_scadnano_file()` writes the design to a `.sc` file with the same name (other than the file extension) of the currently running script.
 
 Run this file from the command line by opening a terminal window, changing directory to the location of the file `24_helix_rectangle.py`, and typing 
 
@@ -87,7 +87,7 @@ Depending on your installation, you may have to type `python3` instead of `pytho
 python3 24_helix_rectangle.py
 ```
 
-In the same directory, a file named `24_helix_origami_rectangle.sc` should appear. Open it in a text editor. The contents of the file should be something similar to this:
+In the same directory, a file named `24_helix_rectangle.sc` should appear. Open it in a text editor. The contents of the file should be something similar to this:
 
 ```json
 {
@@ -100,17 +100,14 @@ In the same directory, a file named `24_helix_origami_rectangle.sc` should appea
 
 This is a file format called [JSON format](https://en.wikipedia.org/wiki/JSON). When using the web interface, it is not typically necessary to think about how the design is represented as JSON, but when using the scripting library, you may find yourself wanting to inspect the output while fixing bugs, so it is helpful to be familiar with how the design is represented. 
 
-Now, we show how to modify the function `create_design()` to add helices and strands to the design.
-
-
 
 
 
 ## Add helices
 
-As you can see, the simple script we wrote generates a design with no helices and no strands. Now we see how to add helices.
+As you can see, the simple script we wrote generates a design with no helices, no strands, using no grid. Now we see how to add helices in the square grid.
 
-We want 24 helices, stacked vertically on the square grid. We can give each `Helix` an explicit `grid_position` coordinate, but it turns out that if we just give a list of helices using the square grid with no `grid_position`'s set, they will be automatically stacked vertically. We need to ensure each helix has enough offsets for all the bases we will need, using the `max_offset` parameter in the `Helix` constructor. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it.
+We want 24 helices, stacked vertically on the square grid. We can give each `Helix` an explicit `grid_position` coordinate, but it turns out that if we just give a list of helices using the square grid with no `grid_position`'s set, they will be automatically stacked vertically. We need to ensure each helix has enough offsets for all the bases we will need, using the `max_offset` parameter in the `Helix` constructor. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it. It turns out that 288 offsets will be enough for us to use close to 7000 of the bases of the scaffold.
 
 Change the Python file as follows. We marked the changed lines in `create_design()` with `###`:
 
@@ -133,7 +130,7 @@ if __name__ == '__main__':
     main()
 ```
 
-To save space, below we will omit the `import scadnano as sc` statement, the `main()` function definition, and `if __name__ == '__main__'` block at the bottom, and we will write only the `create_design()` function, as well as any other functions it calls as we write them:
+To save space, below we will omit the `import scadnano as sc` statement, the `main()` function definition, and `if __name__ == '__main__'` block at the bottom, none of which will change for most of the tutorial, and we will write only the `create_design()` function, as well as any other functions it calls, as we write them:
 
 ```python
 def create_design():
@@ -178,7 +175,7 @@ Execute this script and inspect the output `24_helix_rectangle.sc` file:
 }
 ```
 
-At this point, and periodically throughout the tutorial, reload the file `24_helix_rectangle.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Recall that this can be done either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.) Unfortunately, since it is a browser-based application, there's no way to have it automatically reload whenever your local `24_helix_rectangle.sc` file changes, for the same reason you wouldn't want arbitrary websites to start reading files on your computer without you explicitly uploading them.
+At this point, and periodically throughout the tutorial, reload the file `24_helix_rectangle.sc` in the scadnano web interface, to verify that it resembles the design you expect. (Recall that this can be done either by clicking File&rarr;Open or by dragging the file to the web browser opened to the scadnano site.) Unfortunately, since it is a browser-based application, there's no way to have it automatically reload whenever your local `24_helix_rectangle.sc` file changes (for the same reason you wouldn't want arbitrary websites to start reading files on your computer without you explicitly uploading them).
 
 At this point, the design should look like this:
 
@@ -203,7 +200,7 @@ We do this by creating a "precursor" design, which is not the final design, and 
 
 The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying these strands with crossovers, eventually joining them into one long strand.
 
-We can use the function `Design.strand` to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
+We can use the function [Design.strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand) to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
 
 
 ```python
@@ -224,6 +221,9 @@ def add_scaffold_precursors(design: sc.Design) -> None:
     design.strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
     design.strand(23, 144).move(-144).as_scaffold()  #
 ```
+
+We drew the scaffold precursor on helix 23 as two strands, each half the length (144) of those on other helices (288).
+But we could alternately think of it as one strand of length 288 that has had a "nick" created in the middle, so we could have created it similarly to the other helices and then called the method [Design.add_nick](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.add_nick). This is how we will create the staples later, which have many more nicks on each helix than the scaffold.
 
 Execute the script. The file `24_helix_rectangle.sc` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
 
