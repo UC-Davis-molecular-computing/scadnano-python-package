@@ -72,7 +72,8 @@ if __name__ == '__main__':
     main()
 ```
 
-The line `design = create_design()` creates an empty design with no helices and no strands, and the line `design.write_scadnano_file()`.
+The line `design = create_design()` creates an empty design with no helices and no strands, using no grid.
+The line `design.write_scadnano_file()`.
 
 Run this file from the command line by opening a terminal window, changing directory to the location of the file `24_helix_rectangle.py`, and typing 
 
@@ -109,7 +110,7 @@ Now, we show how to modify the function `create_design()` to add helices and str
 
 As you can see, the simple script we wrote generates a design with no helices and no strands. Now we see how to add helices.
 
-We want 24 helices. We need to ensure each helix has enough offsets for all the bases we will need. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it.
+We want 24 helices, stacked vertically on the square grid. We can give each `Helix` an explicit `grid_position` coordinate, but it turns out that if we just give a list of helices using the square grid with no `grid_position`'s set, they will be automatically stacked vertically. We need to ensure each helix has enough offsets for all the bases we will need, using the `max_offset` parameter in the `Helix` constructor. We will use a standard [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) scaffold strand, of length 7249. We won't use all of it, but we'll use most of it.
 
 Change the Python file as follows. We marked the changed lines in `create_design()` with `###`:
 
