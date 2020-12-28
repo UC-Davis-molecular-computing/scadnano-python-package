@@ -570,7 +570,11 @@ def main() -> None:
     design.write_idt_plate_excel_file() ###
 ```
 
-This will write an Excel file named `24_helix_rectangle.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
+This will write a Microsoft Excel file named `24_helix_rectangle.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
+
+The Excel file should look similar to this:
+
+![](images/excel_file.png)
 
 To customize further (e.g., purification, synthesis scale), one can write to the field `Strand.idt`, of type [IDTFields](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields).
 
