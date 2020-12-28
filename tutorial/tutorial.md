@@ -9,7 +9,7 @@ See the [web interface tutorial](https://github.com/UC-Davis-molecular-computing
 
 ## Prerequisite knowledge
 
-This tutorial assumes a basic knowledge of Python. It's q very readable programming language, so if you know how to program, but not in Python, then you should be able to follow along. But if you are confused by some syntax, it might help to read the [Python tutorial](https://docs.python.org/3/tutorial/).
+This tutorial assumes a basic knowledge of Python. Python is a very readable programming language, so if you know how to program, but not in Python, then you should be able to follow along. But if you are confused by some syntax, it might help to read the [Python tutorial](https://docs.python.org/3/tutorial/).
 
 Before going further in this tutorial, please read through the help for the web interface, specifically the description of [terminology](https://github.com/UC-Davis-molecular-computing/scadnano#terminology). We will use the terms described there in the rest of this tutorial.
 
