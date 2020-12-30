@@ -212,7 +212,7 @@ def create_design():
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
     # whole design
-    design = sc.Design(helices=helices, strands=[], grid=sc.square)
+    design = sc.Design(helices=helices, grid=sc.square)
 
     # for absolute offsets, call method "to"
     # left staple
