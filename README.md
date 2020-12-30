@@ -39,6 +39,14 @@ Please report issues in the web interface at the [scadnano web interface GitHub 
 
 ## Installation
 
+Short version: type this at the command line:
+
+```console
+pip install scadnano
+```
+
+Read below for troubleshooting suggestions if that didn't work.
+
 ### Getting Python
 The scadnano Python package requires Python version 3.7 or later (with a workaround available for version 3.6, but not for any lower version). 
 
@@ -71,6 +79,17 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
     ```console
     pip install scadnano
+    ```
+
+    If it worked, you should be able to open a Python interpreter and import the scadnano module:
+
+    ```console
+    Python 3.7.9 (default, Aug 31 2020, 17:10:11) [MSC v.1916 64 bit (AMD64)] :: Anaconda, Inc. on win32
+    Type "help", "copyright", "credits" or "license" for more information.
+    >>> import scadnano as sc
+    >>> print(sc.Domain(helix=1, forward=True, start=0, end=8))
+    Domain(, helix=1, forward=True, start=0, end=8)
+    >>>
     ```
 
     ### Troubleshooting
