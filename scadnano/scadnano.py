@@ -50,7 +50,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.14.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.15.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -794,11 +794,13 @@ mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 
 # IDT keys
-idt_name_key = 'name'
 idt_scale_key = 'scale'
 idt_purification_key = 'purification'
 idt_plate_key = 'plate'
 idt_well_key = 'well'
+# legacy; not written anymore as part of idt, but may be read from older versions of the JSON if
+# the Strand has no name but the IDT field does have a name
+idt_name_key = 'name'
 
 # end keys
 ##################
@@ -1939,13 +1941,11 @@ def wc(seq: str) -> str:
 class IDTFields(_JSONSerializable):
     """Data required when ordering DNA strands from the synthesis company
     `IDT (Integrated DNA Technologies) <https://www.idtdna.com/>`_.
-    This data is used when automatically generating files used to order DNA from IDT."""
+    This data is used when automatically generating files used to order DNA from IDT.
 
-    name: str
-    """Name of the strand (first field in IDT bulk input: https://www.idtdna.com/site/order/oligoentry).
-    
-    Non-optional field.
-    """
+    When exporting to IDT files via :py:meth:`Design.write_idt_plate_excel_file`
+    or :py:meth:`Design.write_idt_bulk_input_file`, the field :py:data:`Strand.name` is used for the
+    name if it exists, otherwise a reasonable default is chosen."""
 
     scale: str = default_idt_scale
     """Synthesis scale at which to synthesize the strand (third field in IDT bulk input:
@@ -1979,7 +1979,6 @@ class IDTFields(_JSONSerializable):
     """
 
     def __post_init__(self) -> None:
-        _check_idt_string_not_none_or_empty(self.name, 'name')
         _check_idt_string_not_none_or_empty(self.scale, 'scale')
         _check_idt_string_not_none_or_empty(self.purification, 'purification')
         if self.plate is None and self.well is not None:
@@ -2000,12 +1999,11 @@ class IDTFields(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
-        name = mandatory_field(IDTFields, json_map, idt_name_key)
         scale = mandatory_field(IDTFields, json_map, idt_scale_key)
         purification = mandatory_field(IDTFields, json_map, idt_purification_key)
         plate = json_map.get(idt_plate_key)
         well = json_map.get(idt_well_key)
-        return IDTFields(name=name, scale=scale, purification=purification, plate=plate, well=well)
+        return IDTFields(scale=scale, purification=purification, plate=plate, well=well)
 
 
 def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
@@ -2028,7 +2026,17 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     :any:`StrandBuilder` should generally not be created directly.
     Although it is convenient to use chained method calls, it is also sometimes useful to assign the
-    :any:`StrandBuilder` object into a variable and then call the methods on that variable.
+    :any:`StrandBuilder` object into a variable and then call the methods on that variable. For example,
+    this code is equivalent to the above line:
+
+    .. code-block:: Python
+
+        strand_builder = design.strand(0, 0)
+        strand_builder.to(10)
+        strand_builder.cross(1)
+        strand_builder.to(5)
+        strand_builder.with_modification_5p(mod.biotin_5p)
+        strand_builder.as_scaffold()
     """
 
     # remove quotes when Py3.6 support dropped
@@ -2232,16 +2240,14 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_scaffold(True)
         return self
 
-    def with_idt(self, name: str, scale: str = default_idt_scale,
+    def with_idt(self, scale: str = default_idt_scale,
                  purification: str = default_idt_purification,
                  plate: Optional[str] = None, well: Optional[str] = None) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Gives :any:`IDTFields` value to :any:`Strand` being built.
-        Only a name is required; other field have reasonable default values.
+        Only a name is required; other fields are given reasonable default values.
 
-        :param name:
-            name of strand; required field
         :param scale:
             see :py:data:`IDTFields.scale`
         :param purification:
@@ -2254,7 +2260,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
-        self._strand.idt = IDTFields(name=name, scale=scale, purification=purification,
+        self._strand.idt = IDTFields(scale=scale, purification=purification,
                                      plate=plate, well=well)
         return self
 
@@ -2633,9 +2639,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
 
-        idt_dict = json_map.get(idt_key)
-        idt = None if idt_dict is None else IDTFields.from_json(idt_dict)
-
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
         if isinstance(color_str, int):
@@ -2645,8 +2648,16 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             color_str = decimal_int_to_hex(color_str)
         color = Color(hex_string=color_str)
 
-        name = json_map.get(strand_name_key)
         label = json_map.get(strand_label_key)
+
+        name = json_map.get(strand_name_key)
+
+        idt_dict: Optional[dict] = json_map.get(idt_key)
+        idt = None if idt_dict is None else IDTFields.from_json(idt_dict)
+        # legacy:
+        # if no name is specified, but there's a name field in idt, then use that as the Strand's name
+        if name is None and idt_dict is not None and idt_name_key in idt_dict:
+            name = idt_dict[idt_name_key]
 
         return Strand(
             domains=domains,
@@ -2785,17 +2796,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             Has no effect if :py:data:`Strand.idt` or :py:data:`Strand.name` are defined;
             if those are used, they must be explicitly set to be unique.
         :return:
-            If :py:data:`Strand.idt` is not None, return :py:data:`Strand.idt.name`,
-            otherwise, if :py:data:`Strand.name` is not None, return :py:data:`Strand.name`,
+            If :py:data:`Strand.name` is not None, return :py:data:`Strand.name`,
             otherwise return the result of :py:meth:`Strand.default_export_name`
             with parameter `unique_names`.
         """
-        if self.idt is not None:
-            return self.idt.name
-        elif self.name is not None:
-            return self.name
-        else:
-            return self.default_export_name(unique_names)
+        return self.name if self.name is not None else self.default_export_name(unique_names)
 
     def default_export_name(self, unique_names: bool = False) -> str:
         """
@@ -5092,14 +5097,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                         only_strands_with_idt=only_strands_with_idt,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
-
+        print('hello')
         idt_lines: List[str] = []
         for strand in strands_to_export:
-            if strand.idt is None:
-                raise ValueError(f'cannot export strand {strand} to IDT because it has no IDT field')
+            if strand.idt is None and only_strands_with_idt:
+                raise AssertionError(f'cannot export strand {strand} to IDT because it has no IDT field; '
+                                     f'since only_strands_with_idt is True, '
+                                     f'this strand should have been filtered out by _idt_strands_to_export')
+            if strand.idt is not None:
+                scale = strand.idt.scale
+                purification = strand.idt.scale
+            else:
+                scale = default_idt_scale
+                purification = default_idt_purification
             idt_lines.append(delimiter.join(
                 [strand.idt_export_name(), strand.idt_dna_sequence(),
-                 strand.idt.scale, strand.idt.purification]
+                 scale, purification]
             ))
 
         idt_string = '\n'.join(idt_lines)
@@ -5147,9 +5160,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # This is allowed in case one wants to draw multiple copies of the same strand
         # in scadnano without having to worry about setting their idt fields differently.
         # But then we need to check that they agree on everything being exported.
-        if existing_strand.idt is not None:
-            assert existing_strand.idt.name == name
-        elif existing_strand.name is not None:
+        if existing_strand.name is not None:
             assert existing_strand.name == name
         domain = strand.first_domain()
         existing_domain = existing_strand.first_domain()
@@ -5171,7 +5182,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 and existing_strand.idt is not None:
             if strand.idt.scale != existing_strand.idt.scale:
                 raise IllegalDesignError(
-                    f'two strands with same IDT name {name} but different IDT scales:\n'
+                    f'two strands with same name {name} but different IDT scales:\n'
                     f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
                     f'scale: {strand.idt.scale}\n'
                     f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
@@ -5179,7 +5190,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     f'scale: {existing_strand.idt.scale}\n')
             elif strand.idt.purification != existing_strand.idt.purification:
                 raise IllegalDesignError(
-                    f'two strands with same IDT name {name} but different purifications:\n'
+                    f'two strands with same name {name} but different purifications:\n'
                     f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
                     f'purification: {strand.idt.purification}\n'
                     f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
@@ -5226,7 +5237,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
         :param only_strands_with_idt:
-            If False (the default), all non-scaffold sequences are output
+            If False (the default), all non-scaffold sequences are output, with reasonable default values
+            chosen if the field :py:data:`Strand.idt` is missing.
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :any:`Strand.idt` will not be exported.
         :param export_scaffold:
@@ -5284,7 +5296,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
         :param only_strands_with_idt:
-            If False (the default), all non-scaffold sequences are output
+            If False (the default), all non-scaffold sequences are output, with reasonable default values
+            chosen if the field :py:data:`Strand.idt` is missing.
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :any:`Strand.idt` will not be exported.
             If False, then `use_default_plates` must be True.
@@ -5323,7 +5336,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                  'cannot both be False')
             self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
-            self._write_plates_default(directory=directory, filename=filename, strands_to_export=strands_to_export,
+            self._write_plates_default(directory=directory, filename=filename,
+                                       strands_to_export=strands_to_export,
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
@@ -5351,7 +5365,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 if strand.idt is None:
                     raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
                 worksheet.write(row + 1, 0, strand.idt.well)
-                worksheet.write(row + 1, 1, strand.idt.name)
+                worksheet.write(row + 1, 1, strand.idt_export_name())
                 worksheet.write(row + 1, 2, strand.idt_dna_sequence())
 
             workbook.save(filename_plate)

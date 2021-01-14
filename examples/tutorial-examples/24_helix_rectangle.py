@@ -39,7 +39,7 @@ def add_scaffold_crossovers(design: sc.Design) -> None:
 
     for helix in range(0, 23, 2):  # scaffold edges crossovers
         design.add_half_crossover(helix=helix, helix2=helix + 1, offset=0, forward=True)
-        design.add_half_crossover(helix=helix, helix2=helix + 1, offset=287, forward=True)
+        design.add_half_crossover(helix=helix, helix2=helix + 1, offset=287, forward=True) # offset inclusive
 
 
 def add_staple_precursors(design: sc.Design) -> None:

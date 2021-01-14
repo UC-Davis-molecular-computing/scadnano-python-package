@@ -107,12 +107,11 @@ def add_adapters(design: sc.Design) -> None:
     for bot_helix in range(2, 18, 2):
         top_helix = bot_helix - 1 if bot_helix != 2 else 17
         dom_top = sc.Domain(helix=top_helix, forward=True,
-                           start=left_outside_seed, end=left_inside_seed)
+                            start=left_outside_seed, end=left_inside_seed)
         dom_bot = sc.Domain(helix=bot_helix, forward=False,
-                           start=left_outside_seed, end=left_inside_seed)
-        idt = sc.IDTFields(name=f'adap-left-{top_helix}-{bot_helix}',
-                           scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[dom_bot, dom_top], idt=idt)
+                            start=left_outside_seed, end=left_inside_seed)
+        idt = sc.IDTFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[dom_bot, dom_top], name=f'adap-left-{top_helix}-{bot_helix}', idt=idt)
         design.add_strand(adapter)
 
     # right adapters
@@ -121,12 +120,11 @@ def add_adapters(design: sc.Design) -> None:
     for bot_helix in range(2, 18, 2):
         top_helix = bot_helix - 1 if bot_helix != 2 else 17
         dom_top = sc.Domain(helix=top_helix, forward=True,
-                           start=right_inside_seed, end=right_outside_seed)
+                            start=right_inside_seed, end=right_outside_seed)
         dom_bot = sc.Domain(helix=bot_helix, forward=False,
-                           start=right_inside_seed, end=right_outside_seed)
-        idt = sc.IDTFields(name=f'adap-right-{top_helix}-{bot_helix}',
-                           scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[dom_top, dom_bot], idt=idt)
+                            start=right_inside_seed, end=right_outside_seed)
+        idt = sc.IDTFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[dom_top, dom_bot], name=f'adap-right-{top_helix}-{bot_helix}', idt=idt)
         design.add_strand(adapter)
 
 
@@ -163,9 +161,9 @@ def add_tiles_and_assign_dna(design: sc.Design) -> None:
                            start=left_left, end=left_right)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=left_left, end=left_right)
-        idt = sc.IDTFields(name=f'tile-left-{top_helix}-{bot_helix}',
-                           scale='25nm', purification='STD')
-        tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0), idt=idt)
+        idt = sc.IDTFields(scale='25nm', purification='STD')
+        tile = sc.Strand(domains=[ss_bot, ss_top], name=f'tile-left-{top_helix}-{bot_helix}',
+                         color=sc.Color(0, 0, 0), idt=idt)
         design.add_strand(tile)
         design.assign_dna(tile, seq)
 
@@ -178,9 +176,9 @@ def add_tiles_and_assign_dna(design: sc.Design) -> None:
                            start=right_left, end=right_right)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=right_left, end=right_right)
-        idt = sc.IDTFields(name=f'tile-right-{top_helix}-{bot_helix}',
-                           scale='25nm', purification='STD')
-        tile = sc.Strand(domains=[ss_bot, ss_top], color=sc.Color(0, 0, 0), idt=idt)
+        idt = sc.IDTFields(scale='25nm', purification='STD')
+        tile = sc.Strand(domains=[ss_bot, ss_top], name=f'tile-right-{top_helix}-{bot_helix}',
+                         color=sc.Color(0, 0, 0), idt=idt)
         design.add_strand(tile)
         design.assign_dna(tile, seq)
 
