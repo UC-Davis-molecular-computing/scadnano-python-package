@@ -220,7 +220,7 @@ We do this by creating a "precursor" design, which is not the final design, and 
 
 The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying these strands with crossovers, eventually joining them into one long strand.
 
-We can use the function [Design.strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand) to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
+We can use the function [Design.strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand) to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) by 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
 
 
 ```python
@@ -554,7 +554,7 @@ Finally, you will want to export the DNA sequences of the staples. One way to do
 
 ```python
 for strand in design.strands:
-    if strand != design.scaffold:
+    if not strand.is_scaffold:
         print(strand.dna_sequence)
 ```
 

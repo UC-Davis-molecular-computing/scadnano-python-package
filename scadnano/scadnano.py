@@ -2,7 +2,11 @@
 The :mod:`scadnano` Python module is a library for describing synthetic DNA nanostructures
 (e.g., DNA origami).
 Installation instructions are at the
-`GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_.
+`GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package#installation>`_.
+
+The scadnano project is developed and maintained by the UC Davis Molecular Computing group.
+Note that `cadnano <https://cadnano.org>`_ is a separate project,
+developed and maintained by the `Douglas lab <https://bionano.ucsf.edu/>`_ at UCSF.
 
 This module is used to write Python scripts creating files readable
 by `scadnano <https://scadnano.org/>`_, a web application useful for displaying
@@ -50,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.15.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.15.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -409,11 +413,11 @@ class M13Variant(enum.Enum):
     p7249 = "p7249"
     """"Standard" variant of M13mp18; 7249 bases long, available from, for example
     
+    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7249
+    
     https://www.neb.com/products/n4040-m13mp18-single-stranded-dna
     
     http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/
-    
-    https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p7249
     """
 
     p7560 = "p7560"
@@ -439,9 +443,9 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     `GenBank <https://www.ncbi.nlm.nih.gov/nuccore/X02513.1>`_.
     
     By default, returns the "standard" variant of consisting of 7249 bases, sold by companies such as  
-    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
-    and
     `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_.
+    and
+    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
     
     The actual M13 DNA strand itself is circular, 
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
@@ -2493,7 +2497,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         scaffold_strand.set_scaffold()
 
     Both will give the strand the same color that
-    `cadnano <https://cadnano.org/>`_
+    `cadnano <https://cadnano.org>`_
     uses for the scaffold.
     """
 
@@ -4342,7 +4346,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return StrandBuilder(self, helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
-        """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`.
+        """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`
+        and :any:`M13Variant`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
         """
