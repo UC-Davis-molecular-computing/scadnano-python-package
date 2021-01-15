@@ -2,7 +2,11 @@
 The :mod:`scadnano` Python module is a library for describing synthetic DNA nanostructures
 (e.g., DNA origami).
 Installation instructions are at the
-`GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package>`_.
+`GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package#installation>`_.
+
+The scadnano project is developed and maintained by the UC Davis Molecular Computing group.
+Note that `cadnano <https://cadnano.org>`_ is a separate project,
+developed and maintained by the `Douglas lab <https://bionano.ucsf.edu/>`_ at UCSF.
 
 This module is used to write Python scripts creating files readable
 by `scadnano <https://scadnano.org/>`_, a web application useful for displaying
@@ -2493,7 +2497,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         scaffold_strand.set_scaffold()
 
     Both will give the strand the same color that
-    `cadnano <https://cadnano.org/>`_
+    `cadnano <https://cadnano.org>`_
     uses for the scaffold.
     """
 
