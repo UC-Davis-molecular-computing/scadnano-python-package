@@ -7,6 +7,8 @@
 The scadnano Python package 
 ([source code repository here](https://github.com/UC-Davis-molecular-computing/scadnano-python-package)) 
 is a library for programmatically creating and editing these nanostructures.
+The scadnano project is developed and maintained by the UC Davis Molecular Computing group.
+Note that [cadnano](https://cadnano.org) is a separate project, developed and maintained by the [Douglas lab](https://bionano.ucsf.edu/) at UCSF.
 
 If you find scadnano useful in a scientific project, please cite its associated paper:
 
@@ -15,6 +17,18 @@ If you find scadnano useful in a scientific project, please cite its associated 
   DNA 2020: *Proceedings of the 26th International Conference on DNA Computing and Molecular Programming*  
   [ [paper](https://doi.org/10.4230/LIPIcs.DNA.2020.9) | [BibTeX](https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib) ]
 
+
+## Table of contents
+
+* [Overview](#overview)
+* [Reporting issues](#reporting-issues)
+* [Installation](#installation)
+* [Example](#example)
+* [Abbreviated syntax with chained methods](#abbreviated-syntax-with-chained-methods)
+* [Tutorial](#tutorial)
+* [API documentation](#api-documentation)
+* [Other examples](#other-examples)
+* [Contributing](#contributing)
 
 ## Overview
 
@@ -199,7 +213,7 @@ if __name__ == '__main__':
 Running the code above produces a `.sc` file that, if loaded into scadnano, should appear as in the screenshot above. The [web interface README](https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.md#terminology) explains many of the terms used in the code (domain, helix, loopout, insertion, etc.).
 
 
-## abbreviated syntax with chained methods
+## Abbreviated syntax with chained methods
 Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the Design. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above script using these chained methods
 
 ```python
