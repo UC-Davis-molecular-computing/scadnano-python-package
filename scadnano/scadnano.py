@@ -5102,7 +5102,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                         only_strands_with_idt=only_strands_with_idt,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
-        print('hello')
+
         idt_lines: List[str] = []
         for strand in strands_to_export:
             if strand.idt is None and only_strands_with_idt:
