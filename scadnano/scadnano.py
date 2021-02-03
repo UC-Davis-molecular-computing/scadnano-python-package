@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.15.2"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.16.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -365,6 +365,8 @@ default_roll: float = 0.0
 default_yaw: float = 0.0
 
 default_group_name = 'default_group'
+
+floating_point_tolerance = 0.00000001
 
 # XXX: code below related to SVG positions is not currently needed in the scripting library,
 # but I want to make sure these conventions are documented somewhere, so they are just commented out for now.
@@ -1003,10 +1005,16 @@ class HelixGroup(_JSONSerializable):
     """The "origin" of this :any:`HelixGroup`."""
 
     pitch: float = 0
-    """Same meaning as :py:data:`Helix.pitch`, applied to every :any:`Helix` in the group."""
+    """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
+    Rotation is clockwise in the main view.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     yaw: float = 0
-    """Same meaning as :py:data:`Helix.yaw`, applied to every :any:`Helix` in the group."""
+    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
+    Not visually displayed in scadnano, but here to support more general 3D applications.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     roll: float = 0
     """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
@@ -1200,21 +1208,9 @@ class Helix(_JSONSerializable):
     
     Must be None if :py:data:`Helix.grid_position` is specified."""
 
-    pitch: float = 0
-    """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
-    Rotation is clockwise in the main view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
     Rotation is clockwise in the side view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
-    yaw: float = 0
-    """Third angle for orientation besides :py:data:`Helix.pitch` and :py:data:`Helix.roll`.
-    Not visually displayed in scadnano, but here to support more general 3D applications.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
@@ -1275,12 +1271,8 @@ class Helix(_JSONSerializable):
             pos = self.position.to_json_serializable(suppress_indent)
             dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent_helix else pos
 
-        if not _is_close(self.pitch, default_pitch):
-            dct[pitch_key] = self.pitch
         if not _is_close(self.roll, default_roll):
             dct[roll_key] = self.roll
-        if not _is_close(self.yaw, default_yaw):
-            dct[yaw_key] = self.yaw
 
         if not self.major_tick_distance_is_default(grid):
             dct[major_tick_distance_key] = self.major_tick_distance
@@ -1336,9 +1328,7 @@ class Helix(_JSONSerializable):
             min_offset=min_offset,
             max_offset=max_offset,
             position=position,
-            pitch=pitch,
             roll=roll,
-            yaw=yaw,
             idx=idx,
             group=group,
         )
@@ -1405,7 +1395,7 @@ class Helix(_JSONSerializable):
 
 
 def _is_close(x1: float, x2: float) -> bool:
-    return abs(x1 - x2) < 0.00000001
+    return abs(x1 - x2) < floating_point_tolerance
 
 
 DomainLabel = TypeVar('DomainLabel')
@@ -3863,16 +3853,59 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         deserialized_helices_list = json_map[helices_key]
         num_helices = len(deserialized_helices_list)
 
-        # create Helices
+
+
+        # USED ONLY IN THE CASE WHERE THERE IS MORE THAN ONE HELIX GROUP
+        # Maps group name to pitch, yaw, and helix idx of a helix in that group (the first one found).
+        # The helix idx is kept in case an error message needs to be thrown.
+        group_to_pitch_yaw: Dict[str, Tuple[float, float, int]] = {}
+
+        # USED ONLY IN THE CASE WHEN THERE IS EXACTLY ONE HELIX GROUP
+        # Maps pitch and yaw pairs to list of helix with those pitch and yaw
+        # Because of fuzziness with floating point values, the keys are actually
+        # int(pitch/floating_point_tolerance) and int(yaw/floating_point_tolerance)
+        # essentially storing only certain digits of the floating point value
+        pitch_yaw_to_helices: Dict[Tuple[int, int], List[Helix]] = defaultdict(list)
+
+        num_groups_used = 0
+        if groups_key in json_map:
+            num_groups_used = len(json_map[groups_key])
+
+        multiple_groups_used = num_groups_used > 1
+        single_group_used = not multiple_groups_used
+
         idx_default = 0
         for helix_json in deserialized_helices_list:
             helix = Helix.from_json(helix_json)
+            helix_idx = helix.idx if helix.idx is not None else idx_default
+
+
+            # Handle pitch and yaw for individual helices
+            pitch = 0 if pitch_key not in helix_json else helix_json[pitch_key]
+            yaw = 0 if yaw_key not in helix_json else helix_json[yaw_key]
+            group = helix.group
+            if multiple_groups_used:
+                if group not in group_to_pitch_yaw:
+                    # Log pitch and yaw for a helix in group so that other helices in the group can be compared
+                    group_to_pitch_yaw[group] = (pitch, yaw, helix_idx)
+                else:
+                    # Another helix in this group also had a non-zero pitch/yaw, so check if they match
+                    expected_pitch, expected_yaw, idx_of_helix_with_expected_pitch_yaw = group_to_pitch_yaw[group]
+                    if not (_is_close(pitch, expected_pitch) and _is_close(yaw, expected_yaw)):
+                        raise IllegalDesignError(
+                            f'In HelixGroup {group}, Helix {helix_idx} has pitch {pitch} and yaw {yaw} but Helix {helix_idx} has pitch {expected_pitch} and yaw {expected_yaw}. Please seperate Helix {helix_idx} and Helix {idx_of_helix_with_expected_pitch_yaw} into seperate HelixGroups.')
+            if single_group_used:
+                pitch_yaw_to_helices[(int(pitch/floating_point_tolerance), int(yaw/floating_point_tolerance))].append(helix)
+
+
             if not using_groups and grid_is_none and grid_position_key in helix_json:
+                # TODO(benlee12): Should helix_idx be used instead of idx_default in case user explicitly sets idx?
                 raise IllegalDesignError(
-                    f'grid is none, but Helix {idx_default} has grid_position = {helix_json[grid_position_key]}')
+                    f'grid is none, but Helix {helix_idx} has grid_position = {helix_json[grid_position_key]}')
             elif not using_groups and not grid_is_none and position_key in helix_json:
+                # TODO(benlee12): Should helix_idx be used instead of idx_default in case user explicitly sets idx?
                 raise IllegalDesignError(
-                    f'grid is not none, but Helix {idx_default} has position = ${helix_json[position_key]}')
+                    f'grid is not none, but Helix {helix_idx} has position = ${helix_json[position_key]}')
             helices.append(helix)
             idx_default += 1
 
@@ -3884,6 +3917,42 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for name, group_json in groups_json.items():
                 num_helices_in_group = sum(1 for helix in helices if helix.group == name)
                 groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
+
+        if multiple_groups_used:
+            for (group_name, (pitch, yaw, _)) in group_to_pitch_yaw.items():
+                groups[group_name].pitch += pitch
+                groups[group_name].yaw += pitch
+
+        if single_group_used:
+            # New groups to add
+            new_groups = {}
+            # The only group (take into account case when default helix group is used)
+            group = list(groups.values())[0] if groups is not None else HelixGroup()
+
+            for ((integerized_pitch, integerized_yaw), helix_list) in pitch_yaw_to_helices.items():
+                new_pitch = group.pitch + integerized_pitch * floating_point_tolerance
+                new_yaw = group.yaw + integerized_yaw * floating_point_tolerance
+                # Only make new groups if helix's pitch/yaw is non-zero
+                if integerized_pitch or integerized_yaw:
+                    # if len(helices) == 1:
+                    #     # If there is only one helix, rather than creating new group, just modify current one
+                    #     group.pitch = new_pitch
+                    #     group.yaw = new_yaw
+                    # else:
+
+                    # If there is more than one helix, create new helix group for each pitch yaw value
+                    new_group_name = f'pitch_{new_pitch}_yaw_{new_yaw}'
+                    new_groups[new_group_name] = HelixGroup(pitch=new_pitch, yaw=new_yaw, grid=group.grid)
+                    # Move helices into new group
+                    for helix in helix_list:
+                        helix.group = new_group_name
+
+            if len(new_groups) != 0:
+                if groups is not None:
+                    groups.update(new_groups)
+                else:
+                    groups = new_groups
+                    grid = None
 
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)

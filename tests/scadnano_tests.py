@@ -3544,6 +3544,97 @@ class TestJSON(unittest.TestCase):
         actual_color_hex = d.strands[0].color.to_json_serializable(False)
         self.assertEqual(expected_color_hex, actual_color_hex)
 
+    def test_non_parallel_helices_when_using_single_helix_group(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 4,
+              "roll": 5,
+              "yaw": 6
+            },
+            {
+              "group": "north",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "pitch": 21,
+              "yaw": 13,
+              "grid": "none"
+            }
+          },
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(5, helix0.roll)
+        # Helix 0 should have been moved to a new helix group
+        pitch_25_yaw_19_group_name = f'pitch_25.0_yaw_19.0'
+        pitch_25_yaw_19_group = d.groups[pitch_25_yaw_19_group_name]
+        self.assertEqual(25, pitch_25_yaw_19_group.pitch)
+        self.assertEqual(19, pitch_25_yaw_19_group.yaw)
+        self.assertEqual(pitch_25_yaw_19_group_name, helix0.group)
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual("north", helix1.group)
+        self.assertEqual(2, len(d.groups))
+
+
+    def test_non_parallel_helices_when_using_multiple_helix_group(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 4,
+              "roll": 5,
+              "yaw": 6
+            },
+            {
+              "group": "north",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "pitch": 10,
+              "roll": 5,
+              "yaw": 84
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "grid": "none"
+            },
+            "east": {
+              "position": {"x": 0, "y": 0, "z": 100},
+              "pitch": 45,
+              "grid": "square"
+            }
+          },
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Design.from_scadnano_json_str(json_str)
+
     def test_position_specified_with_origin_keyword(self) -> None:
         # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/59
         json_str = """
@@ -3569,13 +3660,16 @@ class TestJSON(unittest.TestCase):
         expected_roll = 5
         expected_yaw = 6
         actual_position = d.helices[0].position
-        actual_pitch = d.helices[0].pitch
+        expected_group_name = f'pitch_{expected_pitch}.0_yaw_{expected_yaw}.0'
+        expected_group = d.groups[expected_group_name]
+        actual_pitch = expected_group.pitch
         actual_roll = d.helices[0].roll
-        actual_yaw = d.helices[0].yaw
+        actual_yaw = expected_group.yaw
         self.assertEqual(expected_position, actual_position)
         self.assertEqual(expected_pitch, actual_pitch)
         self.assertEqual(expected_roll, actual_roll)
         self.assertEqual(expected_yaw, actual_yaw)
+        self.assertEqual(expected_group_name, d.helices[0].group)
 
     def test_json_tristan_example_issue_32(self) -> None:
         json_str = """
