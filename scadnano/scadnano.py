@@ -366,7 +366,7 @@ default_yaw: float = 0.0
 
 default_group_name = 'default_group'
 
-floating_point_tolerance = 0.00000001
+_floating_point_tolerance = 0.00000001
 
 # XXX: code below related to SVG positions is not currently needed in the scripting library,
 # but I want to make sure these conventions are documented somewhere, so they are just commented out for now.
@@ -1313,9 +1313,7 @@ class Helix(_JSONSerializable):
         position_map = optional_field(None, json_map, position_key, *legacy_position_keys)
         position = Position3D.from_json(position_map) if position_map is not None else None
 
-        pitch = json_map.get(pitch_key, default_pitch)
         roll = json_map.get(roll_key, default_roll)
-        yaw = json_map.get(yaw_key, default_yaw)
 
         group = json_map.get(group_key, default_group_name)
 
@@ -1395,7 +1393,7 @@ class Helix(_JSONSerializable):
 
 
 def _is_close(x1: float, x2: float) -> bool:
-    return abs(x1 - x2) < floating_point_tolerance
+    return abs(x1 - x2) < _floating_point_tolerance
 
 
 DomainLabel = TypeVar('DomainLabel')
@@ -3792,6 +3790,18 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             else:
                 strand.color = next(self.color_cycler)
 
+    def pitch_of_helix(self, helix: Helix) -> float:
+        """Same as the pitch of its's :any:`HelixGroup`"""
+        return self.groups[helix.group].pitch
+
+    def yaw_of_helix(self, helix: Helix) -> float:
+        """Same as the yaw of helix's :any:`HelixGroup`"""
+        return self.groups[helix.group].yaw
+
+    def roll_of_helix(self, helix: Helix) -> float:
+        """Roll of helix's :any:`HelixGroup` plus :py:data:`Helix.roll`"""
+        return self.groups[helix.group].roll + helix.roll
+
     @staticmethod
     def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
@@ -3830,55 +3840,43 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'cannot specify both "{key1}" and "{key2}" in Design JSON')
 
     @staticmethod
-    def from_scadnano_json_map(
-            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
-        """
-        Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
-        json.loads(json_str) from a string representing contents of a JSON file.
-
-        :param json_map: map describing the :any:`Design`;
-            should be JSON serializable via ``encode(json_map)``
-        :return: :any:`Design` described in the object
-        """
-        # version = json_map.get(version_key, initial_version)  # not sure what to do with version
-
-        Design._check_mutually_exclusive_fields(json_map)
-
-        grid = optional_field(None, json_map, grid_key)
-        grid_is_none = grid == Grid.none
-
-        using_groups = groups_key in json_map
-
-        helices = []
-        deserialized_helices_list = json_map[helices_key]
-        num_helices = len(deserialized_helices_list)
-
-
-
-        # USED ONLY IN THE CASE WHERE THERE IS MORE THAN ONE HELIX GROUP
-        # Maps group name to pitch, yaw, and helix idx of a helix in that group (the first one found).
-        # The helix idx is kept in case an error message needs to be thrown.
-        group_to_pitch_yaw: Dict[str, Tuple[float, float, int]] = {}
-
-        # USED ONLY IN THE CASE WHEN THERE IS EXACTLY ONE HELIX GROUP
-        # Maps pitch and yaw pairs to list of helix with those pitch and yaw
-        # Because of fuzziness with floating point values, the keys are actually
-        # int(pitch/floating_point_tolerance) and int(yaw/floating_point_tolerance)
-        # essentially storing only certain digits of the floating point value
-        pitch_yaw_to_helices: Dict[Tuple[int, int], List[Helix]] = defaultdict(list)
-
+    def _num_helix_groups(json_map: Dict) -> int:
         num_groups_used = 0
         if groups_key in json_map:
             num_groups_used = len(json_map[groups_key])
+        return num_groups_used
 
-        multiple_groups_used = num_groups_used > 1
+    @staticmethod
+    def _helices_from_json(json_map: Dict) -> Tuple[List[Helix], Dict[str, Tuple[float, float, int]], Dict[Tuple[float, float], List[Helix]]]:
+        """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
+
+        group_to_pitch_yaw is filled if multiple helix groups are used
+        - maps group name to pitch, yaw, and helix idx of a helix in that group (the first one found)
+
+        pitch_yaw_to_helices is filled if a single helix group is used
+        - maps pitch and yaw pairs to list of helix with those pitch and yaw
+
+        These maps are used to convert designs that have helices with individual pitches and yaws
+        into designs where helices do not have individual pitches and yaws.
+
+        Pass these two maps into _groups_from_json so that groups can be assigned appropriate pitch, yaw values.
+        """
+        # Initialize return values
+        helices = []
+        group_to_pitch_yaw: Dict[str, Tuple[float, float, int]] = {}
+        pitch_yaw_to_helices: Dict[Tuple[float, float], List[Helix]] = defaultdict(list)
+
+        # Useful booleans
+        multiple_groups_used = Design._num_helix_groups(json_map) > 1
         single_group_used = not multiple_groups_used
+        using_groups = groups_key in json_map
+        grid_is_none = optional_field(None, json_map, grid_key) == Grid.none
 
         idx_default = 0
+        deserialized_helices_list = json_map[helices_key]
         for helix_json in deserialized_helices_list:
             helix = Helix.from_json(helix_json)
             helix_idx = helix.idx if helix.idx is not None else idx_default
-
 
             # Handle pitch and yaw for individual helices
             pitch = 0 if pitch_key not in helix_json else helix_json[pitch_key]
@@ -3895,22 +3893,54 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                         raise IllegalDesignError(
                             f'In HelixGroup {group}, Helix {helix_idx} has pitch {pitch} and yaw {yaw} but Helix {helix_idx} has pitch {expected_pitch} and yaw {expected_yaw}. Please seperate Helix {helix_idx} and Helix {idx_of_helix_with_expected_pitch_yaw} into seperate HelixGroups.')
             if single_group_used:
-                pitch_yaw_to_helices[(int(pitch/floating_point_tolerance), int(yaw/floating_point_tolerance))].append(helix)
+                is_new_pitch_yaw = True
+                # Search for a pitch yaw pair that is close to pitch yaw of helix
+                for (p, y) in pitch_yaw_to_helices:
+                    if _is_close(p, pitch) and _is_close(y, yaw):
+                        pitch_yaw_to_helices[(p, y)].append(helix)
+                        is_new_pitch_yaw = False
+                        break
+                # If no pitch yaw pair found, then create a new one and add to dictionary
+                if is_new_pitch_yaw:
+                    pitch_yaw_to_helices[(pitch, yaw)].append(helix)
 
 
             if not using_groups and grid_is_none and grid_position_key in helix_json:
-                # TODO(benlee12): Should helix_idx be used instead of idx_default in case user explicitly sets idx?
                 raise IllegalDesignError(
                     f'grid is none, but Helix {helix_idx} has grid_position = {helix_json[grid_position_key]}')
             elif not using_groups and not grid_is_none and position_key in helix_json:
-                # TODO(benlee12): Should helix_idx be used instead of idx_default in case user explicitly sets idx?
                 raise IllegalDesignError(
                     f'grid is not none, but Helix {helix_idx} has position = ${helix_json[position_key]}')
             helices.append(helix)
             idx_default += 1
+        return (helices, group_to_pitch_yaw, pitch_yaw_to_helices)
 
-        # helix groups
+    @staticmethod
+    def _groups_and_grid_from_json(json_map: dict, helices: List[Helix], group_to_pitch_yaw:  Dict[str, Tuple[float, float, int]], pitch_yaw_to_helices:  Dict[Tuple[float, float], List[Helix]]) -> Tuple[Dict[str, HelixGroup], Grid]:
+        """Returns map of helix group names to group as well as the grid
+
+        If multiple helix groups are used, then groups pitch and yaw will be the
+        pitch and yaw given in the json map plus the pitch and yaw values
+        provided in group_to_pitch_yaw
+
+        If a single helix group is used, then new helix groups will be created using
+        the provided group_to_pitch_yaw map. Because new helix groups are created,
+        helices will be modfied so that each helix's group field is set to the new
+        group it has been assigned to.
+
+        In most cases, grid will simply be what is given in the json_map.
+        There is a special case where if the default helix group is used,
+        then the grid may be initially set to some value. If individual helix
+        pitch and rolls were set, then new helix groups are created, meaning
+        the grid field is no longer valid.
+        """
+        # Return values
         groups = None
+        grid = optional_field(None, json_map, grid_key)
+
+        # Get helix groups provided from json_map
+        multiple_groups_used = Design._num_helix_groups(json_map) > 1
+        single_group_used = not multiple_groups_used
         if groups_key in json_map:
             groups_json = json_map[groups_key]
             groups = {}
@@ -3918,28 +3948,24 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 num_helices_in_group = sum(1 for helix in helices if helix.group == name)
                 groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
 
+        # Add individual helix pitch and yaw
         if multiple_groups_used:
             for (group_name, (pitch, yaw, _)) in group_to_pitch_yaw.items():
                 groups[group_name].pitch += pitch
-                groups[group_name].yaw += pitch
+                groups[group_name].yaw += yaw
 
+        # Add new helix groups if individual helix pitch and yaw set
         if single_group_used:
             # New groups to add
             new_groups = {}
             # The only group (take into account case when default helix group is used)
             group = list(groups.values())[0] if groups is not None else HelixGroup()
 
-            for ((integerized_pitch, integerized_yaw), helix_list) in pitch_yaw_to_helices.items():
-                new_pitch = group.pitch + integerized_pitch * floating_point_tolerance
-                new_yaw = group.yaw + integerized_yaw * floating_point_tolerance
+            for ((helix_pitch, helix_yaw), helix_list) in pitch_yaw_to_helices.items():
+                new_pitch = group.pitch + helix_pitch
+                new_yaw = group.yaw + helix_yaw
                 # Only make new groups if helix's pitch/yaw is non-zero
-                if integerized_pitch or integerized_yaw:
-                    # if len(helices) == 1:
-                    #     # If there is only one helix, rather than creating new group, just modify current one
-                    #     group.pitch = new_pitch
-                    #     group.yaw = new_yaw
-                    # else:
-
+                if helix_pitch or helix_yaw:
                     # If there is more than one helix, create new helix group for each pitch yaw value
                     new_group_name = f'pitch_{new_pitch}_yaw_{new_yaw}'
                     new_groups[new_group_name] = HelixGroup(pitch=new_pitch, yaw=new_yaw, grid=group.grid)
@@ -3952,7 +3978,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     groups.update(new_groups)
                 else:
                     groups = new_groups
+                    # Change grid to none because multiple helix groups are now used
+                    # so grid can no longer be specified
                     grid = None
+        return (groups, grid)
+
+    @staticmethod
+    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix], Dict[str, HelixGroup], Grid]:
+        helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
+        groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw, pitch_yaw_to_helices)
+        return (helices, groups, grid)
+
+    @staticmethod
+    def from_scadnano_json_map(
+            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
+        """
+        Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
+        json.loads(json_str) from a string representing contents of a JSON file.
+
+        :param json_map: map describing the :any:`Design`;
+            should be JSON serializable via ``encode(json_map)``
+        :return: :any:`Design` described in the object
+        """
+        # version = json_map.get(version_key, initial_version)  # not sure what to do with version
+
+        Design._check_mutually_exclusive_fields(json_map)
+
+        # helices, groups, and grid
+        helices, groups, grid = Design._helices_and_groups_and_grid_from_json(json_map)
+        num_helices = len(helices)
 
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
