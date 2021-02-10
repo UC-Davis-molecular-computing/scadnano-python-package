@@ -3791,7 +3791,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 strand.color = next(self.color_cycler)
 
     def pitch_of_helix(self, helix: Helix) -> float:
-        """Same as the pitch of its's :any:`HelixGroup`"""
+        """Same as the pitch of helix's :any:`HelixGroup`"""
         return self.groups[helix.group].pitch
 
     def yaw_of_helix(self, helix: Helix) -> float:
@@ -3878,6 +3878,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helix = Helix.from_json(helix_json)
             helix_idx = helix.idx if helix.idx is not None else idx_default
 
+            ###########################################################################
+            ## BEGIN Backward Compatibility Code for Helix With Individual Pitch/Yaw ##
+            ###########################################################################
+
             # Handle pitch and yaw for individual helices
             pitch = 0 if pitch_key not in helix_json else helix_json[pitch_key]
             yaw = 0 if yaw_key not in helix_json else helix_json[yaw_key]
@@ -3904,6 +3908,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 if is_new_pitch_yaw:
                     pitch_yaw_to_helices[(pitch, yaw)].append(helix)
 
+            #########################################################################
+            ## END Backward Compatibility Code for Helix With Individual Pitch/Yaw ##
+            #########################################################################
 
             if not using_groups and grid_is_none and grid_position_key in helix_json:
                 raise IllegalDesignError(
@@ -3939,14 +3946,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         grid = optional_field(None, json_map, grid_key)
 
         # Get helix groups provided from json_map
-        multiple_groups_used = Design._num_helix_groups(json_map) > 1
-        single_group_used = not multiple_groups_used
         if groups_key in json_map:
             groups_json = json_map[groups_key]
             groups = {}
             for name, group_json in groups_json.items():
                 num_helices_in_group = sum(1 for helix in helices if helix.group == name)
                 groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
+
+        ###########################################################################
+        ## BEGIN Backward Compatibility Code for Helix With Individual Pitch/Yaw ##
+        ###########################################################################
+
+        multiple_groups_used = Design._num_helix_groups(json_map) > 1
+        single_group_used = not multiple_groups_used
 
         # Add individual helix pitch and yaw
         if multiple_groups_used:
@@ -3981,6 +3993,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     # Change grid to none because multiple helix groups are now used
                     # so grid can no longer be specified
                     grid = None
+
+        #########################################################################
+        ## END Backward Compatibility Code for Helix With Individual Pitch/Yaw ##
+        #########################################################################
+
         return (groups, grid)
 
     @staticmethod
