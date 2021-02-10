@@ -1,10 +1,16 @@
 {
-  "version": "0.15.0",
-  "grid": "none",
+  "version": "0.16.0",
+  "groups": {
+    "pitch90": {
+      "position": {"x": 0, "y": 0, "z": 0},
+      "pitch": 90,
+      "grid": "none"
+    }
+  },
   "helices": [
     {
+      "group": "pitch90",
       "position": {"x": 1, "y": 2, "z": 3},
-      "pitch": 90,
       "major_ticks": [2, 5]
     }
   ],
