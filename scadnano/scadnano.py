@@ -4079,7 +4079,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         dct[version_key] = __version__
 
         if self._has_default_groups():
-            dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+            if str(self.grid).startswith('Grid.'):
+                dct[grid_key] = str(self.grid)[5:]  # remove prefix 'Grid.'
+            else:
+                dct[grid_key] = str(self.grid)
 
         if not self.geometry.is_default():
             dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
