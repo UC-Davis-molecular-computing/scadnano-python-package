@@ -3161,11 +3161,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def idt_dna_sequence(self) -> str:
         """
         :return: DNA sequence as it needs to be typed to order from IDT, with
-        :py:data:`Modification5Prime`'s,
-        :py:data:`Modification3Prime`'s,
-        and
-        :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence
-        ACGT with a 5' biotin modification.
+            :py:data:`Modification5Prime`'s,
+            :py:data:`Modification3Prime`'s,
+            and
+            :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence
+            ACGT with a 5' biotin modification.
         """
         self._ensure_modifications_legal(check_offsets_legal=True)
 
@@ -5050,10 +5050,33 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _helices_to_string(self) -> str:
         return ', '.join(map(str, self.helices.keys()))
 
-    @_docstring_parameter(default_extension=default_scadnano_file_extension)
+    # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def to_json(self, suppress_indent: bool = True) -> str:
         """Return string representing this Design, suitable for reading by scadnano if written to
-        a JSON file ending in extension .{default_extension}"""
+        a JSON file ending in extension .sc
+
+
+        :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
+            e.g., grid coordinates. If True, something like this will be written:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [1, 2]
+              }
+
+            instead of this:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [
+                  1,
+                  2
+                ]
+              }
+
+        """
         # if isinstance(self, DNAOrigamiDesign):
         #     scaf = None
         #     for strand in self.strands:
