@@ -126,7 +126,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
         super(_SuppressableIndentEncoder, self).__init__(*args, **kwargs)
         self.kwargs = dict(kwargs)
         del self.kwargs['indent']
-        self._replacement_map: Dict[int, Any] = {}
+        self._replacement_map: Dict[int, str] = {}
 
     def default(self, obj: Any) -> Any:
         if isinstance(obj, NoIndent):
@@ -140,9 +140,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
 
     def encode(self, obj: Any) -> Any:
         result = super().encode(obj)
-        for k, v in self._replacement_map.items():
-            result = result.replace(f'"@@{k}@@"', v)
-        return result
+        return re.sub(r'"@@(\d+)@@"', lambda m: self._replacement_map[int(m[1])], result)
 
 
 #
