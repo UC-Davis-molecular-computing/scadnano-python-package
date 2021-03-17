@@ -5581,12 +5581,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_oxdna_format(self) -> Tuple[str,str]:
         raise NotImplementedError()
 
-    @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None) -> None:
+    # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
+    # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
+    # so I removed it.
+    #@_docstring_parameter(default_extension=default_scadnano_file_extension)
+    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None,
+                            suppress_indent: bool = True) -> None:
         """Write ``.{default_extension}`` file representing this :any:`Design`,
         suitable for reading by scadnano,
         with the output file having the same name as the running script but with ``.py`` changed to
-        ``.{default_extension}``,
+        ``.sc``,
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
         then the design will be written to ``my_origami.{default_extension}``.
@@ -5598,15 +5602,40 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         The string written is that returned by :meth:`Design.to_json`.
 
-        :param directory: directory in which to put file (default: current working directory)
-        :param filename: filename (default: name of script with ``.py`` replaced by
+
+
+        :param directory:
+            directory in which to put file (default: current working directory)
+        :param filename:
+            filename (default: name of script with ``.py`` replaced by
             ``.{default_extension}``).
             Mutually exclusive with `extension`
-        :param extension: extension for filename (default: ``.{default_extension}``)
+        :param extension:
+            extension for filename (default: ``.{default_extension}``)
             Mutually exclusive with `filename`
+        :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
+            e.g., grid coordinates. If True, something like this will be written:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [1, 2]
+              }
+
+            instead of this:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [
+                  1,
+                  2
+                ]
+              }
+
         """
         self._check_legal_design()
-        contents = self.to_json()
+        contents = self.to_json(suppress_indent)
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
         if extension is None:
