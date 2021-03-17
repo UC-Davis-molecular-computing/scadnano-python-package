@@ -71,6 +71,7 @@ import sys
 import os.path
 
 default_scadnano_file_extension = 'sc'
+"""Default filename extension when writing a scadnano file."""
 
 VStrands = Dict[int, Dict[str, Any]]
 
@@ -84,6 +85,7 @@ def _pairwise(iterable: Iterable) -> Iterable:
 
 # for putting evaluated expressions in docstrings
 # https://stackoverflow.com/questions/10307696/how-to-put-a-variable-into-python-docstring
+# not currently used since this way of implementing it is has a bug with using the .. codeblock:: directive
 def _docstring_parameter(*sub: Any, **kwargs: Any) -> Any:
     def dec(obj: Any) -> Any:
         obj.__doc__ = obj.__doc__.format(*sub, **kwargs)
@@ -5050,10 +5052,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _helices_to_string(self) -> str:
         return ', '.join(map(str, self.helices.keys()))
 
+    # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
+    # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
+    # so I removed it.
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def to_json(self, suppress_indent: bool = True) -> str:
         """Return string representing this Design, suitable for reading by scadnano if written to
-        a JSON file ending in extension .sc
+        a JSON file ending in extension :attr:`default_scadnano_file_extension`.
 
 
         :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
@@ -5608,18 +5613,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     #@_docstring_parameter(default_extension=default_scadnano_file_extension)
     def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None,
                             suppress_indent: bool = True) -> None:
-        """Write ``.{default_extension}`` file representing this :any:`Design`,
-        suitable for reading by scadnano,
+        """Write text file representing this :any:`Design`,
+        suitable for reading by the scadnano web interface,
         with the output file having the same name as the running script but with ``.py`` changed to
-        ``.sc``,
+        :attr:`default_scadnano_file_extension`,
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.{default_extension}``.
+        then the design will be written to ``my_origami.sc``.
         If `extension` is specified (but `filename` is not), then the design will be written to
         ``my_origami.<extension>``
-
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
 
         The string written is that returned by :meth:`Design.to_json`.
 
@@ -5629,10 +5631,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             directory in which to put file (default: current working directory)
         :param filename:
             filename (default: name of script with ``.py`` replaced by
-            ``.{default_extension}``).
+            ``.sc``).
             Mutually exclusive with `extension`
         :param extension:
-            extension for filename (default: ``.{default_extension}``)
+            extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
         :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
             e.g., grid coordinates. If True, something like this will be written:
