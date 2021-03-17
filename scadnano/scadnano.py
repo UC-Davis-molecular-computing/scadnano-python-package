@@ -3160,11 +3160,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def idt_dna_sequence(self) -> str:
         """
-        :return: DNA sequence as it needs to be typed to order from IDT, with
-        :py:data:`Modification5Prime`'s,
-        :py:data:`Modification3Prime`'s,
-        and
-        :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence
+        :return: DNA sequence as it needs to be typed to order from IDT, with \
+        :py:data:`Modification5Prime`'s, \
+        :py:data:`Modification3Prime`'s, \
+        and \
+        :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence \
         ACGT with a 5' biotin modification.
         """
         self._ensure_modifications_legal(check_offsets_legal=True)
