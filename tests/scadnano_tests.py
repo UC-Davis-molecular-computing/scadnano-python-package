@@ -3130,6 +3130,79 @@ class TestNames(unittest.TestCase):
 
 class TestJSON(unittest.TestCase):
 
+    def test_grid_design_level_converted_to_enum_from_string(self) -> None:
+        # reproduces an error where the grid was stored as a string instead of the Grid enum type
+        json_str = '''
+{
+  "version": "0.14.0",
+  "grid": "square",
+  "helices": [
+    {"grid_position": [0, 0]},
+    {"grid_position": [0, 1]}
+  ],
+  "strands": []
+}
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+        grid = design.grid
+        self.assertTrue(type(grid) is sc.Grid)
+        self.assertEqual(sc.Grid.square, grid)
+
+
+    def test_grid_helix_group_level_converted_to_enum_from_string(self) -> None:
+        # reproduces an error where the grid was stored as a string instead of the Grid enum type
+        json_str = '''
+{
+  "version": "0.15.0",
+  "groups": {
+    "north": {
+      "position": {"x": 0, "y": -10, "z": 0},
+      "grid": "honeycomb"
+    },
+    "east": {
+      "position": {"x": 0, "y": 0, "z": 10},
+      "grid": "square"
+    },
+    "south": {
+      "position": {"x": 0, "y": 10, "z": 0},
+      "grid": "hex"
+    },
+    "west": {
+      "position": {"x": 0, "y": 0, "z": -10},
+      "grid": "none"
+    }
+  },
+  "helices": [
+    {"group": "north", "max_offset": 20, "grid_position": [0, 0], "idx": 0},
+    {"group": "north", "max_offset": 21, "grid_position": [1, 0], "idx": 1},
+    {"group": "north", "max_offset": 19, "grid_position": [1, 1], "idx": 2},
+    {"group": "north", "max_offset": 18, "grid_position": [0, 1], "idx": 3},
+    {"group": "north", "max_offset": 17, "grid_position": [-1, 1], "idx": 4},
+    {"group": "north", "max_offset": 16, "grid_position": [-1, 0], "idx": 5},
+    {"group": "south", "max_offset": 24, "grid_position": [0, 1], "idx": 6},
+    {"group": "south", "max_offset": 25, "grid_position": [0, 0], "idx": 7},
+    {"group": "west", "max_offset": 26, "position": {"x": 0, "y": 0, "z": 0}, "idx": 8},
+    {"group": "west", "max_offset": 27, "position": {"x": 0, "y": 3, "z": 0}, "idx": 9},
+    {"group": "east", "max_offset": 22, "grid_position": [0, 0], "idx": 13},
+    {"group": "east", "max_offset": 23, "grid_position": [0, 1], "idx": 15}
+  ],
+  "strands": []
+}
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+
+        grid_n = design.groups['north'].grid
+        grid_e = design.groups['east'].grid
+        grid_s = design.groups['south'].grid
+        grid_w = design.groups['west'].grid
+        for grid in [grid_n, grid_e, grid_s, grid_w]:
+            self.assertTrue(type(grid) is sc.Grid)
+
+        self.assertEqual(sc.Grid.honeycomb, grid_n)
+        self.assertEqual(sc.Grid.square, grid_e)
+        self.assertEqual(sc.Grid.hex, grid_s)
+        self.assertEqual(sc.Grid.none, grid_w)
+
     def test_legacy_idt_name_import__no_strand_name(self) -> None:
         # tests proper importing of old format when name was a subfield of idt;
         # ensures if that exists and no Strand.name field exists, the idt.name is used as Strand.name

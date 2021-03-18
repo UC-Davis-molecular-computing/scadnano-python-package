@@ -64,7 +64,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
     TypeVar, Generic, Callable
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -1020,11 +1020,11 @@ class HelixGroup(_JSONSerializable):
     """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
 
     helices_view_order: Optional[List[int]] = None
-    """Same meaning as :py:data:`Design.helices_view_order`, 
-    applied to only the :any:`Helix`'s in the group."""
+    """Order in which to display the :any:`Helix`'s in the group in the 2D view; if None, then the order
+    is given by the order of the fields :data:`Helix.idx` for each :any:`Helix` in this :any:`HelixGroup`."""
 
     grid: Grid = Grid.none
-    """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix`'s in the group."""
+    """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Dict[str, Any] = dict()
@@ -1059,7 +1059,10 @@ class HelixGroup(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map: dict, **kwargs: Any) -> 'HelixGroup':  # remove quotes when Py3.6 support dropped
-        grid = optional_field(Grid.none, json_map, grid_key)
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
+        # grid: Grid = Grid.none
+        # if grid_key in json_map:
+        #     grid = Grid(json_map[grid_key])
 
         num_helices: int = kwargs['num_helices']
         helices_view_order = json_map.get(helices_view_order_key)
@@ -1068,7 +1071,7 @@ class HelixGroup(_JSONSerializable):
                 raise IllegalDesignError(f'length of helices ({num_helices}) does not match '
                                          f'length of helices_view_order ({len(helices_view_order)})')
 
-        position_map = mandatory_field(HelixGroup, json_map, position_key, *legacy_position_keys)
+        position_map = mandatory_field(HelixGroup, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map)
 
         pitch = json_map.get(pitch_key, default_pitch)
@@ -1310,7 +1313,7 @@ class Helix(_JSONSerializable):
         max_offset = json_map.get(max_offset_key)
         idx = json_map.get(idx_on_helix_key)
 
-        position_map = optional_field(None, json_map, position_key, *legacy_position_keys)
+        position_map = optional_field(None, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map) if position_map is not None else None
 
         roll = json_map.get(roll_key, default_roll)
@@ -1491,7 +1494,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'Domain':  # remove quotes when Py3.6 support dropped
         helix = mandatory_field(Domain, json_map, helix_idx_key)
-        forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
+        forward = mandatory_field(Domain, json_map, forward_key, legacy_keys=legacy_forward_keys)
         start = mandatory_field(Domain, json_map, start_key)
         end = mandatory_field(Domain, json_map, end_key)
         deletions = json_map.get(deletions_key, [])
@@ -2611,7 +2614,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
-        domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
+        domain_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
         if len(domain_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
@@ -2629,7 +2632,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         is_scaffold = json_map.get(is_scaffold_key, False)
         circular = json_map.get(circular_key, False)
 
-        dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
+        dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
@@ -3480,10 +3483,12 @@ def add_quotes(string: str) -> str:
     return f'"{string}"'
 
 
-def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
+def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *,
+                    legacy_keys: Sequence[str] = ()) -> Any:
     # should be called from function whose return type is the type being constructed from JSON, e.g.,
     # Design or Strand, given by ret_type. This helps give a useful error message
-    for key in (main_key,) + legacy_keys:
+    keys = (main_key,) + tuple(legacy_keys)
+    for key in keys:
         if key in json_map:
             return json_map[key]
     ret_type_name = ret_type.__name__
@@ -3496,11 +3501,19 @@ def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *le
     raise IllegalDesignError(msg)
 
 
-def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
-    # like dict.get, except that it checks for multiple keys
-    for key in (main_key,) + legacy_keys:
+def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *,
+                   legacy_keys: Sequence[str] = (), transformer=None) -> Any:
+    # like dict.get, except that it checks for multiple keys, and it can transform the value if it is the
+    # wrong type by specifying transformer
+    keys = (main_key,) + tuple(legacy_keys)
+    for key in keys:
         if key in json_map:
-            return json_map[key]
+            json_value = json_map[key]
+            if transformer is None:
+                value = json_value
+            else:
+                value = transformer(json_value)
+            return value
     return default_value
 
 
@@ -3533,7 +3546,8 @@ class Geometry(_JSONSerializable):
     def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
         geometry = Geometry()
         geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
-                                                     rise_per_base_pair_key, *legacy_rise_per_base_pair_keys)
+                                                     rise_per_base_pair_key,
+                                                     legacy_keys=legacy_rise_per_base_pair_keys)
         geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
         geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
                                                  bases_per_turn_key)
@@ -3631,19 +3645,24 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  groups: Optional[Dict[str, HelixGroup]] = None,
                  strands: List[Strand] = None,
-                 grid: Optional[Grid] = None,
+                 grid: Grid = Grid.none,
                  helices_view_order: List[int] = None,
                  geometry: Geometry = None) -> None:
         """
-        :param helices: List of :any:`Helix`'s; if missing, set based on `strands`.
-        :param groups: Dict mapping group name to :any:`HelixGroup`.
+        :param helices:
+            List of :any:`Helix`'s; if missing, set based on `strands`.
+        :param groups:
+            Dict mapping group name to :any:`HelixGroup`.
             Mutually exclusive with `helices_view_order`, and any non-none :any:`Grid`. If set, then each
             :any:`Helix` must have its :py:data:`Helix.group` field set to a group name that is one of the
             keys of this dict.
-        :param strands: List of :any:`Strand`'s. If missing, will be empty.
-        :param grid: :any:`Grid` to use.
-        :param helices_view_order: order in which to view helices from top to bottom in web interface
-            main view.
+        :param strands:
+            List of :any:`Strand`'s. If missing, will be empty.
+        :param grid:
+            :any:`Grid` to use; if not the default value of :data:`Grid.none`, then it is
+            mutually exclusive with `groups`.
+        :param helices_view_order:
+            order in which to view helices from top to bottom in web interface main view.
             Mutually exclusive with `groups`.
             This list must contain each :py:data:`Helix.idx` exactly once.
             If no :py:data:`Helix.idx` is explicitly specified, then this should be a permutation of the
@@ -3658,13 +3677,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('Design.helices_view_order and Design.groups are mutually exclusive. '
                                      'Set at most one of them.')
 
-        if grid is not None and using_groups:
+        if grid != Grid.none and using_groups:
             raise IllegalDesignError('Design.grid and Design.groups are mutually exclusive. '
                                      'Set at most one of them.')
-
-        if grid is None and not using_groups:
-            # make sure we only set this if groups are not being used
-            grid = Grid.none
 
         self.strands = [] if strands is None else strands
         self.color_cycler = ColorCycler()
@@ -3674,7 +3689,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self.groups = {default_group_name: HelixGroup()}
         else:
             self.groups = groups
-            if grid is not None:
+            if grid != Grid.none:
                 raise IllegalDesignError('cannot use a non-none grid for whole Design when helix groups are '
                                          'used; only the HelixGroups can have non-none grids in this case')
             if helices_view_order is not None:
@@ -3880,7 +3895,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         multiple_groups_used = Design._num_helix_groups(json_map) > 1
         single_group_used = not multiple_groups_used
         using_groups = groups_key in json_map
-        grid_is_none = optional_field(None, json_map, grid_key) == Grid.none
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
+        grid_is_none = grid == Grid.none
 
         idx_default = 0
         deserialized_helices_list = json_map[helices_key]
@@ -3938,11 +3954,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                    group_to_pitch_yaw: Dict[str, Tuple[float, float, int]],
                                    pitch_yaw_to_helices: Dict[Tuple[float, float], List[Helix]]) \
             -> Tuple[Dict[str, HelixGroup], Grid]:
-        """Returns map of helix group names to group as well as the grid
+        """Returns map of helix group names to group as well as the grid.
 
         If multiple helix groups are used, then groups pitch and yaw will be the
         pitch and yaw given in the json map plus the pitch and yaw values
-        provided in group_to_pitch_yaw
+        provided in group_to_pitch_yaw.
 
         If a single helix group is used, then new helix groups will be created using
         the provided group_to_pitch_yaw map. Because new helix groups are created,
@@ -3955,9 +3971,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         pitch and rolls were set, then new helix groups are created, meaning
         the grid field is no longer valid.
         """
-        # Return values
         groups = None
-        grid = optional_field(None, json_map, grid_key)
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
 
         # Get helix groups provided from json_map
         if groups_key in json_map:
@@ -4006,7 +4021,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     groups = new_groups
                     # Change grid to none because multiple helix groups are now used
                     # so grid can no longer be specified
-                    grid = None
+                    grid = Grid.none
 
         #######################################################################
         # END Backward Compatibility Code for Helix With Individual Pitch/Yaw #
