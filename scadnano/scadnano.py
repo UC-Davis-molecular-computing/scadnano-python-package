@@ -3855,7 +3855,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return num_groups_used
 
     @staticmethod
-    def _helices_from_json(json_map: Dict) -> Tuple[List[Helix], Dict[str, Tuple[float, float, int]], Dict[Tuple[float, float], List[Helix]]]:
+    def _helices_from_json(json_map: Dict) -> Tuple[
+        List[Helix], Dict[str, Tuple[float, float, int]], Dict[Tuple[float, float], List[Helix]]]:
         """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
 
         group_to_pitch_yaw is filled if multiple helix groups are used
@@ -3900,7 +3901,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     group_to_pitch_yaw[group] = (pitch, yaw, helix_idx)
                 else:
                     # Another helix in this group also had a non-zero pitch/yaw, so check if they match
-                    expected_pitch, expected_yaw, idx_of_helix_with_expected_pitch_yaw = group_to_pitch_yaw[group]
+                    expected_pitch, expected_yaw, idx_of_helix_with_expected_pitch_yaw = group_to_pitch_yaw[
+                        group]
                     if not (_is_close(pitch, expected_pitch) and _is_close(yaw, expected_yaw)):
                         raise IllegalDesignError(
                             f'In HelixGroup {group}, Helix {helix_idx} has pitch {pitch} and yaw {yaw} but Helix {helix_idx} has pitch {expected_pitch} and yaw {expected_yaw}. Please seperate Helix {helix_idx} and Helix {idx_of_helix_with_expected_pitch_yaw} into seperate HelixGroups.')
@@ -3931,7 +3933,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return (helices, group_to_pitch_yaw, pitch_yaw_to_helices)
 
     @staticmethod
-    def _groups_and_grid_from_json(json_map: dict, helices: List[Helix], group_to_pitch_yaw:  Dict[str, Tuple[float, float, int]], pitch_yaw_to_helices:  Dict[Tuple[float, float], List[Helix]]) -> Tuple[Dict[str, HelixGroup], Grid]:
+    def _groups_and_grid_from_json(json_map: dict, helices: List[Helix],
+                                   group_to_pitch_yaw: Dict[str, Tuple[float, float, int]],
+                                   pitch_yaw_to_helices: Dict[Tuple[float, float], List[Helix]]) -> Tuple[
+        Dict[str, HelixGroup], Grid]:
         """Returns map of helix group names to group as well as the grid
 
         If multiple helix groups are used, then groups pitch and yaw will be the
@@ -4009,9 +4014,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return (groups, grid)
 
     @staticmethod
-    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix], Dict[str, HelixGroup], Grid]:
+    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[
+        List[Helix], Dict[str, HelixGroup], Grid]:
         helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
-        groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw, pitch_yaw_to_helices)
+        groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw,
+                                                         pitch_yaw_to_helices)
         return (helices, groups, grid)
 
     @staticmethod
@@ -5604,13 +5611,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxdna_format(self) -> Tuple[str,str]:
+    def to_oxdna_format(self) -> Tuple[str, str]:
         raise NotImplementedError()
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
     # so I removed it.
-    #@_docstring_parameter(default_extension=default_scadnano_file_extension)
+    # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None,
                             suppress_indent: bool = True) -> None:
         """Write text file representing this :any:`Design`,
@@ -5666,16 +5673,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
-        """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2,
-        with the output file having the same name as the running script but with ``.py`` changed to ``.json``,
-        unless `filename` is explicitly specified.
-        For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.json``.
-
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
+        """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
+
+        :param directory:
+            directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+
+        :param filename:
+            The output file has the same name as the running script but with ``.py`` changed to ``.json``,
+            unless `filename` is explicitly specified.
+            For instance, if the script is named ``my_origami.py``,
+            then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         content_serializable = OrderedDict({})
         content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
@@ -5716,14 +5726,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         nick position, modified in place. Otherwise, this :any:`Strand` will be deleted from the design,
         and two new :any:`Strand`'s will be added.
 
-        :param helix: index of helix where nick will occur
-        :param offset: offset to nick (nick will be between offset and offset-1)
-        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
-        :param new_color: whether to assign a new color to one of the :any:`Strand`'s resulting from the
-                          nick.
-                          If False, both :any:`Strand`'s created have the same color as the original
-                          If True, one :any:`Strand` keeps the same color as the original and the other
-                          is assigned a new color
+        :param helix:
+            index of helix where nick will occur
+        :param offset:
+            offset to nick (nick will be between offset and offset-1)
+        :param forward:
+            forward or reverse :any:`Domain` on `helix` at `offset`?
+        :param new_color:
+            whether to assign a new color to one of the :any:`Strand`'s resulting from the nick.
+            If False, both :any:`Strand`'s created have the same color as the original.
+            If True, one :any:`Strand` keeps the same color as the original and the other
+            is assigned a new color.
         """
         for domain_to_remove in self.domains_at(helix, offset):
             if domain_to_remove.forward == forward:
@@ -5852,9 +5865,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         replacing the previous strand on the 5'-most side of the nick (i.e., the one whose 3' end
         terminated at the nick), and deleting the other strand.
 
-        :param helix: index of helix where nick will be ligated
-        :param offset: offset to ligate (nick to ligate must be between offset and offset-1)
-        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
+        :param helix:
+            index of helix where nick will be ligated
+        :param offset:
+            offset to ligate (nick to ligate must be between offset and offset-1)
+        :param forward:
+            forward or reverse :any:`Domain` on `helix` at `offset`?
         """
         for dom_right in self.domains_at(helix, offset):
             if dom_right.forward == forward:
@@ -5961,11 +5977,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         will simply be made circular, modifying it in place. Otherwise, the old two :any:`Strand`'s will be
         deleted, and a new :any:`Strand` added.
 
-        :param helix: index of one helix of half crossover
-        :param helix2: index of other helix of half crossover
-        :param offset: offset on `helix` at which to add half crossover
-        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
-        :param offset2: offset on `helix2` at which to add half crossover.
+        :param helix:
+            index of one helix of half crossover
+        :param helix2:
+            index of other helix of half crossover
+        :param offset:
+            offset on `helix` at which to add half crossover
+        :param forward:
+            direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2:
+            offset on `helix2` at which to add half crossover.
             If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
             If not specified, defaults to the negation of `forward`
@@ -6038,11 +6059,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         `offset` and `offset`-1 if one is not already present,
         and similarly for `offset2` on helix `helix2`.
 
-        :param helix: index of one helix of half crossover
-        :param helix2: index of other helix of half crossover
-        :param offset: offset on `helix` at which to add half crossover
-        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
-        :param offset2: offset on `helix2` at which to add half crossover.
+        :param helix:
+            index of one helix of half crossover
+        :param helix2:
+            index of other helix of half crossover
+        :param offset:
+            offset on `helix` at which to add half crossover
+        :param forward:
+            direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2:
+            offset on `helix2` at which to add half crossover.
             If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
             If not specified, defaults to the negation of `forward`
