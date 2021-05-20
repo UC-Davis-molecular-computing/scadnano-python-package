@@ -6,6 +6,7 @@ import unittest.mock as mock
 import re
 import json
 import io
+import math
 from typing import Iterable, Union, Dict, Any
 
 import scadnano as sc
@@ -5714,3 +5715,119 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         #     self.assertEqual("TTTACG", ss1.dna_sequence_in(6, 10))
         #     self.assertEqual("TTTTACG", ss1.dna_sequence_in(4, 10))
         #     self.assertEqual("TTTACGTACGT", ss1.dna_sequence_in(2, 10))
+
+class TestOxdnaExport(unittest.TestCase):
+    def setUp(self) -> None:
+        self.OX_UNITS_TO_NM = 0.8518
+        self.NM_TO_OX_UNITS = 1.0 / self.OX_UNITS_TO_NM
+        self.OX_BASE_DIST = 0.6
+    
+    def test_basic_design(self) -> None:
+        helices = [ sc.Helix(max_offset=7), sc.Helix(max_offset=7) ]
+        domain1 = sc.Domain(0, True, 0, 7)
+        domain2 = sc.Domain(1, False, 0, 7)
+        domain3 = sc.Domain(0, False, 0, 7)
+        domain4 = sc.Domain(1, True, 0, 7)
+        strand1 = sc.Strand([domain1, domain2], is_scaffold=True)
+        strand2 = sc.Strand([domain3, domain4], is_scaffold=False)
+
+        design = sc.Design(helices=helices, strands=[strand1, strand2], grid=sc.square)
+        geometry = design.geometry
+
+        helix_angle = math.pi * 2 / geometry.bases_per_turn
+
+        # expected values for verification
+        expected_num_nucleotides = 7 * 4
+        expected_strand_length = 7 * 2
+        # expected distance squared between adjacent nucleotide centers of mass
+        expected_adj_nuc_cm_dist2 = (2 * self.OX_BASE_DIST * math.sin(helix_angle / 2))**2 + (geometry.rise_per_base_pair * self.NM_TO_OX_UNITS)**2
+
+        dat, top = design.to_oxdna_format()
+        dat = dat.strip().split('\n')
+        top = top.strip().split('\n')
+
+        # check length of output files matches num nucleotides plus header size
+        self.assertEqual(len(dat), expected_num_nucleotides + 3)
+        self.assertEqual(len(top), expected_num_nucleotides + 1)
+
+        #find relevant values for nucleotides
+        cm_poss = []
+        nbrs_3p = []
+        nbrs_5p = []
+
+        for line in dat[3:]:
+            data = line.strip().split()
+            # make sure there are 15 values per line
+            self.assertEqual(len(data), 15)
+
+            cm_poss.append(tuple([float(x) for x in data[0:3]]))
+            bb_vec = tuple([float(x) for x in data[3:6]])
+            nm_vec = tuple([float(x) for x in data[6:9]])
+
+            # make sure normal vectors and backbone vectors are unit length
+            self.assertAlmostEqual(sum([x**2 for x in bb_vec]), 1.0)
+            self.assertAlmostEqual(sum([x**2 for x in nm_vec]), 1.0)
+
+            for value in data[9:]:
+                self.assertAlmostEqual(float(value), 0)
+
+        strand1_idxs = []
+        strand2_idxs = []
+        for nuc_idx, line in enumerate(top[1:]):
+            data = line.strip().split()
+            # make sure there are 4 values per line
+            self.assertEqual(len(data), 4)
+
+            # make sure there are only 2 strands
+            self.assertIn(int(data[0]), [1, 2])
+            # make sure base is valid
+            self.assertIn(data[1], ['A', 'C', 'G', 'T'])
+
+            nbrs_3p.append(int(data[2]))
+            nbrs_5p.append(int(data[3]))
+
+            if int(data[3]) == -1:
+                if int(data[0]) == 1:
+                    strand1_idxs.append(nuc_idx)
+                else:
+                    strand2_idxs.append(nuc_idx)
+
+        # reconstruct strands using indices from oxDNA files
+        next_idx = nbrs_3p[strand1_idxs[0]]
+        while next_idx >= 0:
+            strand1_idxs.append(next_idx)
+            next_idx = nbrs_3p[strand1_idxs[-1]]
+            
+
+        next_idx = nbrs_3p[strand2_idxs[0]]
+        while next_idx >= 0:
+            strand2_idxs.append(next_idx)
+            next_idx = nbrs_3p[strand2_idxs[-1]]
+            
+        # assert that our strands are the correct size
+        self.assertEqual(len(strand1_idxs), expected_strand_length)
+        self.assertEqual(len(strand2_idxs), expected_strand_length)
+
+        for i in range(expected_strand_length - 1):
+            # ignore nucleotides between domains
+            if i == 6:
+                continue
+
+            strand1_nuc_idx1 = strand1_idxs[i]
+            strand1_nuc_idx2 = strand1_idxs[i+1]
+            strand2_nuc_idx1 = strand1_idxs[i]
+            strand2_nuc_idx2 = strand1_idxs[i+1]
+
+            s1_cmp1 = cm_poss[strand1_nuc_idx1]
+            s1_cmp2 = cm_poss[strand1_nuc_idx2]
+            s2_cmp1 = cm_poss[strand2_nuc_idx1]
+            s2_cmp2 = cm_poss[strand2_nuc_idx2]
+
+            diff1 = tuple([s1_cmp1[j]-s1_cmp2[j] for j in range(3)])
+            diff2 = tuple([s2_cmp1[j]-s2_cmp2[j] for j in range(3)])
+            sqr_dist1 = sum([x**2 for x in diff1])
+            sqr_dist2 = sum([x**2 for x in diff2])
+
+            # verify squared distance between adjacent nucleotides in a domain
+            self.assertAlmostEqual(sqr_dist1, expected_adj_nuc_cm_dist2)
+            self.assertAlmostEqual(sqr_dist2, expected_adj_nuc_cm_dist2)

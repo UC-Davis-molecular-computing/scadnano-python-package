@@ -6481,6 +6481,7 @@ class _OxdnaSystem:
                     max_vec = max_vec.coord_max(nuc.center)
 
         if min_vec is not None and max_vec is not None:
+            # 5 is arbitrarily chosen so that the box has a bit of wiggle room
             return max_vec - min_vec + _OxdnaVector(5, 5, 5)
         else:
             return _OxdnaVector(1, 1, 1)
@@ -6489,8 +6490,8 @@ class _OxdnaSystem:
 
         bbox = self.compute_bounding_box()
 
-        conf_list = ['t = {}\nb = {} {} {}\nE = {} {} {}\n'.format(0, bbox.x, bbox.y, bbox.z, 0, 0, 0)]
-        topo_list = ['']
+        dat_list = ['t = {}\nb = {} {} {}\nE = {} {} {}'.format(0, bbox.x, bbox.y, bbox.z, 0, 0, 0)]
+        top_list = []
 
         nuc_count = 0
         strand_count = 0
@@ -6510,28 +6511,24 @@ class _OxdnaSystem:
                     n3 = -1
                 nuc_index += 1
 
-                topo_list.append('{} {} {} {}'.format(strand_count, nuc.base, n3, n5))
-                conf_list.append('{} {} {} '.format(nuc.r.x, nuc.r.y, nuc.r.z) +
-                                 '{} {} {} '.format(nuc.b.x, nuc.b.y, nuc.b.z) +
-                                 '{} {} {} '.format(nuc.n.x, nuc.n.y, nuc.n.z) +
-                                 '{} {} {} '.format(nuc.v.x, nuc.v.y, nuc.v.z) +
-                                 '{} {} {}'.format(nuc.L.x, nuc.L.y, nuc.L.z))
+                top_list.append('{} {} {} {}'.format(strand_count, nuc.base, n3, n5))
+                dat_list.append('{} {} {} '.format(nuc.r.x, nuc.r.y, nuc.r.z) +
+                                '{} {} {} '.format(nuc.b.x, nuc.b.y, nuc.b.z) +
+                                '{} {} {} '.format(nuc.n.x, nuc.n.y, nuc.n.z) +
+                                '{} {} {} '.format(nuc.v.x, nuc.v.y, nuc.v.z) +
+                                '{} {} {}'.format(nuc.L.x, nuc.L.y, nuc.L.z))
 
-        topo = '\n'.join(topo_list) + '\n'
-        conf = '\n'.join(conf_list) + '\n'
+        top = '\n'.join(top_list) + '\n'
+        dat = '\n'.join(dat_list) + '\n'
 
-        topo = '{} {}\n'.format(nuc_count, strand_count) + topo
+        top = '{} {}\n'.format(nuc_count, strand_count) + top
 
-        return conf, topo
+        return dat, top
 
-
-DIST_HEX = 2.55  # distance between helices on hex grid
-DIST_SQUARE = 2.60  # distance between helices on square grid
-
+NM_TO_OX_UNITS = 1.0 / 0.8518
 
 # returns the origin, forward, and normal vectors of a helix
-
-def _oxdna_get_helix_vectors(design: Design, helix: Helix, grid: Grid) -> Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]:
+def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]:
     """
     TODO: document functions/methods with docstrings
     :param helix:
@@ -6542,6 +6539,9 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix, grid: Grid) -> Tuple[
         normal  -- a direction perpendicular to forward which represents the angle to the backbone at offset 0
             for the forward Domain on the Helix.
     """
+    grid = design.grid
+    geometry = design.geometry
+
     forward = _OxdnaVector(0, 0, 1)
     normal = _OxdnaVector(0, -1, 0)
 
@@ -6565,23 +6565,21 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix, grid: Grid) -> Tuple[
         # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
         if grid == Grid.square:
             h, v = helix.grid_position
-            x = h * DIST_SQUARE
-            y = v * DIST_SQUARE
+            x = h * geometry.distance_between_helices()
+            y = v * geometry.distance_between_helices()
         if grid == Grid.hex:
             h, v = helix.grid_position
-            x = (h + (v % 2) / 2) * DIST_HEX
-            y = v * sqrt(3) / 2 * DIST_HEX
+            x = (h + (v % 2) / 2) * geometry.distance_between_helices()
+            y = v * sqrt(3) / 2 * geometry.distance_between_helices()
         if grid == Grid.honeycomb:
             h, v = helix.grid_position
-            x = h * sqrt(3) / 2 * DIST_HEX
+            x = h * sqrt(3) / 2 * geometry.distance_between_helices()
             if h % 2 == 0:
-                y = (v * 3 + (v % 2)) / 2 * DIST_HEX
+                y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
             else:
-                y = (v * 3 - (v % 2) + 1) / 2 * DIST_HEX
+                y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
 
-    origin = _OxdnaVector(x, y, z)
-
-
+    origin = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
     return origin, forward, normal
 
 # if no sequence exists on a domain, generate one
@@ -6593,14 +6591,11 @@ def _oxdna_random_sequence(length: int) -> str:
     return seq
 
 
-STEP_SIZE = 0.4
-STEP_ROT = -720 / 21
-MINOR_GROOVE = 150
-
-
 def _oxdna_convert(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
-
+    geometry = design.geometry
+    step_rot = -360 / geometry.bases_per_turn
+    
     # each entry is the number of insertions - deletions since the start of a given helix
     mod_map = {}
     for idx, helix in design.helices.items():
@@ -6632,10 +6627,10 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin, forward, normal = _oxdna_get_helix_vectors(design, helix, design.grid)
+                origin, forward, normal = _oxdna_get_helix_vectors(design, helix)
 
                 if not domain.forward:
-                    normal = normal.rotate(-MINOR_GROOVE, forward)
+                    normal = normal.rotate(-geometry.minor_groove_angle, forward)
                     seq = seq[::-1]
 
                 # dict / set for insertions / deletions to make lookup easier and cheaper when there are lots of them
@@ -6651,27 +6646,27 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
                 # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/state/geometry.dart
 
                 # index is used for finding the base in our sequence
-                # it doesn't increment on deletions so we don't skip bases
                 index = 0
                 for offset in range(domain.start, domain.end):
                     if offset not in deletions:
                         mod = mod_map[domain.helix][offset - helix.min_offset]
 
-                        r = origin + forward * offset * STEP_SIZE
-                        b = normal.rotate(STEP_ROT * (offset + mod), forward)
+                        # we have to check insertions first because they affect the index
+                        if offset in insertions:
+                            num = insertions[offset]
+                            for i in range(num):
+                                r = origin + forward * (offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                b = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                nuc = Nucleotide(r, b, forward, seq[index])
+                                dom_strand.nucleotides.append(nuc)
+                                index += 1
+                                
+                        r = origin + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        b = normal.rotate(step_rot * (offset + mod), forward)
                         nuc = _OxdnaNucleotide(r, b, forward, seq[index])
                         dom_strand.nucleotides.append(nuc)
                         index += 1
 
-                        if offset in insertions:
-                            num = insertions[offset]
-                            for i in range(1, num + 1):
-                                # offsets are positioned tightly in a single slice of the helix
-                                r = origin + forward * (offset + i / (num + 1)) * STEP_SIZE
-                                b = normal.rotate(STEP_ROT * (offset + mod + i), forward)
-                                nuc = _OxdnaNucleotide(r, b, forward, seq[index])
-                                dom_strand.nucleotides.append(nuc)
-                                index += 1
                 # strands are stored from 5' to 3' end
                 if not domain.forward:
                     dom_strand.nucleotides.reverse()
