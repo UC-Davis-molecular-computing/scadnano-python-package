@@ -5640,7 +5640,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         system = _oxdna_convert(self)
         return system.ox_dna_output()
 
-    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None):
+    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/),
         with the output files having the same name as the running script but with ``.py`` changed to
@@ -6480,7 +6480,7 @@ class _OxdnaSystem:
                     min_vec = min_vec.coord_min(nuc.center)
                     max_vec = max_vec.coord_max(nuc.center)
 
-        if min_vec is not None:
+        if min_vec is not None and max_vec is not None:
             return max_vec - min_vec + _OxdnaVector(5, 5, 5)
         else:
             return _OxdnaVector(1, 1, 1)
@@ -6489,14 +6489,11 @@ class _OxdnaSystem:
 
         bbox = self.compute_bounding_box()
 
-        conf = 't = {}\nb = {} {} {}\nE = {} {} {}\n'.format(0, bbox.x, bbox.y, bbox.z, 0, 0, 0)
-        topo = ''
+        conf_list = ['t = {}\nb = {} {} {}\nE = {} {} {}\n'.format(0, bbox.x, bbox.y, bbox.z, 0, 0, 0)]
+        topo_list = ['']
 
         nuc_count = 0
         strand_count = 0
-
-        topo_list = []
-        conf_list = []
 
         for strand in self.strands:
             strand_count += 1
