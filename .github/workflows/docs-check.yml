@@ -16,7 +16,7 @@ jobs:
         pip install sphinx sphinx_rtd_theme
     - name: Move to docs folder
       run: |
-        cd docs
+        cd doc
         pwd
     - name: Build docs
       run: make html
