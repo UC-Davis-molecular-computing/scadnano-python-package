@@ -18,4 +18,4 @@ jobs:
       run: |
         cd doc
         pwd
-        make html
+        sphinx-build -T -E -W -b html . _build
