@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.15.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.16.0"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -64,13 +64,14 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
     TypeVar, Generic, Callable
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
 
 default_scadnano_file_extension = 'sc'
+"""Default filename extension when writing a scadnano file."""
 
 VStrands = Dict[int, Dict[str, Any]]
 
@@ -84,6 +85,7 @@ def _pairwise(iterable: Iterable) -> Iterable:
 
 # for putting evaluated expressions in docstrings
 # https://stackoverflow.com/questions/10307696/how-to-put-a-variable-into-python-docstring
+# not currently used since this way of implementing it is has a bug with using the .. codeblock:: directive
 def _docstring_parameter(*sub: Any, **kwargs: Any) -> Any:
     def dec(obj: Any) -> Any:
         obj.__doc__ = obj.__doc__.format(*sub, **kwargs)
@@ -126,7 +128,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
         super(_SuppressableIndentEncoder, self).__init__(*args, **kwargs)
         self.kwargs = dict(kwargs)
         del self.kwargs['indent']
-        self._replacement_map: Dict[int, Any] = {}
+        self._replacement_map: Dict[int, str] = {}
 
     def default(self, obj: Any) -> Any:
         if isinstance(obj, NoIndent):
@@ -140,9 +142,7 @@ class _SuppressableIndentEncoder(json.JSONEncoder):
 
     def encode(self, obj: Any) -> Any:
         result = super().encode(obj)
-        for k, v in self._replacement_map.items():
-            result = result.replace(f'"@@{k}@@"', v)
-        return result
+        return re.sub(r'"@@(\d+)@@"', lambda m: self._replacement_map[int(m[1])], result)
 
 
 #
@@ -365,6 +365,8 @@ default_roll: float = 0.0
 default_yaw: float = 0.0
 
 default_group_name = 'default_group'
+
+_floating_point_tolerance = 0.00000001
 
 # XXX: code below related to SVG positions is not currently needed in the scripting library,
 # but I want to make sure these conventions are documented somewhere, so they are just commented out for now.
@@ -1003,20 +1005,26 @@ class HelixGroup(_JSONSerializable):
     """The "origin" of this :any:`HelixGroup`."""
 
     pitch: float = 0
-    """Same meaning as :py:data:`Helix.pitch`, applied to every :any:`Helix` in the group."""
+    """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
+    Rotation is clockwise in the main view.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     yaw: float = 0
-    """Same meaning as :py:data:`Helix.yaw`, applied to every :any:`Helix` in the group."""
+    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
+    Not visually displayed in scadnano, but here to support more general 3D applications.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     roll: float = 0
     """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
 
     helices_view_order: Optional[List[int]] = None
-    """Same meaning as :py:data:`Design.helices_view_order`, 
-    applied to only the :any:`Helix`'s in the group."""
+    """Order in which to display the :any:`Helix`'s in the group in the 2D view; if None, then the order
+    is given by the order of the fields :data:`Helix.idx` for each :any:`Helix` in this :any:`HelixGroup`."""
 
     grid: Grid = Grid.none
-    """Same meaning as :py:data:`Design.grid`, enforced only on the :any:`Helix`'s in the group."""
+    """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Dict[str, Any] = dict()
@@ -1051,7 +1059,10 @@ class HelixGroup(_JSONSerializable):
 
     @staticmethod
     def from_json(json_map: dict, **kwargs: Any) -> 'HelixGroup':  # remove quotes when Py3.6 support dropped
-        grid = optional_field(Grid.none, json_map, grid_key)
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
+        # grid: Grid = Grid.none
+        # if grid_key in json_map:
+        #     grid = Grid(json_map[grid_key])
 
         num_helices: int = kwargs['num_helices']
         helices_view_order = json_map.get(helices_view_order_key)
@@ -1060,7 +1071,7 @@ class HelixGroup(_JSONSerializable):
                 raise IllegalDesignError(f'length of helices ({num_helices}) does not match '
                                          f'length of helices_view_order ({len(helices_view_order)})')
 
-        position_map = mandatory_field(HelixGroup, json_map, position_key, *legacy_position_keys)
+        position_map = mandatory_field(HelixGroup, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map)
 
         pitch = json_map.get(pitch_key, default_pitch)
@@ -1200,21 +1211,9 @@ class Helix(_JSONSerializable):
     
     Must be None if :py:data:`Helix.grid_position` is specified."""
 
-    pitch: float = 0
-    """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
-    Rotation is clockwise in the main view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
     Rotation is clockwise in the side view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
-    yaw: float = 0
-    """Third angle for orientation besides :py:data:`Helix.pitch` and :py:data:`Helix.roll`.
-    Not visually displayed in scadnano, but here to support more general 3D applications.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
@@ -1275,12 +1274,8 @@ class Helix(_JSONSerializable):
             pos = self.position.to_json_serializable(suppress_indent)
             dct[position_key] = NoIndent(pos) if suppress_indent and not use_no_indent_helix else pos
 
-        if not _is_close(self.pitch, default_pitch):
-            dct[pitch_key] = self.pitch
         if not _is_close(self.roll, default_roll):
             dct[roll_key] = self.roll
-        if not _is_close(self.yaw, default_yaw):
-            dct[yaw_key] = self.yaw
 
         if not self.major_tick_distance_is_default(grid):
             dct[major_tick_distance_key] = self.major_tick_distance
@@ -1318,12 +1313,10 @@ class Helix(_JSONSerializable):
         max_offset = json_map.get(max_offset_key)
         idx = json_map.get(idx_on_helix_key)
 
-        position_map = optional_field(None, json_map, position_key, *legacy_position_keys)
+        position_map = optional_field(None, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map) if position_map is not None else None
 
-        pitch = json_map.get(pitch_key, default_pitch)
         roll = json_map.get(roll_key, default_roll)
-        yaw = json_map.get(yaw_key, default_yaw)
 
         group = json_map.get(group_key, default_group_name)
 
@@ -1336,9 +1329,7 @@ class Helix(_JSONSerializable):
             min_offset=min_offset,
             max_offset=max_offset,
             position=position,
-            pitch=pitch,
             roll=roll,
-            yaw=yaw,
             idx=idx,
             group=group,
         )
@@ -1405,7 +1396,7 @@ class Helix(_JSONSerializable):
 
 
 def _is_close(x1: float, x2: float) -> bool:
-    return abs(x1 - x2) < 0.00000001
+    return abs(x1 - x2) < _floating_point_tolerance
 
 
 DomainLabel = TypeVar('DomainLabel')
@@ -1503,7 +1494,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'Domain':  # remove quotes when Py3.6 support dropped
         helix = mandatory_field(Domain, json_map, helix_idx_key)
-        forward = mandatory_field(Domain, json_map, forward_key, *legacy_forward_keys)
+        forward = mandatory_field(Domain, json_map, forward_key, legacy_keys=legacy_forward_keys)
         start = mandatory_field(Domain, json_map, start_key)
         end = mandatory_field(Domain, json_map, end_key)
         deletions = json_map.get(deletions_key, [])
@@ -2623,7 +2614,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
-        domain_jsons = mandatory_field(Strand, json_map, domains_key, *legacy_domains_keys)
+        domain_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
         if len(domain_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
@@ -2641,7 +2632,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         is_scaffold = json_map.get(is_scaffold_key, False)
         circular = json_map.get(circular_key, False)
 
-        dna_sequence = optional_field(None, json_map, dna_sequence_key, *legacy_dna_sequence_keys)
+        dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
         color_str = json_map.get(color_key,
                                  default_scaffold_color if is_scaffold else default_strand_color)
@@ -3173,6 +3164,14 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                         f'\n{d2}')
 
     def idt_dna_sequence(self) -> str:
+        """
+        :return: DNA sequence as it needs to be typed to order from IDT, with
+            :py:data:`Modification5Prime`'s,
+            :py:data:`Modification3Prime`'s,
+            and
+            :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence
+            ACGT with a 5' biotin modification.
+        """
         self._ensure_modifications_legal(check_offsets_legal=True)
 
         if self.dna_sequence is None:
@@ -3484,10 +3483,12 @@ def add_quotes(string: str) -> str:
     return f'"{string}"'
 
 
-def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
+def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *,
+                    legacy_keys: Sequence[str] = ()) -> Any:
     # should be called from function whose return type is the type being constructed from JSON, e.g.,
     # Design or Strand, given by ret_type. This helps give a useful error message
-    for key in (main_key,) + legacy_keys:
+    keys = (main_key,) + tuple(legacy_keys)
+    for key in keys:
         if key in json_map:
             return json_map[key]
     ret_type_name = ret_type.__name__
@@ -3500,11 +3501,19 @@ def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *le
     raise IllegalDesignError(msg)
 
 
-def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *legacy_keys: str) -> Any:
-    # like dict.get, except that it checks for multiple keys
-    for key in (main_key,) + legacy_keys:
+def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *,
+                   legacy_keys: Sequence[str] = (), transformer=None) -> Any:
+    # like dict.get, except that it checks for multiple keys, and it can transform the value if it is the
+    # wrong type by specifying transformer
+    keys = (main_key,) + tuple(legacy_keys)
+    for key in keys:
         if key in json_map:
-            return json_map[key]
+            json_value = json_map[key]
+            if transformer is None:
+                value = json_value
+            else:
+                value = transformer(json_value)
+            return value
     return default_value
 
 
@@ -3537,7 +3546,8 @@ class Geometry(_JSONSerializable):
     def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
         geometry = Geometry()
         geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
-                                                     rise_per_base_pair_key, *legacy_rise_per_base_pair_keys)
+                                                     rise_per_base_pair_key,
+                                                     legacy_keys=legacy_rise_per_base_pair_keys)
         geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
         geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
                                                  bases_per_turn_key)
@@ -3635,19 +3645,24 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  groups: Optional[Dict[str, HelixGroup]] = None,
                  strands: List[Strand] = None,
-                 grid: Optional[Grid] = None,
+                 grid: Grid = Grid.none,
                  helices_view_order: List[int] = None,
                  geometry: Geometry = None) -> None:
         """
-        :param helices: List of :any:`Helix`'s; if missing, set based on `strands`.
-        :param groups: Dict mapping group name to :any:`HelixGroup`.
+        :param helices:
+            List of :any:`Helix`'s; if missing, set based on `strands`.
+        :param groups:
+            Dict mapping group name to :any:`HelixGroup`.
             Mutually exclusive with `helices_view_order`, and any non-none :any:`Grid`. If set, then each
             :any:`Helix` must have its :py:data:`Helix.group` field set to a group name that is one of the
             keys of this dict.
-        :param strands: List of :any:`Strand`'s. If missing, will be empty.
-        :param grid: :any:`Grid` to use.
-        :param helices_view_order: order in which to view helices from top to bottom in web interface
-            main view.
+        :param strands:
+            List of :any:`Strand`'s. If missing, will be empty.
+        :param grid:
+            :any:`Grid` to use; if not the default value of :data:`Grid.none`, then it is
+            mutually exclusive with `groups`.
+        :param helices_view_order:
+            order in which to view helices from top to bottom in web interface main view.
             Mutually exclusive with `groups`.
             This list must contain each :py:data:`Helix.idx` exactly once.
             If no :py:data:`Helix.idx` is explicitly specified, then this should be a permutation of the
@@ -3662,13 +3677,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('Design.helices_view_order and Design.groups are mutually exclusive. '
                                      'Set at most one of them.')
 
-        if grid is not None and using_groups:
+        if grid != Grid.none and using_groups:
             raise IllegalDesignError('Design.grid and Design.groups are mutually exclusive. '
                                      'Set at most one of them.')
-
-        if grid is None and not using_groups:
-            # make sure we only set this if groups are not being used
-            grid = Grid.none
 
         self.strands = [] if strands is None else strands
         self.color_cycler = ColorCycler()
@@ -3678,7 +3689,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self.groups = {default_group_name: HelixGroup()}
         else:
             self.groups = groups
-            if grid is not None:
+            if grid != Grid.none:
                 raise IllegalDesignError('cannot use a non-none grid for whole Design when helix groups are '
                                          'used; only the HelixGroups can have non-none grids in this case')
             if helices_view_order is not None:
@@ -3802,6 +3813,18 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             else:
                 strand.color = next(self.color_cycler)
 
+    def pitch_of_helix(self, helix: Helix) -> float:
+        """Same as the pitch of helix's :any:`HelixGroup`"""
+        return self.groups[helix.group].pitch
+
+    def yaw_of_helix(self, helix: Helix) -> float:
+        """Same as the yaw of helix's :any:`HelixGroup`"""
+        return self.groups[helix.group].yaw
+
+    def roll_of_helix(self, helix: Helix) -> float:
+        """Roll of helix's :any:`HelixGroup` plus :py:data:`Helix.roll`"""
+        return self.groups[helix.group].roll + helix.roll
+
     @staticmethod
     def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
@@ -3840,6 +3863,182 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'cannot specify both "{key1}" and "{key2}" in Design JSON')
 
     @staticmethod
+    def _num_helix_groups(json_map: Dict) -> int:
+        num_groups_used = 0
+        if groups_key in json_map:
+            num_groups_used = len(json_map[groups_key])
+        return num_groups_used
+
+    @staticmethod
+    def _helices_from_json(json_map: Dict) -> Tuple[List[Helix],
+                                                    Dict[str, Tuple[float, float, int]],
+                                                    Dict[Tuple[float, float], List[Helix]]]:
+        """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
+
+        group_to_pitch_yaw is filled if multiple helix groups are used
+        - maps group name to pitch, yaw, and helix idx of a helix in that group (the first one found)
+
+        pitch_yaw_to_helices is filled if a single helix group is used
+        - maps pitch and yaw pairs to list of helix with those pitch and yaw
+
+        These maps are used to convert designs that have helices with individual pitches and yaws
+        into designs where helices do not have individual pitches and yaws.
+
+        Pass these two maps into _groups_from_json so that groups can be assigned appropriate pitch, yaw values.
+        """
+        # Initialize return values
+        helices = []
+        group_to_pitch_yaw: Dict[str, Tuple[float, float, int]] = {}
+        pitch_yaw_to_helices: Dict[Tuple[float, float], List[Helix]] = defaultdict(list)
+
+        # Useful booleans
+        multiple_groups_used = Design._num_helix_groups(json_map) > 1
+        single_group_used = not multiple_groups_used
+        using_groups = groups_key in json_map
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
+        grid_is_none = grid == Grid.none
+
+        idx_default = 0
+        deserialized_helices_list = json_map[helices_key]
+        for helix_json in deserialized_helices_list:
+            helix = Helix.from_json(helix_json)
+            helix_idx = helix.idx if helix.idx is not None else idx_default
+
+            #########################################################################
+            # BEGIN Backward Compatibility Code for Helix With Individual Pitch/Yaw #
+            #########################################################################
+
+            # Handle pitch and yaw for individual helices
+            pitch = 0 if pitch_key not in helix_json else helix_json[pitch_key]
+            yaw = 0 if yaw_key not in helix_json else helix_json[yaw_key]
+            group = helix.group
+            if multiple_groups_used:
+                if group not in group_to_pitch_yaw:
+                    # Log pitch and yaw for a helix in group so that other helices in the group can be compared
+                    group_to_pitch_yaw[group] = (pitch, yaw, helix_idx)
+                else:
+                    # Another helix in this group also had a non-zero pitch/yaw, so check if they match
+                    expected_pitch, expected_yaw, idx_of_helix_with_expected_pitch_yaw = group_to_pitch_yaw[
+                        group]
+                    if not (_is_close(pitch, expected_pitch) and _is_close(yaw, expected_yaw)):
+                        raise IllegalDesignError(
+                            f'In HelixGroup {group}, Helix {helix_idx} has pitch {pitch} and yaw {yaw} but Helix {helix_idx} has pitch {expected_pitch} and yaw {expected_yaw}. Please seperate Helix {helix_idx} and Helix {idx_of_helix_with_expected_pitch_yaw} into seperate HelixGroups.')
+            if single_group_used:
+                is_new_pitch_yaw = True
+                # Search for a pitch yaw pair that is close to pitch yaw of helix
+                for (p, y) in pitch_yaw_to_helices:
+                    if _is_close(p, pitch) and _is_close(y, yaw):
+                        pitch_yaw_to_helices[(p, y)].append(helix)
+                        is_new_pitch_yaw = False
+                        break
+                # If no pitch yaw pair found, then create a new one and add to dictionary
+                if is_new_pitch_yaw:
+                    pitch_yaw_to_helices[(pitch, yaw)].append(helix)
+
+            #######################################################################
+            # END Backward Compatibility Code for Helix With Individual Pitch/Yaw #
+            #######################################################################
+
+            if not using_groups and grid_is_none and grid_position_key in helix_json:
+                raise IllegalDesignError(
+                    f'grid is none, but Helix {helix_idx} has grid_position = {helix_json[grid_position_key]}')
+            elif not using_groups and not grid_is_none and position_key in helix_json:
+                raise IllegalDesignError(
+                    f'grid is not none, but Helix {helix_idx} has position = ${helix_json[position_key]}')
+            helices.append(helix)
+            idx_default += 1
+        return helices, group_to_pitch_yaw, pitch_yaw_to_helices
+
+    @staticmethod
+    def _groups_and_grid_from_json(json_map: dict, helices: List[Helix],
+                                   group_to_pitch_yaw: Dict[str, Tuple[float, float, int]],
+                                   pitch_yaw_to_helices: Dict[Tuple[float, float], List[Helix]]) \
+            -> Tuple[Dict[str, HelixGroup], Grid]:
+        """Returns map of helix group names to group as well as the grid.
+
+        If multiple helix groups are used, then groups pitch and yaw will be the
+        pitch and yaw given in the json map plus the pitch and yaw values
+        provided in group_to_pitch_yaw.
+
+        If a single helix group is used, then new helix groups will be created using
+        the provided group_to_pitch_yaw map. Because new helix groups are created,
+        helices will be modfied so that each helix's group field is set to the new
+        group it has been assigned to.
+
+        In most cases, grid will simply be what is given in the json_map.
+        There is a special case where if the default helix group is used,
+        then the grid may be initially set to some value. If individual helix
+        pitch and rolls were set, then new helix groups are created, meaning
+        the grid field is no longer valid.
+        """
+        groups = None
+        grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
+
+        # Get helix groups provided from json_map
+        if groups_key in json_map:
+            groups_json = json_map[groups_key]
+            groups = {}
+            for name, group_json in groups_json.items():
+                num_helices_in_group = sum(1 for helix in helices if helix.group == name)
+                groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
+
+        #########################################################################
+        # BEGIN Backward Compatibility Code for Helix With Individual Pitch/Yaw #
+        #########################################################################
+
+        multiple_groups_used = Design._num_helix_groups(json_map) > 1
+        single_group_used = not multiple_groups_used
+
+        # Add individual helix pitch and yaw
+        if multiple_groups_used:
+            for (group_name, (pitch, yaw, _)) in group_to_pitch_yaw.items():
+                groups[group_name].pitch += pitch
+                groups[group_name].yaw += yaw
+
+        # Add new helix groups if individual helix pitch and yaw set
+        if single_group_used:
+            # New groups to add
+            new_groups = {}
+            # The only group (take into account case when default helix group is used)
+            group = list(groups.values())[0] if groups is not None else HelixGroup()
+
+            for ((helix_pitch, helix_yaw), helix_list) in pitch_yaw_to_helices.items():
+                new_pitch = group.pitch + helix_pitch
+                new_yaw = group.yaw + helix_yaw
+                # Only make new groups if helix's pitch/yaw is non-zero
+                if helix_pitch or helix_yaw:
+                    # If there is more than one helix, create new helix group for each pitch yaw value
+                    new_group_name = f'pitch_{new_pitch}_yaw_{new_yaw}'
+                    new_groups[new_group_name] = HelixGroup(pitch=new_pitch, yaw=new_yaw, grid=group.grid)
+                    # Move helices into new group
+                    for helix in helix_list:
+                        helix.group = new_group_name
+
+            if len(new_groups) != 0:
+                if groups is not None:
+                    groups.update(new_groups)
+                else:
+                    groups = new_groups
+                    # Change grid to none because multiple helix groups are now used
+                    # so grid can no longer be specified
+                    grid = Grid.none
+
+        #######################################################################
+        # END Backward Compatibility Code for Helix With Individual Pitch/Yaw #
+        #######################################################################
+
+        return groups, grid
+
+    @staticmethod
+    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix],
+                                                                        Dict[str, HelixGroup],
+                                                                        Grid]:
+        helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
+        groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw,
+                                                         pitch_yaw_to_helices)
+        return helices, groups, grid
+
+    @staticmethod
     def from_scadnano_json_map(
             json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
@@ -3854,36 +4053,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         Design._check_mutually_exclusive_fields(json_map)
 
-        grid = optional_field(None, json_map, grid_key)
-        grid_is_none = grid == Grid.none
-
-        using_groups = groups_key in json_map
-
-        helices = []
-        deserialized_helices_list = json_map[helices_key]
-        num_helices = len(deserialized_helices_list)
-
-        # create Helices
-        idx_default = 0
-        for helix_json in deserialized_helices_list:
-            helix = Helix.from_json(helix_json)
-            if not using_groups and grid_is_none and grid_position_key in helix_json:
-                raise IllegalDesignError(
-                    f'grid is none, but Helix {idx_default} has grid_position = {helix_json[grid_position_key]}')
-            elif not using_groups and not grid_is_none and position_key in helix_json:
-                raise IllegalDesignError(
-                    f'grid is not none, but Helix {idx_default} has position = ${helix_json[position_key]}')
-            helices.append(helix)
-            idx_default += 1
-
-        # helix groups
-        groups = None
-        if groups_key in json_map:
-            groups_json = json_map[groups_key]
-            groups = {}
-            for name, group_json in groups_json.items():
-                num_helices_in_group = sum(1 for helix in helices if helix.group == name)
-                groups[name] = HelixGroup.from_json(group_json, num_helices=num_helices_in_group)
+        # helices, groups, and grid
+        helices, groups, grid = Design._helices_and_groups_and_grid_from_json(json_map)
+        num_helices = len(helices)
 
         # view order of helices
         helices_view_order = json_map.get(helices_view_order_key)
@@ -4904,10 +5076,36 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _helices_to_string(self) -> str:
         return ', '.join(map(str, self.helices.keys()))
 
-    @_docstring_parameter(default_extension=default_scadnano_file_extension)
+    # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
+    # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
+    # so I removed it.
+    # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def to_json(self, suppress_indent: bool = True) -> str:
         """Return string representing this Design, suitable for reading by scadnano if written to
-        a JSON file ending in extension .{default_extension}"""
+        a JSON file ending in extension :attr:`default_scadnano_file_extension`.
+
+
+        :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
+            e.g., grid coordinates. If True, something like this will be written:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [1, 2]
+              }
+
+            instead of this:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [
+                  1,
+                  2
+                ]
+              }
+
+        """
         # if isinstance(self, DNAOrigamiDesign):
         #     scaf = None
         #     for strand in self.strands:
@@ -5102,7 +5300,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                         only_strands_with_idt=only_strands_with_idt,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
-        print('hello')
+
         idt_lines: List[str] = []
         for strand in strands_to_export:
             if strand.idt is None and only_strands_with_idt:
@@ -5430,32 +5628,61 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None) -> None:
-        """Write ``.{default_extension}`` file representing this :any:`Design`,
-        suitable for reading by scadnano,
+    def to_oxdna_format(self) -> Tuple[str, str]:
+        raise NotImplementedError()
+
+    # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
+    # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
+    # so I removed it.
+    # @_docstring_parameter(default_extension=default_scadnano_file_extension)
+    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None,
+                            suppress_indent: bool = True) -> None:
+        """Write text file representing this :any:`Design`,
+        suitable for reading by the scadnano web interface,
         with the output file having the same name as the running script but with ``.py`` changed to
-        ``.{default_extension}``,
+        :attr:`default_scadnano_file_extension`,
         unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.{default_extension}``.
+        then the design will be written to ``my_origami.sc``.
         If `extension` is specified (but `filename` is not), then the design will be written to
         ``my_origami.<extension>``
 
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
-
         The string written is that returned by :meth:`Design.to_json`.
 
-        :param directory: directory in which to put file (default: current working directory)
-        :param filename: filename (default: name of script with ``.py`` replaced by
-            ``.{default_extension}``).
+
+
+        :param directory:
+            directory in which to put file (default: current working directory)
+        :param filename:
+            filename (default: name of script with ``.py`` replaced by
+            ``.sc``).
             Mutually exclusive with `extension`
-        :param extension: extension for filename (default: ``.{default_extension}``)
+        :param extension:
+            extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
+        :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
+            e.g., grid coordinates. If True, something like this will be written:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [1, 2]
+              }
+
+            instead of this:
+
+            .. code-block:: JSON
+
+              {
+                "grid_position": [
+                  1,
+                  2
+                ]
+              }
+
         """
         self._check_legal_design()
-        contents = self.to_json()
+        contents = self.to_json(suppress_indent)
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
         if extension is None:
@@ -5463,16 +5690,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
-        """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2,
-        with the output file having the same name as the running script but with ``.py`` changed to ``.json``,
-        unless `filename` is explicitly specified.
-        For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.json``.
-
-        `directory` specifies a directory in which to place the file, either absolute or relative to
-        the current working directory. Default is the current working directory.
+        """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
+
+        :param directory:
+            directory in which to place the file, either absolute or relative to
+            the current working directory. Default is the current working directory.
+
+        :param filename:
+            The output file has the same name as the running script but with ``.py`` changed to ``.json``,
+            unless `filename` is explicitly specified.
+            For instance, if the script is named ``my_origami.py``,
+            then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         content_serializable = OrderedDict({})
         content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
@@ -5513,14 +5743,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         nick position, modified in place. Otherwise, this :any:`Strand` will be deleted from the design,
         and two new :any:`Strand`'s will be added.
 
-        :param helix: index of helix where nick will occur
-        :param offset: offset to nick (nick will be between offset and offset-1)
-        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
-        :param new_color: whether to assign a new color to one of the :any:`Strand`'s resulting from the
-                          nick.
-                          If False, both :any:`Strand`'s created have the same color as the original
-                          If True, one :any:`Strand` keeps the same color as the original and the other
-                          is assigned a new color
+        :param helix:
+            index of helix where nick will occur
+        :param offset:
+            offset to nick (nick will be between offset and offset-1)
+        :param forward:
+            forward or reverse :any:`Domain` on `helix` at `offset`?
+        :param new_color:
+            whether to assign a new color to one of the :any:`Strand`'s resulting from the nick.
+            If False, both :any:`Strand`'s created have the same color as the original.
+            If True, one :any:`Strand` keeps the same color as the original and the other
+            is assigned a new color.
         """
         for domain_to_remove in self.domains_at(helix, offset):
             if domain_to_remove.forward == forward:
@@ -5649,9 +5882,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         replacing the previous strand on the 5'-most side of the nick (i.e., the one whose 3' end
         terminated at the nick), and deleting the other strand.
 
-        :param helix: index of helix where nick will be ligated
-        :param offset: offset to ligate (nick to ligate must be between offset and offset-1)
-        :param forward: forward or reverse :any:`Domain` on `helix` at `offset`?
+        :param helix:
+            index of helix where nick will be ligated
+        :param offset:
+            offset to ligate (nick to ligate must be between offset and offset-1)
+        :param forward:
+            forward or reverse :any:`Domain` on `helix` at `offset`?
         """
         for dom_right in self.domains_at(helix, offset):
             if dom_right.forward == forward:
@@ -5758,11 +5994,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         will simply be made circular, modifying it in place. Otherwise, the old two :any:`Strand`'s will be
         deleted, and a new :any:`Strand` added.
 
-        :param helix: index of one helix of half crossover
-        :param helix2: index of other helix of half crossover
-        :param offset: offset on `helix` at which to add half crossover
-        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
-        :param offset2: offset on `helix2` at which to add half crossover.
+        :param helix:
+            index of one helix of half crossover
+        :param helix2:
+            index of other helix of half crossover
+        :param offset:
+            offset on `helix` at which to add half crossover
+        :param forward:
+            direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2:
+            offset on `helix2` at which to add half crossover.
             If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
             If not specified, defaults to the negation of `forward`
@@ -5835,11 +6076,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         `offset` and `offset`-1 if one is not already present,
         and similarly for `offset2` on helix `helix2`.
 
-        :param helix: index of one helix of half crossover
-        :param helix2: index of other helix of half crossover
-        :param offset: offset on `helix` at which to add half crossover
-        :param forward: direction of :any:`Strand` on `helix` to which to add half crossover
-        :param offset2: offset on `helix2` at which to add half crossover.
+        :param helix:
+            index of one helix of half crossover
+        :param helix2:
+            index of other helix of half crossover
+        :param offset:
+            offset on `helix` at which to add half crossover
+        :param forward:
+            direction of :any:`Strand` on `helix` to which to add half crossover
+        :param offset2:
+            offset on `helix2` at which to add half crossover.
             If not specified, defaults to `offset`
         :param forward2: direction of :any:`Strand` on `helix2` to which to add half crossover.
             If not specified, defaults to the negation of `forward`

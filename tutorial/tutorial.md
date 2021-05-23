@@ -561,7 +561,7 @@ for strand in design.strands:
 Or you could use Python's I/O library to write them to a file in a format of your choosing.
 
 scadnano provides utility methods 
-[`Design.write_idt_bulk_input_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_plate_excel_file) (for ordering in test tubes) and [`Design.write_idt_plate_excel_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_bulk_input_file) (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). 
+[`Design.write_idt_bulk_input_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_plate_excel_file) (for ordering in test tubes) and [`Design.write_idt_plate_excel_file`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.write_idt_plate_excel_file) (for ordering in 96- or 384-well plates) for exporting to file formats recognized by the DNA synthesis company IDT ([Integrated DNA Technologies](https://www.idtdna.com/pages)). 
 
 Since this doesn't change the design, we put the code to export the IDT plate file outside of the `create_design()` function, in our `main()` function:
 

@@ -2754,8 +2754,29 @@ class TestSetHelixIdx(unittest.TestCase):
         self.assertEqual(8, ss5.end)
 
 
-class TestHelixGroups(unittest.TestCase):
+class TestDesignPitchYawRollOfHelix(unittest.TestCase):
+    def setUp(self) -> None:
+        n = 'north'
+        helix = sc.Helix(max_offset=12, group=n, grid_position=(1,2), roll=4)
 
+        group_north = sc.HelixGroup(position=sc.Position3D(x=0, y=-200, z=0), grid=sc.square, pitch=12, yaw=40, roll=32)
+        self.design = sc.Design(helices=[helix], groups={n: group_north}, strands=[])
+        self.helix = helix
+
+
+    def test_design_pitch_of_helix(self) -> None:
+        self.assertEqual(12,  self.design.pitch_of_helix(self.helix))
+
+
+    def test_design_yaw_of_helix(self) -> None:
+        self.assertEqual(40,  self.design.yaw_of_helix(self.helix))
+
+
+    def test_design_roll_of_helix(self) -> None:
+        self.assertEqual(36,  self.design.roll_of_helix(self.helix))
+
+
+class TestHelixGroups(unittest.TestCase):
     def setUp(self) -> None:
         n = 'north'
         e = 'east'
@@ -2872,6 +2893,7 @@ class TestHelixGroups(unittest.TestCase):
 
         design_from_json = sc.Design.from_scadnano_json_str(design_json_str)
         self._asserts_for_fixture(design_from_json)
+
 
     def test_helix_groups_fail_nonexistent(self) -> None:
         helices = [
@@ -3107,6 +3129,79 @@ class TestNames(unittest.TestCase):
 
 
 class TestJSON(unittest.TestCase):
+
+    def test_grid_design_level_converted_to_enum_from_string(self) -> None:
+        # reproduces an error where the grid was stored as a string instead of the Grid enum type
+        json_str = '''
+{
+  "version": "0.14.0",
+  "grid": "square",
+  "helices": [
+    {"grid_position": [0, 0]},
+    {"grid_position": [0, 1]}
+  ],
+  "strands": []
+}
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+        grid = design.grid
+        self.assertTrue(type(grid) is sc.Grid)
+        self.assertEqual(sc.Grid.square, grid)
+
+
+    def test_grid_helix_group_level_converted_to_enum_from_string(self) -> None:
+        # reproduces an error where the grid was stored as a string instead of the Grid enum type
+        json_str = '''
+{
+  "version": "0.15.0",
+  "groups": {
+    "north": {
+      "position": {"x": 0, "y": -10, "z": 0},
+      "grid": "honeycomb"
+    },
+    "east": {
+      "position": {"x": 0, "y": 0, "z": 10},
+      "grid": "square"
+    },
+    "south": {
+      "position": {"x": 0, "y": 10, "z": 0},
+      "grid": "hex"
+    },
+    "west": {
+      "position": {"x": 0, "y": 0, "z": -10},
+      "grid": "none"
+    }
+  },
+  "helices": [
+    {"group": "north", "max_offset": 20, "grid_position": [0, 0], "idx": 0},
+    {"group": "north", "max_offset": 21, "grid_position": [1, 0], "idx": 1},
+    {"group": "north", "max_offset": 19, "grid_position": [1, 1], "idx": 2},
+    {"group": "north", "max_offset": 18, "grid_position": [0, 1], "idx": 3},
+    {"group": "north", "max_offset": 17, "grid_position": [-1, 1], "idx": 4},
+    {"group": "north", "max_offset": 16, "grid_position": [-1, 0], "idx": 5},
+    {"group": "south", "max_offset": 24, "grid_position": [0, 1], "idx": 6},
+    {"group": "south", "max_offset": 25, "grid_position": [0, 0], "idx": 7},
+    {"group": "west", "max_offset": 26, "position": {"x": 0, "y": 0, "z": 0}, "idx": 8},
+    {"group": "west", "max_offset": 27, "position": {"x": 0, "y": 3, "z": 0}, "idx": 9},
+    {"group": "east", "max_offset": 22, "grid_position": [0, 0], "idx": 13},
+    {"group": "east", "max_offset": 23, "grid_position": [0, 1], "idx": 15}
+  ],
+  "strands": []
+}
+    '''
+        design = sc.Design.from_scadnano_json_str(json_str)
+
+        grid_n = design.groups['north'].grid
+        grid_e = design.groups['east'].grid
+        grid_s = design.groups['south'].grid
+        grid_w = design.groups['west'].grid
+        for grid in [grid_n, grid_e, grid_s, grid_w]:
+            self.assertTrue(type(grid) is sc.Grid)
+
+        self.assertEqual(sc.Grid.honeycomb, grid_n)
+        self.assertEqual(sc.Grid.square, grid_e)
+        self.assertEqual(sc.Grid.hex, grid_s)
+        self.assertEqual(sc.Grid.none, grid_w)
 
     def test_legacy_idt_name_import__no_strand_name(self) -> None:
         # tests proper importing of old format when name was a subfield of idt;
@@ -3544,6 +3639,332 @@ class TestJSON(unittest.TestCase):
         actual_color_hex = d.strands[0].color.to_json_serializable(False)
         self.assertEqual(expected_color_hex, actual_color_hex)
 
+    def test_single_helix_group_and_helices_specify_pitch_and_yaw(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 4,
+              "roll": 5,
+              "yaw": 6
+            },
+            {
+              "group": "north",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "pitch": 21,
+              "yaw": 13,
+              "grid": "none"
+            }
+          },
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(5, helix0.roll)
+        # Helix 0 should have been moved to a new helix group
+        pitch_25_yaw_19_group_name = f'pitch_25_yaw_19'
+        pitch_25_yaw_19_group = d.groups[pitch_25_yaw_19_group_name]
+        self.assertEqual(25, pitch_25_yaw_19_group.pitch)
+        self.assertEqual(19, pitch_25_yaw_19_group.yaw)
+        self.assertEqual(pitch_25_yaw_19_group_name, helix0.group)
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual("north", helix1.group)
+        self.assertEqual(2, len(d.groups))
+
+    def test_only_individual_helices_specify_pitch_and_yaw(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 25,
+              "yaw": 19,
+              "roll": 5
+            },
+            {
+              "group": "north",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "pitch": 21,
+              "yaw": 13,
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "grid": "none"
+            }
+          },
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+
+        # Helix 0 should have been moved to a new helix group
+        pitch_25_yaw_19_group_name = f'pitch_25.0_yaw_19.0'
+        pitch_25_yaw_19_group = d.groups[pitch_25_yaw_19_group_name]
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(25, pitch_25_yaw_19_group.pitch)
+        self.assertEqual(19, pitch_25_yaw_19_group.yaw)
+        self.assertEqual(5, helix0.roll)
+        self.assertEqual(pitch_25_yaw_19_group_name, helix0.group)
+
+
+        # Helix 1 should have been moved to a new helix group
+        pitch_21_yaw_13_group_name = f'pitch_21.0_yaw_13.0'
+        pitch_21_yaw_13_group = d.groups[pitch_21_yaw_13_group_name]
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(21, pitch_21_yaw_13_group.pitch)
+        self.assertEqual(13, pitch_21_yaw_13_group.yaw)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual(pitch_21_yaw_13_group_name, helix1.group)
+
+        self.assertEqual(3, len(d.groups))
+
+
+    def test_only_helix_groups_specify_pitch_and_yaw(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "roll": 5
+            },
+            {
+              "group": "south",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "pitch": 21,
+              "yaw": 13,
+              "grid": "none"
+            },
+            "south": {
+              "position": {"x": 0, "y": -400, "z": 0},
+              "pitch": 23,
+              "yaw": 98,
+              "grid": "none"
+            }
+          },
+          "strands": [
+            {
+              "color": "#0066cc",
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            }
+          ]
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+
+        north_str= 'north'
+        south_str = 'south'
+        north_group = d.groups[north_str]
+        south_group = d.groups[south_str]
+        self.assertEqual(2, len(d.groups))
+
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(5, helix0.roll)
+        self.assertEqual(21, north_group.pitch)
+        self.assertEqual(13, north_group.yaw)
+        self.assertEqual(north_str, helix0.group)
+
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual(23, south_group.pitch)
+        self.assertEqual(98, south_group.yaw)
+        self.assertEqual(south_str, helix1.group)
+
+
+    def test_both_helix_groups_and_helices_do_not_specify_pitch_nor_yaw(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "roll": 5
+            },
+            {
+              "group": "south",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "grid": "none"
+            },
+            "south": {
+              "position": {"x": 0, "y": -400, "z": 0},
+              "grid": "none"
+            }
+          },
+          "strands": [
+            {
+              "color": "#0066cc",
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            }
+          ]
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+
+        north_str= 'north'
+        south_str = 'south'
+        north_group = d.groups[north_str]
+        south_group = d.groups[south_str]
+        self.assertEqual(2, len(d.groups))
+
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(5, helix0.roll)
+        self.assertEqual(0, north_group.pitch)
+        self.assertEqual(0, north_group.yaw)
+        self.assertEqual(north_str, helix0.group)
+
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual(0, south_group.pitch)
+        self.assertEqual(0, south_group.yaw)
+        self.assertEqual(south_str, helix1.group)
+
+
+    def test_multiple_helix_groups_helices_specify_pitch_and_yaw(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 4,
+              "roll": 5,
+              "yaw": 6            },
+            {
+              "group": "south",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "roll": 15
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "pitch": 21,
+              "yaw": 13,
+              "grid": "none"
+            },
+            "south": {
+              "position": {"x": 0, "y": -400, "z": 0},
+              "pitch": 23,
+              "yaw": 98,
+              "grid": "none"
+            }
+          },
+          "strands": [
+            {
+              "color": "#0066cc",
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            }
+          ]
+        }
+        """
+        d = sc.Design.from_scadnano_json_str(json_str)
+        helix0 = d.helices[0]
+        helix1 = d.helices[1]
+
+        north_str = 'north'
+        south_str = 'south'
+        north_group = d.groups[north_str]
+        south_group = d.groups[south_str]
+        self.assertEqual(2, len(d.groups))
+
+        self.assertEqual(sc.Position3D(1, 2, 3), helix0.position)
+        self.assertEqual(5, helix0.roll)
+        self.assertEqual(25, north_group.pitch)
+        self.assertEqual(19, north_group.yaw)
+        self.assertEqual(north_str, helix0.group)
+
+        self.assertEqual(sc.Position3D(3, 2, 3), helix1.position)
+        self.assertEqual(15, helix1.roll)
+        self.assertEqual(23, south_group.pitch)
+        self.assertEqual(98, south_group.yaw)
+        self.assertEqual(south_str, helix1.group)
+
+    def test_multiple_helix_groups_helices_specify_pitch_and_yaw_invalid(self) -> None:
+        json_str = """
+        {
+          "helices": [
+            {
+              "group": "north",
+              "position": {"x": 1, "y": 2, "z": 3},
+              "pitch": 4,
+              "roll": 5,
+              "yaw": 6
+            },
+            {
+              "group": "north",
+              "position": {"x": 3, "y": 2, "z": 3},
+              "pitch": 10,
+              "roll": 5,
+              "yaw": 84
+            }
+          ],
+          "groups": {
+            "north": {
+              "position": {"x": 0, "y": -200, "z": 0},
+              "grid": "none"
+            },
+            "east": {
+              "position": {"x": 0, "y": 0, "z": 100},
+              "pitch": 45,
+              "grid": "square"
+            }
+          },
+          "strands": [ 
+            { 
+              "color": "#0066cc", 
+              "domains": [ {"helix": 0, "forward": true, "start": 0, "end": 32} ]
+            } 
+          ] 
+        }
+        """
+        # Should fail because multiple helices in same helix group are non-parallel
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Design.from_scadnano_json_str(json_str)
+
     def test_position_specified_with_origin_keyword(self) -> None:
         # addresses https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/59
         json_str = """
@@ -3569,13 +3990,16 @@ class TestJSON(unittest.TestCase):
         expected_roll = 5
         expected_yaw = 6
         actual_position = d.helices[0].position
-        actual_pitch = d.helices[0].pitch
+        expected_group_name = f'pitch_{expected_pitch}_yaw_{expected_yaw}'
+        expected_group = d.groups[expected_group_name]
+        actual_pitch = expected_group.pitch
         actual_roll = d.helices[0].roll
-        actual_yaw = d.helices[0].yaw
+        actual_yaw = expected_group.yaw
         self.assertEqual(expected_position, actual_position)
         self.assertEqual(expected_pitch, actual_pitch)
         self.assertEqual(expected_roll, actual_roll)
         self.assertEqual(expected_yaw, actual_yaw)
+        self.assertEqual(expected_group_name, d.helices[0].group)
 
     def test_json_tristan_example_issue_32(self) -> None:
         json_str = """
