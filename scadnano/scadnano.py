@@ -6429,7 +6429,7 @@ _OXDNA_ORIGIN = _OxdnaVector(0, 0, 0)
 
 # r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
 # r is the position of the base
-# b is the backbone-base vector
+# b is the backbone-base vector (in documentation as versor: more info on versors here https://eater.net/quaternions)
 # n is the forward direction of the helix
 @dataclass(frozen=True)
 class _OxdnaNucleotide:
@@ -6482,7 +6482,7 @@ class _OxdnaSystem:
 
         if min_vec is not None and max_vec is not None:
             # 5 is arbitrarily chosen so that the box has a bit of wiggle room
-            return max_vec - min_vec + _OxdnaVector(5, 5, 5)
+            return 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5)) # changed
         else:
             return _OxdnaVector(1, 1, 1)
 
@@ -6657,7 +6657,7 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
                             for i in range(num):
                                 r = origin + forward * (offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                                 b = normal.rotate(step_rot * (offset + mod - num + i), forward)
-                                nuc = Nucleotide(r, b, forward, seq[index])
+                                nuc = _OxdnaNucleotide(r, b, forward, seq[index])
                                 dom_strand.nucleotides.append(nuc)
                                 index += 1
                                 
