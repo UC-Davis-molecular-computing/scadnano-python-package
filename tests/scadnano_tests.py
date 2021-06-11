@@ -6036,6 +6036,98 @@ class TestOxdnaExport(unittest.TestCase):
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist1)
 
+    def test_insertion_design(self) -> None:
+        """
+        0      7
+            ^ insertion of length 1
+        [------>
+        """
+        helix = [sc.Helix(max_offset=10)]
+        design = sc.Design(helices=helix, grid=sc.square)
+        design.strand(0, 0).to(7)
+        design.add_insertion(helix=0, offset=4, length=1)
+
+        # expected values for verification
+        expected_num_nucleotides = 8
+        expected_strand_length = 8
+
+        dat, top = design.to_oxdna_format()
+        dat = dat.strip().split('\n')
+        top = top.strip().split('\n')
+
+        # check length of output files are as expected (matches # of nucleotides plus header size)
+        self.assertEqual(expected_num_nucleotides + 3, len(dat))
+        self.assertEqual(expected_num_nucleotides + 1, len(top))
+
+        # find relevant values for nucleotides
+        cm_poss = []  # center of mass position
+        nbrs_3p = []
+        nbrs_5p = []
+
+        for line in dat[3:]:
+            data = line.strip().split()
+            # make sure there are 15 values per line (3 values per vector * 5 vectors per line)
+            # order of vectors: center of mass position, backbone base, normal, velocity, angular velocity
+            self.assertEqual(15, len(data))
+
+            cm_poss.append(tuple([float(x) for x in data[0:3]]))
+            bb_vec = tuple([float(x) for x in data[3:6]])  # backbone base vector
+            nm_vec = tuple([float(x) for x in data[6:9]])  # normal vector
+
+            # make sure normal vectors and backbone vectors are unit length
+            sqr_bb_vec = sum([x ** 2 for x in bb_vec])
+            sqr_nm_vec = sum([x ** 2 for x in nm_vec])
+            self.assertAlmostEqual(1.0, sqr_bb_vec)
+            self.assertAlmostEqual(1.0, sqr_nm_vec)
+
+            for value in data[9:]:  # values for velocity and angular velocity vectors are 0
+                self.assertAlmostEqual(0, float(value))
+
+        strand1_idxs = []
+        for nuc_idx, line in enumerate(top[1:]):
+            data = line.strip().split()
+            # make sure there are 4 values per line: strand, base, 3' neighbor, 5' neighbor
+            self.assertEqual(4, len(data))
+
+            # make sure there's only 1 strand
+            strand_num = int(data[0])
+            self.assertEqual(1, strand_num)
+            # make sure base is valid
+            base = data[1]
+            self.assertIn(base, ['A', 'C', 'G', 'T'])
+
+            nbrs_3p.append(int(data[2]))
+            nbrs_5p.append(int(data[3]))
+
+            # append start of strand (no 5' neighbor) to list of indexes for strand
+            neighbor_5 = int(data[3])
+            if neighbor_5 == -1:
+                strand1_start = nuc_idx
+                strand1_idxs.append(strand1_start)
+
+        # reconstruct strand using indices from oxDNA files
+        next_idx = nbrs_3p[strand1_start]
+        while next_idx >= 0:
+            strand1_idxs.append(next_idx)
+            next_idx = nbrs_3p[strand1_idxs[-1]]
+
+        # assert that strand is correct length
+        self.assertEqual(expected_strand_length, len(strand1_idxs))
+
+        for i in range(expected_strand_length - 1):
+            strand1_nuc_idx1 = strand1_idxs[i]
+            strand1_nuc_idx2 = strand1_idxs[i + 1]
+
+            # find the center of mass for adjacent nucleotides
+            s1_cmp1 = cm_poss[strand1_nuc_idx1]
+            s1_cmp2 = cm_poss[strand1_nuc_idx2]
+
+            # calculate and verify squared distance between adjacent nucleotides in a domain
+            diff1 = tuple([s1_cmp1[j] - s1_cmp2[j] for j in range(3)])
+            sqr_dist1 = sum([x ** 2 for x in diff1])
+
+            self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist1)
+
     def test_loopout_design(self) -> None:
         """ 2 strands, one with a loopout
             0      7
