@@ -5632,10 +5632,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         workbook.save(filename_plate)
 
     def to_oxdna_format(self) -> Tuple[str, str]:
-        """ Exports to oxdna format.
+        """Exports to oxdna format.
 
-        :return: two strings that are the contents of the *.conf and *.top file
-        suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
+        :return:
+            two strings that are the contents of the .conf and .top file
+            suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
         system = _oxdna_convert(self)
         return system.ox_dna_output()
