@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.16.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.16.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -421,8 +421,8 @@ class M13Variant(enum.Enum):
     
     https://www.neb.com/products/n4040-m13mp18-single-stranded-dna
     
-    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/
-    """
+    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/ 
+    """  # noqa
 
     p7560 = "p7560"
     """Variant of M13mp18 that is 7560 bases long. Available from, for example
@@ -468,7 +468,7 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     :param rotation: rotation of circular strand. Valid values are 0 through length-1.
     :param variant: variant of M13 strand to use
     :return: M13 strand sequence
-    """  # noqa (suppress PEP warning)
+    """  # noqa
     seq = _m13_variants[variant]
     return _rotate_string(seq, rotation)
 
@@ -3504,7 +3504,8 @@ def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *,
 
 
 def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *,
-                   legacy_keys: Sequence[str] = (), transformer=None) -> Any:
+                   legacy_keys: Iterable[str] = (),
+                   transformer: Optional[Callable[[Any], Any]] = None) -> Any:
     # like dict.get, except that it checks for multiple keys, and it can transform the value if it is the
     # wrong type by specifying transformer
     keys = (main_key,) + tuple(legacy_keys)
@@ -6537,9 +6538,7 @@ NM_TO_OX_UNITS = 1.0 / 0.8518
 # returns the origin, forward, and normal vectors of a helix
 def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]:
     """
-    TODO: document functions/methods with docstrings
-    :param helix:
-    :param grid:
+    :param helix: Helix whose vectors we are getting
     :return: return tuple (origin, forward, normal)
         origin  -- the starting point of the center of a helix, assumed to be at offset 0
         forward -- the direction in which the helix propagates
@@ -6557,9 +6556,9 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
     normal = normal.rotate(helix.roll, forward)
 
-    x = 0
-    y = 0
-    z = 0
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
     if grid == Grid.none:
         if helix.position is not None:
             x = helix.position.x
@@ -6570,24 +6569,24 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
         # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
         # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
         # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
+        if helix.grid_position is None:
+            raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
+        h, v = helix.grid_position
         if grid == Grid.square:
-            h, v = helix.grid_position
             x = h * geometry.distance_between_helices()
             y = v * geometry.distance_between_helices()
         if grid == Grid.hex:
-            h, v = helix.grid_position
             x = (h + (v % 2) / 2) * geometry.distance_between_helices()
             y = v * sqrt(3) / 2 * geometry.distance_between_helices()
         if grid == Grid.honeycomb:
-            h, v = helix.grid_position
             x = h * sqrt(3) / 2 * geometry.distance_between_helices()
             if h % 2 == 0:
                 y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
             else:
                 y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
 
-    origin = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
-    return origin, forward, normal
+    origin_ = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
+    return origin_, forward, normal
 
 
 # if no sequence exists on a domain, generate one
@@ -6607,10 +6606,12 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     # each entry is the number of insertions - deletions since the start of a given helix
     mod_map = {}
     for idx, helix in design.helices.items():
-        mod_map[idx] = [0] * (helix.max_offset - helix.min_offset)
+        if helix.max_offset is not None:
+            mod_map[idx] = [0] * (helix.max_offset - helix.min_offset)
+        else:
+            raise AssertionError('helix.max_offset should be non-None')
 
     # insert each insertion / deletion as a postive / negative number
-    # TODO: report error if there is an insertion/deletion on one Domain and not the other
     for strand in design.strands:
         for domain in strand.domains:
             if isinstance(domain, Domain):
@@ -6622,8 +6623,11 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
 
     # propagate the modifier so it stays consistent accross domains
     for idx, helix in design.helices.items():
-        for offset in range(helix.min_offset + 1, helix.max_offset):
-            mod_map[idx][offset] += mod_map[idx][offset - 1]
+        if helix.max_offset is not None:
+            for offset in range(helix.min_offset + 1, helix.max_offset):
+                mod_map[idx][offset] += mod_map[idx][offset - 1]
+        else:
+            raise AssertionError('helix.max_offset should be non-None')
 
     for strand in design.strands:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
@@ -6634,11 +6638,11 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin, forward, normal = _oxdna_get_helix_vectors(design, helix)
+                origin_, forward, normal = _oxdna_get_helix_vectors(design, helix)
 
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
-                    seq = seq[::-1] # reverse DNA sequence
+                    seq = seq[::-1]  # reverse DNA sequence
 
                 # dict / set for insertions / deletions to make lookup cheaper when there are lots of them
                 deletions = set(domain.deletions)
@@ -6657,14 +6661,14 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                         if offset in insertions:
                             num = insertions[offset]
                             for i in range(num):
-                                r = origin + forward * (
-                                            offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                r = origin_ + forward * (
+                                        offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                                 b = normal.rotate(step_rot * (offset + mod - num + i), forward)
                                 nuc = _OxdnaNucleotide(r, b, forward, seq[index])
                                 dom_strand.nucleotides.append(nuc)
                                 index += 1
 
-                        r = origin + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         b = normal.rotate(step_rot * (offset + mod), forward)
                         nuc = _OxdnaNucleotide(r, b, forward, seq[index])
                         dom_strand.nucleotides.append(nuc)
