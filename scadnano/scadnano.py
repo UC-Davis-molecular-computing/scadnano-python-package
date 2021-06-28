@@ -72,7 +72,6 @@ import os.path
 from math import sqrt, sin, cos, pi
 from random import randint
 
-
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
 
@@ -5638,7 +5637,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             two strings that are the contents of the .conf and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
-        system = _oxdna_convert(self)
+        system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
     def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None) -> None:
@@ -5662,12 +5661,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         _write_file_same_name_as_running_python_script(conf, 'conf', directory, filename_no_extension)
         _write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
 
-
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
     # so I removed it.
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None, extension: Optional[str] = None,
+    def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
+                            extension: Optional[str] = None,
                             suppress_indent: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by the scadnano web interface,
@@ -6365,6 +6364,7 @@ def _create_directory_and_set_filename(directory: str, filename: str) -> str:
     relative_filename = os.path.join(directory, filename)
     return relative_filename
 
+
 @dataclass(frozen=True)
 class _OxdnaVector:
     x: float = 0
@@ -6423,10 +6423,12 @@ class _OxdnaVector:
 
         return u * self.dot(u) + (c * u.cross(self)).cross(u) - s * u.cross(self)
 
+
 # Constants related to oxdna export
 _GROOVE_GAMMA = 20
 _BASE_DIST = 0.6
 _OXDNA_ORIGIN = _OxdnaVector(0, 0, 0)
+
 
 # r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
 # r is the position of the base
@@ -6439,8 +6441,8 @@ class _OxdnaNucleotide:
     forward: _OxdnaVector
     base: str
 
-    v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN) # velocity for oxDNA conf file
-    L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN) # angular velocity for oxDNA conf file
+    v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # velocity for oxDNA conf file
+    L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # angular velocity for oxDNA conf file
 
     @property
     def b(self) -> _OxdnaVector:
@@ -6453,6 +6455,7 @@ class _OxdnaNucleotide:
     @property
     def n(self) -> _OxdnaVector:
         return self.forward
+
 
 @dataclass(frozen=True)
 class _OxdnaStrand:
@@ -6483,7 +6486,8 @@ class _OxdnaSystem:
 
         if min_vec is not None and max_vec is not None:
             # 5 is arbitrarily chosen so that the box has a bit of wiggle room
-            return 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5)) # changed
+            # 1.5 multiplier is to make all crossovers appear (advice from Oxdna authors)
+            return 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5))  # changed
         else:
             return _OxdnaVector(1, 1, 1)
 
@@ -6491,7 +6495,7 @@ class _OxdnaSystem:
 
         bbox = self.compute_bounding_box()
 
-        dat_list = ['t = {}\nb = {} {} {}\nE = {} {} {}'.format(0, bbox.x, bbox.y, bbox.z, 0, 0, 0)]
+        dat_list = [f't = 0\nb = {bbox.x} {bbox.y} {bbox.z}\nE = 0 0 0']
         top_list = []
 
         nuc_count = 0
@@ -6512,21 +6516,23 @@ class _OxdnaSystem:
                     n3 = -1
                 nuc_index += 1
 
-                top_list.append('{} {} {} {}'.format(strand_count, nuc.base, n3, n5))
-                dat_list.append('{} {} {} '.format(nuc.r.x, nuc.r.y, nuc.r.z) +
-                                '{} {} {} '.format(nuc.b.x, nuc.b.y, nuc.b.z) +
-                                '{} {} {} '.format(nuc.n.x, nuc.n.y, nuc.n.z) +
-                                '{} {} {} '.format(nuc.v.x, nuc.v.y, nuc.v.z) +
-                                '{} {} {}'.format(nuc.L.x, nuc.L.y, nuc.L.z))
+                top_list.append(f'{strand_count} {nuc.base} {n3} {n5}')
+                dat_list.append(f'{nuc.r.x} {nuc.r.y} {nuc.r.z} ' +
+                                f'{nuc.b.x} {nuc.b.y} {nuc.b.z} ' +
+                                f'{nuc.n.x} {nuc.n.y} {nuc.n.z} ' +
+                                f'{nuc.v.x} {nuc.v.y} {nuc.v.z} ' +
+                                f'{nuc.L.x} {nuc.L.y} {nuc.L.z}')
 
         top = '\n'.join(top_list) + '\n'
         dat = '\n'.join(dat_list) + '\n'
 
-        top = '{} {}\n'.format(nuc_count, strand_count) + top
+        top = f'{nuc_count} {strand_count}\n' + top
 
         return dat, top
 
+
 NM_TO_OX_UNITS = 1.0 / 0.8518
+
 
 # returns the origin, forward, and normal vectors of a helix
 def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]:
@@ -6583,6 +6589,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     origin = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
     return origin, forward, normal
 
+
 # if no sequence exists on a domain, generate one
 def _oxdna_random_sequence(length: int) -> str:
     bases = 'ACGT'
@@ -6592,11 +6599,11 @@ def _oxdna_random_sequence(length: int) -> str:
     return seq
 
 
-def _oxdna_convert(design: Design) -> _OxdnaSystem:
+def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
     geometry = design.geometry
     step_rot = -360 / geometry.bases_per_turn
-    
+
     # each entry is the number of insertions - deletions since the start of a given helix
     mod_map = {}
     for idx, helix in design.helices.items():
@@ -6608,10 +6615,10 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
         for domain in strand.domains:
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                for pos, num, in domain.insertions:
-                    mod_map[domain.helix][pos - helix.min_offset] = num
-                for pos in domain.deletions:
-                    mod_map[domain.helix][pos - helix.min_offset] = -1
+                for ins_offset, ins_length in domain.insertions:
+                    mod_map[domain.helix][ins_offset - helix.min_offset] = ins_length
+                for deletion in domain.deletions:
+                    mod_map[domain.helix][deletion - helix.min_offset] = -1
 
     # propagate the modifier so it stays consistent accross domains
     for idx, helix in design.helices.items():
@@ -6622,8 +6629,7 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
             dom_strand = _OxdnaStrand()
-            # TODO: report error if DNA not assigned
-            seq = domain.dna_sequence() or _oxdna_random_sequence(domain.dna_length())
+            seq = domain.dna_sequence() or 'T' * domain.dna_length()
 
             # handle normal domains
             if isinstance(domain, Domain):
@@ -6632,16 +6638,11 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
 
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
-                    seq = seq[::-1]
+                    seq = seq[::-1] # reverse DNA sequence
 
-                # dict / set for insertions / deletions to make lookup easier and cheaper when there are lots of them
-                insertions = {}
-                for pos, num in domain.insertions:
-                    insertions[pos] = num
-
-                deletions = set()
-                for pos in domain.deletions:
-                    deletions.add(pos)
+                # dict / set for insertions / deletions to make lookup cheaper when there are lots of them
+                deletions = set(domain.deletions)
+                insertions = dict(domain.insertions)
 
                 # use Design.geometry field to figure out various distances
                 # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/state/geometry.dart
@@ -6656,12 +6657,13 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
                         if offset in insertions:
                             num = insertions[offset]
                             for i in range(num):
-                                r = origin + forward * (offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                r = origin + forward * (
+                                            offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                                 b = normal.rotate(step_rot * (offset + mod - num + i), forward)
                                 nuc = _OxdnaNucleotide(r, b, forward, seq[index])
                                 dom_strand.nucleotides.append(nuc)
                                 index += 1
-                                
+
                         r = origin + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         b = normal.rotate(step_rot * (offset + mod), forward)
                         nuc = _OxdnaNucleotide(r, b, forward, seq[index])
@@ -6680,7 +6682,8 @@ def _oxdna_convert(design: Design) -> _OxdnaSystem:
                 # these will be updated later, for now we just need the base
                 for i in range(domain.length):
                     base = seq[i]
-                    nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1), base)
+                    nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
+                                           base)
                     dom_strand.nucleotides.append(nuc)
                 dom_strands.append((dom_strand, True))
 

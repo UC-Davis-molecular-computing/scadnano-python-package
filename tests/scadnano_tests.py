@@ -5746,19 +5746,19 @@ class TestOxdnaExport(unittest.TestCase):
         expected_strand_length = 7 * 2
 
         dat, top = design.to_oxdna_format()
-        dat = dat.strip().split('\n')
-        top = top.strip().split('\n')
+        dat_lines = dat.strip().split('\n')
+        top_lines = top.strip().split('\n')
 
         # check length of output files are as expected (matches # of nucleotides plus header size)
-        self.assertEqual(expected_num_nucleotides + 3, len(dat))
-        self.assertEqual(expected_num_nucleotides + 1, len(top))
+        self.assertEqual(expected_num_nucleotides + 3, len(dat_lines))
+        self.assertEqual(expected_num_nucleotides + 1, len(top_lines))
 
         # find relevant values for nucleotides
         cm_poss = []    # center of mass position
         nbrs_3p = []
         nbrs_5p = []
 
-        for line in dat[3:]:
+        for line in dat_lines[3:]:
             data = line.strip().split()
             # make sure there are 15 values per line (3 values per vector * 5 vectors per line)
             # order of vectors: center of mass position, backbone base versor, normal versor, velocity, angular velocity (more info on versors: https://eater.net/quaternions)
@@ -5779,7 +5779,7 @@ class TestOxdnaExport(unittest.TestCase):
 
         strand1_idxs = []
         strand2_idxs = []
-        for nuc_idx, line in enumerate(top[1:]):
+        for nuc_idx, line in enumerate(top_lines[1:]):
             data = line.strip().split()
             # make sure there are 4 values per line: strand, base, 3' neighbor, 5' neighbor
             self.assertEqual(4, len(data))
