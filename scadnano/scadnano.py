@@ -5312,7 +5312,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                      f'this strand should have been filtered out by _idt_strands_to_export')
             if strand.idt is not None:
                 scale = strand.idt.scale
-                purification = strand.idt.scale
+                purification = strand.idt.purification
             else:
                 scale = default_idt_scale
                 purification = default_idt_purification
