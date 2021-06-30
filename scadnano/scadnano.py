@@ -3435,6 +3435,30 @@ class PlateType(int, enum.Enum):
     def cols(self) -> List[int]:
         return _96WELL_PLATE_COLS if self is PlateType.wells96 else _384WELL_PLATE_COLS
 
+    def num_wells_per_plate(self) -> int:
+        """
+        :return:
+            number of wells in this plate type
+        """
+        if self is PlateType.wells96:
+            return 96
+        elif self is PlateType.wells384:
+            return 384
+        else:
+            raise AssertionError('unreachable')
+
+    def min_wells_per_plate(self) -> int:
+        """
+        :return:
+            minimum number of wells in this plate type to avoid extra charge by IDT
+        """
+        if self is PlateType.wells96:
+            return 24
+        elif self is PlateType.wells384:
+            return 96
+        else:
+            raise AssertionError('unreachable')
+
 
 class _PlateCoordinate:
 
@@ -3464,6 +3488,11 @@ class _PlateCoordinate:
 
     def well(self) -> str:
         return f'{self.row()}{self.col()}'
+
+    def advance_to_next_plate(self):
+        self._row_idx = 0
+        self._col_idx = 0
+        self._plate += 1
 
 
 def remove_helix_idxs_if_default(helices: List[Dict]) -> None:
@@ -5486,6 +5515,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xls``.
 
+        If the last plate as fewer than 24 strands for a 96-well plate, or fewer than 96 strands for a
+        384-well plate, then the last two plates are rebalanced to ensure that each plate has at least
+        that number of strands, because IDT charges extra for a plate with too few strands:
+        https://www.idtdna.com/pages/products/custom-dna-rna/dna-oligos/custom-dna-oligos
+
         :param directory:
             specifies a directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
@@ -5543,7 +5577,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
             self._write_plates_default(directory=directory, filename=filename,
-                                       strands_to_export=strands_to_export,
+                                       strands=strands_to_export,
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
@@ -5596,7 +5630,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         workbook = xlwt.Workbook()
         return filename_plate, workbook
 
-    def _write_plates_default(self, directory: str, filename: Optional[str], strands_to_export: List[Strand],
+    def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True) -> None:
         plate_coord = _PlateCoordinate(plate_type=plate_type)
@@ -5605,7 +5639,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         filename_plate, workbook = self._setup_excel_file(directory, filename)
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
-        for strand in strands_to_export:
+
+        num_strands_per_plate = plate_type.num_wells_per_plate()
+        num_plates_needed = len(strands) // num_strands_per_plate
+        if len(strands) % num_strands_per_plate != 0:
+            num_plates_needed += 1
+
+        min_strands_per_plate = plate_type.min_wells_per_plate()
+
+        num_strands_plates_except_final = max(0, (num_plates_needed - 1) * num_strands_per_plate)
+        num_strands_final_plate = len(strands) - num_strands_plates_except_final
+        final_plate_less_than_min_required = num_strands_final_plate < min_strands_per_plate
+
+        num_strands_remaining = len(strands)
+        on_final_plate = num_plates_needed == 1
+
+        for strand in strands:
             if strand.idt is not None:
                 if warn_using_default_plates and strand.idt.plate is not None:
                     print(
@@ -5620,7 +5669,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             worksheet.write(excel_row, 0, well)
             worksheet.write(excel_row, 1, strand.idt_export_name())
             worksheet.write(excel_row, 2, strand.idt_dna_sequence())
-            plate_coord.increment()
+            num_strands_remaining -= 1
+
+            # IDT charges extra for a plate with < 24 strands for 96-well plate
+            # or < 96 strands for 384-well plate.
+            # So if we would have fewer than that many on the last plate, 
+            # shift some from the penultimate plate.
+            if not on_final_plate and \
+                final_plate_less_than_min_required and \
+                num_strands_remaining == min_strands_per_plate:
+                plate_coord.advance_to_next_plate()
+            else:
+                plate_coord.increment()
+
             if plate != plate_coord.plate():
                 workbook.save(filename_plate)
                 plate = plate_coord.plate()
