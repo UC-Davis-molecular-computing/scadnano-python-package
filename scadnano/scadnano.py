@@ -5515,6 +5515,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xls``.
 
+        If the last plate as fewer than 24 strands for a 96-well plate, or fewer than 96 strands for a
+        384-well plate, then the last two plates are rebalanced to ensure that each plate has at least
+        that number of strands, because IDT charges extra for a plate with too few strands:
+        https://www.idtdna.com/pages/products/custom-dna-rna/dna-oligos/custom-dna-oligos
+
         :param directory:
             specifies a directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
