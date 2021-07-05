@@ -152,7 +152,7 @@ So the steps for committing to the master branch are:
 
 3. Ensure all unit tests pass.
 
-4. In the Python repo, ensure that the documentation is generated without errors. From the subfolder `doc`, run the command `make html`, ensure there are no errors, and inspect the documentation it generates in the folder `build`.
+4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install sphinx sphinx_rtd_theme`. Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `build`.
 
 5. Create a PR to merge changes from dev into master. 
 
