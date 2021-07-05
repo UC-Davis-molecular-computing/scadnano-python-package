@@ -124,7 +124,7 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 ## Pushing to the repository main branch and documenting changes (done less frequently)
 
-Less frequently, pull requests (abbreviated PR) can be made from `dev` to `main`, but make sure that `dev` is working before merging to `main` as all changes to `main` are automatically built and deployed to [PyPI](https://pypi.org/project/scadnano/), which is the site hosting the pip installation package, and [readthedocs](https://scadnano-python-package.readthedocs.io/en/latest/), which is the site hosting the API documentation. That is, changes to main immediately affect users installing via pip or reading online documention, so it is critical that these work.
+Less frequently, pull requests (abbreviated PR) can be made from `dev` to `main`, but make sure that `dev` is working before merging to `main` as all changes to `main` are automatically built and deployed to [PyPI](https://pypi.org/project/scadnano/), which is the site hosting the pip installation package, and [readthedocs](https://scadnano-python-package.readthedocs.io/en/latest/), which is the site hosting the API documentation. That is, changes to main immediately affect users installing via pip or reading online documentation, so it is critical that these work.
 
 **WARNING:** Always wait for the checks to complete. This is important to ensure that unit tests pass. 
 
