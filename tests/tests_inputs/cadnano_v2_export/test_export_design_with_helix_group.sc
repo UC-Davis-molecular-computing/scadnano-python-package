@@ -1,9 +1,9 @@
 {
-  "version": "0.16.1",
+  "version": "0.16.0",
   "groups": {
     "east": {
       "position": {"x": 10, "y": 0, "z": 0},
-      "grid": "honeycomb"
+      "grid": "square"
     },
     "south": {
       "position": {"x": 0, "y": 10, "z": 0},

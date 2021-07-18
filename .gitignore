@@ -7,6 +7,8 @@ __pyache__/*
 *.egg-info
 /scadnano.zip
 .pypirc
+tests/tests_outputs/
+tests/tests_outputs/cadnano_v2_export/*
 tests/tests_outputs/cadnano_v2_export/test_16_helix_origami_rectangle_no_twist.dna
 tests/tests_outputs/cadnano_v2_export/test_16_helix_origami_rectangle_no_twist.json
 tests/tests_outputs/cadnano_v2_export/test_2_stape_2_helix_origami_deletions_insertions.dna

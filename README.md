@@ -17,6 +17,8 @@ If you find scadnano useful in a scientific project, please cite its associated 
   DNA 2020: *Proceedings of the 26th International Conference on DNA Computing and Molecular Programming*  
   [ [paper](https://doi.org/10.4230/LIPIcs.DNA.2020.9) | [BibTeX](https://web.cs.ucdavis.edu/~doty/papers/scadnano.bib) ]
 
+*Note:* If you are reading this on the PyPI website, some of the links below won't work. Many are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
+
 
 ## Table of contents
 

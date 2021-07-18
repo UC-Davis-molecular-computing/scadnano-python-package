@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.16.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.16.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -69,6 +69,8 @@ from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, 
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
+from math import sqrt, sin, cos, pi
+from random import randint
 
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
@@ -80,7 +82,7 @@ def _pairwise(iterable: Iterable) -> Iterable:
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = itertools.tee(iterable)
     next(b, None)
-    return zip(a, b)
+    return zip(a, b) 
 
 
 # for putting evaluated expressions in docstrings
@@ -419,8 +421,8 @@ class M13Variant(enum.Enum):
     
     https://www.neb.com/products/n4040-m13mp18-single-stranded-dna
     
-    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/
-    """
+    http://www.bayoubiolabs.com/biochemicat/vectors/pUCM13/ 
+    """  # noqa
 
     p7560 = "p7560"
     """Variant of M13mp18 that is 7560 bases long. Available from, for example
@@ -466,7 +468,7 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     :param rotation: rotation of circular strand. Valid values are 0 through length-1.
     :param variant: variant of M13 strand to use
     :return: M13 strand sequence
-    """  # noqa (suppress PEP warning)
+    """  # noqa
     seq = _m13_variants[variant]
     return _rotate_string(seq, rotation)
 
@@ -3433,6 +3435,30 @@ class PlateType(int, enum.Enum):
     def cols(self) -> List[int]:
         return _96WELL_PLATE_COLS if self is PlateType.wells96 else _384WELL_PLATE_COLS
 
+    def num_wells_per_plate(self) -> int:
+        """
+        :return:
+            number of wells in this plate type
+        """
+        if self is PlateType.wells96:
+            return 96
+        elif self is PlateType.wells384:
+            return 384
+        else:
+            raise AssertionError('unreachable')
+
+    def min_wells_per_plate(self) -> int:
+        """
+        :return:
+            minimum number of wells in this plate type to avoid extra charge by IDT
+        """
+        if self is PlateType.wells96:
+            return 24
+        elif self is PlateType.wells384:
+            return 96
+        else:
+            raise AssertionError('unreachable')
+
 
 class _PlateCoordinate:
 
@@ -3462,6 +3488,11 @@ class _PlateCoordinate:
 
     def well(self) -> str:
         return f'{self.row()}{self.col()}'
+
+    def advance_to_next_plate(self):
+        self._row_idx = 0
+        self._col_idx = 0
+        self._plate += 1
 
 
 def remove_helix_idxs_if_default(helices: List[Dict]) -> None:
@@ -3502,7 +3533,8 @@ def mandatory_field(ret_type: Type, json_map: Dict[str, Any], main_key: str, *,
 
 
 def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, *,
-                   legacy_keys: Sequence[str] = (), transformer=None) -> Any:
+                   legacy_keys: Iterable[str] = (),
+                   transformer: Optional[Callable[[Any], Any]] = None) -> Any:
     # like dict.get, except that it checks for multiple keys, and it can transform the value if it is the
     # wrong type by specifying transformer
     keys = (main_key,) + tuple(legacy_keys)
@@ -5309,7 +5341,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                      f'this strand should have been filtered out by _idt_strands_to_export')
             if strand.idt is not None:
                 scale = strand.idt.scale
-                purification = strand.idt.scale
+                purification = strand.idt.purification
             else:
                 scale = default_idt_scale
                 purification = default_idt_purification
@@ -5483,6 +5515,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xls``.
 
+        If the last plate as fewer than 24 strands for a 96-well plate, or fewer than 96 strands for a
+        384-well plate, then the last two plates are rebalanced to ensure that each plate has at least
+        that number of strands, because IDT charges extra for a plate with too few strands:
+        https://www.idtdna.com/pages/products/custom-dna-rna/dna-oligos/custom-dna-oligos
+
         :param directory:
             specifies a directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
@@ -5540,7 +5577,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
             self._write_plates_default(directory=directory, filename=filename,
-                                       strands_to_export=strands_to_export,
+                                       strands=strands_to_export,
                                        plate_type=plate_type,
                                        warn_using_default_plates=warn_using_default_plates)
 
@@ -5593,7 +5630,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         workbook = xlwt.Workbook()
         return filename_plate, workbook
 
-    def _write_plates_default(self, directory: str, filename: Optional[str], strands_to_export: List[Strand],
+    def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True) -> None:
         plate_coord = _PlateCoordinate(plate_type=plate_type)
@@ -5602,7 +5639,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         filename_plate, workbook = self._setup_excel_file(directory, filename)
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
-        for strand in strands_to_export:
+
+        num_strands_per_plate = plate_type.num_wells_per_plate()
+        num_plates_needed = len(strands) // num_strands_per_plate
+        if len(strands) % num_strands_per_plate != 0:
+            num_plates_needed += 1
+
+        min_strands_per_plate = plate_type.min_wells_per_plate()
+
+        num_strands_plates_except_final = max(0, (num_plates_needed - 1) * num_strands_per_plate)
+        num_strands_final_plate = len(strands) - num_strands_plates_except_final
+        final_plate_less_than_min_required = num_strands_final_plate < min_strands_per_plate
+
+        num_strands_remaining = len(strands)
+        on_final_plate = num_plates_needed == 1
+
+        for strand in strands:
             if strand.idt is not None:
                 if warn_using_default_plates and strand.idt.plate is not None:
                     print(
@@ -5617,7 +5669,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             worksheet.write(excel_row, 0, well)
             worksheet.write(excel_row, 1, strand.idt_export_name())
             worksheet.write(excel_row, 2, strand.idt_dna_sequence())
-            plate_coord.increment()
+            num_strands_remaining -= 1
+
+            # IDT charges extra for a plate with < 24 strands for 96-well plate
+            # or < 96 strands for 384-well plate.
+            # So if we would have fewer than that many on the last plate, 
+            # shift some from the penultimate plate.
+            if not on_final_plate and \
+                final_plate_less_than_min_required and \
+                num_strands_remaining == min_strands_per_plate:
+                plate_coord.advance_to_next_plate()
+            else:
+                plate_coord.increment()
+
             if plate != plate_coord.plate():
                 workbook.save(filename_plate)
                 plate = plate_coord.plate()
@@ -5629,13 +5693,42 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         workbook.save(filename_plate)
 
     def to_oxdna_format(self) -> Tuple[str, str]:
-        raise NotImplementedError()
+        """Exports to oxdna format.
+
+        :return:
+            two strings that are the contents of the .conf and .top file
+            suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
+        """
+        system = _convert_design_to_oxdna_system(self)
+        return system.ox_dna_output()
+
+    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None) -> None:
+        """Write text file representing this :any:`Design`,
+        suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/),
+        with the output files having the same name as the running script but with ``.py`` changed to
+        ``.conf`` and ``.top``,
+        unless `filename_no_extension` is explicitly specified.
+        For instance, if the script is named ``my_origami.py``,
+        then the design will be written to ``my_origami.conf`` and ``my_origami.top``.
+
+        The strings written are those returned by :meth:`Design.to_oxdna_format`.
+
+        :param directory:
+            directory in which to put file (default: current working directory)
+        :param filename_no_extension:
+            filename without extension (default: name of script without ``.py``).
+        """
+        conf, top = self.to_oxdna_format()
+
+        _write_file_same_name_as_running_python_script(conf, 'conf', directory, filename_no_extension)
+        _write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
     # so I removed it.
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: str = None, extension: str = None,
+    def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
+                            extension: Optional[str] = None,
                             suppress_indent: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by the scadnano web interface,
@@ -6332,3 +6425,354 @@ def _create_directory_and_set_filename(directory: str, filename: str) -> str:
         os.makedirs(directory)
     relative_filename = os.path.join(directory, filename)
     return relative_filename
+
+
+@dataclass(frozen=True)
+class _OxdnaVector:
+    x: float = 0
+    y: float = 0
+    z: float = 0
+
+    def dot(self, other: "_OxdnaVector") -> float:
+        return self.x * other.x + self.y * other.y + self.z * other.z
+
+    def cross(self, other: "_OxdnaVector") -> "_OxdnaVector":
+        x = self.y * other.z - self.z * other.y
+        y = self.z * other.x - self.x * other.z
+        z = self.x * other.y - self.y * other.x
+        return _OxdnaVector(x, y, z)
+
+    def length(self) -> float:
+        return sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+
+    def normalize(self) -> "_OxdnaVector":
+        length = self.length()
+        return _OxdnaVector(self.x / length, self.y / length, self.z / length)
+
+    # returns a vector containing the min x, y, and z coords from both self and other
+    def coord_min(self, other: "_OxdnaVector") -> "_OxdnaVector":
+        return _OxdnaVector(min(self.x, other.x), min(self.y, other.y), min(self.z, other.z))
+
+    def coord_max(self, other: "_OxdnaVector") -> "_OxdnaVector":
+        return _OxdnaVector(max(self.x, other.x), max(self.y, other.y), max(self.z, other.z))
+
+    def __add__(self, other: "_OxdnaVector") -> "_OxdnaVector":
+        return _OxdnaVector(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other: "_OxdnaVector") -> "_OxdnaVector":
+        return _OxdnaVector(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def __mul__(self, scalar: float) -> "_OxdnaVector":
+        return _OxdnaVector(self.x * scalar, self.y * scalar, self.z * scalar)
+
+    def __rmul__(self, scalar: float) -> "_OxdnaVector":
+        return _OxdnaVector(self.x * scalar, self.y * scalar, self.z * scalar)
+
+    def __neg__(self) -> "_OxdnaVector":
+        return _OxdnaVector(-self.x, -self.y, -self.z)
+
+    def __str__(self) -> str:
+        return '({}, {}, {})'.format(self.x, self.y, self.z)
+
+    def __repr__(self) -> str:
+        return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
+
+    # counterclockwise rotation around axis
+    def rotate(self, angle: float, axis: "_OxdnaVector") -> "_OxdnaVector":
+        u = axis.normalize()
+        c = cos(angle * pi / 180)
+        s = sin(angle * pi / 180)
+
+        return u * self.dot(u) + (c * u.cross(self)).cross(u) - s * u.cross(self)
+
+
+# Constants related to oxdna export
+_GROOVE_GAMMA = 20
+_BASE_DIST = 0.6
+_OXDNA_ORIGIN = _OxdnaVector(0, 0, 0)
+
+
+# r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
+# r is the position of the base
+# b is the backbone-base vector (in documentation as versor: more info on versors here https://eater.net/quaternions)
+# n is the forward direction of the helix
+@dataclass(frozen=True)
+class _OxdnaNucleotide:
+    center: _OxdnaVector
+    normal: _OxdnaVector
+    forward: _OxdnaVector
+    base: str
+
+    v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # velocity for oxDNA conf file
+    L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # angular velocity for oxDNA conf file
+
+    @property
+    def b(self) -> _OxdnaVector:
+        return -self.normal.rotate(-_GROOVE_GAMMA, self.forward).normalize()
+
+    @property
+    def r(self) -> _OxdnaVector:
+        return self.center - self.b * _BASE_DIST
+
+    @property
+    def n(self) -> _OxdnaVector:
+        return self.forward
+
+
+@dataclass(frozen=True)
+class _OxdnaStrand:
+    nucleotides: List[_OxdnaNucleotide] = field(default_factory=list)
+
+    def join(self, other: "_OxdnaStrand") -> "_OxdnaStrand":
+        return _OxdnaStrand(self.nucleotides + other.nucleotides)
+
+
+# represents an oxDNA system and contains a list of strands
+# from its list of strands it can compute the oxDNA conf and top files
+@dataclass(frozen=True)
+class _OxdnaSystem:
+    strands: List[_OxdnaStrand] = field(default_factory=list)
+
+    def compute_bounding_box(self) -> _OxdnaVector:
+        min_vec = None
+        max_vec = None
+
+        for strand in self.strands:
+            for nuc in strand.nucleotides:
+                if min_vec is None:
+                    min_vec = nuc.center
+                    max_vec = nuc.center
+                else:
+                    min_vec = min_vec.coord_min(nuc.center)
+                    max_vec = max_vec.coord_max(nuc.center)
+
+        if min_vec is not None and max_vec is not None:
+            # 5 is arbitrarily chosen so that the box has a bit of wiggle room
+            # 1.5 multiplier is to make all crossovers appear (advice from Oxdna authors)
+            return 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5))  # changed
+        else:
+            return _OxdnaVector(1, 1, 1)
+
+    def ox_dna_output(self) -> Tuple[str, str]:
+
+        bbox = self.compute_bounding_box()
+
+        dat_list = [f't = 0\nb = {bbox.x} {bbox.y} {bbox.z}\nE = 0 0 0']
+        top_list = []
+
+        nuc_count = 0
+        strand_count = 0
+
+        for strand in self.strands:
+            strand_count += 1
+
+            nuc_index = 0
+            for nuc in strand.nucleotides:
+                n5 = nuc_count - 1
+                n3 = nuc_count + 1
+                nuc_count += 1
+
+                if nuc_index == 0:
+                    n5 = -1
+                if nuc_index == len(strand.nucleotides) - 1:
+                    n3 = -1
+                nuc_index += 1
+
+                top_list.append(f'{strand_count} {nuc.base} {n3} {n5}')
+                dat_list.append(f'{nuc.r.x} {nuc.r.y} {nuc.r.z} ' +
+                                f'{nuc.b.x} {nuc.b.y} {nuc.b.z} ' +
+                                f'{nuc.n.x} {nuc.n.y} {nuc.n.z} ' +
+                                f'{nuc.v.x} {nuc.v.y} {nuc.v.z} ' +
+                                f'{nuc.L.x} {nuc.L.y} {nuc.L.z}')
+
+        top = '\n'.join(top_list) + '\n'
+        dat = '\n'.join(dat_list) + '\n'
+
+        top = f'{nuc_count} {strand_count}\n' + top
+
+        return dat, top
+
+
+NM_TO_OX_UNITS = 1.0 / 0.8518
+
+
+# returns the origin, forward, and normal vectors of a helix
+def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]:
+    """
+    :param helix: Helix whose vectors we are getting
+    :return: return tuple (origin, forward, normal)
+        origin  -- the starting point of the center of a helix, assumed to be at offset 0
+        forward -- the direction in which the helix propagates
+        normal  -- a direction perpendicular to forward which represents the angle to the backbone at offset 0
+            for the forward Domain on the Helix.
+    """
+    grid = design.grid
+    geometry = design.geometry
+
+    forward = _OxdnaVector(0, 0, 1)
+    normal = _OxdnaVector(0, -1, 0)
+
+    forward = forward.rotate(design.yaw_of_helix(helix), normal)
+    forward = forward.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
+    normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
+    normal = normal.rotate(helix.roll, forward)
+
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.0
+    if grid == Grid.none:
+        if helix.position is not None:
+            x = helix.position.x
+            y = helix.position.y
+            z = helix.position.z
+    else:
+        # see here:
+        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
+        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
+        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
+        if helix.grid_position is None:
+            raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
+        h, v = helix.grid_position
+        if grid == Grid.square:
+            x = h * geometry.distance_between_helices()
+            y = v * geometry.distance_between_helices()
+        if grid == Grid.hex:
+            x = (h + (v % 2) / 2) * geometry.distance_between_helices()
+            y = v * sqrt(3) / 2 * geometry.distance_between_helices()
+        if grid == Grid.honeycomb:
+            x = h * sqrt(3) / 2 * geometry.distance_between_helices()
+            if h % 2 == 0:
+                y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
+            else:
+                y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+
+    origin_ = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
+    return origin_, forward, normal
+
+
+# if no sequence exists on a domain, generate one
+def _oxdna_random_sequence(length: int) -> str:
+    bases = 'ACGT'
+    seq = ''
+    for i in range(length):
+        seq += bases[randint(0, 3)]
+    return seq
+
+
+def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
+    system = _OxdnaSystem()
+    geometry = design.geometry
+    step_rot = -360 / geometry.bases_per_turn
+
+    # each entry is the number of insertions - deletions since the start of a given helix
+    mod_map = {}
+    for idx, helix in design.helices.items():
+        if helix.max_offset is not None:
+            mod_map[idx] = [0] * (helix.max_offset - helix.min_offset)
+        else:
+            raise AssertionError('helix.max_offset should be non-None')
+
+    # insert each insertion / deletion as a postive / negative number
+    for strand in design.strands:
+        for domain in strand.domains:
+            if isinstance(domain, Domain):
+                helix = design.helices[domain.helix]
+                for ins_offset, ins_length in domain.insertions:
+                    mod_map[domain.helix][ins_offset - helix.min_offset] = ins_length
+                for deletion in domain.deletions:
+                    mod_map[domain.helix][deletion - helix.min_offset] = -1
+
+    # propagate the modifier so it stays consistent accross domains
+    for idx, helix in design.helices.items():
+        if helix.max_offset is not None:
+            for offset in range(helix.min_offset + 1, helix.max_offset):
+                mod_map[idx][offset] += mod_map[idx][offset - 1]
+        else:
+            raise AssertionError('helix.max_offset should be non-None')
+
+    for strand in design.strands:
+        dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
+        for domain in strand.domains:
+            dom_strand = _OxdnaStrand()
+            seq = domain.dna_sequence() or 'T' * domain.dna_length()
+
+            # handle normal domains
+            if isinstance(domain, Domain):
+                helix = design.helices[domain.helix]
+                origin_, forward, normal = _oxdna_get_helix_vectors(design, helix)
+
+                if not domain.forward:
+                    normal = normal.rotate(-geometry.minor_groove_angle, forward)
+                    seq = seq[::-1]  # reverse DNA sequence
+
+                # dict / set for insertions / deletions to make lookup cheaper when there are lots of them
+                deletions = set(domain.deletions)
+                insertions = dict(domain.insertions)
+
+                # use Design.geometry field to figure out various distances
+                # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/state/geometry.dart
+
+                # index is used for finding the base in our sequence
+                index = 0
+                for offset in range(domain.start, domain.end):
+                    if offset not in deletions:
+                        mod = mod_map[domain.helix][offset - helix.min_offset]
+
+                        # we have to check insertions first because they affect the index
+                        if offset in insertions:
+                            num = insertions[offset]
+                            for i in range(num):
+                                r = origin_ + forward * (
+                                        offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                b = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                nuc = _OxdnaNucleotide(r, b, forward, seq[index])
+                                dom_strand.nucleotides.append(nuc)
+                                index += 1
+
+                        r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        b = normal.rotate(step_rot * (offset + mod), forward)
+                        nuc = _OxdnaNucleotide(r, b, forward, seq[index])
+                        dom_strand.nucleotides.append(nuc)
+                        index += 1
+
+                # strands are stored from 5' to 3' end
+                if not domain.forward:
+                    dom_strand.nucleotides.reverse()
+                dom_strands.append((dom_strand, False))
+            # because we need to know the positions of nucleotides before and after the loopout
+            # we temporarily store domain strands with a boolean that is true if it's a loopout
+            # handle loopouts
+            else:
+                # we place the loopout nucleotides at temporary nonsense positions and orientations
+                # these will be updated later, for now we just need the base
+                for i in range(domain.length):
+                    base = seq[i]
+                    nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
+                                           base)
+                    dom_strand.nucleotides.append(nuc)
+                dom_strands.append((dom_strand, True))
+
+        sstrand = _OxdnaStrand()
+        # process loopouts and join strands
+        for i in range(len(dom_strands)):
+            dstrand, is_loopout = dom_strands[i]
+            if is_loopout:
+                prev_nuc = dom_strands[i - 1][0].nucleotides[-1]
+                next_nuc = dom_strands[i + 1][0].nucleotides[0]
+
+                strand_length = len(dstrand.nucleotides)
+
+                # now we position loopouts relative to the previous and next strand
+                # for now we use a linear interpolation
+                forward = next_nuc.center - prev_nuc.center
+                normal = (prev_nuc.forward + next_nuc.forward) * 0.5
+
+                for loopout_idx in range(strand_length):
+                    pos = prev_nuc.center + forward * ((loopout_idx + 1) / (strand_length + 1))
+                    old_nuc = dstrand.nucleotides[loopout_idx]
+                    new_nuc = _OxdnaNucleotide(pos, normal, forward.normalize(), old_nuc.base)
+                    dstrand.nucleotides[loopout_idx] = new_nuc
+
+            sstrand = sstrand.join(dstrand)
+        system.strands.append(sstrand)
+    return system
