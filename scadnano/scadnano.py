@@ -6498,26 +6498,32 @@ _OXDNA_ORIGIN = _OxdnaVector(0, 0, 0)
 # n is the forward direction of the helix
 @dataclass(frozen=True)
 class _OxdnaNucleotide:
-    center: _OxdnaVector
-    normal: _OxdnaVector
-    forward: _OxdnaVector
+    center: _OxdnaVector   # center of the slice of the helix to which this nucleotide belongs
+    normal: _OxdnaVector   # unit vector from the backbone to the center of the helix, same as negated b from oxDNA configuration file
+    forward: _OxdnaVector  # unit vector pointing in direction from 3' to 5' ends of the helix, same as oxDNA n vector
     base: str
 
     v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # velocity for oxDNA conf file
     L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # angular velocity for oxDNA conf file
 
-    @property
-    def b(self) -> _OxdnaVector:
-        return -self.normal.rotate(-_GROOVE_GAMMA, self.forward).normalize()
+    # https://dna.physics.ox.ac.uk/index.php/Documentation
+    # r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
 
+    # r is the position of the center of mass of the oxDNA binding sites (stacking, hydrogen bonding, backbone-repulsion https://dna.physics.ox.ac.uk/index.php/Documentation)
+    # offset from the center of the helix by _BASE_DIST
     @property
     def r(self) -> _OxdnaVector:
         return self.center - self.b * _BASE_DIST
+    
+    # b is the backbone-base vector (in documentation as versor: more info on versors here https://eater.net/quaternions)
+    @property
+    def b(self) -> _OxdnaVector:
+        return -self.normal
 
+    # n is the forward direction of the helix
     @property
     def n(self) -> _OxdnaVector:
         return self.forward
-
 
 @dataclass(frozen=True)
 class _OxdnaStrand:
@@ -6705,6 +6711,11 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
                     seq = seq[::-1]  # reverse DNA sequence
 
+                # oxDNA will rotate our backbone vector by +- _GROOVE_GAMMA (20 degrees)
+                # we apply the opposite rotation so that we get the expected vector from scadnano in oxDNA
+                groove_gamma_correction = _GROOVE_GAMMA if domain.forward else -_GROOVE_GAMMA
+                normal = normal.rotate(groove_gamma_correction, forward).normalize()
+                    
                 # dict / set for insertions / deletions to make lookup cheaper when there are lots of them
                 deletions = set(domain.deletions)
                 insertions = dict(domain.insertions)
@@ -6725,13 +6736,15 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                                 r = origin_ + forward * (
                                         offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                                 b = normal.rotate(step_rot * (offset + mod - num + i), forward)
-                                nuc = _OxdnaNucleotide(r, b, forward, seq[index])
+                                n = -forward if domain.forward else forward # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                                nuc = _OxdnaNucleotide(r, b, n, seq[index])
                                 dom_strand.nucleotides.append(nuc)
                                 index += 1
 
                         r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         b = normal.rotate(step_rot * (offset + mod), forward)
-                        nuc = _OxdnaNucleotide(r, b, forward, seq[index])
+                        n = -forward if domain.forward else forward # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                        nuc = _OxdnaNucleotide(r, b, n, seq[index])
                         dom_strand.nucleotides.append(nuc)
                         index += 1
 
