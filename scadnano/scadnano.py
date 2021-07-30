@@ -6539,7 +6539,7 @@ class _OxdnaStrand:
 class _OxdnaSystem:
     strands: List[_OxdnaStrand] = field(default_factory=list)
 
-    def compute_bounding_box(self) -> _OxdnaVector:
+    def compute_bounding_box(self, cubic: bool = True) -> _OxdnaVector:
         min_vec = None
         max_vec = None
 
@@ -6555,7 +6555,11 @@ class _OxdnaSystem:
         if min_vec is not None and max_vec is not None:
             # 5 is arbitrarily chosen so that the box has a bit of wiggle room
             # 1.5 multiplier is to make all crossovers appear (advice from Oxdna authors)
-            return 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5))  # changed
+            box = 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5))
+            if cubic: # oxDNA requires cubic bounding box with default simulation options
+                max_side = max(box.x, box.y, box.z)
+                box = _OxdnaVector(max_side, max_side, max_side)
+            return box
         else:
             return _OxdnaVector(1, 1, 1)
 
