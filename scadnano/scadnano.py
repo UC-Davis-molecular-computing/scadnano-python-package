@@ -6412,10 +6412,11 @@ def _write_file_same_name_as_running_python_script(contents: str, extension: str
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename: Optional[str]) -> str:
-    if filename is None:
-        filename = _name_of_this_script() + f'.{extension}'
-    relative_filename = _create_directory_and_set_filename(directory, filename)
+                                                     filename_no_extension: Optional[str]) -> str:
+    if filename_no_extension is None:
+        filename_no_extension = _name_of_this_script()
+    filename_with_extension = f'{filename_no_extension}.{extension}'
+    relative_filename = _create_directory_and_set_filename(directory, filename_with_extension)
     return relative_filename
 
 
