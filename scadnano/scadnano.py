@@ -3862,7 +3862,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         Loads a :any:`Design` from the file with the given name.
 
-        :param filename: name of the file with the design. Should be a JSON file ending in .dna
+        :param filename: name of the file with the design. Should be a JSON file ending in .sc
         :return: Design described in the file
         """
         with open(filename) as f:
