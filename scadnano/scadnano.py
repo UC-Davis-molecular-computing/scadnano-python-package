@@ -5715,7 +5715,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param directory:
             directory in which to put file (default: current working directory)
         :param filename_no_extension:
-            filename without extension (default: name of script without ``.py``).
+            filename without extension (default: name of running script without ``.py``).
         """
         dat, top = self.to_oxdna_format()
 
