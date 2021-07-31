@@ -82,7 +82,7 @@ def _pairwise(iterable: Iterable) -> Iterable:
     """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
     a, b = itertools.tee(iterable)
     next(b, None)
-    return zip(a, b) 
+    return zip(a, b)
 
 
 # for putting evaluated expressions in docstrings
@@ -5639,7 +5639,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         filename_plate, workbook = self._setup_excel_file(directory, filename)
         worksheet = self._add_new_excel_plate_sheet(f'plate{plate}', workbook)
 
-
         num_strands_per_plate = plate_type.num_wells_per_plate()
         num_plates_needed = len(strands) // num_strands_per_plate
         if len(strands) % num_strands_per_plate != 0:
@@ -5676,8 +5675,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             # So if we would have fewer than that many on the last plate, 
             # shift some from the penultimate plate.
             if not on_final_plate and \
-                final_plate_less_than_min_required and \
-                num_strands_remaining == min_strands_per_plate:
+                    final_plate_less_than_min_required and \
+                    num_strands_remaining == min_strands_per_plate:
                 plate_coord.advance_to_next_plate()
             else:
                 plate_coord.increment()
@@ -5696,7 +5695,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Exports to oxdna format.
 
         :return:
-            two strings that are the contents of the .conf and .top file
+            two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
         system = _convert_design_to_oxdna_system(self)
@@ -5706,10 +5705,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Write text file representing this :any:`Design`,
         suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/),
         with the output files having the same name as the running script but with ``.py`` changed to
-        ``.conf`` and ``.top``,
+        ``.dat`` and ``.top``,
         unless `filename_no_extension` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
-        then the design will be written to ``my_origami.conf`` and ``my_origami.top``.
+        then the design will be written to ``my_origami.dat`` and ``my_origami.top``.
 
         The strings written are those returned by :meth:`Design.to_oxdna_format`.
 
@@ -5718,9 +5717,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param filename_no_extension:
             filename without extension (default: name of script without ``.py``).
         """
-        conf, top = self.to_oxdna_format()
+        dat, top = self.to_oxdna_format()
 
-        _write_file_same_name_as_running_python_script(conf, 'conf', directory, filename_no_extension)
+        _write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
         _write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
@@ -6492,29 +6491,36 @@ _BASE_DIST = 0.6
 _OXDNA_ORIGIN = _OxdnaVector(0, 0, 0)
 
 
-# r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
+# r, b, and n represent the oxDNA configuration (.dat) file vectors that describe a nucleotide
 # r is the position of the base
 # b is the backbone-base vector (in documentation as versor: more info on versors here https://eater.net/quaternions)
 # n is the forward direction of the helix
 @dataclass(frozen=True)
 class _OxdnaNucleotide:
-    center: _OxdnaVector   # center of the slice of the helix to which this nucleotide belongs
-    normal: _OxdnaVector   # unit vector from the backbone to the center of the helix, same as negated b from oxDNA configuration file
-    forward: _OxdnaVector  # unit vector pointing in direction from 3' to 5' ends of the helix, same as oxDNA n vector
+    center: _OxdnaVector
+    # center of the slice of the helix to which this nucleotide belongs
+
+    normal: _OxdnaVector
+    # unit vector from the backbone to the center of the helix, same as negated b from oxDNA dat file
+
+    forward: _OxdnaVector
+    # unit vector pointing in direction from 3' to 5' ends of the helix, same as oxDNA n vector
+
     base: str
 
-    v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # velocity for oxDNA conf file
-    L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # angular velocity for oxDNA conf file
+    v: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # velocity for oxDNA dat file
+    L: _OxdnaVector = field(init=False, default=_OXDNA_ORIGIN)  # angular velocity for oxDNA dat file
 
     # https://dna.physics.ox.ac.uk/index.php/Documentation
-    # r, b, and n represent the oxDNA conf file vectors that describe a nucleotide
+    # r, b, and n represent the oxDNA dat file vectors that describe a nucleotide
 
-    # r is the position of the center of mass of the oxDNA binding sites (stacking, hydrogen bonding, backbone-repulsion https://dna.physics.ox.ac.uk/index.php/Documentation)
+    # r is the position of the center of mass of the oxDNA binding sites
+    # (stacking, hydrogen bonding, backbone-repulsion https://dna.physics.ox.ac.uk/index.php/Documentation)
     # offset from the center of the helix by _BASE_DIST
     @property
     def r(self) -> _OxdnaVector:
         return self.center - self.b * _BASE_DIST
-    
+
     # b is the backbone-base vector (in documentation as versor: more info on versors here https://eater.net/quaternions)
     @property
     def b(self) -> _OxdnaVector:
@@ -6524,6 +6530,7 @@ class _OxdnaNucleotide:
     @property
     def n(self) -> _OxdnaVector:
         return self.forward
+
 
 @dataclass(frozen=True)
 class _OxdnaStrand:
@@ -6556,7 +6563,7 @@ class _OxdnaSystem:
             # 5 is arbitrarily chosen so that the box has a bit of wiggle room
             # 1.5 multiplier is to make all crossovers appear (advice from Oxdna authors)
             box = 1.5 * (max_vec - min_vec + _OxdnaVector(5, 5, 5))
-            if cubic: # oxDNA requires cubic bounding box with default simulation options
+            if cubic:  # oxDNA requires cubic bounding box with default simulation options
                 max_side = max(box.x, box.y, box.z)
                 box = _OxdnaVector(max_side, max_side, max_side)
             return box
@@ -6719,7 +6726,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 # we apply the opposite rotation so that we get the expected vector from scadnano in oxDNA
                 groove_gamma_correction = _GROOVE_GAMMA if domain.forward else -_GROOVE_GAMMA
                 normal = normal.rotate(groove_gamma_correction, forward).normalize()
-                    
+
                 # dict / set for insertions / deletions to make lookup cheaper when there are lots of them
                 deletions = set(domain.deletions)
                 insertions = dict(domain.insertions)
@@ -6740,14 +6747,14 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                                 r = origin_ + forward * (
                                         offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                                 b = normal.rotate(step_rot * (offset + mod - num + i), forward)
-                                n = -forward if domain.forward else forward # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                                n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                                 nuc = _OxdnaNucleotide(r, b, n, seq[index])
                                 dom_strand.nucleotides.append(nuc)
                                 index += 1
 
                         r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         b = normal.rotate(step_rot * (offset + mod), forward)
-                        n = -forward if domain.forward else forward # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                        n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                         nuc = _OxdnaNucleotide(r, b, n, seq[index])
                         dom_strand.nucleotides.append(nuc)
                         index += 1
