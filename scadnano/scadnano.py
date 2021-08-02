@@ -4627,14 +4627,25 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         start_from, end_from, forward_from = domain_from.start, domain_from.end, domain_from.forward
 
         helix_to = helix_to_dct['num']
-        start_to, end_to = domain_to.start, domain_to.end
+        start_to, end_to, forward_to = domain_to.start, domain_to.end, domain_to.forward
 
-        if forward_from:
+        # Because of paranemic crossovers it is possible
+        # to crossover to a strand that goes in the same direction
+        # In total there are four cases corresponding to
+        # [forward_from, not forward_from] x [forward_to, not forward_to]
+        if forward_from and not forward_to:
             helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, end_to - 1]
             helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, end_from - 1]
-        else:
+        elif not forward_from and forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, start_to]
             helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
+        elif forward_from and forward_to:
+            helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, start_to]
+            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+        elif not forward_from and not forward_to:
+            helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
+            helix_to_dct[strand_type][start_to][:2] = [helix_from, end_from - 1]
+
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
