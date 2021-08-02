@@ -4706,7 +4706,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Creates blank cadnanov2 helices in and initialized all their fields.
         """
         helices_ids_reverse = {}
-        for i, helix in self.helices.items():
+        i = 0
+        for _, helix in self.helices.items():
             helix_dct: Dict[str, Any] = OrderedDict()
             helix_dct['num'] = helix.idx
 
@@ -4732,6 +4733,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             helices_ids_reverse[helix_dct['num']] = i
             dct['vstrands'].append(helix_dct)
+            i += 1
         return helices_ids_reverse
 
     def to_cadnano_v2(self) -> Dict[str, Any]:
