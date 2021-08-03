@@ -5168,8 +5168,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__one_helix_with_one_bottom_strand_and_three_top_strands(self) -> None:
         """
          012   345   678
-        -TTT> -GGG> -CCC>
-        <AAA---CCC---GGG-
+        -CCC> -GGG> -TTT>
+        <GGG---CCC---AAA-
          876   543   210
         """
         ss_bot = sc.Domain(helix=0, forward=False, start=0, end=9)
