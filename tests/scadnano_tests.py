@@ -610,6 +610,13 @@ class TestImportCadnanoV2(unittest.TestCase):
         design.write_scadnano_file(directory=self.output_path,
                                    filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
+    def test_paranemic_crossover(self) -> None:
+        file_name = "test_paranemic_crossover"
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+
 
 class TestExportDNASequences(unittest.TestCase):
 
@@ -1033,6 +1040,12 @@ class TestExportCadnanoV2(unittest.TestCase):
             os.path.join(self.input_path, f'test_big_circular_staples.{self.ext}'))
         design.export_cadnano_v2(directory=self.output_path,
                                  filename='test_big_circular_staples.json')
+
+    def test_paranemic_crossover(self) -> None:
+        design = sc.Design.from_scadnano_file(
+            os.path.join(self.input_path, f'test_paranemic_crossover.{self.ext}'))
+        design.export_cadnano_v2(directory=self.output_path,
+                                 filename='test_paranemic_crossover.json')
 
     def test_bad_cases(self) -> None:
         """ We do not handle Loopouts and design where the parity of the helix
