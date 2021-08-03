@@ -6646,7 +6646,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     forward = forward.rotate(design.yaw_of_helix(helix), normal)
     forward = forward.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
     normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
-    normal = normal.rotate(helix.roll, forward)
+    normal = normal.rotate(-helix.roll, forward)
 
     x: float = 0.0
     y: float = 0.0
