@@ -4754,17 +4754,16 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__from_strand_with_loopout(self) -> None:
         """
           01234
-        <-TTTGG-]
-        [-AAACC-    # helix 0
-                \
+        [-AAACC-\  # helix 0
+        <-TTTGG-]        \
                  T  # loopout
                  G  # loopout
                  C  # loopout
                  A  # loopout
                  C  # loopout
                 /
-        <-GCTTA-    # helix 1
-        [-CGAAT->
+        [-CGAAT>    # helix 1
+        <-GCTTA/
         """
         ss_f = sc.Domain(helix=0, forward=True, start=0, end=5)
         loop = sc.Loopout(length=5)
@@ -4788,8 +4787,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__to_strand_with_loopout(self) -> None:
         """
           01234
-        <-TTTGG-]
-        [-AAACC-    # helix 0
+        [-AAACC\
+        <-TTTGG] # helix 0]
                 \
                  ?  # loopout
                  ?  # loopout
@@ -4797,8 +4796,8 @@ class TestAssignDNA(unittest.TestCase):
                  ?  # loopout
                  ?  # loopout
                 /
-        <-GCTTA-    # helix 1
-        [-CGAAT->
+        [-ATTCG>    # helix 1
+        <-TAAGC/
         """
         ss_f = sc.Domain(helix=0, forward=True, start=0, end=5)
         loop = sc.Loopout(length=5)
@@ -4827,8 +4826,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__assign_from_strand_multi_other_single(self) -> None:
         """
           01234567
-        <-TTTG----GACA-]
         +-AAAC->[-CTGT-+   # helix 0
+        <-TTTG----GACA-]
         |              |
         +-GCTT----AGTA-+   # helix 1
         """
@@ -4850,8 +4849,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__assign_to_strand_multi_other_single(self) -> None:
         """
           01234567
-        <-TTTG----GACA-]
         +-AAAC->[-CTGT-+   # helix 0
+        <-TTTG----GACA-]
         |              |
         +-????----????-+   # helix 1
         """
@@ -4924,10 +4923,10 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__two_equal_length_strands_on_one_helix(self) -> None:
         """
         01234
-        <---]
-        CAAAA
         GTTTT
+        <---]
         [--->
+        CAAAA
         """
         ss_r = sc.Domain(helix=0, forward=True, start=0, end=5)
         ss_l = sc.Domain(helix=0, forward=False, start=0, end=5)
@@ -4940,10 +4939,10 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__assign_seq_with_wildcards(self) -> None:
         """
         01234
-        <---]
-        C??AA
         G??TT
         [--->
+        <---]
+        C??AA
         """
         ss_bot = sc.Domain(helix=0, forward=True, start=0, end=5)
         ss_top = sc.Domain(helix=0, forward=False, start=0, end=5)
@@ -4957,8 +4956,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__one_strand_assigned_by_complement_from_two_other_strands(self) -> None:
         """
           0123     4567
-        <-AAAC-] <-GGGA-]
         [-TTTG-----CCCT->
+        <-AAAC-] <-GGGA-]
         """
         ss_top_left = sc.Domain(0, False, 0, 4)
         ss_top_right = sc.Domain(0, False, 4, 8)
@@ -5094,10 +5093,10 @@ class TestAssignDNA(unittest.TestCase):
 
     def test_assign_dna__dna_sequence_shorter_than_complementary_strand_right_strand_longer(self) -> None:
         """
-        <---]
-        CAAAA
         GTTTT?????
         [-------->
+        <---]
+        CAAAA
         """
         ss_long = sc.Domain(helix=0, forward=True, start=0, end=10)
         ss_short = sc.Domain(helix=0, forward=False, start=0, end=5)
@@ -5124,15 +5123,15 @@ class TestAssignDNA(unittest.TestCase):
         design.assign_dna(strand_short, 'AAAAC')
         self.assertEqual('?????GTTTT', strand_long.dna_sequence)
 
+
     def test_assign_dna__dna_sequence_with_uncomplemented_domain_on_different_helix(self) -> None:
         """
-        <---]
-        CAAAA
+
         GTTTT?????
         [--------+
                  |
-               <-+
-               ???
+        <---]  <-+
+        CAAAA  ???
         """
         ss_long = sc.Domain(helix=0, forward=True, start=0, end=10)
         ss_long_h1 = sc.Domain(helix=0, forward=False, start=7, end=10)
@@ -5147,12 +5146,12 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__dna_sequence_with_uncomplemented_domain_on_different_helix_wildcards_both_ends(
             self) -> None:
         """
+        ?????GTTTT
+        [--------+ #Helix 0
              <---]
              CAAAA
-        ?????GTTTT
-        [--------+
                  |
-               <-+
+               <-+ #Helix 1
                ???
         """
         ss_long_h0 = sc.Domain(helix=0, forward=True, start=0, end=10)
@@ -5168,8 +5167,8 @@ class TestAssignDNA(unittest.TestCase):
     def test_assign_dna__one_helix_with_one_bottom_strand_and_three_top_strands(self) -> None:
         """
          012   345   678
-        -CCC> -GGG> -TTT>
-        <GGG---CCC---AAA-
+        [CCC> [GGG> [TTT>
+        <GGG---CCC---AAA]
          876   543   210
         """
         ss_bot = sc.Domain(helix=0, forward=False, start=0, end=9)
@@ -5218,11 +5217,12 @@ class TestAssignDNA(unittest.TestCase):
 
     def test_assign_dna__upper_left_edge_staple_of_16H_origami_rectangle(self) -> None:
         """
-        staple <ACATAAGAAAACGGAG--+
-        M13   +-TGTATTCTTTTGCCTC> |
-              |                   |
-              +-GATTTTGTGAGTAGAA- |
-               -CTAAAACACTCATCTT--+
+        staple 
+        M13   +-TGTATTCTTTTGCCTC> 
+              <ACATAAGAAAACGGAG-+
+              |                 |
+              [CTAAAACACTCATCTT-+
+              +-GATTTTGTGAGTAGAA-
         """
         scaf0_ss = sc.Domain(helix=0, forward=True, start=0, end=16)
         scaf1_ss = sc.Domain(helix=1, forward=False, start=0, end=16)
@@ -5253,6 +5253,7 @@ class TestAssignDNA(unittest.TestCase):
                     +     ]  <     +
         offset:     0 D1  2  3 D4  5
         scaf index: 1     0  7     6
+        0      6
         """
         width = 6
         width_h = width // 2
