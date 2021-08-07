@@ -5269,7 +5269,7 @@ class TestAssignDNA(unittest.TestCase):
         """
          012   345   678
         -TTC> -GGA> -CCT>
-        <AAG---CCT---GGA-
+        <AAG---CCT---GGA- 
          876   543   210
         """
         ss_bot = sc.Domain(helix=0, forward=False, start=0, end=9)
