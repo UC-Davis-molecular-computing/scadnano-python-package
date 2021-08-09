@@ -65,7 +65,7 @@ import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
-    TypeVar, Generic, Callable
+    TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -910,12 +910,17 @@ class Modification3Prime(Modification):
 class ModificationInternal(Modification):
     """Internal modification of DNA sequence, e.g., biotin or Cy3."""
 
-    allowed_bases: Optional[FrozenSet[str]] = None
+    allowed_bases: Optional[AbstractSet[str]] = None
     """If None, then this is an internal modification that goes between bases. 
     If instead it is a list of bases, then this is an internal modification that attaches to a base,
     and this lists the allowed bases for this internal modification to be placed at. 
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
     ``['A','C','G','T']``."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.allowed_bases is not None and not isinstance(self.allowed_bases, frozenset):
+            object.__setattr__(self, 'allowed_bases', frozenset(self.allowed_bases))
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
