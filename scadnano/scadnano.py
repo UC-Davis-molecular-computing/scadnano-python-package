@@ -818,14 +818,14 @@ idt_name_key = 'name'
 
 
 ##########################################################################
-# modification abstract base classes
+# modification classes
 
 _default_modification_id = "WARNING: no id assigned to modification"
 
 
 @dataclass(frozen=True, eq=True)
 class Modification(_JSONSerializable):
-    """Base class of modifications (to DNA sequences, e.g., biotin or Cy3).
+    """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
     Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate."""
 
@@ -942,7 +942,7 @@ class ModificationInternal(Modification):
         return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
 
 
-# end modification abstract base classes
+# end modification classes
 ##########################################################################
 
 
