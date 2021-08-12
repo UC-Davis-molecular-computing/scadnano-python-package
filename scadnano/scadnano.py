@@ -2897,6 +2897,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, 'cannot have loopout as last domain on strand')
         return domain
 
+    def dna_sequence_delimited(self, delimiter: str) -> str:
+        """
+        :param delimiter:
+            string to put in between DNA sequences of each domain
+        :return:
+            DNA sequence of this :any:`Strand`, with `delimiter` in between DNA sequences of each
+            :any:`Domain` or :any:`Loopout`.
+        """
+        result = [substrand.dna_sequence() for substrand in self.domains]
+        return delimiter.join(result)
+
     def set_dna_sequence(self, sequence: str) -> None:
         """Set this :any:`Strand`'s DNA sequence to `seq`
         WITHOUT checking for complementarity with overlapping
