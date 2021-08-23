@@ -64,7 +64,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
     TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -1971,13 +1971,13 @@ class IDTFields(_JSONSerializable):
     plate: Optional[str] = None
     """Name of plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTField.well` is not ``None``.
+    Optional field, but non-optional if :py:data:`IDTFields.well` is not ``None``.
     """
 
     well: Optional[str] = None
     """Well position on plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTField.plate` is not ``None``.
+    Optional field, but non-optional if :py:data:`IDTFields.plate` is not ``None``.
     """
 
     def __post_init__(self) -> None:
@@ -3656,6 +3656,22 @@ def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_
             f"is not a bijection on helices indices: {helix_idxs}.")
 
 
+def _check_type(obj: Any, expected_type) -> None:
+    # check that `obj` is of type `expected_type`
+    if not isinstance(obj, expected_type):
+        raise IllegalDesignError(f'I expected the object {obj} to be of type {expected_type}, '
+                                 f'but instead it is of type {type(obj)}')
+
+
+def _check_type_is_one_of(obj: Any, expected_types: Iterable) -> None:
+    # check that `obj` is one of the types in `expected_types`
+    for expected_type in expected_types:
+        if isinstance(obj, expected_type):
+            return
+    raise IllegalDesignError(f'I expected the object {obj} to be one of the types {expected_types}, '
+                             f'but instead it is of type {type(obj)}')
+
+
 @dataclass
 class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
@@ -4498,13 +4514,29 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return design
 
     def _all_modifications(self) -> Set[Modification]:
-        # List of all modifications.
+        # Set of all modifications.
         mods_5p = {strand.modification_5p for strand in self.strands if
                    strand.modification_5p is not None}
         mods_3p = {strand.modification_3p for strand in self.strands if
                    strand.modification_3p is not None}
         mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
-        return mods_5p | mods_3p | mods_int
+
+        all_mods = mods_5p | mods_3p | mods_int
+
+        self._ensure_mods_unique_names(all_mods)
+
+        return all_mods
+
+    @staticmethod
+    def _ensure_mods_unique_names(all_mods: Set[Modification]) -> None:
+        mods_dict = {}
+        for mod in all_mods:
+            if mod.id not in mods_dict:
+                mods_dict[mod.id] = mod
+            else:
+                other_mod = mods_dict[mod.id]
+                raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
+                                         f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building by calling
@@ -4661,7 +4693,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
             helix_to_dct[strand_type][start_to][:2] = [helix_from, end_from - 1]
-
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
@@ -4899,12 +4930,37 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 if isinstance(strand.domains[-1], Domain) and strand.domains[-1].helix == helix]
 
     def _check_legal_design(self) -> None:
+        self._check_types()
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
         self._warn_if_strand_names_not_unique()
+
+    def _check_types(self) -> None:
+        # Check that type of objects are what we expect. Added this after a nasty bug when I accidentally
+        # inserted a dsd.Domain object into a scadnano.Strand.domains list. mypy didn't catch the
+        # type error because they have the same name (even though different packages!). So let's not
+        # completely trust mypy.
+        _check_type(self.geometry, Geometry)
+        _check_type(self.helices, dict)
+        _check_type(self.strands, list)
+        for idx, helix in self.helices.items():
+            _check_type(idx, int)
+            _check_type(helix, Helix)
+        for strand in self.strands:
+            _check_type(strand, Strand)
+            for substrand in strand.domains:
+                _check_type_is_one_of(substrand, [Domain, Loopout])
+                if isinstance(substrand, Domain):
+                    _check_type(substrand.helix, int)
+                    _check_type(substrand.forward, bool)
+                    _check_type(substrand.start, int)
+                    _check_type(substrand.end, int)
+                elif isinstance(substrand, Loopout):
+                    _check_type(substrand.length, int)
+        # TODO: add checks for optional fields
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self) -> None:
@@ -5167,20 +5223,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
               }
 
         """
-        # if isinstance(self, DNAOrigamiDesign):
-        #     scaf = None
-        #     for strand in self.strands:
-        #         if strand.is_scaffold == True:
-        #             scaf = strand
-        #             break
-        #     if self.scaffold is None:
-        #         msg = 'No scaffold specified for Design. You can delay assigning the scaffold ' \
-        #               'until after creating the Design object, but you must assign a scaffold ' \
-        #               'using the method Strand.set_scaffold() before calling to_json().'
-        #         if scaf is not None:
-        #             msg += f'There is a strand marked as a scaffold. Try calling set_scaffold with it as ' \
-        #                    f'a parameter:\n{scaf}'
-        #         raise IllegalDesignError(msg)
         return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
@@ -5485,7 +5527,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             specifies a directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
         :param filename:
-            optinoal custom filename to use (instead of currently running script)
+            optional custom filename to use (instead of currently running script)
         :param key:
             `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
             order in which to output strand sequences. Some useful defaults are provided by
@@ -5496,7 +5538,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             is the symbol to delimit the four IDT fields name,sequence,scale,purification.
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :py:attr:`IDTFields.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
@@ -5523,7 +5565,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                  export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
             extension = 'idt'
-        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
+        write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
                                    key: Optional[KeyFunction[Strand]] = None,
@@ -5560,7 +5602,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             :py:meth:`strand_order_key_function`
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :py:attr:`IDTFields.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
@@ -5748,8 +5790,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         dat, top = self.to_oxdna_format()
 
-        _write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
-        _write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
@@ -5769,8 +5811,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         ``my_origami.<extension>``
 
         The string written is that returned by :meth:`Design.to_json`.
-
-
 
         :param directory:
             directory in which to put file (default: current working directory)
@@ -5808,7 +5848,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise ValueError('at least one of filename or extension must be None')
         if extension is None:
             extension = default_scadnano_file_extension
-        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
+        write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
@@ -5834,7 +5874,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         encoder = _SuppressableIndentEncoder
         contents = json.dumps(content_serializable, cls=encoder, indent=2)
 
-        _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
+        write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
@@ -6433,19 +6473,32 @@ def _name_of_this_script() -> str:
     return os.path.basename(sys.argv[0])[:-3]
 
 
-def _write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                   filename: Optional[str] = None) -> None:
+def write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
+                                                  filename: Optional[str] = None) -> None:
+    """
+    Writes a text file with `contents` whose name is (by default) the same as the name of the
+    currently running script, but with extension ``.py`` changed to `extension`.
+
+    :param contents:
+        contents of file to write
+    :param extension:
+        extension to use
+    :param directory:
+        directory in which to write file. If not specified, the current working directory is used.
+    :param filename:
+        filename to use instead of the currently running script
+    """
     relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename_no_extension: Optional[str]) -> str:
-    if filename_no_extension is None:
-        filename_no_extension = _name_of_this_script()
-    filename_with_extension = f'{filename_no_extension}.{extension}'
-    relative_filename = _create_directory_and_set_filename(directory, filename_with_extension)
+                                                     filename: Optional[str]) -> str:
+    # if filename is not None, assume it has an extension
+    if filename is None:
+        filename = _name_of_this_script() + '.' + extension
+    relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
 
@@ -6662,7 +6715,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     forward = forward.rotate(design.yaw_of_helix(helix), normal)
     forward = forward.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
     normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
-    
+
     normal = normal.rotate(-helix.roll, forward)
 
     x: float = 0.0
