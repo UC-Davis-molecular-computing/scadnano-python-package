@@ -374,6 +374,24 @@ class TestM13(unittest.TestCase):
 
 class TestModifications(unittest.TestCase):
 
+    def test_to_json__names_unique_for_modifications_raises_no_error(self) -> None:
+        helices = [sc.Helix(max_offset=100)]
+        design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        name = 'mod_name'
+        design.strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.strand(0, 5).move(5).with_modification_3p(
+            sc.Modification3Prime(display_text=name, id=name + '3'))
+        design.to_json(True)
+
+    def test_to_json__names_not_unique_for_modifications_raises_error(self) -> None:
+        helices = [sc.Helix(max_offset=100)]
+        design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        name = 'mod_name'
+        design.strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
+        with self.assertRaises(sc.IllegalDesignError):
+            design.to_json(True)
+
     def test_mod_illegal_exceptions_raised(self) -> None:
         strand = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='AATGC')
         strand.set_modification_internal(2, mod.biotin_int)
