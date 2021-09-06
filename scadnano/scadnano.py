@@ -3429,9 +3429,8 @@ class StrandError(IllegalDesignError):
 _96WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 _96WELL_PLATE_COLS: List[int] = list(range(1, 13))
 
-_384WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-                                  'O',
-                                  'P']
+_384WELL_PLATE_ROWS: List[str] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
 _384WELL_PLATE_COLS: List[int] = list(range(1, 25))
 
 
@@ -5538,15 +5537,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             is the symbol to delimit the four IDT fields name,sequence,scale,purification.
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTFields.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :data:`IDTFields.name` and the same :data:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
         :param only_strands_with_idt:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
-            chosen if the field :py:data:`Strand.idt` is missing.
+            chosen if the field :data:`Strand.idt` is missing.
             (though scaffold is included if `export_scaffold` is True).
-            If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+            If True, then strands lacking the field :data:`Strand.idt` will not be exported.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
             If True, scaffold sequences on strands output according to `only_strands_with_idt`
