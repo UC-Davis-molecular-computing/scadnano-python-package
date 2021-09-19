@@ -823,8 +823,22 @@ idt_name_key = 'name'
 _default_modification_id = "WARNING: no id assigned to modification"
 
 
+class ModificationType(enum.Enum):
+    """
+    Type of modification (5', 3', or internal).
+    """
+    five_prime = "5'"
+    """5' modification type"""
+
+    three_prime = "5'"
+    """3' modification type"""
+
+    internal = "internal"
+    """internal modification type"""
+
+
 @dataclass(frozen=True, eq=True)
-class Modification(_JSONSerializable):
+class Modification(_JSONSerializable, ABC):
     """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
     Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate."""
@@ -867,6 +881,11 @@ class Modification(_JSONSerializable):
         else:
             raise IllegalDesignError(f'unknown Modification location "{location}"')
 
+    @staticmethod
+    @abstractmethod
+    def modification_type() -> ModificationType:
+        pass
+
 
 @dataclass(frozen=True, eq=True)
 class Modification5Prime(Modification):
@@ -886,6 +905,10 @@ class Modification5Prime(Modification):
         idt_text = json_map.get(mod_idt_text_key)
         return Modification5Prime(display_text=display_text, idt_text=idt_text)
 
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.five_prime
+
 
 @dataclass(frozen=True, eq=True)
 class Modification3Prime(Modification):
@@ -904,6 +927,10 @@ class Modification3Prime(Modification):
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
         return Modification3Prime(display_text=display_text, idt_text=idt_text)
+
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.three_prime
 
 
 @dataclass(frozen=True, eq=True)
@@ -940,6 +967,10 @@ class ModificationInternal(Modification):
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
         return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
+
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.internal
 
 
 # end modification classes
@@ -4202,7 +4233,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     self.helices_view_order) if suppress_indent else self.helices_view_order
 
         # modifications
-        mods = self._all_modifications()
+        mods = self.modifications()
         if len(mods) > 0:
             mods_dict = {}
             for mod in mods:
@@ -4512,15 +4543,38 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return design
 
-    def _all_modifications(self) -> Set[Modification]:
-        # Set of all modifications.
-        mods_5p = {strand.modification_5p for strand in self.strands if
-                   strand.modification_5p is not None}
-        mods_3p = {strand.modification_3p for strand in self.strands if
-                   strand.modification_3p is not None}
-        mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+    def modifications(self, mod_type: Optional[ModificationType] = None) -> Set[Modification]:
+        """
+        Returns either set of all modifications in this :any:`Design`, or set of all modifications
+        of a given type (5', 3', or internal).
 
-        all_mods = mods_5p | mods_3p | mods_int
+        :param mod_type:
+            type of modifications (5', 3', or internal); if not specified, all three types are returned
+        :return:
+            Set of all modifications in this :any:`Design` (possibly of a given type).
+        """
+        if mod_type is None:
+            mods_5p = {strand.modification_5p for strand in self.strands if
+                       strand.modification_5p is not None}
+            mods_3p = {strand.modification_3p for strand in self.strands if
+                       strand.modification_3p is not None}
+            mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+
+            all_mods = mods_5p | mods_3p | mods_int
+
+        elif mod_type is ModificationType.five_prime:
+            all_mods = {strand.modification_5p for strand in self.strands if
+                        strand.modification_5p is not None}
+
+        elif mod_type is ModificationType.three_prime:
+            all_mods = {strand.modification_3p for strand in self.strands if
+                        strand.modification_3p is not None}
+
+        elif mod_type is ModificationType.internal:
+            all_mods = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+
+        else:
+            raise AssertionError('should be unreachable')
 
         self._ensure_mods_unique_names(all_mods)
 
