@@ -4847,7 +4847,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             i += 1
         return helices_ids_reverse
 
-    def to_cadnano_v2(self) -> Dict[str, Any]:
+    def to_cadnano_v2_serializable(self) -> Dict[str, Any]:
         """Converts the design to the cadnano v2 format.
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
         """
@@ -5918,11 +5918,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             For instance, if the script is named ``my_origami.py``,
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
-        content_serializable = OrderedDict({})
-        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
-                                                                                        filename)
-        content_serializable_final = self.to_cadnano_v2()
-        content_serializable.update(content_serializable_final)
+
+        content_serializable = self.to_cadnano_v2_serializable()
 
         encoder = _SuppressableIndentEncoder
         contents = json.dumps(content_serializable, cls=encoder, indent=2)
