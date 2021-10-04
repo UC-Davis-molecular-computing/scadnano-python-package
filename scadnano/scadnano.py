@@ -4848,7 +4848,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return helices_ids_reverse
 
     def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
-        """Converts the design to the cadnano v2 format.
+        """Converts the design to a JSON-serializable Python object (a dict) representing
+        the cadnano v2 format. Calling json.dumps on this object will result in a string representing
+        the cadnano c2 format.
+        
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
 
         :param name: Name of the design.
