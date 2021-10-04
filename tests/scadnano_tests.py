@@ -1087,11 +1087,10 @@ class TestExportCadnanoV2(unittest.TestCase):
         #                          filename='test_paranemic_crossover.json')
         design.to_cadnano_v2_json()
 
-    def test_bad_cases(self) -> None:
-        """ We do not handle Loopouts and design where the parity of the helix
+    def test_parity_issue(self) -> None:
+        """ We do not design where the parity of the helix
         does not correspond to the direction.
         """
-
         # Bad case one: parity issue in design (see cadnano v2 format spec, v2.txt)
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
         scaf_part = sc.Domain(helix=1, forward=True, start=0, end=32)
@@ -1104,6 +1103,10 @@ class TestExportCadnanoV2(unittest.TestCase):
             design.to_cadnano_v2_json()
         self.assertTrue('forward' in context.exception.args[0])
 
+
+    def test_loopout(self) -> None:
+        """ We do not handle Loopouts
+        """
         # Bad case two: Loopouts
         helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
