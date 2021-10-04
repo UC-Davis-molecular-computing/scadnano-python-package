@@ -585,55 +585,66 @@ class TestImportCadnanoV2(unittest.TestCase):
     def test_32_helix_rectangle(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename='test_32_helix_rectangle.json')
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'test_32_helix_rectangle.{sc.default_scadnano_file_extension}')
+        self.assertEqual(35, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'test_32_helix_rectangle.{sc.default_scadnano_file_extension}')
 
     def test_helices_order(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename='test_helices_order.json')
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'test_helices_order.{sc.default_scadnano_file_extension}')
+        self.assertEqual(11, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'test_helices_order.{sc.default_scadnano_file_extension}')
 
     def test_huge_hex(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename='test_huge_hex.json')
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'test_huge_hex.{sc.default_scadnano_file_extension}')
+        self.assertEqual(26, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'test_huge_hex.{sc.default_scadnano_file_extension}')
 
     def test_Science09_prot120_98_v3(self) -> None:
         file_name = "test_Science09_prot120_98_v3"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        self.assertEqual(19, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_Nature09_monolith(self) -> None:
         file_name = "test_Nature09_monolith"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        self.assertEqual(60, len(design.helices))
+        # Verify snippets of the design
+        self.assertEqual(4, len(design.strands_starting_on_helix(53)))
+        self.assertEqual(5, len(design.strands_starting_on_helix(42)))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_circular_auto_staple(self) -> None:
         file_name = "test_circular_auto_staple"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        self.assertEqual(8, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_circular_auto_staple_hex(self) -> None:
         file_name = "test_circular_auto_staple_hex"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        self.assertEqual(6, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_paranemic_crossover(self) -> None:
         file_name = "test_paranemic_crossover"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
-        design.write_scadnano_file(directory=self.output_path,
-                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        self.assertEqual(4, len(design.helices))
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
 
 class TestExportDNASequences(unittest.TestCase):
@@ -919,10 +930,11 @@ class TestExportCadnanoV2(unittest.TestCase):
         }
 
         design = sc.Design(helices=helices, groups=groups, strands=[])
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_export_design_with_helix_group.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_export_design_with_helix_group.json')
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_export_design_with_helix_group.{self.ext}')
+        design.to_cadnano_v2_json()
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_export_design_with_helix_group.json')
 
     def test_export_design_with_helix_group_not_same_grid(self):
         e = 'east'
@@ -946,12 +958,13 @@ class TestExportCadnanoV2(unittest.TestCase):
         }
 
         design = sc.Design(helices=helices, groups=groups, strands=[])
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_export_design_with_helix_group_not_same_grid.{self.ext}')
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_export_design_with_helix_group_not_same_grid.{self.ext}')
 
         with self.assertRaises(ValueError) as context:
-            design.write_cadnano_v2_file(directory=self.output_path,
-                                     filename='test_export_design_with_helix_group_not_same_grid.json')
+            design.to_cadnano_v2_json()
+            # design.write_cadnano_v2_file(directory=self.output_path,
+            #                          filename='test_export_design_with_helix_group_not_same_grid.json')
         self.assertTrue('helix groups' in context.exception.args[0])
 
     def test_2_staple_2_helix_origami_extremely_simple(self):
@@ -959,10 +972,12 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf_part = sc.Domain(helix=0, forward=True, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part], is_scaffold=True)
         design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_2_stape_2_helix_origami_extremely_simple.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_2_stape_2_helix_origami_extremely_simple.json')
+        design.to_cadnano_v2_json()
+
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_2_stape_2_helix_origami_extremely_simple.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_2_stape_2_helix_origami_extremely_simple.json')
 
     def test_2_staple_2_helix_origami_extremely_simple_2(self) -> None:
         helices = [sc.Helix(max_offset=32), sc.Helix(max_offset=32)]
@@ -970,10 +985,11 @@ class TestExportCadnanoV2(unittest.TestCase):
         scaf_part2 = sc.Domain(helix=1, forward=False, start=0, end=32)
         scaf = sc.Strand(domains=[scaf_part1, scaf_part2], is_scaffold=True)
         design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_2_stape_2_helix_origami_extremely_simple_2.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_2_stape_2_helix_origami_extremely_simple_2.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_2_stape_2_helix_origami_extremely_simple_2.json')
+        design.to_cadnano_v2_json()
 
     def test_2_staple_2_helix_origami_deletions_insertions(self) -> None:
         # left staple
@@ -1010,60 +1026,68 @@ class TestExportCadnanoV2(unittest.TestCase):
 
         # also assigns complement to strands other than scaf bound to it
         design.assign_dna(scaf, 'AACGT' * 18)
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_2_stape_2_helix_origami_deletions_insertions.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_2_stape_2_helix_origami_deletions_insertions.json')
+        design.to_cadnano_v2_json()
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_2_stape_2_helix_origami_deletions_insertions.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_2_stape_2_helix_origami_deletions_insertions.json')
 
     def test_6_helix_origami_rectangle(self) -> None:
         design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
                              twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_6_helix_origami_rectangle.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_6_helix_origami_rectangle.json')
+        design.to_cadnano_v2_json()
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_6_helix_origami_rectangle.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_6_helix_origami_rectangle.json')
 
     def test_6_helix_bundle_honeycomb(self) -> None:
         design = sc.Design.from_scadnano_file(
             os.path.join(self.input_path, f'test_6_helix_bundle_honeycomb.{self.ext}'))
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_6_helix_bundle_honeycomb.json')
+        design.to_cadnano_v2_json()
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_6_helix_bundle_honeycomb.json')
 
     def test_16_helix_origami_rectangle_no_twist(self) -> None:
         design = rect.create(num_helices=16, num_cols=26, assign_seq=True,
                              twist_correction_deletion_spacing=3)
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_16_helix_origami_rectangle_no_twist.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_16_helix_origami_rectangle_no_twist.json')
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_16_helix_origami_rectangle_no_twist.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_16_helix_origami_rectangle_no_twist.json')
+        design.to_cadnano_v2_json()
 
     def test_circular_strand(self) -> None:
         helices = [sc.Helix(max_offset=24) for _ in range(2)]
         design = sc.Design(helices=helices, grid=sc.square)
 
         design.strand(1, 0).move(8).cross(0).move(-8).as_circular()
-        design.write_scadnano_file(directory=self.input_path,
-                                   filename=f'test_circular_strand.{self.ext}')
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_circular_strand.json')
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_circular_strand.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_circular_strand.json')
+        design.to_cadnano_v2_json()
 
     def test_big_circular_staples_hex(self) -> None:
         design = sc.Design.from_scadnano_file(
             os.path.join(self.input_path, f'test_big_circular_staples_hex.{self.ext}'))
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_big_circular_staples_hex.json')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_big_circular_staples_hex.json')
+        design.to_cadnano_v2_json()
 
     def test_big_circular_staples(self) -> None:
         design = sc.Design.from_scadnano_file(
             os.path.join(self.input_path, f'test_big_circular_staples.{self.ext}'))
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_big_circular_staples.json')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_big_circular_staples.json')
+        design.to_cadnano_v2_json()
 
     def test_paranemic_crossover(self) -> None:
         design = sc.Design.from_scadnano_file(
             os.path.join(self.input_path, f'test_paranemic_crossover.{self.ext}'))
-        design.write_cadnano_v2_file(directory=self.output_path,
-                                 filename='test_paranemic_crossover.json')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_paranemic_crossover.json')
+        design.to_cadnano_v2_json()
 
     def test_bad_cases(self) -> None:
         """ We do not handle Loopouts and design where the parity of the helix
@@ -1077,8 +1101,9 @@ class TestExportCadnanoV2(unittest.TestCase):
         design = sc.Design(helices=helices, strands=[scaf], grid=sc.square)
 
         with self.assertRaises(ValueError) as context:
-            design.write_cadnano_v2_file(directory=self.output_path,
-                                     filename='test_parity_issue.json')
+            # design.write_cadnano_v2_file(directory=self.output_path,
+            #                          filename='test_parity_issue.json')
+            design.to_cadnano_v2_json()
         self.assertTrue('forward' in context.exception.args[0])
 
         # Bad case two: Loopouts
@@ -1110,8 +1135,9 @@ class TestExportCadnanoV2(unittest.TestCase):
         design.add_insertion(helix=0, offset=26, length=2)
 
         with self.assertRaises(ValueError) as context:
-            design.write_cadnano_v2_file(directory=self.output_path,
-                                     filename='test_loopout_issue.json')
+            # design.write_cadnano_v2_file(directory=self.output_path,
+            #                          filename='test_loopout_issue.json')
+            design.to_cadnano_v2_json()
         self.assertTrue('Loopouts' in context.exception.args[0])
 
 
