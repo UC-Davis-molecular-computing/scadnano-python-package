@@ -580,7 +580,6 @@ class TestImportCadnanoV2(unittest.TestCase):
     """
     folder = "cadnano_v2_import"
     input_path = os.path.join('tests_inputs', folder)
-    output_path = os.path.join('tests_outputs', folder)
 
     def test_32_helix_rectangle(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
@@ -905,7 +904,6 @@ class TestExportCadnanoV2(unittest.TestCase):
     """
     folder = "cadnano_v2_export"
     input_path = os.path.join('tests_inputs', folder)
-    output_path = os.path.join('tests_outputs', folder)
     ext = sc.default_scadnano_file_extension
 
     def test_export_design_with_helix_group(self):
