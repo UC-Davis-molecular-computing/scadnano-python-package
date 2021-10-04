@@ -4851,10 +4851,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Converts the design to a JSON-serializable Python object (a dict) representing
         the cadnano v2 format. Calling json.dumps on this object will result in a string representing
         the cadnano c2 format.
-        
+
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
 
-        :param name: Name of the design.
+
+        :param name:
+            Name of the design.
+        :return:
+            a Python dict representing the cadnano v2 format for this :any:`Design`
         """
         dct: Dict[str, Any] = OrderedDict()
         if name != '':
@@ -4931,9 +4935,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def to_cadnano_v2_json(self, name: str = '') -> str:
         """Converts the design to the cadnano v2 format.
+
+
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
 
-        :param name: Name of the design.
+        :param name:
+            Name of the design.
+        :return:
+            a string in the cadnano v2 format representing this :any:`Design`
         """
         content_serializable = self.to_cadnano_v2_serializable(name)
 
