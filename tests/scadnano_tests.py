@@ -672,6 +672,44 @@ class TestImportCadnanoV2(unittest.TestCase):
         # design.write_scadnano_file(directory=self.output_path,
         #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
+    def test_2_stape_2_helix_origami_deletions_insertions(self) -> None:
+        file_name = "test_2_stape_2_helix_origami_deletions_insertions"
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
+        self.assertEqual(2, len(design.helices))
+        self.assertEqual(design.grid, Grid.square)
+        self.assertEqual(2, len(design.helices))
+        output_helix_0 = design.helices[0]
+        output_helix_1 = design.helices[1]
+        self.assertEqual(output_helix_0.grid_position, (0, 0))
+        self.assertEqual(output_helix_1.grid_position, (0, 1))
+        self.assertEqual(3, len(design.strands))
+
+        # left staple
+        stap_left_ss1 = sc.Domain(helix=1, forward=True, start=0, end=16, deletions=[12], insertions=[(6, 3)])
+        stap_left_ss0 = sc.Domain(helix=0, forward=False, start=0, end=16, deletions=[11, 12], insertions=[(6, 1)])
+        stap_left = sc.Strand(domains=[stap_left_ss1, stap_left_ss0])
+        self.assertIn(stap_left, design.strands)
+
+        # right staple
+        stap_right_ss0 = sc.Domain(helix=0, forward=False, start=16, end=32, deletions=[24], insertions=[(18, 2)])
+        stap_right_ss1 = sc.Domain(helix=1, forward=True, start=16, end=32, deletions=[24], insertions=[(18, 4)])
+        stap_right = sc.Strand(domains=[stap_right_ss0, stap_right_ss1])
+        self.assertIn(stap_right, design.strands)
+
+        # scaffold
+        scaf_ss1_left = sc.Domain(helix=1, forward=False, start=0, end=16, deletions=[12], insertions=[(6,3)])
+        scaf_ss0 = sc.Domain(helix=0, forward=True, start=0, end=32, deletions=[11,12,24], insertions=[(6,1), (18,2)])
+        # loopout = sc.Loopout(length=3) No loopout in cadnano
+        scaf_ss1_right = sc.Domain(helix=1, forward=False, start=16, end=32, deletions=[24], insertions=[(18,4)])
+        scaf = sc.Strand(domains=[scaf_ss1_left, scaf_ss0, scaf_ss1_right], is_scaffold=True)
+        self.assertIn(scaf, design.strands)
+
+        # To help with debugging, uncomment these lines to write out the
+        # scadnano file
+        #
+        # design.write_scadnano_file(directory=self.output_path,
+        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
 class TestExportDNASequences(unittest.TestCase):
 
