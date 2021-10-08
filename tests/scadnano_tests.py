@@ -10,6 +10,7 @@ import xlrd
 import scadnano as sc
 import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
+from scadnano.scadnano import Grid, Helix
 
 
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int,
@@ -1075,7 +1076,16 @@ class TestExportCadnanoV2(unittest.TestCase):
 
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
         # To help with debugging, uncomment these lines to write out the
+        self.assertEqual(output_design.grid, Grid.square)
         self.assertEqual(2, len(output_design.helices))
+        output_helix_0 = output_design.helices[0]
+        output_helix_1 = output_design.helices[1]
+        self.assertEqual(output_helix_0.grid_position, (0, 0))
+        self.assertEqual(output_helix_1.grid_position, (0, 1))
+        self.assertEqual(3, len(output_design.strands))
+        self.assertIn(stap_left, output_design.strands)
+        self.assertIn(stap_right, output_design.strands)
+        self.assertIn(scaf, output_design.strands)
         # scadnano and/or cadnano file
         #
         # design.write_scadnano_file(directory=self.input_path,
