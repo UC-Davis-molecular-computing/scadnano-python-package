@@ -4847,11 +4847,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             i += 1
         return helices_ids_reverse
 
-    def to_cadnano_v2(self) -> Dict[str, Any]:
-        """Converts the design to the cadnano v2 format.
+    def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
+        """Converts the design to a JSON-serializable Python object (a dict) representing
+        the cadnano v2 format. Calling json.dumps on this object will result in a string representing
+        the cadnano c2 format.
+
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+
+
+        :param name:
+            Name of the design.
+        :return:
+            a Python dict representing the cadnano v2 format for this :any:`Design`
         """
         dct: Dict[str, Any] = OrderedDict()
+        if name != '':
+            dct['name'] = name
+
         dct['vstrands'] = []
 
         '''Check if helix group are used or if only one grid is used'''
@@ -4920,6 +4932,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
 
         return dct
+
+    def to_cadnano_v2_json(self, name: str = '') -> str:
+        """Converts the design to the cadnano v2 format.
+
+
+        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+
+        :param name:
+            Name of the design.
+        :return:
+            a string in the cadnano v2 format representing this :any:`Design`
+        """
+        content_serializable = self.to_cadnano_v2_serializable(name)
+
+        encoder = _SuppressableIndentEncoder
+        return json.dumps(content_serializable, cls=encoder, indent=2)
 
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
@@ -5903,7 +5931,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = default_scadnano_file_extension
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
+    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
@@ -5918,16 +5946,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             For instance, if the script is named ``my_origami.py``,
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
-        content_serializable = OrderedDict({})
-        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
-                                                                                        filename)
-        content_serializable_final = self.to_cadnano_v2()
-        content_serializable.update(content_serializable_final)
-
-        encoder = _SuppressableIndentEncoder
-        contents = json.dumps(content_serializable, cls=encoder, indent=2)
-
-        write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
+        name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
+        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
