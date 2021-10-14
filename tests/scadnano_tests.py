@@ -5480,7 +5480,7 @@ class TestAssignDNA(unittest.TestCase):
         """
          012   345   678
         -TTC> -GGA> -CCT>
-        <AAG---CCT---GGA-
+        <AAG---CCT---GGA- 
          876   543   210
         """
         ss_bot = sc.Domain(helix=0, forward=False, start=0, end=9)
@@ -5502,6 +5502,102 @@ class TestAssignDNA(unittest.TestCase):
 
         design.assign_dna(strand_top2, 'GGA')
         self.assertEqual('AGGTCCGAA', strand_bot.dna_sequence)
+    def test_assign_dna__one_bound_strand__with_insertions__complement_true(self) -> None:
+            """
+                0                  16
+                AACGTATCGCGATGCATCC
+            0   [-------I: 3------->
+                <-------I: 3-------]
+            """
+            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+            design.strand(0, 0).move(16)
+            design.strand(0, 16).move(-16)
+            design.add_insertion(0, 8, 3)
+            design.assign_dna(strand = design.strands[0], sequence = 'AACGTATCGCGATGCATCC', assign_complement= True)
+
+            """
+                0                  16
+                AACGTATCGCGATGCATCC
+            0   [-------I: 3------->
+                <-------I: 3-------]
+                TTGCATAGCGCTACGTAGG  
+            """
+            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
+            self.assertEqual(design.strands[1].dna_sequence, 'GGATGCATCGCGATACGTT')
+    def test_assign_dna__two_bound_strands__with_insertions__complement_true(self) -> None:
+            """
+                0                  16
+                
+            0   [-------I: 3------>
+                <---]<--I: 3------]
+                TTGCATAGCGCTACGTAGG
+            """
+            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+            design.strand(0, 0).move(16)
+            design.strand(0, 5).move(-5)
+            design.strand(0, 16).move(-11)
+            design.add_insertion(0, 8, 3)
+            design.assign_dna(strand = design.strands[1], sequence = 'ACGTT', assign_complement= True)
+            design.assign_dna(strand = design.strands[2], sequence = 'GGATGCATCGCGAT', assign_complement= True)
+
+            """
+                0                  16
+                AACGTATCGCGATGCATCC
+            0   [-------I: 3------>
+                <---]<--I: 3------]
+                TTGCATAGCGCTACGTAGG
+            """
+            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
+            self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
+            self.assertEqual(design.strands[2].dna_sequence, 'GGATGCATCGCGAT')
+    def test_assign_dna__one_bound_strand__with_deletions__complement_true(self) -> None:
+            """
+                0               16
+                AACGTACG TGCATCC
+            0   [-------X------>
+                <-------X------]
+            """
+            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+            design.strand(0, 0).move(16)
+            design.strand(0, 16).move(-16)
+            design.add_deletion(0, 8)
+            design.assign_dna(strand = design.strands[0], sequence = 'AACGTACGTGCATCC', assign_complement= True)
+
+            """
+                0               16
+                AACGTACG TGCATCC
+            0   [-------X------>
+                <-------X------]
+                TTGCATGC ACGTAGG
+            """
+            self.assertEqual(design.strands[0].dna_sequence, 'AACGTACGTGCATCC')
+            self.assertEqual(design.strands[1].dna_sequence, 'GGATGCACGTACGTT')
+    def test_assign_dna__two_bound_strands__with_deletions__complement_true(self) -> None:
+            """
+                0               16
+            0   [-------X------>
+                <---]<--X------]
+                TTGCATAG GCTACGT
+            """
+            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+            design.strand(0, 0).move(16)
+            design.strand(0, 5).move(-5)
+            design.strand(0, 16).move(-11)
+            design.add_deletion(0, 8)
+            design.assign_dna(strand = design.strands[1], sequence = 'ACGTT', assign_complement= True)
+            design.assign_dna(strand = design.strands[2], sequence = 'TGCATCGGAT', assign_complement= True)
+            
+            """
+                0               16
+                AACGTATC CGATGCA
+            0   [-------X------>
+                <---]<--X------]
+                TTGCATAG GCTACGT
+            """
+            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCCGATGCA')
+            self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
+            self.assertEqual(design.strands[2].dna_sequence, 'TGCATCGGAT')
+
 
 
 class TestAssignDNAToDomains(unittest.TestCase):
