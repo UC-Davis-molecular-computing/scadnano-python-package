@@ -687,21 +687,27 @@ class TestImportCadnanoV2(unittest.TestCase):
 
         # left staple
         stap_left_ss1 = sc.Domain(helix=1, forward=True, start=0, end=16, deletions=[12], insertions=[(6, 3)])
-        stap_left_ss0 = sc.Domain(helix=0, forward=False, start=0, end=16, deletions=[11, 12], insertions=[(6, 1)])
+        stap_left_ss0 = sc.Domain(helix=0, forward=False, start=0, end=16, deletions=[11, 12],
+                                  insertions=[(6, 1)])
         stap_left = sc.Strand(domains=[stap_left_ss1, stap_left_ss0])
         self.assertIn(stap_left, design.strands)
 
         # right staple
-        stap_right_ss0 = sc.Domain(helix=0, forward=False, start=16, end=32, deletions=[24], insertions=[(18, 2)])
-        stap_right_ss1 = sc.Domain(helix=1, forward=True, start=16, end=32, deletions=[24], insertions=[(18, 4)])
+        stap_right_ss0 = sc.Domain(helix=0, forward=False, start=16, end=32, deletions=[24],
+                                   insertions=[(18, 2)])
+        stap_right_ss1 = sc.Domain(helix=1, forward=True, start=16, end=32, deletions=[24],
+                                   insertions=[(18, 4)])
         stap_right = sc.Strand(domains=[stap_right_ss0, stap_right_ss1])
         self.assertIn(stap_right, design.strands)
 
         # scaffold
-        scaf_ss1_left = sc.Domain(helix=1, forward=False, start=0, end=16, deletions=[12], insertions=[(6,3)])
-        scaf_ss0 = sc.Domain(helix=0, forward=True, start=0, end=32, deletions=[11,12,24], insertions=[(6,1), (18,2)])
+        scaf_ss1_left = sc.Domain(helix=1, forward=False, start=0, end=16, deletions=[12],
+                                  insertions=[(6, 3)])
+        scaf_ss0 = sc.Domain(helix=0, forward=True, start=0, end=32, deletions=[11, 12, 24],
+                             insertions=[(6, 1), (18, 2)])
         # loopout = sc.Loopout(length=3) No loopout in cadnano
-        scaf_ss1_right = sc.Domain(helix=1, forward=False, start=16, end=32, deletions=[24], insertions=[(18,4)])
+        scaf_ss1_right = sc.Domain(helix=1, forward=False, start=16, end=32, deletions=[24],
+                                   insertions=[(18, 4)])
         scaf = sc.Strand(domains=[scaf_ss1_left, scaf_ss0, scaf_ss1_right], is_scaffold=True)
         self.assertIn(scaf, design.strands)
 
@@ -710,6 +716,7 @@ class TestImportCadnanoV2(unittest.TestCase):
         #
         # design.write_scadnano_file(directory=self.output_path,
         #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+
 
 class TestExportDNASequences(unittest.TestCase):
 
@@ -1252,7 +1259,6 @@ class TestExportCadnanoV2(unittest.TestCase):
             #                          filename='test_parity_issue.json')
             design.to_cadnano_v2_json()
         self.assertTrue('forward' in context.exception.args[0])
-
 
     def test_loopout(self) -> None:
         """ We do not handle Loopouts
@@ -5502,102 +5508,105 @@ class TestAssignDNA(unittest.TestCase):
 
         design.assign_dna(strand_top2, 'GGA')
         self.assertEqual('AGGTCCGAA', strand_bot.dna_sequence)
+
     def test_assign_dna__one_bound_strand__with_insertions__complement_true(self) -> None:
-            """
-                0                  16
-                AACGTATCGCGATGCATCC
-            0   [-------I: 3------->
-                <-------I: 3-------]
-            """
-            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-            design.strand(0, 0).move(16)
-            design.strand(0, 16).move(-16)
-            design.add_insertion(0, 8, 3)
-            design.assign_dna(strand = design.strands[0], sequence = 'AACGTATCGCGATGCATCC', assign_complement= True)
+        """
+            0                  16
+            AACGTATCGCGATGCATCC
+        0   [-------I: 3------->
+            <-------I: 3-------]
+        """
+        design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+        design.strand(0, 0).move(16)
+        design.strand(0, 16).move(-16)
+        design.add_insertion(0, 8, 3)
+        design.assign_dna(strand=design.strands[0], sequence='AACGTATCGCGATGCATCC', assign_complement=True)
 
-            """
-                0                  16
-                AACGTATCGCGATGCATCC
-            0   [-------I: 3------->
-                <-------I: 3-------]
-                TTGCATAGCGCTACGTAGG  
-            """
-            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
-            self.assertEqual(design.strands[1].dna_sequence, 'GGATGCATCGCGATACGTT')
+        """
+            0                  16
+            AACGTATCGCGATGCATCC
+        0   [-------I: 3------->
+            <-------I: 3-------]
+            TTGCATAGCGCTACGTAGG  
+        """
+        self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
+        self.assertEqual(design.strands[1].dna_sequence, 'GGATGCATCGCGATACGTT')
+
     def test_assign_dna__two_bound_strands__with_insertions__complement_true(self) -> None:
-            """
-                0                  16
-                
-            0   [-------I: 3------>
-                <---]<--I: 3------]
-                TTGCATAGCGCTACGTAGG
-            """
-            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-            design.strand(0, 0).move(16)
-            design.strand(0, 5).move(-5)
-            design.strand(0, 16).move(-11)
-            design.add_insertion(0, 8, 3)
-            design.assign_dna(strand = design.strands[1], sequence = 'ACGTT', assign_complement= True)
-            design.assign_dna(strand = design.strands[2], sequence = 'GGATGCATCGCGAT', assign_complement= True)
+        """
+            0                  16
 
-            """
-                0                  16
-                AACGTATCGCGATGCATCC
-            0   [-------I: 3------>
-                <---]<--I: 3------]
-                TTGCATAGCGCTACGTAGG
-            """
-            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
-            self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
-            self.assertEqual(design.strands[2].dna_sequence, 'GGATGCATCGCGAT')
+        0   [-------I: 3------>
+            <---]<--I: 3------]
+            TTGCATAGCGCTACGTAGG
+        """
+        design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+        design.strand(0, 0).move(16)
+        design.strand(0, 5).move(-5)
+        design.strand(0, 16).move(-11)
+        design.add_insertion(0, 8, 3)
+        design.assign_dna(strand=design.strands[1], sequence='ACGTT', assign_complement=True)
+        design.assign_dna(strand=design.strands[2], sequence='GGATGCATCGCGAT', assign_complement=True)
+
+        """
+            0                  16
+            AACGTATCGCGATGCATCC
+        0   [-------I: 3------>
+            <---]<--I: 3------]
+            TTGCATAGCGCTACGTAGG
+        """
+        self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCGCGATGCATCC')
+        self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
+        self.assertEqual(design.strands[2].dna_sequence, 'GGATGCATCGCGAT')
+
     def test_assign_dna__one_bound_strand__with_deletions__complement_true(self) -> None:
-            """
-                0               16
-                AACGTACG TGCATCC
-            0   [-------X------>
-                <-------X------]
-            """
-            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-            design.strand(0, 0).move(16)
-            design.strand(0, 16).move(-16)
-            design.add_deletion(0, 8)
-            design.assign_dna(strand = design.strands[0], sequence = 'AACGTACGTGCATCC', assign_complement= True)
+        """
+            0               16
+            AACGTACG TGCATCC
+        0   [-------X------>
+            <-------X------]
+        """
+        design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+        design.strand(0, 0).move(16)
+        design.strand(0, 16).move(-16)
+        design.add_deletion(0, 8)
+        design.assign_dna(strand=design.strands[0], sequence='AACGTACGTGCATCC', assign_complement=True)
 
-            """
-                0               16
-                AACGTACG TGCATCC
-            0   [-------X------>
-                <-------X------]
-                TTGCATGC ACGTAGG
-            """
-            self.assertEqual(design.strands[0].dna_sequence, 'AACGTACGTGCATCC')
-            self.assertEqual(design.strands[1].dna_sequence, 'GGATGCACGTACGTT')
+        """
+            0               16
+            AACGTACG TGCATCC
+        0   [-------X------>
+            <-------X------]
+            TTGCATGC ACGTAGG
+        """
+        self.assertEqual(design.strands[0].dna_sequence, 'AACGTACGTGCATCC')
+        self.assertEqual(design.strands[1].dna_sequence, 'GGATGCACGTACGTT')
+
     def test_assign_dna__two_bound_strands__with_deletions__complement_true(self) -> None:
-            """
-                0               16
-            0   [-------X------>
-                <---]<--X------]
-                TTGCATAG GCTACGT
-            """
-            design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-            design.strand(0, 0).move(16)
-            design.strand(0, 5).move(-5)
-            design.strand(0, 16).move(-11)
-            design.add_deletion(0, 8)
-            design.assign_dna(strand = design.strands[1], sequence = 'ACGTT', assign_complement= True)
-            design.assign_dna(strand = design.strands[2], sequence = 'TGCATCGGAT', assign_complement= True)
-            
-            """
-                0               16
-                AACGTATC CGATGCA
-            0   [-------X------>
-                <---]<--X------]
-                TTGCATAG GCTACGT
-            """
-            self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCCGATGCA')
-            self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
-            self.assertEqual(design.strands[2].dna_sequence, 'TGCATCGGAT')
+        """
+            0               16
+        0   [-------X------>
+            <---]<--X------]
+            TTGCATAG GCTACGT
+        """
+        design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
+        design.strand(0, 0).move(16)
+        design.strand(0, 5).move(-5)
+        design.strand(0, 16).move(-11)
+        design.add_deletion(0, 8)
+        design.assign_dna(strand=design.strands[1], sequence='ACGTT', assign_complement=True)
+        design.assign_dna(strand=design.strands[2], sequence='TGCATCGGAT', assign_complement=True)
 
+        """
+            0               16
+            AACGTATC CGATGCA
+        0   [-------X------>
+            <---]<--X------]
+            TTGCATAG GCTACGT
+        """
+        self.assertEqual(design.strands[0].dna_sequence, 'AACGTATCCGATGCA')
+        self.assertEqual(design.strands[1].dna_sequence, 'ACGTT')
+        self.assertEqual(design.strands[2].dna_sequence, 'TGCATCGGAT')
 
 
 class TestAssignDNAToDomains(unittest.TestCase):
@@ -6060,15 +6069,145 @@ class TestOxdnaExport(unittest.TestCase):
         """ 2 double strands of length 7 connected across helices.
                   0      7
         helix 0   [------+
-                  +------]
-                  |      |
-        helix 1   <------+
-                  +------>
+                  +------]\
+                  |       |
+        helix 1   +------>/
+                  <------+
         """
         helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
         design = sc.Design(helices=helices, grid=sc.square)
-        design.strand(0, 0).to(7).cross(1).move(-7)
+        design.strand(0, 0).move(7).cross(1).move(-7)
         design.strand(0, 7).move(-7).cross(1).move(7)
+
+        # expected values for verification
+        expected_num_nucleotides = 7 * 4
+        expected_strand_length = 7 * 2
+
+        dat, top = design.to_oxdna_format()
+        dat_lines = dat.strip().split('\n')
+        top_lines = top.strip().split('\n')
+
+        # check length of output files are as expected (matches # of nucleotides plus header size)
+        self.assertEqual(expected_num_nucleotides + 3, len(dat_lines))
+        self.assertEqual(expected_num_nucleotides + 1, len(top_lines))
+
+        # find relevant values for nucleotides
+        cm_poss = []  # center of mass position
+        nbrs_3p = []
+        nbrs_5p = []
+
+        for line in dat_lines[3:]:
+            data = line.strip().split()
+            # make sure there are 15 values per line (3 values per vector * 5 vectors per line)
+            # order of vectors: center of mass position, backbone base versor, normal versor, velocity, angular velocity (more info on versors: https://eater.net/quaternions)
+            self.assertEqual(15, len(data))
+
+            cm_poss.append(tuple([float(x) for x in data[0:3]]))
+            bb_vec = tuple([float(x) for x in data[3:6]])  # backbone base vector
+            nm_vec = tuple([float(x) for x in data[6:9]])  # normal vector
+
+            # make sure normal vectors and backbone vectors are unit length
+            sqr_bb_vec = sum([x ** 2 for x in bb_vec])
+            sqr_nm_vec = sum([x ** 2 for x in nm_vec])
+            self.assertAlmostEqual(1.0, sqr_bb_vec)
+            self.assertAlmostEqual(1.0, sqr_nm_vec)
+
+            for value in data[9:]:  # values for velocity and angular velocity vectors are 0
+                self.assertAlmostEqual(0, float(value))
+
+        strand1_idxs = []
+        strand2_idxs = []
+        for nuc_idx, line in enumerate(top_lines[1:]):
+            data = line.strip().split()
+            # make sure there are 4 values per line: strand, base, 3' neighbor, 5' neighbor
+            self.assertEqual(4, len(data))
+
+            # make sure there are only 2 strands
+            strand_num = int(data[0])
+            self.assertIn(strand_num, [1, 2])
+            # make sure base is valid
+            base = data[1]
+            self.assertIn(base, ['A', 'C', 'G', 'T'])
+
+            nbrs_3p.append(int(data[2]))
+            nbrs_5p.append(int(data[3]))
+
+            # append start of strand (no 5' neighbor) to list of indexes for strand
+            neighbor_5 = int(data[3])
+            if neighbor_5 == -1:
+                if strand_num == 1:
+                    strand1_start = nuc_idx
+                    strand1_idxs.append(strand1_start)
+                else:
+                    strand2_start = nuc_idx
+                    strand2_idxs.append(strand2_start)
+
+        # reconstruct strands using indices from oxDNA files
+        next_idx = nbrs_3p[strand1_start]
+        while next_idx >= 0:
+            strand1_idxs.append(next_idx)
+            next_idx = nbrs_3p[strand1_idxs[-1]]
+
+        next_idx = nbrs_3p[strand2_start]
+        while next_idx >= 0:
+            strand2_idxs.append(next_idx)
+            next_idx = nbrs_3p[strand2_idxs[-1]]
+
+        # assert that strands are the correct length
+        self.assertEqual(expected_strand_length, len(strand1_idxs))
+        self.assertEqual(expected_strand_length, len(strand2_idxs))
+
+        for i in range(expected_strand_length - 1):
+            # ignore nucleotide distance between domains (on crossover)
+            if i == 6:
+                continue
+
+            strand1_nuc_idx1 = strand1_idxs[i]
+            strand1_nuc_idx2 = strand1_idxs[i + 1]
+            strand2_nuc_idx1 = strand2_idxs[i]
+            strand2_nuc_idx2 = strand2_idxs[i + 1]
+
+            # find the center of mass for adjacent nucleotides
+            s1_cmp1 = cm_poss[strand1_nuc_idx1]
+            s1_cmp2 = cm_poss[strand1_nuc_idx2]
+            s2_cmp1 = cm_poss[strand2_nuc_idx1]
+            s2_cmp2 = cm_poss[strand2_nuc_idx2]
+
+            # calculate and verify squared distance between adjacent nucleotides in a domain
+            diff1 = tuple([s1_cmp1[j] - s1_cmp2[j] for j in range(3)])
+            diff2 = tuple([s2_cmp1[j] - s2_cmp2[j] for j in range(3)])
+            sqr_dist1 = sum([x ** 2 for x in diff1])
+            sqr_dist2 = sum([x ** 2 for x in diff2])
+
+            self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist1)
+            self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
+
+    def test_helix_groups(self) -> None:
+        """ 2 double strands of length 7 connected across helices.
+
+        honeycomb                       square
+        group a                         group b
+
+                  01234567             01234567
+        helix 0   [------+    helix 2
+                         |             +------]
+                         |             |
+        helix 1          |    helix 3  +------>
+                  <------+
+
+
+        Other than placing second strand on new helices in new helix group, same design as basic design,
+        so testing the same things essentially.
+        """
+        helices = [sc.Helix(max_offset=7, group='a'), sc.Helix(max_offset=7, group='a'),
+                   sc.Helix(max_offset=7, group='b'), sc.Helix(max_offset=7, group='b')]
+        groups = {
+            'a': sc.HelixGroup(position=sc.Position3D(0, 0, 0), grid=sc.honeycomb),
+            'b': sc.HelixGroup(position=sc.Position3D(100, 0, 0), grid=sc.square),
+        }
+        design = sc.Design(helices=helices, groups=groups)
+        design.strand(0, 0).move(7).cross(1).move(-7)
+        design.strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4

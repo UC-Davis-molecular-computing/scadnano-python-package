@@ -1015,6 +1015,22 @@ class Position3D(_JSONSerializable):
             z = json_map[position_z_key]
         return Position3D(x=x, y=y, z=z)
 
+    def __add__(self, other: 'Position3D') -> 'Position3D':
+        """
+        :param other:
+            other position to add to this one
+        :return:
+            sum of the two positions
+        """
+        return Position3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def clone(self) -> 'Position3D':
+        """
+        :return:
+            copy of this :any:`Position3D`
+        """
+        return Position3D(self.x, self.y, self.z)
+
 
 origin: Position3D = Position3D(x=0, y=0, z=0)
 
@@ -5850,6 +5866,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
+        self._check_legal_design()
         system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
@@ -5947,7 +5964,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
-        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory, filename)
+        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory,
+                                                      filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
@@ -6529,6 +6547,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 return strand
         return None
 
+    def grid_of_helix(self, helix):
+        pass
+
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
@@ -6779,7 +6800,8 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
         normal  -- a direction perpendicular to forward which represents the angle to the backbone at offset 0
             for the forward Domain on the Helix.
     """
-    grid = design.grid
+    group = design.groups[helix.group]
+    grid = group.grid
     geometry = design.geometry
 
     forward = _OxdnaVector(0, 0, 1)
@@ -6791,37 +6813,54 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
 
     normal = normal.rotate(-helix.roll, forward)
 
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
+    position = Position3D()
     if grid == Grid.none:
         if helix.position is not None:
-            x = helix.position.x
-            y = helix.position.y
-            z = helix.position.z
+            position = helix.position.clone()
     else:
-        # see here:
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
         if helix.grid_position is None:
             raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
-        h, v = helix.grid_position
-        if grid == Grid.square:
-            x = h * geometry.distance_between_helices()
-            y = v * geometry.distance_between_helices()
-        if grid == Grid.hex:
-            x = (h + (v % 2) / 2) * geometry.distance_between_helices()
-            y = v * sqrt(3) / 2 * geometry.distance_between_helices()
-        if grid == Grid.honeycomb:
-            x = h * sqrt(3) / 2 * geometry.distance_between_helices()
-            if h % 2 == 0:
-                y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
-            else:
-                y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+        position = grid_position_to_position(helix.grid_position, grid, geometry)
 
-    origin_ = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
+    position = position + group.position
+
+    origin_ = _OxdnaVector(position.x, position.y, position.z) * NM_TO_OX_UNITS
     return origin_, forward, normal
+
+
+def grid_position_to_position(grid_position: Tuple[int, int], grid: Grid, geometry: Geometry) -> Position3D:
+    """
+    Converts a grid position to a 3D position (a :any:`Position3D`).
+
+    :param grid_position:
+        pair of ints representing a grid position
+    :param grid:
+        the :any:`Grid`; cannot be :data:`Grid.none`
+    :param geometry:
+        the :any:`Geometry` object defining spacing parameters between grid positions
+    :return:
+        the :any:`Position3D` represented by `grid_position` in the grid `grid`;
+        Note that the :data:`Position3D.z` coordinate is always 0.
+    """
+    # see here for other instances of this conversion algorithm:
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
+    h, v = grid_position
+    if grid == Grid.square:
+        x = h * geometry.distance_between_helices()
+        y = v * geometry.distance_between_helices()
+    if grid == Grid.hex:
+        x = (h + (v % 2) / 2) * geometry.distance_between_helices()
+        y = v * sqrt(3) / 2 * geometry.distance_between_helices()
+    if grid == Grid.honeycomb:
+        x = h * sqrt(3) / 2 * geometry.distance_between_helices()
+        if h % 2 == 0:
+            y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
+        else:
+            y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+    z = 0
+    return Position3D(x, y, z)
 
 
 # if no sequence exists on a domain, generate one
@@ -6864,16 +6903,22 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
         else:
             raise AssertionError('helix.max_offset should be non-None')
 
+    # for efficiency just calculate each helix's vector once
+    helix_vectors = {idx: _oxdna_get_helix_vectors(design, helix) for idx, helix in
+                     design.helices.items()}
+
     for strand in design.strands:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
             dom_strand = _OxdnaStrand()
-            seq = domain.dna_sequence() or 'T' * domain.dna_length()
+            seq = domain.dna_sequence()
+            if seq is None:
+                seq = 'T' * domain.dna_length()
 
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin_, forward, normal = _oxdna_get_helix_vectors(design, helix)
+                origin_, forward, normal = helix_vectors[helix.idx]
 
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
