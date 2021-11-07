@@ -6183,7 +6183,8 @@ class TestOxdnaExport(unittest.TestCase):
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
 
     def test_helix_groups(self) -> None:
-        """ 2 double strands of length 7 connected across helices.
+        """
+        2 double strands of length 7 connected across helices.
 
         honeycomb                       square
         group a                         group b
