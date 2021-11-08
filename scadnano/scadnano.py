@@ -6843,22 +6843,25 @@ def grid_position_to_position(grid_position: Tuple[int, int], grid: Grid, geomet
         Note that the :data:`Position3D.z` coordinate is always 0.
     """
     # see here for other instances of this conversion algorithm:
-    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
-    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
-    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/985e2ebced188cc7d867a7cc695ba128fef86a87/lib/src/util.dart#L785
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/985e2ebced188cc7d867a7cc695ba128fef86a87/lib/src/util.dart#L878
+
     h, v = grid_position
     if grid == Grid.square:
         x = h * geometry.distance_between_helices()
         y = v * geometry.distance_between_helices()
-    if grid == Grid.hex:
+    elif grid == Grid.hex:
         x = (h + (v % 2) / 2) * geometry.distance_between_helices()
         y = v * sqrt(3) / 2 * geometry.distance_between_helices()
-    if grid == Grid.honeycomb:
+    elif grid == Grid.honeycomb:
         x = h * sqrt(3) / 2 * geometry.distance_between_helices()
         if h % 2 == 0:
             y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
         else:
             y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+    else:
+        raise ValueError(f'grid must be square, hex, or honeycomb to interpret grid_position, '
+                         f'but it is {grid}')
     z = 0
     return Position3D(x, y, z)
 
