@@ -1049,10 +1049,15 @@ class HelixGroup(_JSONSerializable):
     If there are :any:`HelixGroup`'s explicitly specified, then the field :py:data:`Design.grid` is ignored.
     Each :any:`HelixGroup` has its own grid, and the fields :py:data:`Helix.position` or
     :py:data:`Helix.grid_position` are considered relative to the origin of that :any:`HelixGroup`
-    (i.e., the value :py:data:`HelixGroup.position`). Although it is possible to assign a :any:`Helix`
-    in a :any:`HelixGroup` a non-zero :py:data:`Helix.pitch` or :py:data:`Helix.yaw`,
-    the most common use case is that all helices in a group are parallel, so they all have these angles
-    equal to 0 (since they are unrotated relative to each other along the pitch and yaw planes).
+    (i.e., the value :py:data:`HelixGroup.position`). Although an individual :any:`Helix`
+    can have a non-zero :py:data:`Helix.roll` (which is in addition to whatever value there is for
+    :data:`HelixGroup.roll`), all helices in a group are parallel.
+
+    The three angles are interpreted to be applied in the following order: first yaw, then pitch, then roll,
+    using the "intrinsic rotation" convention
+    (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+    This convention is not apparent in the scadnano web interface, which only directly shows pitch,
+    but it shows up, for example, in oxDNA export via :meth:`Design.to_oxdna_format`.
     """
 
     position: Position3D = origin
@@ -1060,18 +1065,21 @@ class HelixGroup(_JSONSerializable):
 
     pitch: float = 0
     """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
-    Rotation is clockwise in the main view.
+    Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     yaw: float = 0
     """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
     Not visually displayed in scadnano, but here to support more general 3D applications.
+    Rotation is clockwise in the X-Z plane, around the Y-axis.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     roll: float = 0
-    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
+    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group. 
+    
+    Rotation is clockwise in the X-Y plane, around the Z-axis."""
 
     helices_view_order: Optional[List[int]] = None
     """Order in which to display the :any:`Helix`'s in the group in the 2D view; if None, then the order
@@ -1267,7 +1275,8 @@ class Helix(_JSONSerializable):
 
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
-    Rotation is clockwise in the side view.
+    
+    Rotation is clockwise in the side view, i.e., clockwise in the X-Y plane, around the Z-axis..
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
@@ -5862,6 +5871,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_oxdna_format(self) -> Tuple[str, str]:
         """Exports to oxdna format.
 
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
         :return:
             two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
@@ -5880,6 +5895,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         then the design will be written to ``my_origami.dat`` and ``my_origami.top``.
 
         The strings written are those returned by :meth:`Design.to_oxdna_format`.
+
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
 
         :param directory:
             directory in which to put file (default: current working directory)
