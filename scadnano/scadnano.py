@@ -1058,6 +1058,8 @@ class HelixGroup(_JSONSerializable):
     (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
     This convention is not apparent in the scadnano web interface, which only directly shows pitch,
     but it shows up, for example, in oxDNA export via :meth:`Design.to_oxdna_format`.
+    See the fields :data:`HelixGroup.pitch`, :data:`HelixGroup.roll`, and :data:`HelixGroup.yaw`
+    for an explanation how to interpret each rotation.
     """
 
     position: Position3D = origin
@@ -1065,21 +1067,28 @@ class HelixGroup(_JSONSerializable):
 
     pitch: float = 0
     """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
-    Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
-    yaw: float = 0
-    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
-    Not visually displayed in scadnano, but here to support more general 3D applications.
-    Rotation is clockwise in the X-Z plane, around the Y-axis.
+    
+    Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis,
+    when Y-axis points down, Z-axis points right, and X-axis points out of the page.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     roll: float = 0
-    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group. 
+    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group, 
+    i.e., it represents the rotation about the axis of a helix.
     
-    Rotation is clockwise in the X-Y plane, around the Z-axis."""
+    Rotation is *clockwise* in the side view, i.e., in the X-Y plane, around the Z-axis, 
+    when X-axis points right, Y-axis points down, and Z-axis points into the page."""
+
+    yaw: float = 0
+    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
+    Not visually displayed in scadnano, but here to support more general 3D applications.
+
+    Rotation is *clockwise* while looking down onto the main view, 
+    i.e., in the X-Z plane, around the Y-axis, 
+    when X-axis points down, Z-axis points right, and Y-axis points into the page.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     helices_view_order: Optional[List[int]] = None
     """Order in which to display the :any:`Helix`'s in the group in the 2D view; if None, then the order
@@ -1276,8 +1285,7 @@ class Helix(_JSONSerializable):
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
     
-    Rotation is clockwise in the side view, i.e., clockwise in the X-Y plane, around the Z-axis..
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Rotation is clockwise in the side view; the same convention as :data:`HelixGroup.roll`.
     Units are degrees."""
 
     idx: Optional[int] = None
