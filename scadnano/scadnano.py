@@ -6683,6 +6683,7 @@ class _OxdnaVector:
         return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
 
     # counterclockwise rotation around axis
+    # units of angle is degrees
     def rotate(self, angle: float, axis: "_OxdnaVector") -> "_OxdnaVector":
         u = axis.normalize()
         c = cos(angle * pi / 180)
@@ -6833,15 +6834,32 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     grid = group.grid
     geometry = design.geometry
 
-    forward = _OxdnaVector(0, 0, 1)
-    normal = _OxdnaVector(0, -1, 0)
+    # principal axes for computing rotation
+    # see https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    yaw_axis = _OxdnaVector(0, 1, 0)
+    pitch_axis = _OxdnaVector(0, 0, 1)
+    roll_axis = _OxdnaVector(1, 0, 0)
 
-    forward = forward.rotate(design.yaw_of_helix(helix), normal)
-    forward = forward.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
-    normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
+    # we apply rotations in the order yaw, pitch, and then roll
+    # the _OxdnaVector.rotate function applies ccw rotation so angle needs to be negated
+    
+    # first the yaw rotation
+    pitch_axis = pitch_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
+    roll_axis = roll_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
 
-    normal = normal.rotate(-helix.roll, forward)
+    # then the pitch rotation
+    yaw_axis = yaw_axis.rotate(-design.pitch_of_helix(helix), pitch_axis)
+    roll_axis = roll_axis.rotate(-design.pitch_of_helix(helix), pitch_axis)
 
+    # then the roll rotation
+    yaw_axis = yaw_axis.rotate(-design.roll_of_helix(helix), roll_axis)
+    pitch_axis = pitch_axis.rotate(-design.roll_of_helix(helix), roll_axis)
+
+    # by chosen convension, forward is the same as the roll axis
+    # and normal is the negated yaw axis
+    forward = roll_axis
+    normal = -yaw_axis
+    
     position = Position3D()
     if grid == Grid.none:
         if helix.position is not None:
