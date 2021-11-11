@@ -6837,23 +6837,21 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     # principal axes for computing rotation
     # see https://en.wikipedia.org/wiki/Aircraft_principal_axes
     yaw_axis = _OxdnaVector(0, 1, 0)
-    pitch_axis = _OxdnaVector(0, 0, 1)
-    roll_axis = _OxdnaVector(1, 0, 0)
+    pitch_axis = _OxdnaVector(1, 0, 0)
+    roll_axis = _OxdnaVector(0, 0, 1)
 
     # we apply rotations in the order yaw, pitch, and then roll
-    # the _OxdnaVector.rotate function applies ccw rotation so angle needs to be negated
     
     # first the yaw rotation
     pitch_axis = pitch_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
     roll_axis = roll_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
 
     # then the pitch rotation
-    yaw_axis = yaw_axis.rotate(-design.pitch_of_helix(helix), pitch_axis)
-    roll_axis = roll_axis.rotate(-design.pitch_of_helix(helix), pitch_axis)
+    yaw_axis = yaw_axis.rotate(design.pitch_of_helix(helix), pitch_axis)
+    roll_axis = roll_axis.rotate(design.pitch_of_helix(helix), pitch_axis)
 
     # then the roll rotation
     yaw_axis = yaw_axis.rotate(-design.roll_of_helix(helix), roll_axis)
-    pitch_axis = pitch_axis.rotate(-design.roll_of_helix(helix), roll_axis)
 
     # by chosen convension, forward is the same as the roll axis
     # and normal is the negated yaw axis
