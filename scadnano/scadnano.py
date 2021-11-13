@@ -4688,6 +4688,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         and :any:`M13Variant`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
+
+        :param rotation:
+            rotation of M13 to use. See :meth:`m13` for explanation.
+        :param variant:
+            which variant of M13 to use. See :any:`M13Variant`.
         """
         scaffold = None
         num_scafs = 0
