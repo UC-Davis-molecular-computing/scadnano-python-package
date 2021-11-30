@@ -4316,6 +4316,12 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
     #     with self.assertRaises(sc.IllegalDesignError):
     #         design_pre_json.to_json()
 
+    def test_domains_not_none_in_Strand_constructor(self) -> None:
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Strand(domains=None)
+        with self.assertRaises(sc.IllegalDesignError):
+            sc.Strand(domains=[None])
+
     def test_strands_not_specified_in_Design_constructor(self) -> None:
         design = sc.Design(helices=[])
         self.assertEqual(0, len(design.helices))

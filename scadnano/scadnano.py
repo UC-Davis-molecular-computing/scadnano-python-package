@@ -2645,6 +2645,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __post_init__(self) -> None:
+        self._ensure_domains_not_none()
         self._helix_idx_domain_map = defaultdict(list)
 
         self.set_domains(self.domains)
@@ -3223,6 +3224,15 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for domain in self.bound_domains():
             domain.forward = not domain.forward
 
+    def _ensure_domains_not_none(self) -> None:
+        if self.domains is None:
+            raise IllegalDesignError('parameter domains cannot be None')
+        for idx, domain in enumerate(self.domains):
+            if domain is None:
+                raise IllegalDesignError(f"no element of parameter domains can be None, but the {idx}'th "
+                                         f"element is None. Here is the list of domains you specified:\n"
+                                         f"{self.domains}")
+
     def _ensure_modifications_legal(self, check_offsets_legal: bool = False) -> None:
         if check_offsets_legal:
             if self.dna_sequence is None:
@@ -3460,11 +3470,11 @@ class StrandError(IllegalDesignError):
         # need to avoid calling first_bound_domain here to avoid infinite mutual recursion
         first_domain: Optional[Domain]
         last_domain: Optional[Domain]
-        if len(strand.domains) > 0 and isinstance(strand.domains[0], Domain):
+        if strand.domains is not None and len(strand.domains) > 0 and isinstance(strand.domains[0], Domain):
             first_domain = strand.domains[0]
         else:
             first_domain = None
-        if len(strand.domains) > 0 and isinstance(strand.domains[-1], Domain):
+        if strand.domains is not None and len(strand.domains) > 0 and isinstance(strand.domains[-1], Domain):
             last_domain = strand.domains[-1]
         else:
             last_domain = None
@@ -6846,7 +6856,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     roll_axis = _OxdnaVector(0, 0, 1)
 
     # we apply rotations in the order yaw, pitch, and then roll
-    
+
     # first the yaw rotation
     pitch_axis = pitch_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
     roll_axis = roll_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
@@ -6862,7 +6872,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     # and normal is the negated yaw axis
     forward = roll_axis
     normal = -yaw_axis
-    
+
     position = Position3D()
     if grid == Grid.none:
         if helix.position is not None:
