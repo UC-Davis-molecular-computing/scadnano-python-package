@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.16.3"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.1"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -64,8 +64,8 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, FrozenSet, Type, cast, Any, \
-    TypeVar, Generic, Callable
+from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
+    TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -818,14 +818,28 @@ idt_name_key = 'name'
 
 
 ##########################################################################
-# modification abstract base classes
+# modification classes
 
 _default_modification_id = "WARNING: no id assigned to modification"
 
 
+class ModificationType(enum.Enum):
+    """
+    Type of modification (5', 3', or internal).
+    """
+    five_prime = "5'"
+    """5' modification type"""
+
+    three_prime = "5'"
+    """3' modification type"""
+
+    internal = "internal"
+    """internal modification type"""
+
+
 @dataclass(frozen=True, eq=True)
-class Modification(_JSONSerializable):
-    """Base class of modifications (to DNA sequences, e.g., biotin or Cy3).
+class Modification(_JSONSerializable, ABC):
+    """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
     Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate."""
 
@@ -867,6 +881,11 @@ class Modification(_JSONSerializable):
         else:
             raise IllegalDesignError(f'unknown Modification location "{location}"')
 
+    @staticmethod
+    @abstractmethod
+    def modification_type() -> ModificationType:
+        pass
+
 
 @dataclass(frozen=True, eq=True)
 class Modification5Prime(Modification):
@@ -885,6 +904,10 @@ class Modification5Prime(Modification):
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
         return Modification5Prime(display_text=display_text, idt_text=idt_text)
+
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.five_prime
 
 
 @dataclass(frozen=True, eq=True)
@@ -905,17 +928,26 @@ class Modification3Prime(Modification):
         idt_text = json_map.get(mod_idt_text_key)
         return Modification3Prime(display_text=display_text, idt_text=idt_text)
 
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.three_prime
+
 
 @dataclass(frozen=True, eq=True)
 class ModificationInternal(Modification):
     """Internal modification of DNA sequence, e.g., biotin or Cy3."""
 
-    allowed_bases: Optional[FrozenSet[str]] = None
+    allowed_bases: Optional[AbstractSet[str]] = None
     """If None, then this is an internal modification that goes between bases. 
     If instead it is a list of bases, then this is an internal modification that attaches to a base,
     and this lists the allowed bases for this internal modification to be placed at. 
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
     ``['A','C','G','T']``."""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.allowed_bases is not None and not isinstance(self.allowed_bases, frozenset):
+            object.__setattr__(self, 'allowed_bases', frozenset(self.allowed_bases))
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
@@ -936,8 +968,12 @@ class ModificationInternal(Modification):
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
         return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
 
+    @staticmethod
+    def modification_type() -> ModificationType:
+        return ModificationType.internal
 
-# end modification abstract base classes
+
+# end modification classes
 ##########################################################################
 
 
@@ -979,6 +1015,22 @@ class Position3D(_JSONSerializable):
             z = json_map[position_z_key]
         return Position3D(x=x, y=y, z=z)
 
+    def __add__(self, other: 'Position3D') -> 'Position3D':
+        """
+        :param other:
+            other position to add to this one
+        :return:
+            sum of the two positions
+        """
+        return Position3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def clone(self) -> 'Position3D':
+        """
+        :return:
+            copy of this :any:`Position3D`
+        """
+        return Position3D(self.x, self.y, self.z)
+
 
 origin: Position3D = Position3D(x=0, y=0, z=0)
 
@@ -997,10 +1049,17 @@ class HelixGroup(_JSONSerializable):
     If there are :any:`HelixGroup`'s explicitly specified, then the field :py:data:`Design.grid` is ignored.
     Each :any:`HelixGroup` has its own grid, and the fields :py:data:`Helix.position` or
     :py:data:`Helix.grid_position` are considered relative to the origin of that :any:`HelixGroup`
-    (i.e., the value :py:data:`HelixGroup.position`). Although it is possible to assign a :any:`Helix`
-    in a :any:`HelixGroup` a non-zero :py:data:`Helix.pitch` or :py:data:`Helix.yaw`,
-    the most common use case is that all helices in a group are parallel, so they all have these angles
-    equal to 0 (since they are unrotated relative to each other along the pitch and yaw planes).
+    (i.e., the value :py:data:`HelixGroup.position`). Although an individual :any:`Helix`
+    can have a non-zero :py:data:`Helix.roll` (which is in addition to whatever value there is for
+    :data:`HelixGroup.roll`), all helices in a group are parallel.
+
+    The three angles are interpreted to be applied in the following order: first yaw, then pitch, then roll,
+    using the "intrinsic rotation" convention
+    (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+    This convention is not apparent in the scadnano web interface, which only directly shows pitch,
+    but it shows up, for example, in oxDNA export via :meth:`Design.to_oxdna_format`.
+    See the fields :data:`HelixGroup.pitch`, :data:`HelixGroup.roll`, and :data:`HelixGroup.yaw`
+    for an explanation how to interpret each rotation.
     """
 
     position: Position3D = origin
@@ -1008,18 +1067,28 @@ class HelixGroup(_JSONSerializable):
 
     pitch: float = 0
     """Angle in the main view plane; 0 means pointing to the right (min_offset on left, max_offset on right).
-    Rotation is clockwise in the main view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
-    Units are degrees."""
-
-    yaw: float = 0
-    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
-    Not visually displayed in scadnano, but here to support more general 3D applications.
+    
+    Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis,
+    when Y-axis points down, Z-axis points right, and X-axis points out of the page.
     See https://en.wikipedia.org/wiki/Aircraft_principal_axes
     Units are degrees."""
 
     roll: float = 0
-    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group."""
+    """Same meaning as :py:data:`Helix.roll`, applied to every :any:`Helix` in the group, 
+    i.e., it represents the rotation about the axis of a helix.
+    
+    Rotation is *clockwise* in the side view, i.e., in the X-Y plane, around the Z-axis, 
+    when X-axis points right, Y-axis points down, and Z-axis points into the page."""
+
+    yaw: float = 0
+    """Third angle for orientation besides :py:data:`HelixGroup.pitch` and :py:data:`HelixGroup.roll`.
+    Not visually displayed in scadnano, but here to support more general 3D applications.
+
+    Rotation is *clockwise* while looking down onto the main view, 
+    i.e., in the X-Z plane, around the Y-axis, 
+    when X-axis points down, Z-axis points right, and Y-axis points into the page.
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    Units are degrees."""
 
     helices_view_order: Optional[List[int]] = None
     """Order in which to display the :any:`Helix`'s in the group in the 2D view; if None, then the order
@@ -1215,8 +1284,8 @@ class Helix(_JSONSerializable):
 
     roll: float = 0
     """Angle around the center of the helix; 0 means pointing straight up in the side view.
-    Rotation is clockwise in the side view.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    
+    Rotation is clockwise in the side view; the same convention as :data:`HelixGroup.roll`.
     Units are degrees."""
 
     idx: Optional[int] = None
@@ -1966,13 +2035,13 @@ class IDTFields(_JSONSerializable):
     plate: Optional[str] = None
     """Name of plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTField.well` is not ``None``.
+    Optional field, but non-optional if :py:data:`IDTFields.well` is not ``None``.
     """
 
     well: Optional[str] = None
     """Well position on plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTField.plate` is not ``None``.
+    Optional field, but non-optional if :py:data:`IDTFields.plate` is not ``None``.
     """
 
     def __post_init__(self) -> None:
@@ -2576,6 +2645,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __post_init__(self) -> None:
+        self._ensure_domains_not_none()
         self._helix_idx_domain_map = defaultdict(list)
 
         self.set_domains(self.domains)
@@ -2892,6 +2962,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, 'cannot have loopout as last domain on strand')
         return domain
 
+    def dna_sequence_delimited(self, delimiter: str) -> str:
+        """
+        :param delimiter:
+            string to put in between DNA sequences of each domain
+        :return:
+            DNA sequence of this :any:`Strand`, with `delimiter` in between DNA sequences of each
+            :any:`Domain` or :any:`Loopout`.
+        """
+        result = [substrand.dna_sequence() for substrand in self.domains]
+        return delimiter.join(result)
+
     def set_dna_sequence(self, sequence: str) -> None:
         """Set this :any:`Strand`'s DNA sequence to `seq`
         WITHOUT checking for complementarity with overlapping
@@ -3143,6 +3224,15 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for domain in self.bound_domains():
             domain.forward = not domain.forward
 
+    def _ensure_domains_not_none(self) -> None:
+        if self.domains is None:
+            raise IllegalDesignError('parameter domains cannot be None')
+        for idx, domain in enumerate(self.domains):
+            if domain is None:
+                raise IllegalDesignError(f"no element of parameter domains can be None, but the {idx}'th "
+                                         f"element is None. Here is the list of domains you specified:\n"
+                                         f"{self.domains}")
+
     def _ensure_modifications_legal(self, check_offsets_legal: bool = False) -> None:
         if check_offsets_legal:
             if self.dna_sequence is None:
@@ -3380,11 +3470,11 @@ class StrandError(IllegalDesignError):
         # need to avoid calling first_bound_domain here to avoid infinite mutual recursion
         first_domain: Optional[Domain]
         last_domain: Optional[Domain]
-        if len(strand.domains) > 0 and isinstance(strand.domains[0], Domain):
+        if strand.domains is not None and len(strand.domains) > 0 and isinstance(strand.domains[0], Domain):
             first_domain = strand.domains[0]
         else:
             first_domain = None
-        if len(strand.domains) > 0 and isinstance(strand.domains[-1], Domain):
+        if strand.domains is not None and len(strand.domains) > 0 and isinstance(strand.domains[-1], Domain):
             last_domain = strand.domains[-1]
         else:
             last_domain = None
@@ -3413,9 +3503,8 @@ class StrandError(IllegalDesignError):
 _96WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 _96WELL_PLATE_COLS: List[int] = list(range(1, 13))
 
-_384WELL_PLATE_ROWS: List[str] = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-                                  'O',
-                                  'P']
+_384WELL_PLATE_ROWS: List[str] = [
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']
 _384WELL_PLATE_COLS: List[int] = list(range(1, 25))
 
 
@@ -3638,6 +3727,22 @@ def _check_helices_view_order_is_bijection(helices_view_order: List[int], helix_
         raise IllegalDesignError(
             f"The specified helices view order: {helices_view_order}\n "
             f"is not a bijection on helices indices: {helix_idxs}.")
+
+
+def _check_type(obj: Any, expected_type) -> None:
+    # check that `obj` is of type `expected_type`
+    if not isinstance(obj, expected_type):
+        raise IllegalDesignError(f'I expected the object {obj} to be of type {expected_type}, '
+                                 f'but instead it is of type {type(obj)}')
+
+
+def _check_type_is_one_of(obj: Any, expected_types: Iterable) -> None:
+    # check that `obj` is one of the types in `expected_types`
+    for expected_type in expected_types:
+        if isinstance(obj, expected_type):
+            return
+    raise IllegalDesignError(f'I expected the object {obj} to be one of the types {expected_types}, '
+                             f'but instead it is of type {type(obj)}')
 
 
 @dataclass
@@ -4171,7 +4276,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     self.helices_view_order) if suppress_indent else self.helices_view_order
 
         # modifications
-        mods = self._all_modifications()
+        mods = self.modifications()
         if len(mods) > 0:
             mods_dict = {}
             for mod in mods:
@@ -4481,14 +4586,53 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return design
 
-    def _all_modifications(self) -> Set[Modification]:
-        # List of all modifications.
-        mods_5p = {strand.modification_5p for strand in self.strands if
-                   strand.modification_5p is not None}
-        mods_3p = {strand.modification_3p for strand in self.strands if
-                   strand.modification_3p is not None}
-        mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
-        return mods_5p | mods_3p | mods_int
+    def modifications(self, mod_type: Optional[ModificationType] = None) -> Set[Modification]:
+        """
+        Returns either set of all modifications in this :any:`Design`, or set of all modifications
+        of a given type (5', 3', or internal).
+
+        :param mod_type:
+            type of modifications (5', 3', or internal); if not specified, all three types are returned
+        :return:
+            Set of all modifications in this :any:`Design` (possibly of a given type).
+        """
+        if mod_type is None:
+            mods_5p = {strand.modification_5p for strand in self.strands if
+                       strand.modification_5p is not None}
+            mods_3p = {strand.modification_3p for strand in self.strands if
+                       strand.modification_3p is not None}
+            mods_int = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+
+            all_mods = mods_5p | mods_3p | mods_int
+
+        elif mod_type is ModificationType.five_prime:
+            all_mods = {strand.modification_5p for strand in self.strands if
+                        strand.modification_5p is not None}
+
+        elif mod_type is ModificationType.three_prime:
+            all_mods = {strand.modification_3p for strand in self.strands if
+                        strand.modification_3p is not None}
+
+        elif mod_type is ModificationType.internal:
+            all_mods = {mod for strand in self.strands for mod in strand.modifications_int.values()}
+
+        else:
+            raise AssertionError('should be unreachable')
+
+        self._ensure_mods_unique_names(all_mods)
+
+        return all_mods
+
+    @staticmethod
+    def _ensure_mods_unique_names(all_mods: Set[Modification]) -> None:
+        mods_dict = {}
+        for mod in all_mods:
+            if mod.id not in mods_dict:
+                mods_dict[mod.id] = mod
+            else:
+                other_mod = mods_dict[mod.id]
+                raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
+                                         f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building by calling
@@ -4554,6 +4698,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         and :any:`M13Variant`.
 
         Raises :any:`IllegalDesignError` if the number of scaffolds is not exactly 1.
+
+        :param rotation:
+            rotation of M13 to use. See :meth:`m13` for explanation.
+        :param variant:
+            which variant of M13 to use. See :any:`M13Variant`.
         """
         scaffold = None
         num_scafs = 0
@@ -4645,7 +4794,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
             helix_to_dct[strand_type][start_to][:2] = [helix_from, end_from - 1]
-
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
@@ -4747,11 +4895,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             i += 1
         return helices_ids_reverse
 
-    def to_cadnano_v2(self) -> Dict[str, Any]:
-        """Converts the design to the cadnano v2 format.
+    def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
+        """Converts the design to a JSON-serializable Python object (a dict) representing
+        the cadnano v2 format. Calling json.dumps on this object will result in a string representing
+        the cadnano c2 format.
+
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+
+
+        :param name:
+            Name of the design.
+        :return:
+            a Python dict representing the cadnano v2 format for this :any:`Design`
         """
         dct: Dict[str, Any] = OrderedDict()
+        if name != '':
+            dct['name'] = name
+
         dct['vstrands'] = []
 
         '''Check if helix group are used or if only one grid is used'''
@@ -4821,6 +4981,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return dct
 
+    def to_cadnano_v2_json(self, name: str = '') -> str:
+        """Converts the design to the cadnano v2 format.
+
+
+        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+
+        :param name:
+            Name of the design.
+        :return:
+            a string in the cadnano v2 format representing this :any:`Design`
+        """
+        content_serializable = self.to_cadnano_v2_serializable(name)
+
+        encoder = _SuppressableIndentEncoder
+        return json.dumps(content_serializable, cls=encoder, indent=2)
+
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
         Sets helices_view_order.
@@ -4883,12 +5059,37 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 if isinstance(strand.domains[-1], Domain) and strand.domains[-1].helix == helix]
 
     def _check_legal_design(self) -> None:
+        self._check_types()
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
         self._warn_if_strand_names_not_unique()
+
+    def _check_types(self) -> None:
+        # Check that type of objects are what we expect. Added this after a nasty bug when I accidentally
+        # inserted a dsd.Domain object into a scadnano.Strand.domains list. mypy didn't catch the
+        # type error because they have the same name (even though different packages!). So let's not
+        # completely trust mypy.
+        _check_type(self.geometry, Geometry)
+        _check_type(self.helices, dict)
+        _check_type(self.strands, list)
+        for idx, helix in self.helices.items():
+            _check_type(idx, int)
+            _check_type(helix, Helix)
+        for strand in self.strands:
+            _check_type(strand, Strand)
+            for substrand in strand.domains:
+                _check_type_is_one_of(substrand, [Domain, Loopout])
+                if isinstance(substrand, Domain):
+                    _check_type(substrand.helix, int)
+                    _check_type(substrand.forward, bool)
+                    _check_type(substrand.start, int)
+                    _check_type(substrand.end, int)
+                elif isinstance(substrand, Loopout):
+                    _check_type(substrand.length, int)
+        # TODO: add checks for optional fields
 
     # TODO: come up with reasonable default behavior when no strands are on helix and max_offset not given
     def _check_helix_offsets(self) -> None:
@@ -5151,20 +5352,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
               }
 
         """
-        # if isinstance(self, DNAOrigamiDesign):
-        #     scaf = None
-        #     for strand in self.strands:
-        #         if strand.is_scaffold == True:
-        #             scaf = strand
-        #             break
-        #     if self.scaffold is None:
-        #         msg = 'No scaffold specified for Design. You can delay assigning the scaffold ' \
-        #               'until after creating the Design object, but you must assign a scaffold ' \
-        #               'using the method Strand.set_scaffold() before calling to_json().'
-        #         if scaf is not None:
-        #             msg += f'There is a strand marked as a scaffold. Try calling set_scaffold with it as ' \
-        #                    f'a parameter:\n{scaf}'
-        #         raise IllegalDesignError(msg)
         return _json_encode(self, suppress_indent)
 
     # TODO: create version of add_deletion and add_insertion that simply changes the major tick distance
@@ -5469,7 +5656,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             specifies a directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
         :param filename:
-            optinoal custom filename to use (instead of currently running script)
+            optional custom filename to use (instead of currently running script)
         :param key:
             `key function <https://docs.python.org/3/howto/sorting.html#key-functions>`_ used to determine
             order in which to output strand sequences. Some useful defaults are provided by
@@ -5480,15 +5667,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             is the symbol to delimit the four IDT fields name,sequence,scale,purification.
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :data:`IDTFields.name` and the same :data:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
         :param only_strands_with_idt:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
-            chosen if the field :py:data:`Strand.idt` is missing.
+            chosen if the field :data:`Strand.idt` is missing.
             (though scaffold is included if `export_scaffold` is True).
-            If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+            If True, then strands lacking the field :data:`Strand.idt` will not be exported.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
             If True, scaffold sequences on strands output according to `only_strands_with_idt`
@@ -5507,7 +5694,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                                  export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
             extension = 'idt'
-        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
+        write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
     def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
                                    key: Optional[KeyFunction[Strand]] = None,
@@ -5544,7 +5731,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             :py:meth:`strand_order_key_function`
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTField.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :py:attr:`IDTFields.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
@@ -5707,10 +5894,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_oxdna_format(self) -> Tuple[str, str]:
         """Exports to oxdna format.
 
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
         :return:
             two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
+        self._check_legal_design()
         system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
@@ -5725,6 +5919,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         The strings written are those returned by :meth:`Design.to_oxdna_format`.
 
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
         :param directory:
             directory in which to put file (default: current working directory)
         :param filename_no_extension:
@@ -5732,8 +5932,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         dat, top = self.to_oxdna_format()
 
-        _write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
-        _write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
@@ -5753,8 +5953,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         ``my_origami.<extension>``
 
         The string written is that returned by :meth:`Design.to_json`.
-
-
 
         :param directory:
             directory in which to put file (default: current working directory)
@@ -5792,9 +5990,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise ValueError('at least one of filename or extension must be None')
         if extension is None:
             extension = default_scadnano_file_extension
-        _write_file_same_name_as_running_python_script(contents, extension, directory, filename)
+        write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def export_cadnano_v2(self, directory: str = '.', filename: Optional[str] = None) -> None:
+    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
@@ -5809,16 +6007,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             For instance, if the script is named ``my_origami.py``,
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
-        content_serializable = OrderedDict({})
-        content_serializable['name'] = _get_filename_same_name_as_running_python_script(directory, 'json',
-                                                                                        filename)
-        content_serializable_final = self.to_cadnano_v2()
-        content_serializable.update(content_serializable_final)
-
-        encoder = _SuppressableIndentEncoder
-        contents = json.dumps(content_serializable, cls=encoder, indent=2)
-
-        _write_file_same_name_as_running_python_script(contents, 'json', directory, filename)
+        name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
+        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory,
+                                                      filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
@@ -6400,6 +6591,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 return strand
         return None
 
+    def grid_of_helix(self, helix):
+        pass
+
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
@@ -6417,19 +6611,32 @@ def _name_of_this_script() -> str:
     return os.path.basename(sys.argv[0])[:-3]
 
 
-def _write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                   filename: Optional[str] = None) -> None:
+def write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
+                                                  filename: Optional[str] = None) -> None:
+    """
+    Writes a text file with `contents` whose name is (by default) the same as the name of the
+    currently running script, but with extension ``.py`` changed to `extension`.
+
+    :param contents:
+        contents of file to write
+    :param extension:
+        extension to use
+    :param directory:
+        directory in which to write file. If not specified, the current working directory is used.
+    :param filename:
+        filename to use instead of the currently running script
+    """
     relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename_no_extension: Optional[str]) -> str:
-    if filename_no_extension is None:
-        filename_no_extension = _name_of_this_script()
-    filename_with_extension = f'{filename_no_extension}.{extension}'
-    relative_filename = _create_directory_and_set_filename(directory, filename_with_extension)
+                                                     filename: Optional[str]) -> str:
+    # if filename is not None, assume it has an extension
+    if filename is None:
+        filename = _name_of_this_script() + '.' + extension
+    relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
 
@@ -6491,6 +6698,7 @@ class _OxdnaVector:
         return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
 
     # counterclockwise rotation around axis
+    # units of angle is degrees
     def rotate(self, angle: float, axis: "_OxdnaVector") -> "_OxdnaVector":
         u = axis.normalize()
         c = cos(angle * pi / 180)
@@ -6637,49 +6845,85 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
         normal  -- a direction perpendicular to forward which represents the angle to the backbone at offset 0
             for the forward Domain on the Helix.
     """
-    grid = design.grid
+    group = design.groups[helix.group]
+    grid = group.grid
     geometry = design.geometry
 
-    forward = _OxdnaVector(0, 0, 1)
-    normal = _OxdnaVector(0, -1, 0)
+    # principal axes for computing rotation
+    # see https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    yaw_axis = _OxdnaVector(0, 1, 0)
+    pitch_axis = _OxdnaVector(1, 0, 0)
+    roll_axis = _OxdnaVector(0, 0, 1)
 
-    forward = forward.rotate(design.yaw_of_helix(helix), normal)
-    forward = forward.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
-    normal = normal.rotate(-design.pitch_of_helix(helix), _OxdnaVector(1, 0, 0))
-    
-    normal = normal.rotate(-helix.roll, forward)
+    # we apply rotations in the order yaw, pitch, and then roll
 
-    x: float = 0.0
-    y: float = 0.0
-    z: float = 0.0
+    # first the yaw rotation
+    pitch_axis = pitch_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
+    roll_axis = roll_axis.rotate(-design.yaw_of_helix(helix), yaw_axis)
+
+    # then the pitch rotation
+    yaw_axis = yaw_axis.rotate(design.pitch_of_helix(helix), pitch_axis)
+    roll_axis = roll_axis.rotate(design.pitch_of_helix(helix), pitch_axis)
+
+    # then the roll rotation
+    yaw_axis = yaw_axis.rotate(-design.roll_of_helix(helix), roll_axis)
+
+    # by chosen convension, forward is the same as the roll axis
+    # and normal is the negated yaw axis
+    forward = roll_axis
+    normal = -yaw_axis
+
+    position = Position3D()
     if grid == Grid.none:
         if helix.position is not None:
-            x = helix.position.x
-            y = helix.position.y
-            z = helix.position.z
+            position = helix.position.clone()
     else:
-        # see here:
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L799
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L664
-        # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/util.dart#L706
         if helix.grid_position is None:
             raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
-        h, v = helix.grid_position
-        if grid == Grid.square:
-            x = h * geometry.distance_between_helices()
-            y = v * geometry.distance_between_helices()
-        if grid == Grid.hex:
-            x = (h + (v % 2) / 2) * geometry.distance_between_helices()
-            y = v * sqrt(3) / 2 * geometry.distance_between_helices()
-        if grid == Grid.honeycomb:
-            x = h * sqrt(3) / 2 * geometry.distance_between_helices()
-            if h % 2 == 0:
-                y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
-            else:
-                y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+        position = grid_position_to_position(helix.grid_position, grid, geometry)
 
-    origin_ = _OxdnaVector(x, y, z) * NM_TO_OX_UNITS
+    position = position + group.position
+
+    origin_ = _OxdnaVector(position.x, position.y, position.z) * NM_TO_OX_UNITS
     return origin_, forward, normal
+
+
+def grid_position_to_position(grid_position: Tuple[int, int], grid: Grid, geometry: Geometry) -> Position3D:
+    """
+    Converts a grid position to a 3D position (a :any:`Position3D`).
+
+    :param grid_position:
+        pair of ints representing a grid position
+    :param grid:
+        the :any:`Grid`; cannot be :data:`Grid.none`
+    :param geometry:
+        the :any:`Geometry` object defining spacing parameters between grid positions
+    :return:
+        the :any:`Position3D` represented by `grid_position` in the grid `grid`;
+        Note that the :data:`Position3D.z` coordinate is always 0.
+    """
+    # see here for other instances of this conversion algorithm:
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/985e2ebced188cc7d867a7cc695ba128fef86a87/lib/src/util.dart#L785
+    # https://github.com/UC-Davis-molecular-computing/scadnano/blob/985e2ebced188cc7d867a7cc695ba128fef86a87/lib/src/util.dart#L878
+
+    h, v = grid_position
+    if grid == Grid.square:
+        x = h * geometry.distance_between_helices()
+        y = v * geometry.distance_between_helices()
+    elif grid == Grid.hex:
+        x = (h + (v % 2) / 2) * geometry.distance_between_helices()
+        y = v * sqrt(3) / 2 * geometry.distance_between_helices()
+    elif grid == Grid.honeycomb:
+        x = h * sqrt(3) / 2 * geometry.distance_between_helices()
+        if h % 2 == 0:
+            y = (v * 3 + (v % 2)) / 2 * geometry.distance_between_helices()
+        else:
+            y = (v * 3 - (v % 2) + 1) / 2 * geometry.distance_between_helices()
+    else:
+        raise ValueError(f'grid must be square, hex, or honeycomb to interpret grid_position, '
+                         f'but it is {grid}')
+    z = 0
+    return Position3D(x, y, z)
 
 
 # if no sequence exists on a domain, generate one
@@ -6722,16 +6966,22 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
         else:
             raise AssertionError('helix.max_offset should be non-None')
 
+    # for efficiency just calculate each helix's vector once
+    helix_vectors = {idx: _oxdna_get_helix_vectors(design, helix) for idx, helix in
+                     design.helices.items()}
+
     for strand in design.strands:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
             dom_strand = _OxdnaStrand()
-            seq = domain.dna_sequence() or 'T' * domain.dna_length()
+            seq = domain.dna_sequence()
+            if seq is None:
+                seq = 'T' * domain.dna_length()
 
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin_, forward, normal = _oxdna_get_helix_vectors(design, helix)
+                origin_, forward, normal = helix_vectors[helix.idx]
 
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)

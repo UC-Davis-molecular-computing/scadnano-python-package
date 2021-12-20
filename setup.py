@@ -52,8 +52,8 @@ setup(name='scadnano',
       long_description=long_description,
       long_description_content_type='text/markdown; variant=GFM',
       python_requires='>=3.6',
-      requires=['xlwt'],
       install_requires=[
+        'xlwt',
         'dataclasses>=0.6;python_version<"3.7"'
       ]
 )
