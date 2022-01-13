@@ -840,8 +840,29 @@ class ModificationType(enum.Enum):
 @dataclass(frozen=True, eq=True)
 class Modification(_JSONSerializable, ABC):
     """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
-    Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
-    to instantiate."""
+    Use concrete subclasses
+    :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
+    to instantiate.
+    
+    If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
+    the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' "modification"
+    to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
+    (this is a useful hack for putting single-stranded extensions on strands until loopouts on the end
+    of a strand are supported;
+    see https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/2),
+    then this would clash with a similar 3' modification without specifying unique IDs for them:
+    ``t6_3p = Modification3Prime(display_text='6T', idt_text='TTTTTT') # ERROR``.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 5' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 5' biotin:
+
+    .. code-block:: python
+
+        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        design.strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.strand(1, 0).move(8).with_modification_5p(biotin_5p)
+    """
 
     display_text: str
     """Short text to display in the web interface as an "icon"
@@ -4518,21 +4539,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_cadnano_v2(directory: Optional[str] = None, filename: Optional[str] = None,
+    def from_cadnano_v2(directory: str = '', filename: Optional[str] = None,
                         json_dict: Optional[dict] = None) -> 'Design':
         """
-        Creates a Design from a cadnano v2 file.
+        Creates a Design from a cadnano v2 design. The design can either be specified as a filename
+        (assumed to be the a JSON file containing the cadnano design) or as a Python dictionary,
+        assumed to be the result of importing the JSON from the cadnano file.
+
+        Exactly one of `filename` or `json_dict` should be specified.
+
+        :param directory:
+            directory in which to look for `filename`; current directory by default.
+            Ignored if `json_dict` is specified.
+        :param filename:
+            name of file containing cadnano design. Mutually exclusive with `json_dict`.
+        :param json_dict:
+            cadnano design represented as a Python dict.
+            (assumed to be the result of json.load on a cadnano file)
+        :return:
+            An scadnano design equivalent to the specified cadnano design.
         """
 
-        if json_dict is None and filename is not None and directory is not None:
-            file_path = os.path.join(directory, filename)
-            f = open(file_path, 'r')
-            cadnano_v2_design = json.load(f)
-            f.close()
-        elif json_dict is not None:
+        if json_dict is not None and filename is None:
             cadnano_v2_design = json_dict
+        elif json_dict is None and filename is not None:
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as f:
+                cadnano_v2_design = json.load(f)
         else:
-            raise ValueError('must have json_dict None and filename/directory not None, or vice versa')
+            raise ValueError('exactly one of json_dict or filename should be None')
 
         num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
         grid_type = Grid.square

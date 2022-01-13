@@ -146,7 +146,7 @@ def create(*, num_helices: int, num_cols: int, assign_seq: bool = True, seam_lef
     Here's an example of using :any:`origami_rectangle.create` to create a design for a
     16-helix rectangle and write it to a file readable by scadnano.
     (By default the output file name is the same as the script calling 
-    :py:meth:`Design.write_scadnano_file`
+    :py:meth:`scadnano.Design.write_scadnano_file`
     but with the extension ``.py`` changed to ``.dna``.)
 
     .. code-block:: Python
