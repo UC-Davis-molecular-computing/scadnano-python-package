@@ -1,3 +1,4 @@
+import dataclasses
 import os
 import unittest
 import re
@@ -512,9 +513,11 @@ class TestModifications(unittest.TestCase):
 
     def test_to_json_serializable(self) -> None:
         biotin5 = mod.biotin_5p
+        biotin5 = dataclasses.replace(biotin5, connector_length = 6)
         self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
+        self.assertEqual(6, biotin5.connector_length)
         biotin3 = mod.biotin_3p
         self.assertEqual(r'/3Bio/', biotin3.idt_text)
         self.assertEqual(r'/3Bio/', biotin3.id)
@@ -553,6 +556,16 @@ class TestModifications(unittest.TestCase):
         self.assertTrue(r'/5Biosg/' in mods_dict)
         self.assertTrue(r'/3Bio/' in mods_dict)
         self.assertTrue(r'/iBiodT/' in mods_dict)
+
+        biotin5_json = mods_dict[r'/5Biosg/']
+        self.assertEqual('/5Biosg/', biotin5_json[sc.mod_idt_text_key])
+        self.assertEqual('B', biotin5_json[sc.mod_display_text_key])
+        self.assertEqual(6, biotin5_json[sc.mod_connector_length_key])
+
+        biotin3_json = mods_dict[r'/3Bio/']
+        self.assertEqual('/3Bio/', biotin3_json[sc.mod_idt_text_key])
+        self.assertEqual('B', biotin3_json[sc.mod_display_text_key])
+        self.assertNotIn(sc.mod_connector_length_key, biotin3_json)
 
         strand5_mod5_json = json_dict[sc.strands_key][0][sc.modification_5p_key]
         strand3_mod3_json = json_dict[sc.strands_key][1][sc.modification_3p_key]
