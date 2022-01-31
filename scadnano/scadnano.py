@@ -800,6 +800,7 @@ mod_idt_text_key = 'idt_text'
 mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
+mod_connector_length_key = 'connector_length'
 
 # IDT keys
 idt_scale_key = 'scale'
@@ -821,6 +822,7 @@ idt_name_key = 'name'
 # modification classes
 
 _default_modification_id = "WARNING: no id assigned to modification"
+default_connector_length = 4
 
 
 class ModificationType(enum.Enum):
@@ -878,6 +880,13 @@ class Modification(_JSONSerializable, ABC):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
+    connector_length: int = default_connector_length
+    """Length of "connector" displayed in web interface. 
+    
+    Drawn like a carbon chain to offset the display of the modification vertically from the DNA strand.
+    This field is useful for putting two nearby modifications at different heights so that their 
+    text does not overlap."""
+
     def __post_init__(self) -> None:
         if self.id == _default_modification_id and self.idt_text is not None:
             object.__setattr__(self, 'id', self.idt_text)
@@ -887,6 +896,8 @@ class Modification(_JSONSerializable, ABC):
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
             ret[mod_display_connector_key] = False  # type: ignore
+        if self.connector_length != default_connector_length:
+            ret[mod_connector_length_key] = self.connector_length
         return ret
 
     @staticmethod
@@ -924,7 +935,9 @@ class Modification5Prime(Modification):
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, idt_text=idt_text)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return Modification5Prime(display_text=display_text, idt_text=idt_text,
+                                  connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
@@ -947,7 +960,9 @@ class Modification3Prime(Modification):
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification3Prime(display_text=display_text, idt_text=idt_text)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return Modification3Prime(display_text=display_text, idt_text=idt_text,
+                                  connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
@@ -987,7 +1002,9 @@ class ModificationInternal(Modification):
         idt_text = json_map.get(mod_idt_text_key)
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
-        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases,
+                                    connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
