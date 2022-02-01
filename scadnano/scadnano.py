@@ -5966,7 +5966,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
-    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None) -> None:
+    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None,
+                          warn_duplicate_strand_names: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/),
         with the output files having the same name as the running script but with ``.py`` changed to
@@ -5987,8 +5988,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             directory in which to put file (default: current working directory)
         :param filename_no_extension:
             filename without extension (default: name of running script without ``.py``).
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         """
-        dat, top = self.to_oxdna_format()
+        dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
 
         write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
         write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
