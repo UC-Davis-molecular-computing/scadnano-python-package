@@ -4940,7 +4940,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             helix_dct['stap_colors'] = []
             helix_dct['scafLoop'] = []
-            helix_dct['stap_loop'] = []
+            helix_dct['stapLoop'] = []
 
             helices_ids_reverse[helix_dct['num']] = i
             dct['vstrands'].append(helix_dct)
