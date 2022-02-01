@@ -4474,11 +4474,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
-            # We have a crossover when we jump helix or when order is broken on same helix
-            # Or circular strand
-            if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
-                    direction_forward and curr_base < old_base) or (
-                    curr_helix == strand_5_end_helix and curr_base == strand_5_end_base):
+            # We have a crossover when we jump helix or we stay on the same helix but either:
+            # 1. the order of curr_base vs old_base is opposite the direction of the strand
+            # 2. or abs(curr_base-old_base) > 1 (this accounts for test_crossover_same_helix)
+            # 3. or the strand is circular strand
+            if curr_helix != old_helix or (
+                    (not direction_forward and curr_base > old_base) or (direction_forward and curr_base < old_base) # 1.
+                    or (abs(curr_base-old_base) > 1)                                                                 # 2.
+                    or (curr_helix == strand_5_end_helix and curr_base == strand_5_end_base)):                       # 3.
 
                 if direction_forward:
                     end = old_base
