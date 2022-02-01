@@ -604,8 +604,8 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'test_32_helix_rectangle.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'test_32_helix_rectangle.{sc.default_scadnano_file_extension}')
 
     def test_helices_order(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
@@ -624,8 +624,8 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'test_huge_hex.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'test_huge_hex.{sc.default_scadnano_file_extension}')
 
     def test_Science09_prot120_98_v3(self) -> None:
         file_name = "test_Science09_prot120_98_v3"
@@ -649,8 +649,8 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_circular_auto_staple(self) -> None:
         file_name = "test_circular_auto_staple"
@@ -660,8 +660,8 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_circular_auto_staple_hex(self) -> None:
         file_name = "test_circular_auto_staple_hex"
@@ -671,19 +671,26 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
     def test_paranemic_crossover(self) -> None:
+        file_name = "test_crossover_to_same_helix"
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename=file_name + ".json")
+        self.assertEqual(1, len(design.helices))
+        # To help with debugging, uncomment these lines to write out the
+        # scadnano file
+        #
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+    
+    def test_same_helix_crossover(self) -> None:
         file_name = "test_paranemic_crossover"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
         self.assertEqual(4, len(design.helices))
-        # To help with debugging, uncomment these lines to write out the
-        # scadnano file
-        #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+
 
     def test_2_stape_2_helix_origami_deletions_insertions(self) -> None:
         file_name = "test_2_stape_2_helix_origami_deletions_insertions"
@@ -727,8 +734,8 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'{file_name}.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'{file_name}.{sc.default_scadnano_file_extension}')
 
 
 class TestExportDNASequences(unittest.TestCase):
