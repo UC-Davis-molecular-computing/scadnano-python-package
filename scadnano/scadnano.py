@@ -5110,14 +5110,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return [strand for strand in self.strands
                 if isinstance(strand.domains[-1], Domain) and strand.domains[-1].helix == helix]
 
-    def _check_legal_design(self) -> None:
+    def _check_legal_design(self, warn_duplicate_strand_names: bool = True) -> None:
         self._check_types()
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
-        self._warn_if_strand_names_not_unique()
+        if warn_duplicate_strand_names:
+            self._warn_if_strand_names_not_unique()
 
     def _check_types(self) -> None:
         # Check that type of objects are what we expect. Added this after a nasty bug when I accidentally
@@ -5160,7 +5161,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         def err_msg(d1: Domain, d2: Domain, h_idx: int) -> str:
             return f"two domains overlap on helix {h_idx}: " \
-                   f"\n{d1}\n  and\n{d2}\n  but have the same direction"
+                   f"\n{d1} on strand {d1.strand()}\n  and\n{d2} on strand {d2.strand()}\n  but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
@@ -5250,12 +5251,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Domain):
                 helix = self.helices[domain.helix]
                 if helix.min_offset is not None and domain.start < helix.min_offset:
-                    err_msg = f"domain {domain} has start offset {domain.start}, " \
+                    err_msg = f"domain {domain} on strand {domain.strand()} " \
+                              f"has start offset {domain.start}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
                     raise StrandError(strand, err_msg)
                 if helix.max_offset is not None and domain.end > helix.max_offset:
-                    err_msg = f"domain {domain} has end offset {domain.end}, " \
+                    err_msg = f"domain {domain} on strand {domain.strand()} " \
+                              f"has end offset {domain.end}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
                     raise StrandError(strand, err_msg)
@@ -5943,7 +5946,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxdna_format(self) -> Tuple[str, str]:
+    def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
 
         The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
@@ -5952,11 +5955,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
         The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
 
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         :return:
             two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
-        self._check_legal_design()
+        self._check_legal_design(warn_duplicate_strand_names)
         system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
@@ -5993,7 +5999,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
                             extension: Optional[str] = None,
-                            suppress_indent: bool = True) -> None:
+                            suppress_indent: bool = True,
+                            warn_duplicate_strand_names: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by the scadnano web interface,
         with the output file having the same name as the running script but with ``.py`` changed to
@@ -6015,6 +6022,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param extension:
             extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
             e.g., grid coordinates. If True, something like this will be written:
 
@@ -6036,7 +6046,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
               }
 
         """
-        self._check_legal_design()
+        self._check_legal_design(warn_duplicate_strand_names)
         contents = self.to_json(suppress_indent)
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
