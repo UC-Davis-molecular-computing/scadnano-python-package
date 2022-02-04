@@ -2099,7 +2099,7 @@ class IDTFields(_JSONSerializable):
             del dct['plate']
         if self.well is None:
             del dct['well']
-        return NoIndent(dct)
+        return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
@@ -3588,7 +3588,7 @@ class PlateType(int, enum.Enum):
             raise AssertionError('unreachable')
 
 
-class _PlateCoordinate:
+class PlateCoordinate:
 
     def __init__(self, plate_type: PlateType) -> None:
         self._plate_type = plate_type
@@ -3599,11 +3599,14 @@ class _PlateCoordinate:
     def increment(self) -> None:
         self._row_idx += 1
         if self._row_idx == len(self._plate_type.rows()):
-            self._row_idx = 0
-            self._col_idx += 1
+            self.advance_to_next_col()
             if self._col_idx == len(self._plate_type.cols()):
                 self._col_idx = 0
                 self._plate += 1
+
+    def advance_to_next_col(self) -> None:
+        self._row_idx = 0
+        self._col_idx += 1
 
     def plate(self) -> int:
         return self._plate
@@ -5892,7 +5895,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True) -> None:
-        plate_coord = _PlateCoordinate(plate_type=plate_type)
+        plate_coord = PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
         filename_plate, workbook = self._setup_excel_file(directory, filename)
