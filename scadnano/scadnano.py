@@ -2651,16 +2651,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
 
     modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
-    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). Maps offset to 
-    modification. If the internal modification is attached to a base 
+    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). 
+    
+    Maps index within DNA sequence to modification. If the internal modification is attached to a base 
     (e.g., internal biotin, /iBiodT/ from IDT), 
-    then the offset is that of the base.
+    then the index is that of the base.
     If it goes between two bases 
     (e.g., internal Cy3, /iCy3/ from IDT),
-    then the offset is that of the previous base, 
-    e.g., to put a Cy3 between bases at offsets 3 and 4, the offset should be 3. 
-    So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
-    and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
+    then the index is that of the previous base, 
+    e.g., to put a Cy3 between bases at indices 3 and 4, the index should be 3. 
+    So for an internal modified base on a sequence of length n, the allowed indices are 0,...,n-1,
+    and for an internal modification that goes between bases, the allowed indices are 0,...,n-2."""
 
     name: Optional[str] = None
     """
@@ -3282,7 +3283,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f"smallest offset is {min_offset} but must be nonnegative: "
                                          f"{self.modifications_int}")
             if max_offset is not None and max_offset > len(self.dna_sequence):
-                raise IllegalDesignError(f"largeest offset is {max_offset} but must be at most "
+                raise IllegalDesignError(f"largest offset is {max_offset} but must be at most "
                                          f"{len(self.dna_sequence)}: "
                                          f"{self.modifications_int}")
 
