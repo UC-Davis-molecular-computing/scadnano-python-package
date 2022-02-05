@@ -921,7 +921,19 @@ class Modification(_JSONSerializable, ABC):
 
 @dataclass(frozen=True, eq=True)
 class Modification5Prime(Modification):
-    """5' modification of DNA sequence, e.g., biotin or Cy3."""
+    """
+    5' modification of DNA sequence, e.g., biotin or Cy3.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 5' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 5' biotin:
+
+    .. code-block:: python
+
+        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        design.strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.strand(1, 0).move(8).with_modification_5p(biotin_5p)
+    """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
@@ -946,7 +958,19 @@ class Modification5Prime(Modification):
 
 @dataclass(frozen=True, eq=True)
 class Modification3Prime(Modification):
-    """3' modification of DNA sequence, e.g., biotin or Cy3."""
+    """
+    3' modification of DNA sequence, e.g., biotin or Cy3.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 3' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 3' biotin:
+
+    .. code-block:: python
+
+        biotin_3p = Modification3Prime(display_text='B', idt_text='/3Bio/')
+        design.strand(0, 0).move(8).with_modification_3p(biotin_3p)
+        design.strand(1, 0).move(8).with_modification_3p(biotin_3p)
+    """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
@@ -4483,9 +4507,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             # 2. or abs(curr_base-old_base) > 1 (this accounts for test_crossover_same_helix)
             # 3. or the strand is circular strand
             if curr_helix != old_helix or (
-                    (not direction_forward and curr_base > old_base) or (direction_forward and curr_base < old_base) # 1.
-                    or (abs(curr_base-old_base) > 1)                                                                 # 2.
-                    or (curr_helix == strand_5_end_helix and curr_base == strand_5_end_base)):                       # 3.
+                    (not direction_forward and curr_base > old_base) or (
+                    direction_forward and curr_base < old_base)  # 1.
+                    or (abs(curr_base - old_base) > 1)  # 2.
+                    or (curr_helix == strand_5_end_helix and curr_base == strand_5_end_base)):  #  3.
 
                 if direction_forward:
                     end = old_base
@@ -4644,6 +4669,94 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # design.set_helices_view_order([num for num in helices])
 
         return design
+
+    def plate_maps_markdown(self, warn_duplicate_strand_names: bool = True,
+                            plate_type: PlateType = PlateType.wells96) -> Dict[str, str]:
+        """
+        Generates plate maps from this :any:`Design`.
+
+        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
+        specified are exported. The number of strings in the returned list is equal to the number of
+        different plate names specified across all :any:`Strand`'s in the design.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
+            for :data:`Strand.name`.
+        :param plate_type:
+            Type of plate: 96 or 384 well.
+        :return:
+            dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
+            in this design with IDT plates specified
+        """
+        strand_names_to_plate_and_well = {}
+        plate_names_to_strands = defaultdict(list)
+        for strand in self.strands:
+            if strand.idt is not None and strand.idt.plate is not None:
+                plate_names_to_strands[strand.idt.plate].append(strand)
+                if strand.name is None:
+                    raise ValueError(f'strand {strand} has no name, but has a plate, which is not allowed')
+                if strand.name in strand_names_to_plate_and_well:
+                    if warn_duplicate_strand_names:
+                        print(f'WARNING: found duplicate instance of strand with name {strand.name}')
+                    plate, well = strand_names_to_plate_and_well[strand.name]
+                    if strand.idt.plate != plate:
+                        raise ValueError(f'two strands with name {strand.name} exist but have different '
+                                         f'IDT plates "{plate}" and "{strand.idt.plate}"'
+                                         'duplicate strands with the same name are allowed, '
+                                         'but they must have the same IDT plate and well')
+                    if strand.idt.well != well:
+                        raise ValueError(f'two strands with name {strand.name} exist but have different '
+                                         f'IDT wells "{well}" and "{strand.idt.well}"'
+                                         'duplicate strands with the same name are allowed, '
+                                         'but they must have the same IDT plate and well')
+                else:
+                    strand_names_to_plate_and_well[strand.name] = (strand.idt.plate, strand.idt.well)
+
+        maps = {name: self._plate_map_markdown(name, strands_in_plate, plate_type)
+                for name, strands_in_plate in plate_names_to_strands.items()}
+
+        return maps
+
+    def _plate_map_markdown(self, plate_name: str, strands_in_plate: List[Strand],
+                            plate_type: PlateType) -> str:
+        """
+        Generates plate map from this :any:`Design` for plate with name `plate_name`.
+
+        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
+        with value `plate_name` are exported.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
+            for :data:`Strand.name`.
+        :return:
+            markdown string specifying plate map for :any:`Strand`'s with
+            :data:`Strand.idt.plate` equal to`plate_name`
+        """
+        well_to_strand = {}
+        for strand in strands_in_plate:
+            well_to_strand[strand.idt.well] = strand
+
+
+        num_rows = len(plate_type.rows())
+        num_cols = len(plate_type.cols())
+        header = [' '] + [str(col) for col in plate_type.cols()]
+        table = [[' ' for _ in range(num_cols + 1)] for _ in range(num_rows)]
+
+        for r in range(num_rows):
+            table[r][0] = plate_type.rows()[r]
+
+        plate_coord = PlateCoordinate(plate_type)
+        for c in range(1, num_cols + 1):
+            for r in range(num_rows):
+                well = plate_coord.well()
+                plate_coord.increment()
+                if well in well_to_strand:
+                    strand = well_to_strand[well]
+                    table[r][c] = strand.name
+
+        from tabulate import tabulate
+        md_table = tabulate(table, header, tablefmt='github')
+        return f'## {plate_name}\n{md_table}'
 
     def modifications(self, mod_type: Optional[ModificationType] = None) -> Set[Modification]:
         """
