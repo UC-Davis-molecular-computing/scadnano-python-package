@@ -4671,7 +4671,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return design
 
     def plate_maps_markdown(self, warn_duplicate_strand_names: bool = True,
-                            plate_type: PlateType = PlateType.wells96) -> Dict[str, str]:
+                            plate_type: PlateType = PlateType.wells96,
+                            strands: Optional[Iterable[Strand]] = None,
+                            well_marker: Optional[str] = None) -> Dict[str, str]:
         """
         Generates plate maps from this :any:`Design`.
 
@@ -4684,13 +4686,21 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for :data:`Strand.name`.
         :param plate_type:
             Type of plate: 96 or 384 well.
+        :param strands:
+            If specified, only the :any:`Strand`'s in `strands` are put in the plate map.
+        :param well_marker:
+            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified,
+            then it is put there instead. This is useful for printing plate maps that just put,
+            for instance, an `'X'` in the well to pipette. (e.g., specify `well_marker` = `'X'`)
         :return:
             dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
             in this design with IDT plates specified
         """
+        if strands is None:
+            strands = self.strands
         strand_names_to_plate_and_well = {}
         plate_names_to_strands = defaultdict(list)
-        for strand in self.strands:
+        for strand in strands:
             if strand.idt is not None and strand.idt.plate is not None:
                 plate_names_to_strands[strand.idt.plate].append(strand)
                 if strand.name is None:
@@ -4712,13 +4722,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 else:
                     strand_names_to_plate_and_well[strand.name] = (strand.idt.plate, strand.idt.well)
 
-        maps = {name: self._plate_map_markdown(name, strands_in_plate, plate_type)
+        maps = {name: self._plate_map_markdown(name, strands_in_plate, plate_type, well_marker)
                 for name, strands_in_plate in plate_names_to_strands.items()}
 
         return maps
 
     def _plate_map_markdown(self, plate_name: str, strands_in_plate: List[Strand],
-                            plate_type: PlateType) -> str:
+                            plate_type: PlateType, well_marker: Optional[str]) -> str:
         """
         Generates plate map from this :any:`Design` for plate with name `plate_name`.
 
@@ -4752,7 +4762,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 plate_coord.increment()
                 if well in well_to_strand:
                     strand = well_to_strand[well]
-                    table[r][c] = strand.name
+                    well_marker_to_use = well_marker if well_marker is not None else strand.name
+                    table[r][c] = well_marker_to_use
 
         from tabulate import tabulate
         md_table = tabulate(table, header, tablefmt='github')
