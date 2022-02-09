@@ -4675,11 +4675,44 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                             strands: Optional[Iterable[Strand]] = None,
                             well_marker: Optional[str] = None) -> Dict[str, str]:
         """
-        Generates plate maps from this :any:`Design`.
+        Generates plate maps from this :any:`Design` in Markdown format, for example:
+
+        .. code-block::
+
+            |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
+            | A   | mon0 | mon0_F |        | adp0 |          |     |     |     |     |      |      |      |
+            | B   | mon1 | mon1_Q | mon1_F | adp1 | adp_sst1 |     |     |     |     |      |      |      |
+            | C   | mon2 | mon2_F | mon2_Q | adp2 | adp_sst2 |     |     |     |     |      |      |      |
+            | D   | mon3 | mon3_Q | mon3_F | adp3 | adp_sst3 |     |     |     |     |      |      |      |
+            | E   | mon4 |        | mon4_Q | adp4 | adp_sst4 |     |     |     |     |      |      |      |
+            | F   |      |        |        | adp5 |          |     |     |     |     |      |      |      |
+            | G   |      |        |        |      |          |     |     |     |     |      |      |      |
+            | H   |      |        |        |      |          |     |     |     |     |      |      |      |
+
+        or, with `well_marker` set to ``'*'`` (in case you don't need to see the strand names and just
+        want to see which wells are marked):
+
+        .. code-block::
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
+            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
+            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
 
         All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
         specified are exported. The number of strings in the returned list is equal to the number of
         different plate names specified across all :any:`Strand`'s in the design.
+
+        If parameter `strands` is given, then a subset of strands is included. This is useful for
+        specifying a mix of strands for a particular experiment, which come from a plate but does not
+        include every strand in the plate.
 
         :param warn_duplicate_strand_names:
             If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
@@ -4691,7 +4724,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param well_marker:
             By default the strand's name is put in the relevant plate entry. If `well_marker` is specified,
             then it is put there instead. This is useful for printing plate maps that just put,
-            for instance, an `'X'` in the well to pipette. (e.g., specify `well_marker` = `'X'`)
+            for instance, an `'X'` in the well to pipette (e.g., specify `well_marker` = `'X'`),
+            e.g., for experimental mixes that use only some strands in the plate.
         :return:
             dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
             in this design with IDT plates specified
