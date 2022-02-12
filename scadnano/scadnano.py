@@ -3925,6 +3925,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 grid_for_group = group.grid
             group.helices_view_order = _check_helices_view_order_and_return(helices_view_order_for_group,
                                                                             helix_idxs_in_group)
+            
             if grid_for_group is None:
                 raise AssertionError()
             group.grid = grid_for_group
@@ -4393,7 +4394,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         for idx, helix in helices.items():
             helix.idx = idx
-
+        
         return helices
 
     @staticmethod
@@ -4666,7 +4667,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/121
         # which means we may not have a well-defined helices_view_order on the whole design if groups
         # are used
-        # design.set_helices_view_order([num for num in helices])
+        # TS: Dave, I have thorougly checked the code of Design constructor and the order of the helices
+        # IS lost even if the helices were give as a list.
+        # Indeed, you very early call `_normalize_helices_as_dict` in the constructor the order is lost.
+        # Later in the code, if no view order was given the code will choose the identity 
+        # in function `_check_helices_view_order_and_return`.
+        # Conclusion: do not assume that your constructor code deals with the ordering, even if 
+        # input helices is a list. I am un commenting the below:
+        design.set_helices_view_order([num for num in helices])
 
         return design
 

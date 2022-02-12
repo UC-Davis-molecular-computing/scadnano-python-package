@@ -614,8 +614,18 @@ class TestImportCadnanoV2(unittest.TestCase):
         # To help with debugging, uncomment these lines to write out the
         # scadnano file
         #
-        # design.write_scadnano_file(directory=self.output_path,
-        #                            filename=f'test_helices_order.{sc.default_scadnano_file_extension}')
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'test_helices_order.{sc.default_scadnano_file_extension}')
+
+    def test_helices_order2(self) -> None:
+        design = sc.Design.from_cadnano_v2(directory=self.input_path,
+                                           filename='test_helices_order2.json')
+        self.assertEqual(35, len(design.helices))
+        # To help with debugging, uncomment these lines to write out the
+        # scadnano file
+        #
+        design.write_scadnano_file(directory=self.output_path,
+                                   filename=f'test_helices_order2.{sc.default_scadnano_file_extension}')
 
     def test_huge_hex(self) -> None:
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
