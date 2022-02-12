@@ -4640,7 +4640,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # are used
         # TS: Dave, I have thorougly checked the code of Design constructor and the order of the helices
         # IS lost even if the helices were give as a list.
-        # Indeed, you very early call `_normalize_helices_as_dict`` in the constructor the order is lost.
+        # Indeed, you very early call `_normalize_helices_as_dict` in the constructor the order is lost.
         # Later in the code, if no view order was given the code will choose the identity 
         # in function `_check_helices_view_order_and_return`.
         # Conclusion: do not assume that your constructor code deals with the ordering, even if 
