@@ -2163,14 +2163,14 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         """
         design = self.small_nicked_design
         self.assertEqual(8, len(design.strands))
-        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 8)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 8)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 8)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(0, False, 8, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 8, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 8, 16)]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8, dna_sequence='ACGTACGA')]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 8, dna_sequence='TGCATGCT'[::-1]), ]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 8, dna_sequence='AAACCCGG')]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 8, dna_sequence='TTTGGGCC'[::-1])]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16, dna_sequence='AACCGGTA')]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, False, 8, 16, dna_sequence='TTGGCCAT'[::-1])]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, True, 8, 16, dna_sequence='TTTGGGCC')]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, False, 8, 16, dna_sequence='AAACCCGG'[::-1])]), design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 8)
         self.assertEqual(remove_whitespace('ACGTACGA'), strand.dna_sequence)
@@ -5905,7 +5905,7 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         ss0 = sc.Domain(0, True, 0, 10)
         ss1 = sc.Domain(1, False, 0, 10)
         strand = sc.Strand([ss0, ss1])
-        strand.dna_sequence = "AAAACCCCGGGGTTTTACGT"
+        strand.set_dna_sequence("AAAACCCCGGGGTTTTACGT")
         # offset: 0  1  2  3  4  5  6  7  8  9
         # index:  0  1  2  3  4  5  6  7  8  9
         #         A  A  A  A  C  C  C  C  G  G
@@ -5941,7 +5941,7 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         ss0 = sc.Domain(0, True, 0, 10, deletions=[2, 5, 6])
         ss1 = sc.Domain(1, False, 0, 10, deletions=[2, 6, 7])
         strand = sc.Strand([ss0, ss1])
-        strand.dna_sequence = "AAACCGGGGTTAGT"
+        strand.set_dna_sequence("AAACCGGGGTTAGT")
         # offset: 0  1 D2  3  4 D5 D6  7  8  9
         # index:  0  1     2  3        4  5  6
         #         A  A     A  C        C  G  G
@@ -5983,7 +5983,7 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         ss0 = sc.Domain(0, True, 0, 10, insertions=[(2, 1), (6, 2)])
         ss1 = sc.Domain(1, False, 0, 10, insertions=[(2, 1), (6, 2)])
         strand = sc.Strand([ss0, ss1])
-        strand.dna_sequence = "AAAACCCCGGGGTTTTACGTACGTAC"
+        strand.set_dna_sequence("AAAACCCCGGGGTTTTACGTACGTAC")
         # offset: 0  1  2  I  3  4  5  6  I  I  7  8  9
         # index:  0  1  2  3  4  5  6  7  8  9 10 11 12
         #         A  A  A  A  C  C  C  C  G  G  G  G  T
@@ -6025,7 +6025,7 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         ss0 = sc.Domain(0, True, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
         ss1 = sc.Domain(1, False, 0, 10, deletions=[4], insertions=[(2, 1), (6, 2)])
         strand = sc.Strand([ss0, ss1])
-        strand.dna_sequence = "AAAACCCCGGGGTTTTACGTACGTAC"
+        strand.set_dna_sequence("AAAACCCCGGGGTTTTACGTACGT")
         # offset: 0  1  2  I  3 D4  5  6  I  I  7  8  9
         # index:  0  1  2  3  4     5  6  7  8  9 10 11
         #         A  A  A  A  C     C  C  C  G  G  G  G
