@@ -6522,6 +6522,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         else:
             # join strands
+            old_strand_3p_dna_sequence = strand_3p.dna_sequence
+            old_strand_5p_dna_sequence = strand_5p.dna_sequence
+
             strand_3p.domains.pop()
             strand_3p.domains.append(dom_new)
             strand_3p.domains.extend(strand_5p.domains[1:])
@@ -6530,8 +6533,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for idx, mod in strand_5p.modifications_int.items():
                 new_idx = idx + strand_3p.dna_length()
                 strand_3p.set_modification_internal(new_idx, mod)
-            if strand_3p.dna_sequence is not None and strand_5p.dna_sequence is not None:
-                strand_3p.dna_sequence += strand_5p.dna_sequence
+            if old_strand_3p_dna_sequence is not None and old_strand_5p_dna_sequence is not None:
+                strand_3p.set_dna_sequence(old_strand_3p_dna_sequence + old_strand_5p_dna_sequence)
             if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
                 strand_3p.set_color(strand_5p.color)
             self.strands.remove(strand_5p)

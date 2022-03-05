@@ -2247,10 +2247,14 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design.ligate(1, 8, True)
         design.ligate(1, 8, False)
         self.assertEqual(4, len(design.strands))
-        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16)]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 16, dna_sequence='ACGTACGAAACCGGTA')]), design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence='TGCATGCTTTGGCCAT'[:: -1])]),
+            design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence='AAACCCGGTTTGGGCC')]), design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence='TTTGGGCCAAACCCGG'[:: -1])]),
+            design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 16)
         self.assertEqual(remove_whitespace('ACGTACGA AACCGGTA'), strand.dna_sequence)
