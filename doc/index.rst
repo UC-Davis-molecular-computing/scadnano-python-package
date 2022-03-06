@@ -25,8 +25,8 @@ Interoperability - cadnano v2
 
 Scadnano provides function to convert design to and from cadnano v2:
 
-* :py:meth:`DNADesign.from_cadnano_v2` will create a scadnano DNADesign from a ``cadnanov2`` json file.
-* :py:meth:`DNADesign.export_cadnano_v2` will produce a ``cadnanov2`` json file from a scadnano design.
+* :py:meth:`scadnano.DNADesign.from_cadnano_v2` will create a scadnano DNADesign from a ``cadnanov2`` json file.
+* :py:meth:`scadnano.DNADesign.export_cadnano_v2` will produce a ``cadnanov2`` json file from a scadnano design.
 
 **Important**
 

@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.2"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -800,6 +800,7 @@ mod_idt_text_key = 'idt_text'
 mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
+mod_connector_length_key = 'connector_length'
 
 # IDT keys
 idt_scale_key = 'scale'
@@ -821,6 +822,7 @@ idt_name_key = 'name'
 # modification classes
 
 _default_modification_id = "WARNING: no id assigned to modification"
+default_connector_length = 4
 
 
 class ModificationType(enum.Enum):
@@ -840,8 +842,29 @@ class ModificationType(enum.Enum):
 @dataclass(frozen=True, eq=True)
 class Modification(_JSONSerializable, ABC):
     """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
-    Use :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
-    to instantiate."""
+    Use concrete subclasses
+    :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
+    to instantiate.
+    
+    If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
+    the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' "modification"
+    to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
+    (this is a useful hack for putting single-stranded extensions on strands until loopouts on the end
+    of a strand are supported;
+    see https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/2),
+    then this would clash with a similar 3' modification without specifying unique IDs for them:
+    ``t6_3p = Modification3Prime(display_text='6T', idt_text='TTTTTT') # ERROR``.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 5' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 5' biotin:
+
+    .. code-block:: python
+
+        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
+    """
 
     display_text: str
     """Short text to display in the web interface as an "icon"
@@ -857,6 +880,13 @@ class Modification(_JSONSerializable, ABC):
     idt_text: Optional[str] = None
     """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
 
+    connector_length: int = default_connector_length
+    """Length of "connector" displayed in web interface. 
+    
+    Drawn like a carbon chain to offset the display of the modification vertically from the DNA strand.
+    This field is useful for putting two nearby modifications at different heights so that their 
+    text does not overlap."""
+
     def __post_init__(self) -> None:
         if self.id == _default_modification_id and self.idt_text is not None:
             object.__setattr__(self, 'id', self.idt_text)
@@ -866,6 +896,8 @@ class Modification(_JSONSerializable, ABC):
         if self.idt_text is not None:
             ret[mod_idt_text_key] = self.idt_text
             ret[mod_display_connector_key] = False  # type: ignore
+        if self.connector_length != default_connector_length:
+            ret[mod_connector_length_key] = self.connector_length
         return ret
 
     @staticmethod
@@ -889,7 +921,19 @@ class Modification(_JSONSerializable, ABC):
 
 @dataclass(frozen=True, eq=True)
 class Modification5Prime(Modification):
-    """5' modification of DNA sequence, e.g., biotin or Cy3."""
+    """
+    5' modification of DNA sequence, e.g., biotin or Cy3.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 5' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 5' biotin:
+
+    .. code-block:: python
+
+        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
+    """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
@@ -903,7 +947,9 @@ class Modification5Prime(Modification):
         location = json_map[mod_location_key]
         assert location == "5'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification5Prime(display_text=display_text, idt_text=idt_text)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return Modification5Prime(display_text=display_text, idt_text=idt_text,
+                                  connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
@@ -912,7 +958,19 @@ class Modification5Prime(Modification):
 
 @dataclass(frozen=True, eq=True)
 class Modification3Prime(Modification):
-    """3' modification of DNA sequence, e.g., biotin or Cy3."""
+    """
+    3' modification of DNA sequence, e.g., biotin or Cy3.
+
+    In general it is recommended to create a single :any:`Modification` object for each *type* of
+    modification in the design. For example, if many strands have a 3' biotin, then it is recommended to
+    create a single :any:`Modification` object and re-use it on each strand with a 3' biotin:
+
+    .. code-block:: python
+
+        biotin_3p = Modification3Prime(display_text='B', idt_text='/3Bio/')
+        design.draw_strand(0, 0).move(8).with_modification_3p(biotin_3p)
+        design.draw_strand(1, 0).move(8).with_modification_3p(biotin_3p)
+    """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = super().to_json_serializable(suppress_indent)
@@ -926,7 +984,9 @@ class Modification3Prime(Modification):
         location = json_map[mod_location_key]
         assert location == "3'"
         idt_text = json_map.get(mod_idt_text_key)
-        return Modification3Prime(display_text=display_text, idt_text=idt_text)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return Modification3Prime(display_text=display_text, idt_text=idt_text,
+                                  connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
@@ -966,7 +1026,9 @@ class ModificationInternal(Modification):
         idt_text = json_map.get(mod_idt_text_key)
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
-        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases)
+        connector_length = json_map.get(mod_connector_length_key, default_connector_length)
+        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases,
+                                    connector_length=connector_length)
 
     @staticmethod
     def modification_type() -> ModificationType:
@@ -1886,7 +1948,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
-        design.strand(0,0).move(10).loopout(0,5).move(-10)
+        design.draw_strand(0,0).move(10).loopout(0,5).move(-10)
     """
 
     length: int
@@ -2061,7 +2123,7 @@ class IDTFields(_JSONSerializable):
             del dct['plate']
         if self.well is None:
             del dct['well']
-        return NoIndent(dct)
+        return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
@@ -2088,7 +2150,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     .. code-block:: Python
 
-        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+        design.draw_strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
 
     :any:`StrandBuilder` should generally not be created directly.
     Although it is convenient to use chained method calls, it is also sometimes useful to assign the
@@ -2097,7 +2159,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     .. code-block:: Python
 
-        strand_builder = design.strand(0, 0)
+        strand_builder = design.draw_strand(0, 0)
         strand_builder.to(10)
         strand_builder.cross(1)
         strand_builder.to(5)
@@ -2394,7 +2456,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
 
         :param sequence: the DNA sequence to assign to the :any:`Strand`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
@@ -2421,7 +2483,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_sequence('AAA')\\
+            design.draw_strand(0, 5).to(8).with_domain_sequence('AAA')\\
                 .cross(1).to(5).with_domain_sequence('TTT')\\
                 .loopout(2, 4).with_domain_sequence('CCCC')\\
                 .to(10).with_domain_sequence('GGGGG')
@@ -2446,7 +2508,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_name('scaffold')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_name('scaffold')
 
         :param name: name to assign to the :any:`Strand`
         :return: self
@@ -2463,7 +2525,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_label('scaffold')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_label('scaffold')
 
         :param label: label to assign to the :any:`Strand`
         :return: self
@@ -2486,7 +2548,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).with_domain_name('dom1*').cross(1).to(5).with_domain_name('dom1')
+            design.draw_strand(0, 0).to(10).with_domain_name('dom1*').cross(1).to(5).with_domain_name('dom1')
 
         :param name: name to assign to the most recently created :any:`Domain` or :any:`Loopout`
         :return: self
@@ -2510,7 +2572,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_label('domain 1')\\
+            design.draw_strand(0, 5).to(8).with_domain_label('domain 1')\\
                 .cross(1).to(5).with_domain_label('domain 2')\\
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
@@ -2613,16 +2675,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """
 
     modifications_int: Dict[int, ModificationInternal] = field(default_factory=dict)
-    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). Maps offset to 
-    modification. If the internal modification is attached to a base 
+    """:any:`Modification`'s to the DNA sequence (e.g., biotin, Cy3/Cy5 fluorphores). 
+    
+    Maps index within DNA sequence to modification. If the internal modification is attached to a base 
     (e.g., internal biotin, /iBiodT/ from IDT), 
-    then the offset is that of the base.
+    then the index is that of the base.
     If it goes between two bases 
     (e.g., internal Cy3, /iCy3/ from IDT),
-    then the offset is that of the previous base, 
-    e.g., to put a Cy3 between bases at offsets 3 and 4, the offset should be 3. 
-    So for an internal modified base on a sequence of length n, the allowed offsets are 0,...,n-1,
-    and for an internal modification that goes between bases, the allowed offsets are 0,...,n-2."""
+    then the index is that of the previous base, 
+    e.g., to put a Cy3 between bases at indices 3 and 4, the index should be 3. 
+    So for an internal modified base on a sequence of length n, the allowed indices are 0,...,n-1,
+    and for an internal modification that goes between bases, the allowed indices are 0,...,n-2."""
 
     name: Optional[str] = None
     """
@@ -3244,7 +3307,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f"smallest offset is {min_offset} but must be nonnegative: "
                                          f"{self.modifications_int}")
             if max_offset is not None and max_offset > len(self.dna_sequence):
-                raise IllegalDesignError(f"largeest offset is {max_offset} but must be at most "
+                raise IllegalDesignError(f"largest offset is {max_offset} but must be at most "
                                          f"{len(self.dna_sequence)}: "
                                          f"{self.modifications_int}")
 
@@ -3549,7 +3612,7 @@ class PlateType(int, enum.Enum):
             raise AssertionError('unreachable')
 
 
-class _PlateCoordinate:
+class PlateCoordinate:
 
     def __init__(self, plate_type: PlateType) -> None:
         self._plate_type = plate_type
@@ -3560,11 +3623,14 @@ class _PlateCoordinate:
     def increment(self) -> None:
         self._row_idx += 1
         if self._row_idx == len(self._plate_type.rows()):
-            self._row_idx = 0
-            self._col_idx += 1
+            self.advance_to_next_col()
             if self._col_idx == len(self._plate_type.cols()):
                 self._col_idx = 0
                 self._plate += 1
+
+    def advance_to_next_col(self) -> None:
+        self._row_idx = 0
+        self._col_idx += 1
 
     def plate(self) -> int:
         return self._plate
@@ -3859,6 +3925,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 grid_for_group = group.grid
             group.helices_view_order = _check_helices_view_order_and_return(helices_view_order_for_group,
                                                                             helix_idxs_in_group)
+
             if grid_for_group is None:
                 raise AssertionError()
             group.grid = grid_for_group
@@ -4436,11 +4503,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             seen[(curr_helix, curr_base)] = True
             curr_helix, curr_base = vstrands[curr_helix][strand_type][curr_base][2:]
             # Add crossover
-            # We have a crossover when we jump helix or when order is broken on same helix
-            # Or circular strand
-            if curr_helix != old_helix or (not direction_forward and curr_base > old_base) or (
-                    direction_forward and curr_base < old_base) or (
-                    curr_helix == strand_5_end_helix and curr_base == strand_5_end_base):
+            # We have a crossover when we jump helix or we stay on the same helix but either:
+            # 1. the order of curr_base vs old_base is opposite the direction of the strand
+            # 2. or abs(curr_base-old_base) > 1 (this accounts for test_crossover_same_helix)
+            # 3. or the strand is circular strand
+            if curr_helix != old_helix or (
+                    (not direction_forward and curr_base > old_base) or (
+                    direction_forward and curr_base < old_base)  # 1.
+                    or (abs(curr_base - old_base) > 1)  # 2.
+                    or (curr_helix == strand_5_end_helix and curr_base == strand_5_end_base)):  #  3.
 
                 if direction_forward:
                     end = old_base
@@ -4518,21 +4589,35 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_cadnano_v2(directory: Optional[str] = None, filename: Optional[str] = None,
+    def from_cadnano_v2(directory: str = '', filename: Optional[str] = None,
                         json_dict: Optional[dict] = None) -> 'Design':
         """
-        Creates a Design from a cadnano v2 file.
+        Creates a Design from a cadnano v2 design. The design can either be specified as a filename
+        (assumed to be the a JSON file containing the cadnano design) or as a Python dictionary,
+        assumed to be the result of importing the JSON from the cadnano file.
+
+        Exactly one of `filename` or `json_dict` should be specified.
+
+        :param directory:
+            directory in which to look for `filename`; current directory by default.
+            Ignored if `json_dict` is specified.
+        :param filename:
+            name of file containing cadnano design. Mutually exclusive with `json_dict`.
+        :param json_dict:
+            cadnano design represented as a Python dict.
+            (assumed to be the result of json.load on a cadnano file)
+        :return:
+            An scadnano design equivalent to the specified cadnano design.
         """
 
-        if json_dict is None and filename is not None and directory is not None:
-            file_path = os.path.join(directory, filename)
-            f = open(file_path, 'r')
-            cadnano_v2_design = json.load(f)
-            f.close()
-        elif json_dict is not None:
+        if json_dict is not None and filename is None:
             cadnano_v2_design = json_dict
+        elif json_dict is None and filename is not None:
+            file_path = os.path.join(directory, filename)
+            with open(file_path, 'r') as f:
+                cadnano_v2_design = json.load(f)
         else:
-            raise ValueError('must have json_dict None and filename/directory not None, or vice versa')
+            raise ValueError('exactly one of json_dict or filename should be None')
 
         num_bases = len(cadnano_v2_design['vstrands'][0]['scaf'])
         grid_type = Grid.square
@@ -4582,9 +4667,148 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/121
         # which means we may not have a well-defined helices_view_order on the whole design if groups
         # are used
-        # design.set_helices_view_order([num for num in helices])
+        # TS: Dave, I have thorougly checked the code of Design constructor and the order of the helices
+        # IS lost even if the helices were give as a list.
+        # Indeed, you very early call `_normalize_helices_as_dict` in the constructor the order is lost.
+        # Later in the code, if no view order was given the code will choose the identity 
+        # in function `_check_helices_view_order_and_return`.
+        # Conclusion: do not assume that your constructor code deals with the ordering, even if 
+        # input helices is a list. I am un commenting the below:
+        design.set_helices_view_order([num for num in helices])
 
         return design
+
+    def plate_maps_markdown(self, warn_duplicate_strand_names: bool = True,
+                            plate_type: PlateType = PlateType.wells96,
+                            strands: Optional[Iterable[Strand]] = None,
+                            well_marker: Optional[str] = None) -> Dict[str, str]:
+        """
+        Generates plate maps from this :any:`Design` in Markdown format, for example:
+
+        .. code-block::
+
+            |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
+            | A   | mon0 | mon0_F |        | adp0 |          |     |     |     |     |      |      |      |
+            | B   | mon1 | mon1_Q | mon1_F | adp1 | adp_sst1 |     |     |     |     |      |      |      |
+            | C   | mon2 | mon2_F | mon2_Q | adp2 | adp_sst2 |     |     |     |     |      |      |      |
+            | D   | mon3 | mon3_Q | mon3_F | adp3 | adp_sst3 |     |     |     |     |      |      |      |
+            | E   | mon4 |        | mon4_Q | adp4 | adp_sst4 |     |     |     |     |      |      |      |
+            | F   |      |        |        | adp5 |          |     |     |     |     |      |      |      |
+            | G   |      |        |        |      |          |     |     |     |     |      |      |      |
+            | H   |      |        |        |      |          |     |     |     |     |      |      |      |
+
+        or, with `well_marker` set to ``'*'`` (in case you don't need to see the strand names and just
+        want to see which wells are marked):
+
+        .. code-block::
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
+            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
+            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
+        specified are exported. The number of strings in the returned list is equal to the number of
+        different plate names specified across all :any:`Strand`'s in the design.
+
+        If parameter `strands` is given, then a subset of strands is included. This is useful for
+        specifying a mix of strands for a particular experiment, which come from a plate but does not
+        include every strand in the plate.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
+            for :data:`Strand.name`.
+        :param plate_type:
+            Type of plate: 96 or 384 well.
+        :param strands:
+            If specified, only the :any:`Strand`'s in `strands` are put in the plate map.
+        :param well_marker:
+            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified,
+            then it is put there instead. This is useful for printing plate maps that just put,
+            for instance, an `'X'` in the well to pipette (e.g., specify `well_marker` = `'X'`),
+            e.g., for experimental mixes that use only some strands in the plate.
+        :return:
+            dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
+            in this design with IDT plates specified
+        """
+        if strands is None:
+            strands = self.strands
+        strand_names_to_plate_and_well = {}
+        plate_names_to_strands = defaultdict(list)
+        for strand in strands:
+            if strand.idt is not None and strand.idt.plate is not None:
+                plate_names_to_strands[strand.idt.plate].append(strand)
+                if strand.name is None:
+                    raise ValueError(f'strand {strand} has no name, but has a plate, which is not allowed')
+                if strand.name in strand_names_to_plate_and_well:
+                    if warn_duplicate_strand_names:
+                        print(f'WARNING: found duplicate instance of strand with name {strand.name}')
+                    plate, well = strand_names_to_plate_and_well[strand.name]
+                    if strand.idt.plate != plate:
+                        raise ValueError(f'two strands with name {strand.name} exist but have different '
+                                         f'IDT plates "{plate}" and "{strand.idt.plate}"'
+                                         'duplicate strands with the same name are allowed, '
+                                         'but they must have the same IDT plate and well')
+                    if strand.idt.well != well:
+                        raise ValueError(f'two strands with name {strand.name} exist but have different '
+                                         f'IDT wells "{well}" and "{strand.idt.well}"'
+                                         'duplicate strands with the same name are allowed, '
+                                         'but they must have the same IDT plate and well')
+                else:
+                    strand_names_to_plate_and_well[strand.name] = (strand.idt.plate, strand.idt.well)
+
+        maps = {name: self._plate_map_markdown(name, strands_in_plate, plate_type, well_marker)
+                for name, strands_in_plate in plate_names_to_strands.items()}
+
+        return maps
+
+    def _plate_map_markdown(self, plate_name: str, strands_in_plate: List[Strand],
+                            plate_type: PlateType, well_marker: Optional[str]) -> str:
+        """
+        Generates plate map from this :any:`Design` for plate with name `plate_name`.
+
+        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
+        with value `plate_name` are exported.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
+            for :data:`Strand.name`.
+        :return:
+            markdown string specifying plate map for :any:`Strand`'s with
+            :data:`Strand.idt.plate` equal to`plate_name`
+        """
+        well_to_strand = {}
+        for strand in strands_in_plate:
+            well_to_strand[strand.idt.well] = strand
+
+        num_rows = len(plate_type.rows())
+        num_cols = len(plate_type.cols())
+        header = [' '] + [str(col) for col in plate_type.cols()]
+        table = [[' ' for _ in range(num_cols + 1)] for _ in range(num_rows)]
+
+        for r in range(num_rows):
+            table[r][0] = plate_type.rows()[r]
+
+        plate_coord = PlateCoordinate(plate_type)
+        for c in range(1, num_cols + 1):
+            for r in range(num_rows):
+                well = plate_coord.well()
+                plate_coord.increment()
+                if well in well_to_strand:
+                    strand = well_to_strand[well]
+                    well_marker_to_use = well_marker if well_marker is not None else strand.name
+                    table[r][c] = well_marker_to_use
+
+        from tabulate import tabulate
+        md_table = tabulate(table, header, tablefmt='github')
+        return f'## {plate_name}\n{md_table}'
 
     def modifications(self, mod_type: Optional[ModificationType] = None) -> Set[Modification]:
         """
@@ -4634,14 +4858,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
-    def strand(self, helix: int, offset: int) -> StrandBuilder:
+    def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building by calling
         :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4657,7 +4881,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4671,7 +4895,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             ]))
 
         Each call to
-        :py:meth:`Design.strand`,
+        :py:meth:`Design.draw_strand`,
         :py:meth:`StrandBuilder.cross`,
         :py:meth:`StrandBuilder.loopout`,
         :py:meth:`StrandBuilder.to`
@@ -4692,6 +4916,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
         """
         return StrandBuilder(self, helix, offset)
+
+    def strand(self, helix: int, offset: int) -> StrandBuilder:
+        """
+        Same functionality as :meth:`Design.draw_strand`.
+
+        .. deprecated:: 0.17.2
+           Use :meth:`Design.draw_strand` instead. This method will be removed in a future version.
+        """
+        print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
+              'which has the same functionality. Design.strand will be removed in a future version.')
+        return self.draw_strand(helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`
@@ -4888,7 +5123,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
             helix_dct['stap_colors'] = []
             helix_dct['scafLoop'] = []
-            helix_dct['stap_loop'] = []
+            helix_dct['stapLoop'] = []
 
             helices_ids_reverse[helix_dct['num']] = i
             dct['vstrands'].append(helix_dct)
@@ -4898,7 +5133,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
         """Converts the design to a JSON-serializable Python object (a dict) representing
         the cadnano v2 format. Calling json.dumps on this object will result in a string representing
-        the cadnano c2 format.
+        the cadnano c2 format; this is essentially what is done in
+        :meth:`Design.to_cadnano_v2_json`.
 
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
 
@@ -4984,7 +5220,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_cadnano_v2_json(self, name: str = '') -> str:
         """Converts the design to the cadnano v2 format.
 
-
         Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
 
         :param name:
@@ -5058,14 +5293,15 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return [strand for strand in self.strands
                 if isinstance(strand.domains[-1], Domain) and strand.domains[-1].helix == helix]
 
-    def _check_legal_design(self) -> None:
+    def _check_legal_design(self, warn_duplicate_strand_names: bool = True) -> None:
         self._check_types()
         self._check_helix_offsets()
         self._check_strands_reference_helices_legally()
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         self._check_loopouts_not_first_or_last_substrand()
         self._check_strands_overlap_legally()
-        self._warn_if_strand_names_not_unique()
+        if warn_duplicate_strand_names:
+            self._warn_if_strand_names_not_unique()
 
     def _check_types(self) -> None:
         # Check that type of objects are what we expect. Added this after a nasty bug when I accidentally
@@ -5108,7 +5344,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         def err_msg(d1: Domain, d2: Domain, h_idx: int) -> str:
             return f"two domains overlap on helix {h_idx}: " \
-                   f"\n{d1}\n  and\n{d2}\n  but have the same direction"
+                   f"\n{d1} on strand {d1.strand()}\n  and\n{d2} on strand {d2.strand()}\n  but have the same direction"
 
         # ensure that if two strands overlap on the same helix,
         # they point in opposite directions
@@ -5198,12 +5434,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Domain):
                 helix = self.helices[domain.helix]
                 if helix.min_offset is not None and domain.start < helix.min_offset:
-                    err_msg = f"domain {domain} has start offset {domain.start}, " \
+                    err_msg = f"domain {domain} on strand {domain.strand()} " \
+                              f"has start offset {domain.start}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has min_offset = {helix.min_offset}"
                     raise StrandError(strand, err_msg)
                 if helix.max_offset is not None and domain.end > helix.max_offset:
-                    err_msg = f"domain {domain} has end offset {domain.end}, " \
+                    err_msg = f"domain {domain} on strand {domain.strand()} " \
+                              f"has end offset {domain.end}, " \
                               f"beyond the end of " \
                               f"Helix {domain.helix} that has max_offset = {helix.max_offset}"
                     raise StrandError(strand, err_msg)
@@ -5833,7 +6071,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
                               plate_type: PlateType = PlateType.wells96,
                               warn_using_default_plates: bool = True) -> None:
-        plate_coord = _PlateCoordinate(plate_type=plate_type)
+        plate_coord = PlateCoordinate(plate_type=plate_type)
         plate = 1
         excel_row = 1
         filename_plate, workbook = self._setup_excel_file(directory, filename)
@@ -5891,7 +6129,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxdna_format(self) -> Tuple[str, str]:
+    def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
 
         The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
@@ -5900,15 +6138,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
         The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
 
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         :return:
             two strings that are the contents of the .dat and .top file
             suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
         """
-        self._check_legal_design()
+        self._check_legal_design(warn_duplicate_strand_names)
         system = _convert_design_to_oxdna_system(self)
         return system.ox_dna_output()
 
-    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None) -> None:
+    def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None,
+                          warn_duplicate_strand_names: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/),
         with the output files having the same name as the running script but with ``.py`` changed to
@@ -5929,8 +6171,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             directory in which to put file (default: current working directory)
         :param filename_no_extension:
             filename without extension (default: name of running script without ``.py``).
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         """
-        dat, top = self.to_oxdna_format()
+        dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
 
         write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
         write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
@@ -5941,7 +6186,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
     def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
                             extension: Optional[str] = None,
-                            suppress_indent: bool = True) -> None:
+                            suppress_indent: bool = True,
+                            warn_duplicate_strand_names: bool = True) -> None:
         """Write text file representing this :any:`Design`,
         suitable for reading by the scadnano web interface,
         with the output file having the same name as the running script but with ``.py`` changed to
@@ -5963,6 +6209,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param extension:
             extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
         :param suppress_indent: whether to suppress indenting JSON for "small" objects such as short lists,
             e.g., grid coordinates. If True, something like this will be written:
 
@@ -5984,7 +6233,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
               }
 
         """
-        self._check_legal_design()
+        self._check_legal_design(warn_duplicate_strand_names)
         contents = self.to_json(suppress_indent)
         if filename is not None and extension is not None:
             raise ValueError('at least one of filename or extension must be None')
