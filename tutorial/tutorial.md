@@ -220,8 +220,7 @@ We do this by creating a "precursor" design, which is not the final design, and 
 
 The scaffold is a good starting point. It is one long strand, but we won't specify it as such. Instead, we will specify it by drawing one strand on each helix, spanning the full length, and then modifying these strands with crossovers, eventually joining them into one long strand.
 
-We can use the function [Design.strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand) to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) by 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
-
+We can use the function [Design.draw_strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand) to draw strands. It takes two integer arguments: a helix and an offset, and uses "chained method calls" to give a short syntax for specifying strands. In this case, depending on the helix, we either want the strand (in order from 5' end to 3' end) to start at offset 0 and move forward (right) by 288, or start at offset 288 and move in reverse by 288 (i.e., move by -288). The bottommost helix, 23, is an exception, where we want the "nick" to be, so we actually want to draw two strands, with a break between them at the halfway point 144:
 
 ```python
 def create_design() -> sc.Design:
@@ -235,11 +234,11 @@ def create_design() -> sc.Design:
 
 def add_scaffold_precursors(design: sc.Design) -> None:
     for helix in range(0, 23, 2):  # scaffold goes forward on even helices
-        design.strand(helix, 0).move(288).as_scaffold()
+        design.draw_strand(helix, 0).move(288).as_scaffold()
     for helix in range(1, 23, 2):  # scaffold goes reverse on odd helices
-        design.strand(helix, 288).move(-288).as_scaffold()
-    design.strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
-    design.strand(23, 144).move(-144).as_scaffold()  #
+        design.draw_strand(helix, 288).move(-288).as_scaffold()
+    design.draw_strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
+    design.draw_strand(23, 144).move(-144).as_scaffold()  #
 ```
 
 We drew the scaffold precursor on helix 23 as two strands, each half the length (144) of those on other helices (288).
@@ -615,11 +614,11 @@ def create_design() -> sc.Design:
 
 def add_scaffold_precursors(design: sc.Design) -> None:
     for helix in range(0, 23, 2):  # scaffold goes forward on even helices
-        design.strand(helix, 0).move(288).as_scaffold()
+        design.draw_strand(helix, 0).move(288).as_scaffold()
     for helix in range(1, 23, 2):  # scaffold goes reverse on odd helices
-        design.strand(helix, 288).move(-288).as_scaffold()
-    design.strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
-    design.strand(23, 144).move(-144).as_scaffold()  #
+        design.draw_strand(helix, 288).move(-288).as_scaffold()
+    design.draw_strand(23, 288).move(-144).as_scaffold()  # bottom part of scaffold has a "nick"
+    design.draw_strand(23, 144).move(-144).as_scaffold()  #
 
 
 def add_scaffold_crossovers(design: sc.Design) -> None:

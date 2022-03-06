@@ -9,9 +9,9 @@ def create_design() -> sc.Design:
     # whole design
     design = sc.Design(helices=helices, strands=[], grid=sc.square)
 
-    design.strand(1, 8).to(24).cross(0).to(8) # left staple
-    design.strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p) # right staple
-    design.strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
+    design.draw_strand(1, 8).to(24).cross(0).to(8) # left staple
+    design.draw_strand(0, 40).to(24).cross(1).to(40).with_modification_5p(mod.biotin_5p) # right staple
+    design.draw_strand(1, 24).to(8).cross(0).to(40).loopout(1, 3).to(24).as_scaffold()
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)

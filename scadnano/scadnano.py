@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.2"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -862,8 +862,8 @@ class Modification(_JSONSerializable, ABC):
     .. code-block:: python
 
         biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
-        design.strand(0, 0).move(8).with_modification_5p(biotin_5p)
-        design.strand(1, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
     """
 
     display_text: str
@@ -931,8 +931,8 @@ class Modification5Prime(Modification):
     .. code-block:: python
 
         biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
-        design.strand(0, 0).move(8).with_modification_5p(biotin_5p)
-        design.strand(1, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
+        design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
     """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
@@ -968,8 +968,8 @@ class Modification3Prime(Modification):
     .. code-block:: python
 
         biotin_3p = Modification3Prime(display_text='B', idt_text='/3Bio/')
-        design.strand(0, 0).move(8).with_modification_3p(biotin_3p)
-        design.strand(1, 0).move(8).with_modification_3p(biotin_3p)
+        design.draw_strand(0, 0).move(8).with_modification_3p(biotin_3p)
+        design.draw_strand(1, 0).move(8).with_modification_3p(biotin_3p)
     """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
@@ -1948,7 +1948,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
-        design.strand(0,0).move(10).loopout(0,5).move(-10)
+        design.draw_strand(0,0).move(10).loopout(0,5).move(-10)
     """
 
     length: int
@@ -2150,7 +2150,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     .. code-block:: Python
 
-        design.strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
+        design.draw_strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
 
     :any:`StrandBuilder` should generally not be created directly.
     Although it is convenient to use chained method calls, it is also sometimes useful to assign the
@@ -2159,7 +2159,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     .. code-block:: Python
 
-        strand_builder = design.strand(0, 0)
+        strand_builder = design.draw_strand(0, 0)
         strand_builder.to(10)
         strand_builder.cross(1)
         strand_builder.to(5)
@@ -2456,7 +2456,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_sequence('AAAAAAAAAACGCGC')
 
         :param sequence: the DNA sequence to assign to the :any:`Strand`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
@@ -2483,7 +2483,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_sequence('AAA')\\
+            design.draw_strand(0, 5).to(8).with_domain_sequence('AAA')\\
                 .cross(1).to(5).with_domain_sequence('TTT')\\
                 .loopout(2, 4).with_domain_sequence('CCCC')\\
                 .to(10).with_domain_sequence('GGGGG')
@@ -2508,7 +2508,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_name('scaffold')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_name('scaffold')
 
         :param name: name to assign to the :any:`Strand`
         :return: self
@@ -2525,7 +2525,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).cross(1).to(5).with_label('scaffold')
+            design.draw_strand(0, 0).to(10).cross(1).to(5).with_label('scaffold')
 
         :param label: label to assign to the :any:`Strand`
         :return: self
@@ -2548,7 +2548,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 0).to(10).with_domain_name('dom1*').cross(1).to(5).with_domain_name('dom1')
+            design.draw_strand(0, 0).to(10).with_domain_name('dom1*').cross(1).to(5).with_domain_name('dom1')
 
         :param name: name to assign to the most recently created :any:`Domain` or :any:`Loopout`
         :return: self
@@ -2572,7 +2572,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 5).to(8).with_domain_label('domain 1')\\
+            design.draw_strand(0, 5).to(8).with_domain_label('domain 1')\\
                 .cross(1).to(5).with_domain_label('domain 2')\\
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
@@ -3925,7 +3925,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 grid_for_group = group.grid
             group.helices_view_order = _check_helices_view_order_and_return(helices_view_order_for_group,
                                                                             helix_idxs_in_group)
-            
+
             if grid_for_group is None:
                 raise AssertionError()
             group.grid = grid_for_group
@@ -4394,7 +4394,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         for idx, helix in helices.items():
             helix.idx = idx
-        
+
         return helices
 
     @staticmethod
@@ -4788,7 +4788,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in strands_in_plate:
             well_to_strand[strand.idt.well] = strand
 
-
         num_rows = len(plate_type.rows())
         num_cols = len(plate_type.cols())
         header = [' '] + [str(col) for col in plate_type.cols()]
@@ -4859,14 +4858,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
-    def strand(self, helix: int, offset: int) -> StrandBuilder:
+    def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building by calling
         :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4882,7 +4881,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4896,7 +4895,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             ]))
 
         Each call to
-        :py:meth:`Design.strand`,
+        :py:meth:`Design.draw_strand`,
         :py:meth:`StrandBuilder.cross`,
         :py:meth:`StrandBuilder.loopout`,
         :py:meth:`StrandBuilder.to`
@@ -4917,6 +4916,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
         """
         return StrandBuilder(self, helix, offset)
+
+    def strand(self, helix: int, offset: int) -> StrandBuilder:
+        """
+        Same functionality as :meth:`Design.draw_strand`.
+
+        .. deprecated:: 0.17.2
+           Use :meth:`Design.draw_strand` instead. This method will be removed in a future version.
+        """
+        print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
+              'which has the same functionality. Design.strand will be removed in a future version.')
+        return self.draw_strand(helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`

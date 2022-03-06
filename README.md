@@ -232,14 +232,14 @@ def create_design():
 
     # for absolute offsets, call method "to"
     # left staple
-    design.strand(1, 8).to(24).cross(0).to(8)
+    design.draw_strand(1, 8).to(24).cross(0).to(8)
 
     # for relative offsets, call method "move"
     # right staple
-    design.strand(0, 40).move(-16).cross(1).move(16).with_modification_5p(mod.biotin_5p)
+    design.draw_strand(0, 40).move(-16).cross(1).move(16).with_modification_5p(mod.biotin_5p)
 
     # scaffold
-    design.strand(1, 24).move(-16).cross(0).move(32).loopout(1, 3).move(-16).as_scaffold()
+    design.draw_strand(1, 24).move(-16).cross(0).move(32).loopout(1, 3).move(-16).as_scaffold()
 
     # deletions and insertions added to design are added to both strands on a helix
     design.add_deletion(helix=1, offset=20)
@@ -257,7 +257,7 @@ if __name__ == '__main__':
     design.write_scadnano_file(directory='output_designs')
 ```
 
-Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.strand).
+Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand).
 
 
 
