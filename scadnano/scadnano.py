@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.2"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -4918,16 +4918,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         return StrandBuilder(self, helix, offset)
 
-    # def strand(self, helix: int, offset: int) -> StrandBuilder:
-    #     """
-    #     Same as :meth:`Design.draw_strand`.
-    #
-    #     .. deprecated:: 0.18.0
-    #        Use :meth:`Design.draw_strand` instead. This method will be removed.
-    #     """
-    #     print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
-    #           'which has the same functionality.')
-    #     return self.draw_strand(helix, offset)
+    def strand(self, helix: int, offset: int) -> StrandBuilder:
+        """
+        Same functionality as :meth:`Design.draw_strand`.
+
+        .. deprecated:: 0.17.2
+           Use :meth:`Design.draw_strand` instead. This method will be removed in a future version.
+        """
+        print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
+              'which has the same functionality. Design.strand will be removed in a future version.')
+        return self.draw_strand(helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`
