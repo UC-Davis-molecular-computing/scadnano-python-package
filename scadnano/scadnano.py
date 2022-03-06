@@ -4859,14 +4859,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
-    def strand(self, helix: int, offset: int) -> StrandBuilder:
+    def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building by calling
         :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).cross(2).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4882,7 +4882,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         .. code-block:: Python
 
-            design.strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
+            design.draw_strand(0, 7).to(10).cross(1).to(5).loopout(2, 3).to(15)
 
         This creates a :any:`Strand` in this :any:`Design` equivalent to
 
@@ -4917,6 +4917,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
         """
         return StrandBuilder(self, helix, offset)
+
+    # def strand(self, helix: int, offset: int) -> StrandBuilder:
+    #     """
+    #     Same as :meth:`Design.draw_strand`.
+    #
+    #     .. deprecated:: 0.18.0
+    #        Use :meth:`Design.draw_strand` instead. This method will be removed.
+    #     """
+    #     print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
+    #           'which has the same functionality.')
+    #     return self.draw_strand(helix, offset)
 
     def assign_m13_to_scaffold(self, rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> None:
         """Assigns the scaffold to be the sequence of M13: :py:func:`m13` with the given `rotation`

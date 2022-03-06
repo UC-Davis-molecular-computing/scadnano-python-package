@@ -41,7 +41,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__loopouts_with_labels(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 8)
         sb.with_domain_label('loop0')
@@ -66,7 +66,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__loopouts_with_labels_to_json(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 8)
         sb.with_domain_label('loop0')
@@ -93,7 +93,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__0_0_to_10_cross_1_to_5(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.cross(1)
         sb.to(5)
@@ -112,7 +112,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__0_0_to_10_cross_1_to_5__reverse(self) -> None:
         design = self.design_6helix
-        design.strand(1, 5).to(10).cross(0).to(0)
+        design.draw_strand(1, 5).to(10).cross(0).to(0)
         expected_strand = sc.Strand([
             sc.Domain(1, True, 5, 10),
             sc.Domain(0, False, 0, 10),
@@ -128,7 +128,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__h0_off0_to_off10_cross_h1_to_off5_loopout_length3_h2_to_off15(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.cross(1)
         sb.to(5)
@@ -151,7 +151,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__two_forward_paranemic_crossovers(self) -> None:
         design = self.design_6helix
-        design.strand(0, 0).to(10).cross(1).to(15).cross(2).to(20)
+        design.draw_strand(0, 0).to(10).cross(1).to(15).cross(2).to(20)
         expected_strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
             sc.Domain(1, True, 10, 15),
@@ -168,7 +168,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__two_reverse_paranemic_crossovers(self) -> None:
         design = self.design_6helix
-        design.strand(0, 20).to(10).cross(1).to(5).cross(2).to(0)
+        design.draw_strand(0, 20).to(10).cross(1).to(5).cross(2).to(0)
         expected_strand = sc.Strand([
             sc.Domain(0, False, 10, 20),
             sc.Domain(1, False, 5, 10),
@@ -185,8 +185,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__multiple_strands(self) -> None:
         design = self.design_6helix
-        design.strand(0, 0).to(10).cross(1).to(0)
-        design.strand(0, 20).to(10).cross(1).to(20)
+        design.draw_strand(0, 0).to(10).cross(1).to(0)
+        design.draw_strand(0, 20).to(10).cross(1).to(20)
         expected_strand0 = sc.Strand([
             sc.Domain(0, True, 0, 10),
             sc.Domain(1, False, 0, 10),
@@ -207,8 +207,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__multiple_strands_other_order(self) -> None:
         design = self.design_6helix
-        design.strand(0, 20).to(10).cross(1).to(20)
-        design.strand(0, 0).to(10).cross(1).to(0)
+        design.draw_strand(0, 20).to(10).cross(1).to(20)
+        design.draw_strand(0, 0).to(10).cross(1).to(0)
         expected_strand0 = sc.Strand([
             sc.Domain(0, False, 10, 20),
             sc.Domain(1, True, 10, 20),
@@ -229,10 +229,10 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__multiple_strands_overlap_no_error(self) -> None:
         design = self.design_6helix
-        design.strand(0, 0).to(10).cross(1).to(0) \
+        design.draw_strand(0, 0).to(10).cross(1).to(0) \
             .as_scaffold() \
             .with_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
-        design.strand(0, 10).to(0).cross(1).to(10).with_modification_5p(mod.biotin_5p)
+        design.draw_strand(0, 10).to(0).cross(1).to(10).with_modification_5p(mod.biotin_5p)
         expected_strand0 = sc.Strand([
             sc.Domain(0, True, 0, 10),
             sc.Domain(1, False, 0, 10),
@@ -266,13 +266,13 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__multiple_strands_overlap_error(self) -> None:
         design = self.design_6helix
-        design.strand(0, 0).to(10).cross(1).to(0)
+        design.draw_strand(0, 0).to(10).cross(1).to(0)
         with self.assertRaises(sc.IllegalDesignError):
-            design.strand(0, 2).to(8)
+            design.draw_strand(0, 2).to(8)
 
     def test_strand__call_to_twice_legally(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.cross(1)
         sb.to(5)
@@ -293,7 +293,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__call_update_to_twice_legally(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.cross(1)
         sb.update_to(5)
@@ -313,7 +313,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__call_to_then_update_to_legally(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.cross(1)
         sb.to(5)
@@ -333,14 +333,14 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__call_to_twice_increase_decrease_forward(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 0)
+        sb = design.draw_strand(0, 0)
         sb.to(10)
         with self.assertRaises(sc.IllegalDesignError):
             sb.to(5)
 
     def test_strand__call_to_twice_decrease_increase_reverse(self) -> None:
         design = self.design_6helix
-        sb = design.strand(0, 10)
+        sb = design.draw_strand(0, 10)
         sb.to(0)
         with self.assertRaises(sc.IllegalDesignError):
             sb.to(5)
@@ -380,8 +380,8 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
-        design.strand(0, 5).move(5).with_modification_3p(
+        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 5).move(5).with_modification_3p(
             sc.Modification3Prime(display_text=name, id=name + '3'))
         design.to_json(True)
 
@@ -389,8 +389,8 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
-        design.strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
         with self.assertRaises(sc.IllegalDesignError):
             design.to_json(True)
 
@@ -801,33 +801,33 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         self.design_6h: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         d = self.design_6h
 
-        d.strand(1, 0).move(16).cross(0).move(-16).with_name('A')
-        d.strand(3, 0).move(16).cross(2).move(-16).with_name('B')
-        d.strand(5, 0).move(16).cross(4).move(-16).with_name('C')
+        d.draw_strand(1, 0).move(16).cross(0).move(-16).with_name('A')
+        d.draw_strand(3, 0).move(16).cross(2).move(-16).with_name('B')
+        d.draw_strand(5, 0).move(16).cross(4).move(-16).with_name('C')
 
-        d.strand(0, 40).move(-24).cross(1).move(8).with_name('D')
+        d.draw_strand(0, 40).move(-24).cross(1).move(8).with_name('D')
 
-        d.strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_name('E')
-        d.strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_name('F')
+        d.draw_strand(1, 24).move(8).cross(2).move(-16).cross(3).move(8).with_name('E')
+        d.draw_strand(3, 24).move(8).cross(4).move(-16).cross(5).move(8).with_name('F')
 
-        d.strand(0, 72).move(-32).with_name('G')
+        d.draw_strand(0, 72).move(-32).with_name('G')
 
-        d.strand(2, 40).move(-8).cross(1).move(24).with_name('H')
-        d.strand(1, 56).move(8).cross(2).move(-24).with_name('I')
+        d.draw_strand(2, 40).move(-8).cross(1).move(24).with_name('H')
+        d.draw_strand(1, 56).move(8).cross(2).move(-24).with_name('I')
 
-        d.strand(4, 40).move(-8).cross(3).move(24).with_name('J')
-        d.strand(3, 56).move(8).cross(4).move(-24).with_name('K')
+        d.draw_strand(4, 40).move(-8).cross(3).move(24).with_name('J')
+        d.draw_strand(3, 56).move(8).cross(4).move(-24).with_name('K')
 
-        d.strand(5, 24).move(32).with_name('L')
+        d.draw_strand(5, 24).move(32).with_name('L')
 
-        d.strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_name('M')
-        d.strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_name('N')
+        d.draw_strand(2, 72).move(-8).cross(1).move(16).cross(0).move(-8).with_name('M')
+        d.draw_strand(4, 72).move(-8).cross(3).move(16).cross(2).move(-8).with_name('N')
 
-        d.strand(5, 56).move(24).cross(4).move(-8).with_name('O')
+        d.draw_strand(5, 56).move(24).cross(4).move(-8).with_name('O')
 
-        d.strand(0, 96).move(-16).cross(1).move(16).with_name('P')
-        d.strand(2, 96).move(-16).cross(3).move(16).with_name('Q')
-        d.strand(4, 96).move(-16).cross(5).move(16).with_name('R')
+        d.draw_strand(0, 96).move(-16).cross(1).move(16).with_name('P')
+        d.draw_strand(2, 96).move(-16).cross(3).move(16).with_name('Q')
+        d.draw_strand(4, 96).move(-16).cross(5).move(16).with_name('R')
 
         for strand in d.strands:
             d.assign_dna(strand, 'A' * 32, assign_complement=False)
@@ -977,7 +977,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
             helices = [sc.Helix(max_offset=100) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
             for strand_idx in range(3 * plate_type.num_wells_per_plate() + 10):
-                design.strand(0, strand_len * strand_idx).move(strand_len).with_name(f's{strand_idx}')
+                design.draw_strand(0, strand_len * strand_idx).move(strand_len).with_name(f's{strand_idx}')
                 design.strands[-1].set_dna_sequence('T' * strand_len)
 
             design.write_idt_plate_excel_file(filename=filename, plate_type=plate_type)
@@ -1219,7 +1219,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         helices = [sc.Helix(max_offset=24) for _ in range(2)]
         design = sc.Design(helices=helices, grid=sc.square)
 
-        design.strand(1, 0).move(8).cross(0).move(-8).as_circular()
+        design.draw_strand(1, 0).move(8).cross(0).move(-8).as_circular()
         # To help with debugging, uncomment these lines to write out the
         # scadnano and/or cadnano file
         #
@@ -2049,15 +2049,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         small_nicked_helices = [sc.Helix(max_offset=100) for _ in range(2)]
         self.small_nicked_design = sc.Design(helices=small_nicked_helices, grid=sc.square)
         # forward strands
-        self.small_nicked_design.strand(0, 0).move(8)
-        self.small_nicked_design.strand(0, 8).move(8)
-        self.small_nicked_design.strand(1, 0).move(8)
-        self.small_nicked_design.strand(1, 8).move(8)
+        self.small_nicked_design.draw_strand(0, 0).move(8)
+        self.small_nicked_design.draw_strand(0, 8).move(8)
+        self.small_nicked_design.draw_strand(1, 0).move(8)
+        self.small_nicked_design.draw_strand(1, 8).move(8)
         # reverse strands
-        self.small_nicked_design.strand(0, 8).move(-8)
-        self.small_nicked_design.strand(0, 16).move(-8)
-        self.small_nicked_design.strand(1, 8).move(-8)
-        self.small_nicked_design.strand(1, 16).move(-8)
+        self.small_nicked_design.draw_strand(0, 8).move(-8)
+        self.small_nicked_design.draw_strand(0, 16).move(-8)
+        self.small_nicked_design.draw_strand(1, 8).move(-8)
+        self.small_nicked_design.draw_strand(1, 16).move(-8)
 
         self.small_nicked_design.assign_dna(self.small_nicked_design.strands[0], "ACGTACGA")
         self.small_nicked_design.assign_dna(self.small_nicked_design.strands[1], "AACCGGTA")
@@ -2078,8 +2078,8 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.origami: sc.Design = sc.Design(strands=scafs + staps, grid=sc.square)
 
         self.two_strand_design = sc.Design(helices=[sc.Helix(max_offset=100) for _ in range(2)])
-        self.two_strand_design.strand(0, 0).move(16)
-        self.two_strand_design.strand(1, 16).move(-16)
+        self.two_strand_design.draw_strand(0, 0).move(16)
+        self.two_strand_design.draw_strand(1, 16).move(-16)
 
     def test_add_nick__twice_on_same_domain(self) -> None:
         """
@@ -2112,9 +2112,9 @@ class TestNickLigateAndCrossover(unittest.TestCase):
     0   [------- -------- ------->
         """
         design = sc.Design(helices=[sc.Helix(max_offset=24)], grid=sc.square)
-        design.strand(0, 0).move(8)
-        design.strand(0, 8).move(8)
-        design.strand(0, 16).move(8)
+        design.draw_strand(0, 0).move(8)
+        design.draw_strand(0, 8).move(8)
+        design.draw_strand(0, 16).move(8)
         design.ligate(helix=0, offset=8, forward=True)
         design.ligate(helix=0, offset=16, forward=True)
         self.assertEqual(1, len(design.strands))
@@ -4494,7 +4494,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=100) for _ in range(4)]
         self.design = sc.Design(helices=helices, strands=[])
-        self.design.strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
+        self.design.draw_strand(0, 0).to(3).cross(1).to(0).cross(2).to(3).with_sequence('ACA TCT GTG')
         self.strand = self.design.strands[0]
 
     def test_3_helix_before_design(self) -> None:
@@ -4508,7 +4508,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
     def test_insert_domain_with_sequence(self) -> None:
         helices = [sc.Helix(max_offset=100) for _ in range(4)]
         design = sc.Design(helices=helices, strands=[])
-        design.strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
+        design.draw_strand(0, 0).to(3).cross(1).to(0).cross(3).to(3).with_sequence('ACA TCT GTG')
         strand = design.strands[0]
 
         expected_strand_before = sc.Strand([
@@ -4572,7 +4572,7 @@ class TestLabels(unittest.TestCase):
 
     def test_with_label__str(self) -> None:
         label = 'abc'
-        self.design.strand(0, 0).to(5).cross(1).to(0).with_label(label)
+        self.design.draw_strand(0, 0).to(5).cross(1).to(0).with_label(label)
         actual_strand = self.design.strands[0]
         expected_strand = sc.Strand(domains=[
             sc.Domain(0, True, 0, 5),
@@ -4583,7 +4583,7 @@ class TestLabels(unittest.TestCase):
 
     def test_with_label__dict(self) -> None:
         label = {'name': 'abc', 'type': 3}
-        self.design.strand(0, 0).to(5).cross(1).to(0).with_label(label)
+        self.design.draw_strand(0, 0).to(5).cross(1).to(0).with_label(label)
         actual_strand = self.design.strands[0]
         expected_strand = sc.Strand(domains=[
             sc.Domain(0, True, 0, 5),
@@ -4595,7 +4595,7 @@ class TestLabels(unittest.TestCase):
     def test_with_domain_label(self) -> None:
         label0: Union[str, Dict[str, Any]] = 'abc'
         label1: Union[str, Dict[str, Any]] = {'name': 'abc', 'type': 3}
-        self.design.strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1)
+        self.design.draw_strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1)
         actual_strand = self.design.strands[0]
         expected_strand = sc.Strand(domains=[
             sc.Domain(0, True, 0, 5, label=label0),
@@ -4609,7 +4609,7 @@ class TestLabels(unittest.TestCase):
         strand_label = 'xyz'
         label0: Union[str, Dict[str, Any]] = 'abc'
         label1: Union[str, Dict[str, Any]] = {'name': 'abc', 'type': 3}
-        self.design.strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1) \
+        self.design.draw_strand(0, 0).to(5).with_domain_label(label0).cross(1).to(0).with_domain_label(label1) \
             .with_label(strand_label)
         actual_strand = self.design.strands[0]
         expected_strand = sc.Strand(domains=[
@@ -4635,7 +4635,7 @@ class TestCircularStrandsLegalMods(unittest.TestCase):
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=10) for _ in range(2)]
         self.design = sc.Design(helices=helices, strands=[])
-        self.design.strand(0, 0).move(10).cross(1).move(-10)
+        self.design.draw_strand(0, 0).move(10).cross(1).move(-10)
         self.strand = self.design.strands[0]
         r'''
         0  [--------\
@@ -4679,12 +4679,12 @@ class TestCircularStrandEdits(unittest.TestCase):
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=10) for _ in range(3)]
         self.design = sc.Design(helices=helices, strands=[])
-        self.design.strand(0, 0).move(10).cross(1).move(-10)
-        self.design.strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
-        self.design.strand(0, 20).move(10)
-        self.design.strand(1, 30).move(-10)
-        self.design.strand(0, 30).move(10).loopout(1, 5).move(-10).cross(2).move(10).as_circular()
-        self.design.strand(0, 40).move(10).cross(1).move(-10).as_circular()
+        self.design.draw_strand(0, 0).move(10).cross(1).move(-10)
+        self.design.draw_strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
+        self.design.draw_strand(0, 20).move(10)
+        self.design.draw_strand(1, 30).move(-10)
+        self.design.draw_strand(0, 30).move(10).loopout(1, 5).move(-10).cross(2).move(10).as_circular()
+        self.design.draw_strand(0, 40).move(10).cross(1).move(-10).as_circular()
         self.num_strands = len(self.design.strands)
         r'''
            0          10         20         30         40
@@ -5553,8 +5553,8 @@ class TestAssignDNA(unittest.TestCase):
             <-------I: 3-------]
         """
         design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-        design.strand(0, 0).move(16)
-        design.strand(0, 16).move(-16)
+        design.draw_strand(0, 0).move(16)
+        design.draw_strand(0, 16).move(-16)
         design.add_insertion(0, 8, 3)
         design.assign_dna(strand=design.strands[0], sequence='AACGTATCGCGATGCATCC', assign_complement=True)
 
@@ -5577,9 +5577,9 @@ class TestAssignDNA(unittest.TestCase):
             TTGCATAGCGCTACGTAGG
         """
         design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-        design.strand(0, 0).move(16)
-        design.strand(0, 5).move(-5)
-        design.strand(0, 16).move(-11)
+        design.draw_strand(0, 0).move(16)
+        design.draw_strand(0, 5).move(-5)
+        design.draw_strand(0, 16).move(-11)
         design.add_insertion(0, 8, 3)
         design.assign_dna(strand=design.strands[1], sequence='ACGTT', assign_complement=True)
         design.assign_dna(strand=design.strands[2], sequence='GGATGCATCGCGAT', assign_complement=True)
@@ -5603,8 +5603,8 @@ class TestAssignDNA(unittest.TestCase):
             <-------X------]
         """
         design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-        design.strand(0, 0).move(16)
-        design.strand(0, 16).move(-16)
+        design.draw_strand(0, 0).move(16)
+        design.draw_strand(0, 16).move(-16)
         design.add_deletion(0, 8)
         design.assign_dna(strand=design.strands[0], sequence='AACGTACGTGCATCC', assign_complement=True)
 
@@ -5626,9 +5626,9 @@ class TestAssignDNA(unittest.TestCase):
             TTGCATAG GCTACGT
         """
         design = sc.Design(grid=sc.square, helices=[sc.Helix(max_offset=100)], strands=[])
-        design.strand(0, 0).move(16)
-        design.strand(0, 5).move(-5)
-        design.strand(0, 16).move(-11)
+        design.draw_strand(0, 0).move(16)
+        design.draw_strand(0, 5).move(-5)
+        design.draw_strand(0, 16).move(-11)
         design.add_deletion(0, 8)
         design.assign_dna(strand=design.strands[1], sequence='ACGTT', assign_complement=True)
         design.assign_dna(strand=design.strands[2], sequence='TGCATCGGAT', assign_complement=True)
@@ -5831,7 +5831,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---???---???---???---???---???---???-
          098   765   432   109   876   543   210
         """
-        design.strand(0, 21).to(0)
+        design.draw_strand(0, 21).to(0)
         self.assertEqual(1, len(design.strands))
         self.assertEqual(21, design.strands[0].domains[0].dna_length())
 
@@ -5842,7 +5842,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---???---???---???---ACG---???---???-
          098   765   432   109   876   543   210
         """
-        design.strand(0, 12).to(15).with_sequence('TGC')
+        design.draw_strand(0, 12).to(15).with_sequence('TGC')
         self.assertEqual('TGC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -5853,7 +5853,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---???---???---???---ACG---???---???-
          098   765   432   109   876   543   210
         """
-        design.strand(0, 0).to(3).with_sequence('ACG', assign_complement=False)
+        design.draw_strand(0, 0).to(3).with_sequence('ACG', assign_complement=False)
         self.assertEqual('ACG'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -5867,7 +5867,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---AAG---???---TTG---ACG---???---???-
          098   765   432   109   876   543   210
         """
-        sb = design.strand(0, 9).to(12)
+        sb = design.draw_strand(0, 9).to(12)
         sb.with_domain_sequence('AAC')
         sb.cross(0, offset=3)
         sb.to(6)
@@ -5885,7 +5885,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---AAG---CCT---TTG---ACG---AAC---CGT-
          098   765   432   109   876   543   210
         """
-        design.strand(0, 6).to(9) \
+        design.draw_strand(0, 6).to(9) \
             .with_domain_sequence('GGA') \
             .cross(0, offset=15) \
             .to(18) \
@@ -6112,8 +6112,8 @@ class TestOxdnaExport(unittest.TestCase):
         """
         helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
         design = sc.Design(helices=helices, grid=sc.square)
-        design.strand(0, 0).move(7).cross(1).move(-7)
-        design.strand(0, 7).move(-7).cross(1).move(7)
+        design.draw_strand(0, 0).move(7).cross(1).move(-7)
+        design.draw_strand(0, 7).move(-7).cross(1).move(7)
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4
@@ -6243,8 +6243,8 @@ class TestOxdnaExport(unittest.TestCase):
             'b': sc.HelixGroup(position=sc.Position3D(100, 0, 0), grid=sc.square),
         }
         design = sc.Design(helices=helices, groups=groups)
-        design.strand(0, 0).move(7).cross(1).move(-7)
-        design.strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
+        design.draw_strand(0, 0).move(7).cross(1).move(-7)
+        design.draw_strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4
@@ -6361,7 +6361,7 @@ class TestOxdnaExport(unittest.TestCase):
         helices = [sc.Helix(grid_position=(1, 1), max_offset=8), sc.Helix(grid_position=(0, 1), max_offset=8),
                    sc.Helix(grid_position=(0, 2), max_offset=8)]
         design = sc.Design(helices=helices, grid=sc.honeycomb)
-        design.strand(0, 0).to(8).cross(1).move(-8).cross(2).to(8)
+        design.draw_strand(0, 0).to(8).cross(1).move(-8).cross(2).to(8)
 
         # expected values for verification
         expected_num_nucleotides = 8 * 3
@@ -6458,7 +6458,7 @@ class TestOxdnaExport(unittest.TestCase):
         """
         helix = [sc.Helix(max_offset=7)]
         design = sc.Design(helices=helix, grid=sc.square)
-        design.strand(0, 0).to(7)
+        design.draw_strand(0, 0).to(7)
         design.add_deletion(helix=0, offset=4)
 
         # expected values for verification
@@ -6550,7 +6550,7 @@ class TestOxdnaExport(unittest.TestCase):
         """
         helix = [sc.Helix(max_offset=10)]
         design = sc.Design(helices=helix, grid=sc.square)
-        design.strand(0, 0).to(7)
+        design.draw_strand(0, 0).to(7)
         design.add_insertion(helix=0, offset=4, length=1)
 
         # expected values for verification
@@ -6643,8 +6643,8 @@ class TestOxdnaExport(unittest.TestCase):
         """
         helix = [sc.Helix(max_offset=14)]
         design = sc.Design(helices=helix, grid=sc.square)
-        design.strand(0, 0).to(4).loopout(0, 4).to(7)
-        design.strand(0, 7).to(0)
+        design.draw_strand(0, 0).to(4).loopout(0, 4).to(7)
+        design.draw_strand(0, 7).to(0)
 
         # expected values for verification
         expected_num_nucleotides = 7 * 2 + 4

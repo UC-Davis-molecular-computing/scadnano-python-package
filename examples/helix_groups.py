@@ -48,25 +48,25 @@ def create_design() -> sc.Design:
 
     design = sc.Design(helices=helices, groups=groups, strands=[])
 
-    design.strand(0, 0).to(8) \
+    design.draw_strand(0, 0).to(8) \
         .cross(1).to(0) \
         .cross(2).to(8) \
         .cross(3).to(0) \
         .cross(4).to(8) \
         .cross(5).to(0)
 
-    design.strand(4, 10).to(13)
+    design.draw_strand(4, 10).to(13)
 
-    design.strand(6, 0).to(8).cross(7).to(0)
-    design.strand(8, 0).to(8).cross(9).to(0)
-    design.strand(13, 0).to(8).cross(15).to(0)
+    design.draw_strand(6, 0).to(8).cross(7).to(0)
+    design.draw_strand(8, 0).to(8).cross(9).to(0)
+    design.draw_strand(13, 0).to(8).cross(15).to(0)
 
-    design.strand(8, 8).to(11)
-    design.strand(13, 8).to(11)
+    design.draw_strand(8, 8).to(11)
+    design.draw_strand(13, 8).to(11)
 
 
     if include_rot:
-        design.strand(10, 0).to(8).cross(11).to(0)
+        design.draw_strand(10, 0).to(8).cross(11).to(0)
 
     return design
 
