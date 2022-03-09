@@ -2218,12 +2218,12 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design.add_nick(helix=0, offset=8, forward=True)
         self.assertEqual(5, len(design.strands))
         # two new Strands
-        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16)]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8, dna_sequence='ACGTACGA')]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16, dna_sequence='AACCGGTA')]), design.strands)
         # existing Strands
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16)]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16)]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]), design.strands)
+        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]), design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 8)
         self.assertEqual(remove_whitespace('ACGTACGA'), strand.dna_sequence)
