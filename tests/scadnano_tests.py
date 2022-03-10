@@ -1150,7 +1150,6 @@ class TestExportCadnanoV2(unittest.TestCase):
         design.add_insertion(helix=1, offset=18, length=4)
 
         # also assigns complement to strands other than scaf bound to it
-        design.assign_dna(scaf, 'AACGT' * 18)
         output_json = design.to_cadnano_v2_json()
 
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
