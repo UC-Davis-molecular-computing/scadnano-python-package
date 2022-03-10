@@ -3228,7 +3228,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
         # add wildcard symbols to DNA sequence to maintain its length
         if self.dna_sequence is not None:
-            domain.dna_sequence = DNA_base_wildcard * domain.length
+            domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
 
         # Only intended to be called by Design.insert_domain
         self.domains.insert(order, domain)
