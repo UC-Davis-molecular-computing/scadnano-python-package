@@ -3238,15 +3238,6 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     def remove_domain(self, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.remove_domain
-
-        # remove relevant portion of DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[end_idx:]
-            self.dna_sequence = prefix + suffix
-
         self.domains.remove(domain)
         domain._parent_strand = None
         if isinstance(domain, Domain):

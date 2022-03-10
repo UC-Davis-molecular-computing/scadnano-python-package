@@ -4621,7 +4621,7 @@ class TestInsertRemoveDomains(unittest.TestCase):
         expected_strand = sc.Strand([
             sc.Domain(0, True, 0, 3),
             sc.Domain(1, False, 0, 3),
-        ], dna_sequence='ACA TCT GTG'.replace(' ', ''))
+        ], dna_sequence='ACA TCT'.replace(' ', ''))
         self.assertEqual(expected_strand, self.strand)
 
 
