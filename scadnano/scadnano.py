@@ -3226,20 +3226,15 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
     def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+        # add wildcard symbols to DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            domain.dna_sequence = DNA_base_wildcard * domain.length
+
         # Only intended to be called by Design.insert_domain
         self.domains.insert(order, domain)
         domain._parent_strand = self
         if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].append(domain)
-
-        # add wildcard symbols to DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[start_idx:]
-            new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
-            self.dna_sequence = prefix + new_wildcards + suffix
 
     def remove_domain(self, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.remove_domain
