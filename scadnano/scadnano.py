@@ -440,17 +440,17 @@ class M13Variant(enum.Enum):
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     """
     The M13mp18 DNA sequence (commonly called simply M13).
-    
+
     By default, starts from cyclic rotation 5587 
     (with 0-based indexing;  commonly this is called rotation 5588, which assumes that indexing begins at 1), 
     as defined in
     `GenBank <https://www.ncbi.nlm.nih.gov/nuccore/X02513.1>`_.
-    
+
     By default, returns the "standard" variant of consisting of 7249 bases, sold by companies such as  
     `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_.
     and
     `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
-    
+
     The actual M13 DNA strand itself is circular, 
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
     means that the "5' end" of the scaffold :any:`Strand` 
@@ -464,7 +464,7 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     `Supplementary Note S8 <http://www.dna.caltech.edu/Papers/DNAorigami-supp1.linux.pdf>`_ 
     in
     [`Folding DNA to create nanoscale shapes and patterns. Paul W. K. Rothemund, Nature 440:297-302 (2006) <http://www.nature.com/nature/journal/v440/n7082/abs/nature04586.html>`_].
-    
+
     :param rotation: rotation of circular strand. Valid values are 0 through length-1.
     :param variant: variant of M13 strand to use
     :return: M13 strand sequence
@@ -845,7 +845,7 @@ class Modification(_JSONSerializable, ABC):
     Use concrete subclasses
     :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate.
-    
+
     If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
     the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' "modification"
     to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
@@ -1600,6 +1600,10 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     on the object should succeed without having to specify a custom encoder.)
     """
 
+    dna_sequence: Optional[str] = None
+    """Return DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
+    to this :any:`Domain`'s :any:`Strand`."""
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -1757,10 +1761,6 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         This can be more or less than the :meth:`Domain.dna_length` due to insertions and deletions."""
         return self.end - self.start
 
-    def dna_sequence(self) -> Optional[str]:
-        """Return DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
-        to this :any:`Domain`'s :any:`Strand`."""
-        return self.dna_sequence_in(self.start, self.end - 1)
 
     def dna_sequence_in(self, offset_left: int, offset_right: int) -> Optional[str]:
         """Return DNA sequence of this Domain in the interval of offsets given by
@@ -1972,6 +1972,9 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     on the object should succeed without having to specify a custom encoder.)
     """
 
+    dna_sequence: Optional[str] = None
+    """Return DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned."""
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -2028,20 +2031,6 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     def dna_length(self) -> int:
         """Length of this :any:`Loopout`; same as field :py:data:`Loopout.length`."""
         return self.length
-
-    def dna_sequence(self) -> Optional[str]:
-        """Return DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned
-        to the :any:`Strand` of this :any:`Loopout`."""
-        if self._parent_strand is None:
-            raise ValueError('_parent_strand has not been set')
-        strand_seq = self._parent_strand.dna_sequence
-        if strand_seq is None:
-            return None
-
-        str_idx_left = self.get_seq_start_idx()
-        str_idx_right = str_idx_left + self.length  # EXCLUSIVE (unlike similar code for Domain)
-        subseq = strand_seq[str_idx_left:str_idx_right]
-        return subseq
 
     def get_seq_start_idx(self) -> int:
         """Starting DNA subsequence index for first base of this :any:`Loopout` on its
@@ -2638,10 +2627,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     should result in a functionally equivalent :any:`Strand`. It is illegal to have a 
     :any:`Modification5Prime` or :any:`Modification3Prime` on a circular :any:`Strand`."""
 
-    dna_sequence: Optional[str] = None
-    """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
-    (for complementarity checking) or :any:`Strand.set_dna_sequence` 
-    (without complementarity checking, to allow mismatches)."""
+    @property
+    def dna_sequence(self) -> Optional[str]:
+        """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
+        (for complementarity checking) or :any:`Strand.set_dna_sequence` 
+        (without complementarity checking, to allow mismatches)."""
+        sequence = ''
+        for domain in self.domains:
+            if domain.dna_sequence is None:
+                return None
+            sequence += domain.dna_sequence
+        return sequence
 
     color: Optional[Color] = None
     """Color to show this strand in the main view. If not specified in the constructor,
@@ -2706,6 +2702,32 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     # not serialized; efficient way to see a list of all domains on a given helix
     _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
+
+    def __init__(self,
+                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]],
+                 circular: bool = False, color: Optional[Color] = None,
+                 idt: Optional[IDTFields] = None,
+                 is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
+                 modification_3p: Optional[Modification3Prime] = None,
+                 modifications_int: Optional[Dict[int, ModificationInternal]] = None,
+                 name: Optional[str] = None,
+                 label: Optional[StrandLabel] = None,
+                 _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = None,
+                 dna_sequence: Optional[str] = None):
+        self.domains = domains
+        self.circular = circular
+        self.color = color
+        self.idt = idt
+        self.is_scaffold = is_scaffold
+        self.modification_5p = modification_5p
+        self.modification_3p = modification_3p
+        self.modifications_int = modifications_int if modifications_int is not None else dict()
+        self.name = name
+        self.label = label
+        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None else dict()
+        if dna_sequence is not None:
+            self.set_dna_sequence(dna_sequence)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         self._ensure_domains_not_none()
@@ -2818,11 +2840,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         A, B, C, D, E, F
 
         then ``strand.rotate_domains(2)`` makes the :any:`Strand` have the same domains, but in this order:
-        
+
         E, F, A, B, C, D
-        
+
         and  ``strand.rotate_domains(2, forward=False)`` makes
-        
+
         C, D, E, F, A, B
 
         :param rotation:
@@ -3033,7 +3055,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             DNA sequence of this :any:`Strand`, with `delimiter` in between DNA sequences of each
             :any:`Domain` or :any:`Loopout`.
         """
-        result = [substrand.dna_sequence() for substrand in self.domains]
+        result = [substrand.dna_sequence for substrand in self.domains]
         return delimiter.join(result)
 
     def set_dna_sequence(self, sequence: str) -> None:
@@ -3057,7 +3079,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, f"strand starting at helix {domain.helix} offset {domain.offset_5p()} "
                                     f"has length {self.dna_length()}, but you attempted to assign a "
                                     f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
-        self.dna_sequence = trimmed_seq
+
+        start_idx_ss = 0
+        for d in self.domains:
+            end_idx_ss = start_idx_ss + d.dna_length()
+            dna_subseq = sequence[start_idx_ss:end_idx_ss]
+            d.dna_sequence = dna_subseq
+            start_idx_ss = end_idx_ss
 
     def dna_length(self) -> int:
         """Return sum of DNA length of :any:`Domain`'s and :any:`Loopout`'s of this :any:`Strand`."""
@@ -3110,7 +3138,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand_complement_builder: List[str] = []
         if already_assigned:
             for domain in self.domains:
-                domain_seq = domain.dna_sequence()
+                domain_seq = domain.dna_sequence
                 if domain_seq is None:
                     raise ValueError(f'no DNA sequence has been assigned to {self}')
                 strand_complement_builder.append(domain_seq)
@@ -3198,32 +3226,18 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
     def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+        # add wildcard symbols to DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
+
         # Only intended to be called by Design.insert_domain
         self.domains.insert(order, domain)
         domain._parent_strand = self
         if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].append(domain)
 
-        # add wildcard symbols to DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[start_idx:]
-            new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
-            self.dna_sequence = prefix + new_wildcards + suffix
-
     def remove_domain(self, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.remove_domain
-
-        # remove relevant portion of DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[end_idx:]
-            self.dna_sequence = prefix + suffix
-
         self.domains.remove(domain)
         domain._parent_strand = None
         if isinstance(domain, Domain):
@@ -6504,6 +6518,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         else:
             # join strands
+            old_strand_3p_dna_sequence = strand_3p.dna_sequence
+            old_strand_5p_dna_sequence = strand_5p.dna_sequence
+
             strand_3p.domains.pop()
             strand_3p.domains.append(dom_new)
             strand_3p.domains.extend(strand_5p.domains[1:])
@@ -6512,8 +6529,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for idx, mod in strand_5p.modifications_int.items():
                 new_idx = idx + strand_3p.dna_length()
                 strand_3p.set_modification_internal(new_idx, mod)
-            if strand_3p.dna_sequence is not None and strand_5p.dna_sequence is not None:
-                strand_3p.dna_sequence += strand_5p.dna_sequence
+            if old_strand_3p_dna_sequence is not None and old_strand_5p_dna_sequence is not None:
+                strand_3p.set_dna_sequence(old_strand_3p_dna_sequence + old_strand_5p_dna_sequence)
             if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
                 strand_3p.set_color(strand_5p.color)
             self.strands.remove(strand_5p)
@@ -7223,7 +7240,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
             dom_strand = _OxdnaStrand()
-            seq = domain.dna_sequence()
+            seq = domain.dna_sequence
             if seq is None:
                 seq = 'T' * domain.dna_length()
 
