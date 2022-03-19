@@ -378,7 +378,7 @@ and integer `start` and `end` offsets.
 
 
 
-To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
+To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly. In other words, don't write to the list `design.strands` directly, although it is safe to access the fields read-only.
 
 ```python
 def create_design() -> sc.Design:
