@@ -354,6 +354,8 @@ Now the design should look like this:
 
 ![](images/scaffold_complete.png)
 
+We've completed the scaffold strand! On to the staple strands.
+
 
 
 
