@@ -447,9 +447,9 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     `GenBank <https://www.ncbi.nlm.nih.gov/nuccore/X02513.1>`_.
 
     By default, returns the "standard" variant of consisting of 7249 bases, sold by companies such as  
-    `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_.
+    `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_
     and
-    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
+    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_.
 
     The actual M13 DNA strand itself is circular, 
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
