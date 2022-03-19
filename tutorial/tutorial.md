@@ -526,7 +526,7 @@ The design now looks like it did at the top:
 
 Finally, we complete the design by assigning a DNA sequence to the scaffold, which will assign the complementary sequence to the appropriate staples. This is, in a sense, the primary function of [cadnano](https://cadnano.org/) and scadnano: to translate a desired abstract strand design, together with knowledge of a concrete DNA sequence for the scaffold, into the appropriate sequences for the staples to enable them to bind to the scaffold where we want. 
 
-If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has exactly one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method [Design.assign_m13_to_scaffold](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_m13_to_scaffold):
+If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has exactly one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method [`Design.assign_m13_to_scaffold`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_m13_to_scaffold):
 
 ```python
 def create_design() -> sc.Design:
