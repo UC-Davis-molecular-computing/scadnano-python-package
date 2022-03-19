@@ -4873,8 +4873,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
     def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
-        """Used for chained method building by calling
-        :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
+        """Used for chained method building the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
         .. code-block:: Python
@@ -4913,11 +4912,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :py:meth:`StrandBuilder.cross`,
         :py:meth:`StrandBuilder.loopout`,
         :py:meth:`StrandBuilder.to`
+        :py:meth:`StrandBuilder.move`
         :py:meth:`StrandBuilder.update_to`,
         returns a :any:`StrandBuilder` object.
 
         Each call to
         :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.move`,
         :py:meth:`StrandBuilder.update_to`,
         or
         :py:meth:`StrandBuilder.loopout`
@@ -4936,7 +4937,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Same functionality as :meth:`Design.draw_strand`.
 
         .. deprecated:: 0.17.2
-           Use :meth:`Design.draw_strand` instead. This method will be removed in a future version.
+           Use :meth:`Design.draw_strand` instead, which is a better name.
+           This method will be removed in a future version.
         """
         print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
               'which has the same functionality. Design.strand will be removed in a future version.')
