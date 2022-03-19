@@ -583,7 +583,7 @@ The Excel file should look similar to this:
 
 ![](images/excel_file.png)
 
-To customize further (e.g., purification, synthesis scale), one can write to the field `Strand.idt`, of type [IDTFields](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields).
+To customize further (e.g., purification, synthesis scale), one can write to the field `Strand.idt`, of type [IDTFields](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields). Strands can also be given custom names through the field [`Strand.name`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Strand.name); if the Strand has no name, it is assigned one using the cadnano convention (see Excel screenshot above) based on the helix and offset of the strand's 5' and 3' ends.
 
 
 
