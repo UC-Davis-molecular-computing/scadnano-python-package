@@ -363,8 +363,10 @@ We've completed the scaffold strand! On to the staple strands.
 
 ## Add staple precursors
 
-We used chained method calls to create scaffold precursor strands, 
+We used chained method calls to create scaffold "precursor" strands, 
 i.e., one long strand per helix, going the opposite direction as the scaffold.
+In subsequent sections we will also add nicks and crossovers to these,
+to create the staple strands.
 It is also possible, though typically more verbose, to explicitly create `Domain` objects, 
 to be passed into the `Strand` constructor. 
 For the staple precursor strands we do this to show how it works.
