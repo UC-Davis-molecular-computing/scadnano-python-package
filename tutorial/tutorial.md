@@ -373,8 +373,8 @@ For the staple precursor strands we do this to show how it works.
 
 Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
-Boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
-integer `start` and `end` offsets.
+Boolean `forward`: direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end? In other words is the strand arrow pointing to the right (forward) or left (reverse),
+and integer `start` and `end` offsets.
 
 
 
