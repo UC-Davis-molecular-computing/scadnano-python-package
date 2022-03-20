@@ -5152,7 +5152,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         the cadnano c2 format; this is essentially what is done in
         :meth:`Design.to_cadnano_v2_json`.
 
-        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
 
 
         :param name:
@@ -5236,7 +5238,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_cadnano_v2_json(self, name: str = '') -> str:
         """Converts the design to the cadnano v2 format.
 
-        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
 
         :param name:
             Name of the design.
