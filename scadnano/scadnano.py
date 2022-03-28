@@ -2652,7 +2652,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     https://www.idtdna.com/site/order/oligoentry,
     as can the method :py:meth:`Design.write_idt_plate_excel_file` for writing a Microsoft Excel 
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
-    or 384-well plates."""
+    or 384-well plates:
+    https://www.idtdna.com/site/order/plate/index/dna/1800"""
 
     is_scaffold: bool = False
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
