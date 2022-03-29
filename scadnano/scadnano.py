@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.2"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.3"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -440,17 +440,17 @@ class M13Variant(enum.Enum):
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     """
     The M13mp18 DNA sequence (commonly called simply M13).
-    
+
     By default, starts from cyclic rotation 5587 
     (with 0-based indexing;  commonly this is called rotation 5588, which assumes that indexing begins at 1), 
     as defined in
     `GenBank <https://www.ncbi.nlm.nih.gov/nuccore/X02513.1>`_.
-    
+
     By default, returns the "standard" variant of consisting of 7249 bases, sold by companies such as  
-    `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_.
+    `Tilibit <https://cdn.shopify.com/s/files/1/1299/5863/files/Product_Sheet_single-stranded_scaffold_DNA_type_7249_M1-10.pdf?14656642867652657391>`_
     and
-    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_
-    
+    `New England Biolabs <https://www.neb.com/~/media/nebus/page%20images/tools%20and%20resources/interactive%20tools/dna%20sequences%20and%20maps/m13mp18_map.pdf>`_.
+
     The actual M13 DNA strand itself is circular, 
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
     means that the "5' end" of the scaffold :any:`Strand` 
@@ -464,7 +464,7 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     `Supplementary Note S8 <http://www.dna.caltech.edu/Papers/DNAorigami-supp1.linux.pdf>`_ 
     in
     [`Folding DNA to create nanoscale shapes and patterns. Paul W. K. Rothemund, Nature 440:297-302 (2006) <http://www.nature.com/nature/journal/v440/n7082/abs/nature04586.html>`_].
-    
+
     :param rotation: rotation of circular strand. Valid values are 0 through length-1.
     :param variant: variant of M13 strand to use
     :return: M13 strand sequence
@@ -845,7 +845,7 @@ class Modification(_JSONSerializable, ABC):
     Use concrete subclasses
     :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate.
-    
+
     If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
     the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' "modification"
     to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
@@ -1600,6 +1600,10 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     on the object should succeed without having to specify a custom encoder.)
     """
 
+    dna_sequence: Optional[str] = None
+    """DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
+    to this :any:`Domain`'s :any:`Strand`."""
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -1756,11 +1760,6 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
         This can be more or less than the :meth:`Domain.dna_length` due to insertions and deletions."""
         return self.end - self.start
-
-    def dna_sequence(self) -> Optional[str]:
-        """Return DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
-        to this :any:`Domain`'s :any:`Strand`."""
-        return self.dna_sequence_in(self.start, self.end - 1)
 
     def dna_sequence_in(self, offset_left: int, offset_right: int) -> Optional[str]:
         """Return DNA sequence of this Domain in the interval of offsets given by
@@ -1972,6 +1971,9 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     on the object should succeed without having to specify a custom encoder.)
     """
 
+    dna_sequence: Optional[str] = None
+    """DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned."""
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -2028,20 +2030,6 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     def dna_length(self) -> int:
         """Length of this :any:`Loopout`; same as field :py:data:`Loopout.length`."""
         return self.length
-
-    def dna_sequence(self) -> Optional[str]:
-        """Return DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned
-        to the :any:`Strand` of this :any:`Loopout`."""
-        if self._parent_strand is None:
-            raise ValueError('_parent_strand has not been set')
-        strand_seq = self._parent_strand.dna_sequence
-        if strand_seq is None:
-            return None
-
-        str_idx_left = self.get_seq_start_idx()
-        str_idx_right = str_idx_left + self.length  # EXCLUSIVE (unlike similar code for Domain)
-        subseq = strand_seq[str_idx_left:str_idx_right]
-        return subseq
 
     def get_seq_start_idx(self) -> int:
         """Starting DNA subsequence index for first base of this :any:`Loopout` on its
@@ -2638,10 +2626,20 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     should result in a functionally equivalent :any:`Strand`. It is illegal to have a 
     :any:`Modification5Prime` or :any:`Modification3Prime` on a circular :any:`Strand`."""
 
-    dna_sequence: Optional[str] = None
-    """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
-    (for complementarity checking) or :any:`Strand.set_dna_sequence` 
-    (without complementarity checking, to allow mismatches)."""
+    @property
+    def dna_sequence(self) -> Optional[str]:
+        """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
+        (for complementarity checking) or :any:`Strand.set_dna_sequence` 
+        (without complementarity checking, to allow mismatches).
+
+        Note that this does not include any IDT codes for :any:`Modification`'s.
+        To include those call :meth:`Strand.idt_dna_sequence`."""
+        sequence = ''
+        for domain in self.domains:
+            if domain.dna_sequence is None:
+                return None
+            sequence += domain.dna_sequence
+        return sequence
 
     color: Optional[Color] = None
     """Color to show this strand in the main view. If not specified in the constructor,
@@ -2656,7 +2654,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     https://www.idtdna.com/site/order/oligoentry,
     as can the method :py:meth:`Design.write_idt_plate_excel_file` for writing a Microsoft Excel 
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
-    or 384-well plates."""
+    or 384-well plates:
+    https://www.idtdna.com/site/order/plate/index/dna/1800"""
 
     is_scaffold: bool = False
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
@@ -2706,6 +2705,32 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     # not serialized; efficient way to see a list of all domains on a given helix
     _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
+
+    def __init__(self,
+                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]],
+                 circular: bool = False, color: Optional[Color] = None,
+                 idt: Optional[IDTFields] = None,
+                 is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
+                 modification_3p: Optional[Modification3Prime] = None,
+                 modifications_int: Optional[Dict[int, ModificationInternal]] = None,
+                 name: Optional[str] = None,
+                 label: Optional[StrandLabel] = None,
+                 _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = None,
+                 dna_sequence: Optional[str] = None):
+        self.domains = domains
+        self.circular = circular
+        self.color = color
+        self.idt = idt
+        self.is_scaffold = is_scaffold
+        self.modification_5p = modification_5p
+        self.modification_3p = modification_3p
+        self.modifications_int = modifications_int if modifications_int is not None else dict()
+        self.name = name
+        self.label = label
+        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None else dict()
+        if dna_sequence is not None:
+            self.set_dna_sequence(dna_sequence)
+        self.__post_init__()
 
     def __post_init__(self) -> None:
         self._ensure_domains_not_none()
@@ -2818,11 +2843,11 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         A, B, C, D, E, F
 
         then ``strand.rotate_domains(2)`` makes the :any:`Strand` have the same domains, but in this order:
-        
+
         E, F, A, B, C, D
-        
+
         and  ``strand.rotate_domains(2, forward=False)`` makes
-        
+
         C, D, E, F, A, B
 
         :param rotation:
@@ -3033,7 +3058,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             DNA sequence of this :any:`Strand`, with `delimiter` in between DNA sequences of each
             :any:`Domain` or :any:`Loopout`.
         """
-        result = [substrand.dna_sequence() for substrand in self.domains]
+        result = [substrand.dna_sequence for substrand in self.domains]
         return delimiter.join(result)
 
     def set_dna_sequence(self, sequence: str) -> None:
@@ -3057,7 +3082,13 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, f"strand starting at helix {domain.helix} offset {domain.offset_5p()} "
                                     f"has length {self.dna_length()}, but you attempted to assign a "
                                     f"DNA sequence of length {len(trimmed_seq)}: {sequence}")
-        self.dna_sequence = trimmed_seq
+
+        start_idx_ss = 0
+        for d in self.domains:
+            end_idx_ss = start_idx_ss + d.dna_length()
+            dna_subseq = sequence[start_idx_ss:end_idx_ss]
+            d.dna_sequence = dna_subseq
+            start_idx_ss = end_idx_ss
 
     def dna_length(self) -> int:
         """Return sum of DNA length of :any:`Domain`'s and :any:`Loopout`'s of this :any:`Strand`."""
@@ -3110,7 +3141,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand_complement_builder: List[str] = []
         if already_assigned:
             for domain in self.domains:
-                domain_seq = domain.dna_sequence()
+                domain_seq = domain.dna_sequence
                 if domain_seq is None:
                     raise ValueError(f'no DNA sequence has been assigned to {self}')
                 strand_complement_builder.append(domain_seq)
@@ -3198,32 +3229,18 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
     def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+        # add wildcard symbols to DNA sequence to maintain its length
+        if self.dna_sequence is not None:
+            domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
+
         # Only intended to be called by Design.insert_domain
         self.domains.insert(order, domain)
         domain._parent_strand = self
         if isinstance(domain, Domain):
             self._helix_idx_domain_map[domain.helix].append(domain)
 
-        # add wildcard symbols to DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[start_idx:]
-            new_wildcards = DNA_base_wildcard * (end_idx - start_idx)
-            self.dna_sequence = prefix + new_wildcards + suffix
-
     def remove_domain(self, domain: Union[Domain, Loopout]) -> None:
         # Only intended to be called by Design.remove_domain
-
-        # remove relevant portion of DNA sequence to maintain its length
-        if self.dna_sequence is not None:
-            start_idx = self.dna_index_start_domain(domain)
-            end_idx = start_idx + domain.dna_length()
-            prefix = self.dna_sequence[:start_idx]
-            suffix = self.dna_sequence[end_idx:]
-            self.dna_sequence = prefix + suffix
-
         self.domains.remove(domain)
         domain._parent_strand = None
         if isinstance(domain, Domain):
@@ -3620,7 +3637,7 @@ class PlateCoordinate:
         self._row_idx: int = 0
         self._col_idx: int = 0
 
-    def increment(self) -> None:
+    def advance(self) -> None:
         self._row_idx += 1
         if self._row_idx == len(self._plate_type.rows()):
             self.advance_to_next_col()
@@ -3648,6 +3665,15 @@ class PlateCoordinate:
         self._row_idx = 0
         self._col_idx = 0
         self._plate += 1
+
+    def is_last(self) -> bool:
+        """
+        :return:
+            whether WellPos is the last well on this type of plate
+        """
+        rows = _96WELL_PLATE_ROWS if self._plate_type == PlateType.wells96 else _384WELL_PLATE_ROWS
+        cols = _96WELL_PLATE_COLS if self._plate_type == PlateType.wells96 else _384WELL_PLATE_COLS
+        return self.row == len(rows) and self.col == len(cols)
 
 
 def remove_helix_idxs_if_default(helices: List[Dict]) -> None:
@@ -3766,6 +3792,384 @@ class Geometry(_JSONSerializable):
 
 
 _default_geometry = Geometry()
+
+##############################################################################
+# plate maps
+
+
+cell_with_border_css_class = "cell-with-border"
+
+
+# https://bitbucket.org/astanin/python-tabulate/issues/57/html-class-options-for-tables
+def _html_row_with_attrs(
+        celltag: str,
+        cell_values: Sequence[str],
+        colwidths: Sequence[int],  # noqa
+        colaligns: Sequence[str],
+) -> str:
+    alignment = {
+        "left": "",
+        "right": ' style="text-align: right;"',
+        "center": ' style="text-align: center;"',
+        "decimal": ' style="text-align: right;"',
+    }
+    values_with_attrs = [
+        f"<{celltag}{alignment.get(a, '')} class=\"{cell_with_border_css_class}\">{c}</{celltag}>"
+        for c, a in zip(cell_values, colaligns)
+    ]
+    return "<tr>" + "".join(values_with_attrs).rstrip() + "</tr>"
+
+
+# we can't declare a return type because it's TableFormat,
+# and we don't want to force the user to install the tabulate package just to import scadnano
+def create_html_with_borders_tablefmt():  # type: ignore
+    from functools import partial
+    from tabulate import TableFormat, Line
+
+    html_with_borders_tablefmt = TableFormat(
+        lineabove=Line(
+            f"""\
+    <style>
+    th.{cell_with_border_css_class}, td.{cell_with_border_css_class} {{
+        border: 1px solid black;
+    }}
+    </style>
+    <table>\
+    """,
+            "",
+            "",
+            "",
+        ),
+        linebelowheader=None,
+        linebetweenrows=None,
+        linebelow=Line("</table>", "", "", ""),
+        headerrow=partial(_html_row_with_attrs, "th"),  # type: ignore
+        datarow=partial(_html_row_with_attrs, "td"),  # type: ignore
+        padding=0,
+        with_header_hide=None,
+    )
+    return html_with_borders_tablefmt
+
+
+_ALL_TABLEFMTS = [
+    "plain",
+    "simple",
+    "github",
+    "grid",
+    "fancy_grid",
+    "pipe",
+    "orgtbl",
+    "jira",
+    "presto",
+    "pretty",
+    "psql",
+    "rst",
+    "mediawiki",
+    "moinmoin",
+    "youtrack",
+    "html",
+    "unsafehtml",
+    "latex",
+    "latex_raw",
+    "latex_booktabs",
+    "latex_longtable",
+    "textile",
+    "tsv",
+]
+
+_SUPPORTED_TABLEFMTS_TITLE = [
+    "github",
+    "pipe",
+    "simple",
+    "grid",
+    "html",
+    "unsafehtml",
+    "rst",
+    "latex",
+    "latex_raw",
+    "latex_booktabs",
+    "latex_longtable",
+]
+
+
+@dataclass
+class PlateMap:
+    """
+    Represents a "plate map", i.e., a drawing of a 96-well or 384-well plate, indicating which subset
+    of wells in the plate have strands. It is an intermediate representation of structured data about
+    the plate map that is converted to a visual form, such as Markdown, via the export_* methods.
+    """
+
+    plate_name: str
+    """Name of this plate."""
+
+    plate_type: PlateType
+    """Type of this plate (96-well or 384-well)."""
+
+    well_to_strand: Dict[str, Strand]
+    """dictionary mapping the name of each well (e.g., "C4") to the strand in that well.
+
+    Wells with no strand in the PlateMap are not keys in the dictionary."""
+
+    def __str__(self) -> str:
+        return self.to_table()
+
+    def _repr_markdown_(self) -> str:
+        return self.to_table(tablefmt="pipe")
+
+    def to_table(
+            self,
+            well_marker: Optional[Union[str, Callable[[str], str]]] = None,
+            title_level: int = 3,
+            warn_unsupported_title_format: bool = True,
+            vertical_borders: bool = False,
+            tablefmt: str = "pipe",
+            stralign: str = "default",
+            missingval: str = "",
+            showindex: str = "default",
+            disable_numparse: bool = False,
+            colalign: bool = None,
+    ) -> str:
+        """
+        Exports this plate map to string format, with a header indicating information such as the
+        plate's name and volume to pipette. By default the text format is Markdown, which can be
+        rendered in a jupyter notebook using ``display`` and ``Markdown`` from the package
+        IPython.display:
+
+        .. code-block:: python
+
+            plate_maps = design.plate_maps()
+            maps_strs = '\n\n'.join(plate_map.to_table() for plate_map in plate_maps)
+            from IPython.display import display, Markdown
+            display(Markdown(maps_strs))
+
+        It uses the Python tabulate package (https://pypi.org/project/tabulate/).
+        The parameters are identical to that of the `tabulate` function and are passed along to it,
+        except for `tabular_data` and `headers`, which are computed from this plate map.
+        In particular, the parameter `tablefmt` has default value `'pipe'`,
+        which creates a Markdown format. To create other formats such as HTML, change the value of
+        `tablefmt`; see https://github.com/astanin/python-tabulate#readme for other possible formats.
+
+        :param well_marker:
+            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified
+            and is a string, then that string is put into every well with a strand in the plate map instead.
+            This is useful for printing plate maps that just put,
+            for instance, an `'X'` in the well to pipette (e.g., specify ``well_marker='X'``),
+            e.g., for experimental mixes that use only some strands in the plate.
+            To enable the string to depend on the well position
+            (instead of being the same string in every well), `well_marker` can also be a function
+            that takes as input a string representing the well (such as ``"B3"`` or ``"E11"``),
+            and outputs a string. For example, giving the identity function
+            ``mix.to_table(well_marker=lambda x: x)`` puts the well address itself in the well.
+        :param title_level:
+            The "title" is the first line of the returned string, which contains the plate's name
+            and volume to pipette. The `title_level` controls the size, with 1 being the largest size,
+            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML).
+        :param warn_unsupported_title_format:
+            If True, prints a warning if `tablefmt` is a currently unsupported option for the title.
+            The currently supported formats for the title are 'github', 'html', 'unsafehtml', 'rst',
+            'latex', 'latex_raw', 'latex_booktabs', "latex_longtable". If `tablefmt` is another valid
+            option, then the title will be the Markdown format, i.e., same as for `tablefmt` = 'github'.
+        :param vertical_borders:
+            If true, then `tablefmt` must be set to `html` or `unsafehtml`, and the returned
+            HTML will use inline styles to ensure there are vertical borders between columns of the table.
+            The vertical borders make it easier to see which column a well is in.
+            This is useful when rendering in a Jupyter notebook, since the inline styles will be
+            preserved when saving the Jupyter notebook using the nbconvert tool:
+            https://nbconvert.readthedocs.io/en/latest/
+        :param tablefmt:
+            By default set to `'pipe'` to create a Markdown table. For other options see
+            https://github.com/astanin/python-tabulate#readme
+        :param stralign:
+            See https://github.com/astanin/python-tabulate#readme
+        :param missingval:
+            See https://github.com/astanin/python-tabulate#readme
+        :param showindex:
+            See https://github.com/astanin/python-tabulate#readme
+        :param disable_numparse:
+            See https://github.com/astanin/python-tabulate#readme
+        :param colalign:
+            See https://github.com/astanin/python-tabulate#readme
+        :return:
+            a string representation of this plate map
+        """
+        if title_level not in [1, 2, 3, 4, 5, 6]:
+            raise ValueError(
+                f"title_level must be integer from 1 to 6 but is {title_level}"
+            )
+
+        if tablefmt not in _ALL_TABLEFMTS:
+            raise ValueError(
+                f"tablefmt {tablefmt} not recognized; "
+                f'choose one of {", ".join(_ALL_TABLEFMTS)}'
+            )
+        elif (
+                tablefmt not in _SUPPORTED_TABLEFMTS_TITLE and warn_unsupported_title_format
+        ):
+            print(
+                f'{"*" * 99}\n* WARNING: title formatting not supported for tablefmt = {tablefmt}; '
+                f'using Markdown format\n{"*" * 99}'
+            )
+
+        if vertical_borders and tablefmt not in ['html', 'unsafehtml']:
+            raise ValueError('parameter vertical_borders only supported when tablefmt is '
+                             f'"html" or "unsafehtml", but tablefmt = {tablefmt}')
+
+        num_rows = len(self.plate_type.rows())
+        num_cols = len(self.plate_type.cols())
+        table = [[" " for _ in range(num_cols + 1)] for _ in range(num_rows)]
+
+        for r in range(num_rows):
+            table[r][0] = self.plate_type.rows()[r]
+
+        coord = PlateCoordinate(self.plate_type)
+        for c in range(1, num_cols + 1):
+            for r in range(num_rows):
+                well = coord.well()
+                if well in self.well_to_strand:
+                    strand = self.well_to_strand[well]
+                    if isinstance(well_marker, str):
+                        well_marker_to_use = well_marker
+                    elif callable(well_marker):
+                        well_marker_to_use = well_marker(well)
+                    elif well_marker is None and strand.name is not None:
+                        well_marker_to_use = strand.name
+                    elif well_marker is None and strand.name is None:
+                        raise ValueError(f"strand {strand} has no name, and well_marker was not specified, "
+                                         f"but well_marker must be specified if including a nameless "
+                                         f"strand in the plate map")
+                    else:
+                        raise ValueError(f'invalid type of well_marker = {well_marker}; must be a '
+                                         f'string or a function mapping strings to strings, but is a '
+                                         f'{type(well_marker)}')
+                    table[r][c] = well_marker_to_use
+                if not coord.is_last():
+                    coord.advance()
+
+        raw_title = f'plate "{self.plate_name}"'
+        title = _format_title(raw_title, title_level, tablefmt)
+
+        header = [" "] + [str(col) for col in self.plate_type.cols()]
+
+        # wait until just before we need it to produce non-str TableFormat, so that we don't need
+        # to require the TableFormat type in type declarations, which would add a tabulate dependency
+        # for scadnano users even if they don't use plate maps
+        from tabulate import TableFormat, tabulate
+        tablefmt_typed: Union[str, TableFormat] = tablefmt
+        if vertical_borders:
+            tablefmt_typed = create_html_with_borders_tablefmt()
+
+        out_table = tabulate(
+            tabular_data=table,
+            headers=header,
+            tablefmt=tablefmt_typed,
+            stralign=stralign,
+            missingval=missingval,
+            showindex=showindex,
+            disable_numparse=disable_numparse,
+            colalign=colalign,
+        )
+        table_with_title = f"{title}\n{out_table}"
+        return table_with_title
+
+
+def _plate_map(plate_name: str, strands_in_plate: List[Strand], plate_type: PlateType) -> PlateMap:
+    """
+    Generates plate map from this :any:`Design` for plate with name `plate_name`.
+
+    All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
+    with value `plate_name` are exported.
+
+    :return:
+        plate map for :any:`Strand`'s with :data:`Strand.idt.plate` equal to`plate_name`
+    """
+    well_to_strand = {}
+    for strand in strands_in_plate:
+        if strand.idt is None:
+            raise ValueError(f'strand {strand} has no idt field, so cannot be included in the plate map')
+        elif strand.idt.well is None:
+            raise ValueError(f'strand {strand} has no idt.well field, so cannot be included in the plate map')
+        well_to_strand[strand.idt.well] = strand
+
+    plate_map = PlateMap(
+        plate_name=plate_name,
+        plate_type=plate_type,
+        well_to_strand=well_to_strand,
+    )
+    return plate_map
+
+
+def _format_title(
+        raw_title: str,
+        level: int,
+        tablefmt: str,
+) -> str:
+    # formats a title for a table produced using tabulate,
+    # in the formats tabulate understands
+    if tablefmt in ["html", "unsafehtml"]:
+        title = f"<h{level}>{raw_title}</h{level}>"
+    elif tablefmt == "rst":
+        # https://draft-edx-style-guide.readthedocs.io/en/latest/ExampleRSTFile.html#heading-levels
+        # #############
+        # Heading 1
+        # #############
+        #
+        # *************
+        # Heading 2
+        # *************
+        #
+        # ===========
+        # Heading 3
+        # ===========
+        #
+        # Heading 4
+        # ************
+        #
+        # Heading 5
+        # ===========
+        #
+        # Heading 6
+        # ~~~~~~~~~~~
+        raw_title_width = len(raw_title)
+        if level == 1:
+            line = "#" * raw_title_width
+        elif level in [2, 4]:
+            line = "*" * raw_title_width
+        elif level in [3, 5]:
+            line = "=" * raw_title_width
+        else:
+            line = "~" * raw_title_width
+
+        if level in [1, 2, 3]:
+            title = f"{line}\n{raw_title}\n{line}"
+        else:
+            title = f"{raw_title}\n{line}"
+    elif tablefmt in ["latex", "latex_raw", "latex_booktabs", "latex_longtable"]:
+        if level == 1:
+            size = r"\Huge"
+        elif level == 2:
+            size = r"\huge"
+        elif level == 3:
+            size = r"\LARGE"
+        elif level == 4:
+            size = r"\Large"
+        elif level == 5:
+            size = r"\large"
+        elif level == 6:
+            size = r"\normalsize"
+        else:
+            assert False
+        newline = r"\\"
+        noindent = r"\noindent"
+        title = f"{noindent} {{ {size} {raw_title} }} {newline}"
+    else:  # use the title for tablefmt == "pipe"
+        hashes = "#" * level
+        title = f"{hashes} {raw_title}"
+    return title
+
+
+# end plate maps
+#############################################################################
 
 
 def _check_helices_view_order_and_return(
@@ -4678,10 +5082,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return design
 
-    def plate_maps_markdown(self, warn_duplicate_strand_names: bool = True,
-                            plate_type: PlateType = PlateType.wells96,
-                            strands: Optional[Iterable[Strand]] = None,
-                            well_marker: Optional[str] = None) -> Dict[str, str]:
+    def plate_maps(self,
+                   warn_duplicate_strand_names: bool = True,
+                   plate_type: PlateType = PlateType.wells96,
+                   strands: Optional[Iterable[Strand]] = None,
+                   ) -> List[PlateMap]:
         """
         Generates plate maps from this :any:`Design` in Markdown format, for example:
 
@@ -4714,6 +5119,25 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             | G   |     |     |     |     |     |     |     |     |     |      |      |      |
             | H   |     |     |     |     |     |     |     |     |     |      |      |      |
 
+
+        If `well_marker` is not specified, then each strand must have a name. `well_marker` can also
+        be a function of the well; for instance, if it is the identity function ``lambda x:x``, then each
+        well has its own address as the entry:
+
+        .. code-block::
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | A1  | A2  |     | A4  |     |     |     |     |     |      |      |      |
+            | B   | B1  | B2  | B3  | B4  | B5  |     |     |     |     |      |      |      |
+            | C   | C1  | C2  | C3  | C4  | C5  |     |     |     |     |      |      |      |
+            | D   | D1  | D2  | D3  | D4  | D5  |     |     |     |     |      |      |      |
+            | E   | E1  |     | E3  | E4  | E5  |     |     |     |     |      |      |      |
+            | F   |     |     |     | F4  |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+
         All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
         specified are exported. The number of strings in the returned list is equal to the number of
         different plate names specified across all :any:`Strand`'s in the design.
@@ -4729,11 +5153,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             Type of plate: 96 or 384 well.
         :param strands:
             If specified, only the :any:`Strand`'s in `strands` are put in the plate map.
-        :param well_marker:
-            By default the strand's name is put in the relevant plate entry. If `well_marker` is specified,
-            then it is put there instead. This is useful for printing plate maps that just put,
-            for instance, an `'X'` in the well to pipette (e.g., specify `well_marker` = `'X'`),
-            e.g., for experimental mixes that use only some strands in the plate.
         :return:
             dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
             in this design with IDT plates specified
@@ -4745,9 +5164,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in strands:
             if strand.idt is not None and strand.idt.plate is not None:
                 plate_names_to_strands[strand.idt.plate].append(strand)
-                if strand.name is None:
-                    raise ValueError(f'strand {strand} has no name, but has a plate, which is not allowed')
-                if strand.name in strand_names_to_plate_and_well:
+                if strand.name is not None and strand.name in strand_names_to_plate_and_well:
                     if warn_duplicate_strand_names:
                         print(f'WARNING: found duplicate instance of strand with name {strand.name}')
                     plate, well = strand_names_to_plate_and_well[strand.name]
@@ -4764,51 +5181,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 else:
                     strand_names_to_plate_and_well[strand.name] = (strand.idt.plate, strand.idt.well)
 
-        maps = {name: self._plate_map_markdown(name, strands_in_plate, plate_type, well_marker)
-                for name, strands_in_plate in plate_names_to_strands.items()}
+        plate_maps = [_plate_map(name, strands_in_plate, plate_type)
+                      for name, strands_in_plate in plate_names_to_strands.items()]
 
-        return maps
-
-    def _plate_map_markdown(self, plate_name: str, strands_in_plate: List[Strand],
-                            plate_type: PlateType, well_marker: Optional[str]) -> str:
-        """
-        Generates plate map from this :any:`Design` for plate with name `plate_name`.
-
-        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
-        with value `plate_name` are exported.
-
-        :param warn_duplicate_strand_names:
-            If True, prints a warning to the screen if multiple :any:`Strand`'s exist with the same value
-            for :data:`Strand.name`.
-        :return:
-            markdown string specifying plate map for :any:`Strand`'s with
-            :data:`Strand.idt.plate` equal to`plate_name`
-        """
-        well_to_strand = {}
-        for strand in strands_in_plate:
-            well_to_strand[strand.idt.well] = strand
-
-        num_rows = len(plate_type.rows())
-        num_cols = len(plate_type.cols())
-        header = [' '] + [str(col) for col in plate_type.cols()]
-        table = [[' ' for _ in range(num_cols + 1)] for _ in range(num_rows)]
-
-        for r in range(num_rows):
-            table[r][0] = plate_type.rows()[r]
-
-        plate_coord = PlateCoordinate(plate_type)
-        for c in range(1, num_cols + 1):
-            for r in range(num_rows):
-                well = plate_coord.well()
-                plate_coord.increment()
-                if well in well_to_strand:
-                    strand = well_to_strand[well]
-                    well_marker_to_use = well_marker if well_marker is not None else strand.name
-                    table[r][c] = well_marker_to_use
-
-        from tabulate import tabulate
-        md_table = tabulate(table, header, tablefmt='github')
-        return f'## {plate_name}\n{md_table}'
+        return plate_maps
 
     def modifications(self, mod_type: Optional[ModificationType] = None) -> Set[Modification]:
         """
@@ -4859,8 +5235,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
     def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
-        """Used for chained method building by calling
-        :py:meth:`Design.strand` to build the :any:`Strand` domain by domain, in order from 5' to 3'.
+        """Used for chained method building the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
         .. code-block:: Python
@@ -4899,11 +5274,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :py:meth:`StrandBuilder.cross`,
         :py:meth:`StrandBuilder.loopout`,
         :py:meth:`StrandBuilder.to`
+        :py:meth:`StrandBuilder.move`
         :py:meth:`StrandBuilder.update_to`,
         returns a :any:`StrandBuilder` object.
 
         Each call to
         :py:meth:`StrandBuilder.to`,
+        :py:meth:`StrandBuilder.move`,
         :py:meth:`StrandBuilder.update_to`,
         or
         :py:meth:`StrandBuilder.loopout`
@@ -4922,7 +5299,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Same functionality as :meth:`Design.draw_strand`.
 
         .. deprecated:: 0.17.2
-           Use :meth:`Design.draw_strand` instead. This method will be removed in a future version.
+           Use :meth:`Design.draw_strand` instead, which is a better name.
+           This method will be removed in a future version.
         """
         print('WARNING: The method Design.strand is deprecated. Use Design.draw_strand instead, '
               'which has the same functionality. Design.strand will be removed in a future version.')
@@ -5136,7 +5514,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         the cadnano c2 format; this is essentially what is done in
         :meth:`Design.to_cadnano_v2_json`.
 
-        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
 
 
         :param name:
@@ -5220,7 +5600,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_cadnano_v2_json(self, name: str = '') -> str:
         """Converts the design to the cadnano v2 format.
 
-        Please see the spec `misc/cadnano-format-specs/v2.txt` for more info on that format.
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
 
         :param name:
             Name of the design.
@@ -6117,7 +6499,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     num_strands_remaining == min_strands_per_plate:
                 plate_coord.advance_to_next_plate()
             else:
-                plate_coord.increment()
+                plate_coord.advance()
 
             if plate != plate_coord.plate():
                 workbook.save(filename_plate)
@@ -6335,8 +6717,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         seq_before_whole: Optional[str]
         seq_after_whole: Optional[str]
         if strand.dna_sequence is not None:
-            seq_before: str = ''.join(domain.dna_sequence() for domain in domains_before)  # type: ignore
-            seq_after: str = ''.join(domain.dna_sequence() for domain in domains_after)  # type: ignore
+            seq_before: str = ''.join(domain.dna_sequence for domain in domains_before)  # type: ignore
+            seq_after: str = ''.join(domain.dna_sequence for domain in domains_after)  # type: ignore
             seq_on_domain_left: str = domain_to_remove.dna_sequence_in(  # type: ignore
                 domain_to_remove.start,
                 offset - 1)
@@ -6504,6 +6886,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         else:
             # join strands
+            old_strand_3p_dna_sequence = strand_3p.dna_sequence
+            old_strand_5p_dna_sequence = strand_5p.dna_sequence
+
             strand_3p.domains.pop()
             strand_3p.domains.append(dom_new)
             strand_3p.domains.extend(strand_5p.domains[1:])
@@ -6512,8 +6897,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for idx, mod in strand_5p.modifications_int.items():
                 new_idx = idx + strand_3p.dna_length()
                 strand_3p.set_modification_internal(new_idx, mod)
-            if strand_3p.dna_sequence is not None and strand_5p.dna_sequence is not None:
-                strand_3p.dna_sequence += strand_5p.dna_sequence
+            if old_strand_3p_dna_sequence is not None and old_strand_5p_dna_sequence is not None:
+                strand_3p.set_dna_sequence(old_strand_3p_dna_sequence + old_strand_5p_dna_sequence)
             if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
                 strand_3p.set_color(strand_5p.color)
             self.strands.remove(strand_5p)
@@ -7223,7 +7608,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
         dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
             dom_strand = _OxdnaStrand()
-            seq = domain.dna_sequence()
+            seq = domain.dna_sequence
             if seq is None:
                 seq = 'T' * domain.dna_length()
 

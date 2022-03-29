@@ -354,6 +354,8 @@ Now the design should look like this:
 
 ![](images/scaffold_complete.png)
 
+We've completed the scaffold strand! On to the staple strands.
+
 
 
 
@@ -361,18 +363,22 @@ Now the design should look like this:
 
 ## Add staple precursors
 
-We used chained method calls to create scaffold precursor strands.
-It is also possible, though typically more verbose, to explicitly create `Domain` objects, to be passed into the `Strand` constructor. 
+We used chained method calls to create scaffold "precursor" strands, 
+i.e., one long strand per helix, going the opposite direction as the scaffold.
+In subsequent sections we will also add nicks and crossovers to these,
+to create the staple strands.
+It is also possible, though typically more verbose, to explicitly create `Domain` objects, 
+to be passed into the `Strand` constructor. 
 For the staple precursor strands we do this to show how it works.
 
 Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
-Boolean `forward` (direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end?),
-integer `start` and `end` offsets.
+Boolean `forward`: direction of the `Domain`, i.e., is its 3' end at a higher or lower offset than its 5' end? In other words is the strand arrow pointing to the right (forward) or left (reverse),
+and integer `start` and `end` offsets.
 
 
 
-To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly, although it is safe to access the fields read-only.
+To add staples, we use the method `design.add_strand`. In general, modifying an existing design should always be done through methods rather than modifying the fields directly. In other words, don't write to the list `design.strands` directly, although it is safe to access the fields read-only.
 
 ```python
 def create_design() -> sc.Design:
@@ -520,7 +526,7 @@ The design now looks like it did at the top:
 
 Finally, we complete the design by assigning a DNA sequence to the scaffold, which will assign the complementary sequence to the appropriate staples. This is, in a sense, the primary function of [cadnano](https://cadnano.org/) and scadnano: to translate a desired abstract strand design, together with knowledge of a concrete DNA sequence for the scaffold, into the appropriate sequences for the staples to enable them to bind to the scaffold where we want. 
 
-If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has exactly one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method [Design.assign_m13_to_scaffold](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_m13_to_scaffold):
+If you have a particular strand and sequence you would like to assign, you can call [`Design.assign_dna`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_dna). However, in the common case that your design has exactly one scaffold, and you want to assign the sequence of [M13mp18](https://www.ncbi.nlm.nih.gov/nuccore/X02513.1) to it, there is a convenience method [`Design.assign_m13_to_scaffold`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.assign_m13_to_scaffold):
 
 ```python
 def create_design() -> sc.Design:
@@ -577,7 +583,7 @@ The Excel file should look similar to this:
 
 ![](images/excel_file.png)
 
-To customize further (e.g., purification, synthesis scale), one can write to the field `Strand.idt`, of type [IDTFields](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields).
+To customize further (e.g., purification, synthesis scale), one can write to the field [`Strand.idt`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Strand.idt), of type [IDTFields](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.IDTFields). Strands can also be given custom names through the field [`Strand.name`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Strand.name); if the Strand has no name, it is assigned one using the cadnano convention (see Excel screenshot above) based on the helix and offset of the strand's 5' and 3' ends.
 
 
 

@@ -54,7 +54,7 @@ setup(name='scadnano',
       python_requires='>=3.6',
       install_requires=[
         'xlwt',
-        'dataclasses>=0.6;python_version<"3.7"',
+        'dataclasses>=0.6; python_version < "3.7"',
         'tabulate',
       ]
 )
