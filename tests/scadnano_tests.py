@@ -6826,3 +6826,34 @@ class TestOxdnaExport(unittest.TestCase):
             sqr_dist2 = sum([x ** 2 for x in diff2])
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
+
+class TestPlateMaps(unittest.TestCase):
+
+    def setUp(self) -> None:
+        helices = [sc.Helix(max_offset=100)]
+        self.design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        self.design.draw_strand(0, 0).move(10).with_name('strand 0').with_idt(plate='plate 1', well='A1')
+        self.design.draw_strand(0, 10).move(10).with_name('strand 1').with_idt(plate='plate 1', well='A2')
+        self.design.draw_strand(0, 20).move(10).with_name('strand 2').with_idt(plate='plate 1', well='B2')
+        self.design.draw_strand(0, 30).move(10).with_name('strand 3').with_idt(plate='plate 1', well='B3')
+        self.design.draw_strand(0, 40).move(10).with_name('strand 4').with_idt(plate='plate 1', well='D7')
+
+    def test_plate_map_markdown(self) -> None:
+        plate_maps = self.design.plate_maps()
+        self.assertEqual(1, len(plate_maps))
+        plate_map = plate_maps[0]
+        actual_md = plate_map.to_table().strip()
+        expected_md = """
+### plate "plate 1"
+|     | 1        | 2        | 3        | 4   | 5   | 6   | 7        | 8   | 9   | 10   | 11   | 12   |
+|:----|:---------|:---------|:---------|:----|:----|:----|:---------|:----|:----|:-----|:-----|:-----|
+| A   | strand 0 | strand 1 |          |     |     |     |          |     |     |      |      |      |
+| B   |          | strand 2 | strand 3 |     |     |     |          |     |     |      |      |      |
+| C   |          |          |          |     |     |     |          |     |     |      |      |      |
+| D   |          |          |          |     |     |     | strand 4 |     |     |      |      |      |
+| E   |          |          |          |     |     |     |          |     |     |      |      |      |
+| F   |          |          |          |     |     |     |          |     |     |      |      |      |
+| G   |          |          |          |     |     |     |          |     |     |      |      |      |
+| H   |          |          |          |     |     |     |          |     |     |      |      |      |
+""".strip()
+        self.assertEqual(expected_md, actual_md)
