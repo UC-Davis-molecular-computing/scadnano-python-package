@@ -3939,7 +3939,7 @@ class PlateMap:
         .. code-block:: python
 
             plate_maps = design.plate_maps()
-            maps_strs = '\n\n'.join(plate_map.to_table() for plate_map in plate_maps)
+            maps_strs = '\\n\\n'.join(plate_map.to_table() for plate_map in plate_maps)
             from IPython.display import display, Markdown
             display(Markdown(maps_strs))
 
