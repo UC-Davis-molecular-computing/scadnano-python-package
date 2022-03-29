@@ -4693,7 +4693,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return design
 
-    def plate_maps_markdown(self, warn_duplicate_strand_names: bool = True,
+    def plate_maps_markdown(self,
+                            warn_duplicate_strand_names: bool = True,
                             plate_type: PlateType = PlateType.wells96,
                             strands: Optional[Iterable[Strand]] = None,
                             well_marker: Optional[str] = None) -> Dict[str, str]:
@@ -4729,6 +4730,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             | G   |     |     |     |     |     |     |     |     |     |      |      |      |
             | H   |     |     |     |     |     |     |     |     |     |      |      |      |
 
+
+        If `well_marker` is not specified, then each strand must have a name.
+
         All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
         specified are exported. The number of strings in the returned list is equal to the number of
         different plate names specified across all :any:`Strand`'s in the design.
@@ -4760,8 +4764,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in strands:
             if strand.idt is not None and strand.idt.plate is not None:
                 plate_names_to_strands[strand.idt.plate].append(strand)
-                if strand.name is None:
-                    raise ValueError(f'strand {strand} has no name, but has a plate, which is not allowed')
+                if strand.name is None and well_marker is None:
+                    raise ValueError(f'strand {strand} has no name, but has a plate, which is not allowed '
+                                     f'unless well_marker is specified')
                 if strand.name in strand_names_to_plate_and_well:
                     if warn_duplicate_strand_names:
                         print(f'WARNING: found duplicate instance of strand with name {strand.name}')
