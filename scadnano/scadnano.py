@@ -3676,7 +3676,6 @@ class PlateCoordinate:
         return self.row == len(rows) and self.col == len(cols)
 
 
-
 def remove_helix_idxs_if_default(helices: List[Dict]) -> None:
     # removes indices from each helix if they are the default (order of appearance in list)
     default = True
