@@ -3964,7 +3964,8 @@ class PlateMap:
         :param title_level:
             The "title" is the first line of the returned string, which contains the plate's name
             and volume to pipette. The `title_level` controls the size, with 1 being the largest size,
-            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML).
+            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML)
+            and 6 being the smallest size.
         :param warn_unsupported_title_format:
             If True, prints a warning if `tablefmt` is a currently unsupported option for the title.
             The currently supported formats for the title are 'github', 'html', 'unsafehtml', 'rst',
