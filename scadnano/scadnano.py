@@ -1601,7 +1601,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     """
 
     dna_sequence: Optional[str] = None
-    """Return DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
+    """DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
     to this :any:`Domain`'s :any:`Strand`."""
 
     # not serialized; for efficiency
@@ -1973,7 +1973,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     """
 
     dna_sequence: Optional[str] = None
-    """Return DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned."""
+    """DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned."""
 
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
@@ -2631,7 +2631,10 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def dna_sequence(self) -> Optional[str]:
         """Do not assign directly to this field. Always use :any:`Design.assign_dna` 
         (for complementarity checking) or :any:`Strand.set_dna_sequence` 
-        (without complementarity checking, to allow mismatches)."""
+        (without complementarity checking, to allow mismatches).
+
+        Note that this does not include any IDT codes for :any:`Modification`'s.
+        To include those call :meth:`Strand.idt_dna_sequence`."""
         sequence = ''
         for domain in self.domains:
             if domain.dna_sequence is None:
