@@ -6511,26 +6511,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
-        """Exports to oxdna format.
-
-        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
-        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
-        using the "intrinsic rotation" convention
-        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
-        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
-
-        :param warn_duplicate_strand_names:
-            If True, prints a warning to the screen indicating when
-            strands are found to have duplicate names.
-        :return:
-            two strings that are the contents of the .dat and .top file
-            suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
-        """
-        self._check_legal_design(warn_duplicate_strand_names)
-        system = _convert_design_to_oxdna_system(self)
-        return system.ox_dna_output()
-
     def write_oxdna_files(self, directory: str = '.', filename_no_extension: Optional[str] = None,
                           warn_duplicate_strand_names: bool = True) -> None:
         """Write text file representing this :any:`Design`,
@@ -6561,6 +6541,76 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
         write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
+
+    def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
+        """Exports to oxdna format.
+
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
+        :return:
+            two strings that are the contents of the .dat and .top file
+            suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
+        """
+        self._check_legal_design(warn_duplicate_strand_names)
+        system = _convert_design_to_oxdna_system(self)
+        return system.ox_dna_output()
+
+    def write_cando_file(self, directory: str = '.', filename_no_extension: Optional[str] = None,
+                         warn_duplicate_strand_names: bool = True) -> None:
+        """Write text file representing this :any:`Design`,
+        suitable for reading by Cando (),
+        with the output files having the same name as the running script but with ``.py`` changed to
+        ``.dat`` and ``.top``,
+        unless `filename_no_extension` is explicitly specified.
+        For instance, if the script is named ``my_origami.py``,
+        then the design will be written to ``my_origami.dat`` and ``my_origami.top``.
+
+        The strings written are those returned by :meth:`Design.to_oxdna_format`.
+
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
+        :param directory:
+            directory in which to put file (default: current working directory)
+        :param filename_no_extension:
+            filename without extension (default: name of running script without ``.py``).
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
+        """
+        dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
+
+        write_file_same_name_as_running_python_script(dat, 'cndo', directory, filename_no_extension)
+
+    def to_cando_format(self, warn_duplicate_strand_names: bool = True) -> str:
+        """Exports to CanDo format. (https://cando-dna-origami.org/cndo-file-converter/)
+
+        The three angles of each :any:`HelixGroup` are interpreted to be applied in the following order:
+        first :data:`HelixGroup.yaw`, then :data:`HelixGroup.pitch`, then :data:`HelixGroup.roll`,
+        using the "intrinsic rotation" convention
+        (see https://en.wikipedia.org/wiki/Euler_angles#Conventions_by_intrinsic_rotations).
+        The value :data:`Helix.roll` is added to the value :data:`HelixGroup.roll`.
+
+        :param warn_duplicate_strand_names:
+            If True, prints a warning to the screen indicating when
+            strands are found to have duplicate names.
+        :return:
+            two strings that are the contents of the .dat and .top file
+            suitable for reading by oxdna (https://sulcgroup.github.io/oxdna-viewer/)
+        """
+        self._check_legal_design(warn_duplicate_strand_names)
+        system = _convert_design_to_oxdna_system(self)
+        return system.cando_output()
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
@@ -7427,6 +7477,49 @@ class _OxdnaSystem:
             return _OxdnaVector(1, 1, 1)
 
     def ox_dna_output(self) -> Tuple[str, str]:
+
+        bbox = self.compute_bounding_box()
+
+        dat_list = [f't = 0\nb = {bbox.x} {bbox.y} {bbox.z}\nE = 0 0 0']
+        top_list = []
+
+        nuc_count = 0
+        strand_count = 0
+
+        for strand in self.strands:
+            strand_count += 1
+
+            nuc_index = 0
+            for nuc in strand.nucleotides:
+                # nuc_count is also the ID of the current nucleotide
+                n5 = nuc_count - 1
+                n3 = nuc_count + 1
+
+                if nuc_index == 0:  # no 5' neighbor
+                    n5 = -1
+                if nuc_index == len(strand.nucleotides) - 1:  # no 3' neighbor
+                    n3 = -1
+
+                top_list.append(f'{strand_count} {nuc.base} {n3} {n5}')
+                dat_list.append(f'{nuc.r.x} {nuc.r.y} {nuc.r.z} ' +
+                                f'{nuc.b.x} {nuc.b.y} {nuc.b.z} ' +
+                                f'{nuc.n.x} {nuc.n.y} {nuc.n.z} ' +
+                                f'{nuc.v.x} {nuc.v.y} {nuc.v.z} ' +
+                                f'{nuc.L.x} {nuc.L.y} {nuc.L.z}')
+
+                nuc_index += 1
+                nuc_count += 1
+
+        top = '\n'.join(top_list) + '\n'
+        dat = '\n'.join(dat_list) + '\n'
+
+        top = f'{nuc_count} {strand_count}\n' + top
+
+        return dat, top
+
+    def cando_output(self) -> str:
+
+        # TODO: hopefully there's enough information here to figure out cando output
 
         bbox = self.compute_bounding_box()
 
