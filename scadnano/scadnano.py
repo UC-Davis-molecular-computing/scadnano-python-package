@@ -3939,7 +3939,7 @@ class PlateMap:
         .. code-block:: python
 
             plate_maps = design.plate_maps()
-            maps_strs = '\n\n'.join(plate_map.to_table() for plate_map in plate_maps)
+            maps_strs = '\\n\\n'.join(plate_map.to_table() for plate_map in plate_maps)
             from IPython.display import display, Markdown
             display(Markdown(maps_strs))
 
@@ -3964,7 +3964,8 @@ class PlateMap:
         :param title_level:
             The "title" is the first line of the returned string, which contains the plate's name
             and volume to pipette. The `title_level` controls the size, with 1 being the largest size,
-            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML).
+            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML)
+            and 6 being the smallest size.
         :param warn_unsupported_title_format:
             If True, prints a warning if `tablefmt` is a currently unsupported option for the title.
             The currently supported formats for the title are 'github', 'html', 'unsafehtml', 'rst',
@@ -5623,22 +5624,33 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return dct
 
-    def to_cadnano_v2_json(self, name: str = '') -> str:
+    def to_cadnano_v2_json(self, name: str = '', whitespace: bool = True) -> str:
         """Converts the design to the cadnano v2 format.
 
         Not all scadnano designs can be exported to cadnano v2. The constraints that must be satisfied
         are described under :ref:`Interoperability - cadnano v2`. The cadnano file format is also described
         at that link.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param name:
             Name of the design.
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
         :return:
             a string in the cadnano v2 format representing this :any:`Design`
         """
         content_serializable = self.to_cadnano_v2_serializable(name)
 
         encoder = _SuppressableIndentEncoder
-        return json.dumps(content_serializable, cls=encoder, indent=2)
+        content = json.dumps(content_serializable, cls=encoder, indent=2)
+        if not whitespace:
+            # remove whitespace
+            content = ''.join(content.split())
+        return content
 
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
@@ -6707,7 +6719,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = default_scadnano_file_extension
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None) -> None:
+    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None,
+                              whitespace: bool = True) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
@@ -6715,9 +6728,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Not all scadnano designs can be exported to cadnano v2. The constraints that must be satisfied
         are described under :ref:`Interoperability - cadnano v2`.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param directory:
             directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
+
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
 
         :param filename:
             The output file has the same name as the running script but with ``.py`` changed to ``.json``,
@@ -6726,8 +6747,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
-        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory,
-                                                      filename)
+        content = self.to_cadnano_v2_json(name=name, whitespace=whitespace)
+        write_file_same_name_as_running_python_script(content, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
