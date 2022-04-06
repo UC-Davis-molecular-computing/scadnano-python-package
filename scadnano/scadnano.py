@@ -5626,9 +5626,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def to_cadnano_v2_json(self, name: str = '') -> str:
         """Converts the design to the cadnano v2 format.
 
-        Please see the spec
-        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
-        for more info on that format.
+        Not all scadnano designs can be exported to cadnano v2. The constraints that must be satisfied
+        are described under :ref:`Interoperability - cadnano v2`. The cadnano file format is also described
+        at that link.
 
         :param name:
             Name of the design.
@@ -6711,6 +6711,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
+
+        Not all scadnano designs can be exported to cadnano v2. The constraints that must be satisfied
+        are described under :ref:`Interoperability - cadnano v2`.
 
         :param directory:
             directory in which to place the file, either absolute or relative to
