@@ -7131,7 +7131,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         else:
             assert domain_left.end == domain_right.start
 
-    def address_to_domain(self) -> Dict[Address, Domain]:
+    def domain_at_address(self) -> Dict[Address, Domain]:
         """
         :return:
             dict mapping each occupied :any:`Address` of this :any:`Design`, i.e. each address that has a
@@ -7172,7 +7172,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _unpaired_deletion_or_insertion_addresses(self, find_deletions: bool) -> List[Address]:
         # shared code between unpaired_deletion_addresses and unpaired_insertion_addresses
         addresses = set(self.deletion_addresses() if find_deletions else self.insertion_addresses())
-        address_to_domain = self.address_to_domain()
+        address_to_domain = self.domain_at_address()
 
         unpaired_addresses = []
         for address in addresses:
