@@ -380,7 +380,8 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
         design.draw_strand(0, 5).move(5).with_modification_3p(
             sc.Modification3Prime(display_text=name, id=name + '3'))
         design.to_json(True)
@@ -389,8 +390,10 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
-        design.draw_strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 5).move(5).with_modification_3p(
+            sc.Modification3Prime(display_text=name, id=name))
         with self.assertRaises(sc.IllegalDesignError):
             design.to_json(True)
 
@@ -513,7 +516,7 @@ class TestModifications(unittest.TestCase):
 
     def test_to_json_serializable(self) -> None:
         biotin5 = mod.biotin_5p
-        biotin5 = dataclasses.replace(biotin5, connector_length = 6)
+        biotin5 = dataclasses.replace(biotin5, connector_length=6)
         self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
@@ -694,13 +697,12 @@ class TestImportCadnanoV2(unittest.TestCase):
         #
         design.write_scadnano_file(directory=self.output_path,
                                    filename=f'{file_name}.{sc.default_scadnano_file_extension}')
-    
+
     def test_same_helix_crossover(self) -> None:
         file_name = "test_paranemic_crossover"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
         self.assertEqual(4, len(design.helices))
-
 
     def test_2_stape_2_helix_origami_deletions_insertions(self) -> None:
         file_name = "test_2_stape_2_helix_origami_deletions_insertions"
@@ -2220,9 +2222,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8, dna_sequence='ACGTACGA')]), design.strands)
         self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16, dna_sequence='AACCGGTA')]), design.strands)
         # existing Strands
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]), design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]),
+            design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 8)
         self.assertEqual(remove_whitespace('ACGTACGA'), strand.dna_sequence)
@@ -6305,7 +6313,7 @@ class TestOxdnaExport(unittest.TestCase):
         }
         design = sc.Design(helices=helices, groups=groups)
         design.draw_strand(0, 0).move(7).cross(1).move(-7)
-        design.draw_strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
+        design.draw_strand(2, 7).move(-7).cross(3).move(7)  # unlike basic design, put strand on helices 2,3
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4
@@ -6827,6 +6835,7 @@ class TestOxdnaExport(unittest.TestCase):
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
 
+
 class TestPlateMaps(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -6857,3 +6866,131 @@ class TestPlateMaps(unittest.TestCase):
 | H   |          |          |          |     |     |     |          |     |     |      |      |      |
 """.strip()
         self.assertEqual(expected_md, actual_md)
+
+
+class TestUnpairDeletionsInsertions(unittest.TestCase):
+    def setUp(self) -> None:
+        """
+            0      8
+        0   [------>
+            <------]
+
+            0      8
+        1   [------>
+            <------]
+
+            0      8
+        2   [------>
+            <------]
+        """
+        num_helices = 3
+        helices = [sc.Helix(max_offset=100) for _ in range(num_helices)]
+        self.design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        for helix_idx in range(num_helices):
+            self.design.draw_strand(helix_idx, 0).move(8)
+            self.design.draw_strand(helix_idx, 8).move(-8)
+
+    def test_no_deletions_or_insertions(self) -> None:
+        up_del = self.design.unpaired_deletion_addresses()
+        up_ins = self.design.unpaired_insertion_addresses()
+        self.assertEqual(0, len(up_del))
+        self.assertEqual(0, len(up_ins))
+
+    def test_no_unpaired_deletions_or_insertions__some_paired(self) -> None:
+        """
+            0  34  8
+        0   [--X--->
+            <--X---]
+
+            0  34  8
+        1   [---I-->
+            <---I--]
+
+            0  34  8
+        2   [------>
+            <------]
+        """
+        self.design.add_deletion(0, 3)
+        self.design.add_insertion(1, 3, 2)
+        up_del = self.design.unpaired_deletion_addresses()
+        up_ins = self.design.unpaired_insertion_addresses()
+        self.assertEqual(0, len(up_del))
+        self.assertEqual(0, len(up_ins))
+
+    def test_two_unpaired_deletions(self) -> None:
+        """
+            0  34  8
+        0   [--X--->
+            <------]
+
+            0  34  8
+        1   [------>
+            <---X--]
+
+            0  34  8
+        2   [--X--->
+            <--X---]
+        """
+        self.design.strands[0].domains[0].deletions.append(3)
+        self.design.strands[3].domains[0].deletions.append(4)
+        self.design.add_deletion(2, 3)
+        up_del = self.design.unpaired_deletion_addresses()
+        up_ins = self.design.unpaired_insertion_addresses()
+        self.assertEqual(2, len(up_del))
+        self.assertEqual(0, len(up_ins))
+        self.assertIn(sc.Address(0, 3, True), up_del)
+        self.assertIn(sc.Address(1, 4, False), up_del)
+
+    def test_two_unpaired_insertions(self) -> None:
+        """
+            0  34  8
+        0   [--I--->
+            <------]
+
+            0  34  8
+        1   [------>
+            <---I--]
+
+            0  34  8
+        2   [--DI-->
+            <--DI--]
+        """
+        self.design.strands[0].domains[0].insertions.append((3, 2))
+        self.design.strands[3].domains[0].insertions.append((4, 2))
+        self.design.add_deletion(2, 3)
+        self.design.add_insertion(2, 4, 2)
+        up_del = self.design.unpaired_deletion_addresses()
+        up_ins = self.design.unpaired_insertion_addresses()
+        self.assertEqual(0, len(up_del))
+        self.assertEqual(2, len(up_ins))
+        self.assertIn(sc.Address(0, 3, True), up_ins)
+        self.assertIn(sc.Address(1, 4, False), up_ins)
+
+    def test_unpaired_deletion_insertion_same_offset(self) -> None:
+        """
+            0  34  8
+        0   [--I--->
+            <------]
+
+            0  34  8
+        1   [--I--->
+            <--DD--]
+
+            0  34  8
+        2   [--DI-->
+            <--DI--]
+        """
+        self.design.strands[0].domains[0].insertions.append((3, 2))
+        self.design.strands[2].domains[0].insertions.append((3, 2))
+        self.design.strands[3].domains[0].deletions.append(3)
+        self.design.strands[3].domains[0].deletions.append(4)
+        self.design.add_deletion(2, 3)
+        self.design.add_insertion(2, 4, 2)
+        up_del = self.design.unpaired_deletion_addresses()
+        up_ins = self.design.unpaired_insertion_addresses()
+        self.assertEqual(2, len(up_del))
+        self.assertEqual(2, len(up_ins))
+        self.assertIn(sc.Address(0, 3, True), up_ins)
+        self.assertIn(sc.Address(1, 3, True), up_ins)
+        self.assertIn(sc.Address(1, 3, False), up_del)
+        self.assertIn(sc.Address(1, 4, False), up_del)

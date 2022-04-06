@@ -1579,7 +1579,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     """List of positions of deletions on this Domain."""
 
     insertions: List[Tuple[int, int]] = field(default_factory=list)
-    """List of (position,num_insertions) pairs on this Domain.
+    """List of (offset,num_insertions) pairs on this Domain.
     
     This is the number of *extra* bases in addition to the base already at this position. 
     The total number of bases at this offset is num_insertions+1."""
@@ -4215,6 +4215,32 @@ def _check_type_is_one_of(obj: Any, expected_types: Iterable) -> None:
                              f'but instead it is of type {type(obj)}')
 
 
+@dataclass(frozen=True)
+class Address:
+    """
+    Represents a position where a DNA nucleotide could go,
+    defined by a :any:`Helix` idx (:data:`Helix.idx`),
+    an integer offset on the helix,
+    and a direction (Boolean `forward` value).
+    """
+
+    helix: int
+    """Index of the helix of this :any:`Address`."""
+
+    offset: int
+    """Offset on the helix of this :any:`Address`."""
+
+    forward: bool
+    """Direction (forward if True, otherwise reverse); see :data:`Domain.forward`."""
+
+    def reverse(self) -> 'Address':
+        """
+        :return:
+             :any:`Address` in the opposite direction of this (i.e., with :data:`Address.forward` negated)
+        """
+        return replace(self, forward=not self.forward)
+
+
 @dataclass
 class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
@@ -5979,7 +6005,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     #  domains on the same helix)
 
     def add_deletion(self, helix: int, offset: int) -> None:
-        """Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset."""
+        """
+        Adds a deletion to every :class:`scadnano.Strand` at the given helix and base offset.
+
+        If there are two strands (one in each direction), both get a deletion.
+        """
         domains = self.domains_at(helix, offset)
         if len(domains) == 0:
             raise IllegalDesignError(f"no domains are at helix {helix} offset {offset}")
@@ -5988,8 +6018,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 domain.deletions.append(offset)
 
     def add_insertion(self, helix: int, offset: int, length: int) -> None:
-        """Adds an insertion with the given length to every :class:`scadnano.Strand`
-        at the given helix and base offset, with the given length."""
+        """
+        Adds an insertion with the given length to every :class:`scadnano.Strand`
+        at the given helix and base offset, with the given length.
+
+        If there are two strands (one in each direction), both get an insertion.
+        """
         domains = self.domains_at(helix, offset)
         if len(domains) == 0:
             raise IllegalDesignError(f"no domains are at helix {helix} offset {offset}")
@@ -7097,6 +7131,94 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         else:
             assert domain_left.end == domain_right.start
 
+    def address_to_domain(self) -> Dict[Address, Domain]:
+        """
+        :return:
+            dict mapping each occupied :any:`Address` of this :any:`Design`, i.e. each address that has a
+            :any:`Domain` overlapping it, to the domain
+        """
+        domain_of = {}
+        for strand in self.strands:
+            for domain in strand.bound_domains():
+                for offset in range(domain.start, domain.end):
+                    address = Address(domain.helix, offset, domain.forward)
+                    domain_of[address] = domain
+        return domain_of
+
+    def deletion_addresses(self) -> List[Address]:
+        """
+        :return:
+            :any:`Address`'s of all deletions in this :any:`Design`.
+        """
+        addresses = []
+        for strand in self.strands:
+            for domain in strand.bound_domains():
+                for offset in domain.deletions:
+                    addresses.append(Address(domain.helix, offset, domain.forward))
+        return addresses
+
+    def insertion_addresses(self) -> List[Address]:
+        """
+        :return:
+            :any:`Address`'s of all insertions in this :any:`Design`.
+        """
+        addresses = []
+        for strand in self.strands:
+            for domain in strand.bound_domains():
+                for offset, _ in domain.insertions:
+                    addresses.append(Address(domain.helix, offset, domain.forward))
+        return addresses
+
+    def _unpaired_deletion_or_insertion_addresses(self, find_deletions: bool) -> List[Address]:
+        # shared code between unpaired_deletion_addresses and unpaired_insertion_addresses
+        addresses = set(self.deletion_addresses() if find_deletions else self.insertion_addresses())
+        address_to_domain = self.address_to_domain()
+
+        unpaired_addresses = []
+        for address in addresses:
+            reverse_address = address.reverse()
+            if reverse_address in address_to_domain:  # reverse address has a domain
+                if reverse_address not in addresses:  # but has no insertion/deletion
+                    unpaired_addresses.append(address)
+
+        return unpaired_addresses
+
+    def unpaired_deletion_addresses(self) -> List[Address]:
+        """
+        Gets :any:`Address`'` unpaired deletions (see :data:`Domain.deletions`) in this :any:`Design`.
+
+        This is a deletion at an :any:`Address` where there is a :any:`Domain` in both directions
+        (i.e., there is a domain whose [:data:`Domain.start`, :data:`Domain.end`) interval
+        overlaps that :any:`Address`, and also a domain overlapping the same address with
+        :data:`Address.forward` negated),
+        such that the :any:`Domain` in the other direction does not have a deletion.
+
+        Note that a deletion is not considered unpaired if it is at an address with no
+        overlapping :any:`Domain` in the opposite direction.
+
+        :return:
+            List of :any:`Address`'s of unpaired deletions in this :any:`Design`
+        """
+        return self._unpaired_deletion_or_insertion_addresses(True)
+
+    def unpaired_insertion_addresses(self) -> List[Address]:
+        """
+        Gets :any:`Address`'` unpaired insertions (see :data:`Domain.deletions`) in this :any:`Design`.
+
+        This is an insertion at an :any:`Address` where there is a :any:`Domain` in both directions
+        (i.e., there is a domain whose [:data:`Domain.start`, :data:`Domain.end`) interval
+        overlaps that :any:`Address`, and also a domain overlapping the same address with
+        :data:`Address.forward` negated),
+        such that the :any:`Domain` in the other direction does not have an insertion.
+
+        Note that an insertion is not considered unpaired if it is at an address with no
+        overlapping :any:`Domain` in the opposite direction.
+
+        :return:
+            List of :any:`Address`'s of unpaired insertions in this :any:`Design`
+        """
+        return self._unpaired_deletion_or_insertion_addresses(False)
+
     def inline_deletions_insertions(self) -> None:
         """
         Converts deletions and insertions by "inlining" them. Insertions and deletions are removed,
@@ -7150,7 +7272,22 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         We assume that a major tick mark appears just to the LEFT of the offset it encodes,
         so the minimum and maximum offsets for tick marks are respectively the helix's minimum offset
         and 1 plus its maximum offset, the latter being just to the right of the last offset on the helix.
+
+        Raises exception if there are any unpaired deletions or insertions in the :any:`Design`.
+        See :meth:`Design.unpaired_deletions` and :meth:`Design.unpaired_insertions` for a definition.
         """
+        unpaired_deletion_addresses = self.unpaired_deletion_addresses()
+        if len(unpaired_deletion_addresses) > 0:
+            raise ValueError(f'cannot call Design.inline_deletions_insertions if there are any unpaired '
+                             f'deletions in the design. This design has unpaired deletions at these '
+                             f'addresses: {unpaired_deletion_addresses}')
+
+        unpaired_insertion_addresses = self.unpaired_insertion_addresses()
+        if len(unpaired_insertion_addresses) > 0:
+            raise ValueError(f'cannot call Design.inline_deletions_insertions if there are any unpaired '
+                             f'insertions in the design. This design has unpaired insertions at these '
+                             f'addresses: {unpaired_insertion_addresses}')
+
         for helix in self.helices.values():
             self._inline_deletions_insertions_on_helix(helix)
 
