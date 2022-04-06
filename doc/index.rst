@@ -23,10 +23,14 @@ origami_rectangle
 Interoperability - cadnano v2
 =============================
 
-Scadnano provides function to convert design to and from cadnano v2:
+The scadnano Python package provides functionality to convert design to and from cadnano v2:
 
-* :py:meth:`scadnano.DNADesign.from_cadnano_v2` will create a scadnano DNADesign from a ``cadnanov2`` json file.
-* :py:meth:`scadnano.DNADesign.export_cadnano_v2` will produce a ``cadnanov2`` json file from a scadnano design.
+* :meth:`scadnano.Design.from_cadnano_v2` will create a scadnano DNADesign from a ``cadnanov2`` json file.
+* :meth:`scadnano.Design.to_cadnano_v2_json` will produce a ``cadnanov2`` json format from a scadnano design (returning the result as a string).
+* :meth:`scadnano.Design.write_cadnano_v2_file` will produce a ``cadnanov2`` json file from a scadnano design and write it to disk.
+
+Import and export are also supported in the web interface (https://scadnano.org) 
+via the menus "File→Import cadnano v2" and "Export→cadnano v2".
 
 **Important**
 
