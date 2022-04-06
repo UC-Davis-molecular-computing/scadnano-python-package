@@ -1179,6 +1179,24 @@ class TestExportCadnanoV2(unittest.TestCase):
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
         # To help with debugging, uncomment these lines to write out the
         self.assertEqual(6, len(output_design.helices))
+
+        # scadnano and/or cadnano file
+        #
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_6_helix_origami_rectangle.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_6_helix_origami_rectangle.json')
+
+    def test_export_no_whitespace(self) -> None:
+        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
+                             twist_correction_deletion_spacing=3)
+        output_json_with_space = design.to_cadnano_v2_json(whitespace=True)
+        self.assertIn(' ', output_json_with_space)
+        self.assertIn('\n', output_json_with_space)
+        output_json_no_space = design.to_cadnano_v2_json(whitespace=False)
+        self.assertNotIn(' ', output_json_no_space)
+        self.assertNotIn('\n', output_json_no_space)
+
         # scadnano and/or cadnano file
         #
         # design.write_scadnano_file(directory=self.input_path,
