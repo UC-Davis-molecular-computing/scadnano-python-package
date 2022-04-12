@@ -2615,6 +2615,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         else:
             last_domain.deletions = list(deletions)
 
+        for deletion in last_domain.deletions:
+            if not last_domain.start <= deletion < last_domain.end:
+                raise IllegalDesignError(f'all deletions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but deletion={deletion} is outside '
+                                         f'that range')
+
         return self
 
     def with_insertions(self, insertions: Union[Tuple[int, int], Iterable[Tuple[int, int]]]) \
@@ -2659,6 +2665,13 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                 if not (isinstance(ins, tuple) and len(ins) > 0 and isinstance(ins[0], int)):
                     raise ValueError(type_msg)
             last_domain.insertions = list(insertions)
+
+        for insertion in last_domain.insertions:
+            insertion_offset, _ = insertion
+            if not last_domain.start <= insertion_offset < last_domain.end:
+                raise IllegalDesignError(f'all insertions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but insertion={insertion} at offset '
+                                         f'{insertion_offset} is outside that range')
 
         return self
 

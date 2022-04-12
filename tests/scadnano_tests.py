@@ -380,7 +380,8 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
         design.draw_strand(0, 5).move(5).with_modification_3p(
             sc.Modification3Prime(display_text=name, id=name + '3'))
         design.to_json(True)
@@ -389,8 +390,10 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
-        design.draw_strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 5).move(5).with_modification_3p(
+            sc.Modification3Prime(display_text=name, id=name))
         with self.assertRaises(sc.IllegalDesignError):
             design.to_json(True)
 
@@ -513,7 +516,7 @@ class TestModifications(unittest.TestCase):
 
     def test_to_json_serializable(self) -> None:
         biotin5 = mod.biotin_5p
-        biotin5 = dataclasses.replace(biotin5, connector_length = 6)
+        biotin5 = dataclasses.replace(biotin5, connector_length=6)
         self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
@@ -694,13 +697,12 @@ class TestImportCadnanoV2(unittest.TestCase):
         #
         design.write_scadnano_file(directory=self.output_path,
                                    filename=f'{file_name}.{sc.default_scadnano_file_extension}')
-    
+
     def test_same_helix_crossover(self) -> None:
         file_name = "test_paranemic_crossover"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
         self.assertEqual(4, len(design.helices))
-
 
     def test_2_stape_2_helix_origami_deletions_insertions(self) -> None:
         file_name = "test_2_stape_2_helix_origami_deletions_insertions"
@@ -1716,7 +1718,6 @@ class TestInlineInsDel(unittest.TestCase):
             strands=[],
             grid=sc.square)
 
-
     def test_no_deletion_after_loopout(self) -> None:
         # not really a test of inlining, but I added the with_deletions and with_insertions to help these
         # tests, so easier just to test this behavior here
@@ -1729,6 +1730,21 @@ class TestInlineInsDel(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.design.draw_strand(0, 0).move(8).loopout(0, 5, 10).with_insertions((4, 2))
 
+    def test_deletion_below_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 4).move(4).with_deletions(2)
+
+    def test_deletion_above_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(4).with_deletions(6)
+
+    def test_insertion_below_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 4).move(4).with_insertions((2, 1))
+
+    def test_insertion_above_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(4).with_insertions((6, 1))
 
     def test_inline_deletions_insertions__one_deletion(self) -> None:
         """
@@ -2230,9 +2246,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8, dna_sequence='ACGTACGA')]), design.strands)
         self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16, dna_sequence='AACCGGTA')]), design.strands)
         # existing Strands
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]), design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]),
+            design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 8)
         self.assertEqual(remove_whitespace('ACGTACGA'), strand.dna_sequence)
@@ -6315,7 +6337,7 @@ class TestOxdnaExport(unittest.TestCase):
         }
         design = sc.Design(helices=helices, groups=groups)
         design.draw_strand(0, 0).move(7).cross(1).move(-7)
-        design.draw_strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
+        design.draw_strand(2, 7).move(-7).cross(3).move(7)  # unlike basic design, put strand on helices 2,3
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4
@@ -6836,6 +6858,7 @@ class TestOxdnaExport(unittest.TestCase):
             sqr_dist2 = sum([x ** 2 for x in diff2])
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
+
 
 class TestPlateMaps(unittest.TestCase):
 
