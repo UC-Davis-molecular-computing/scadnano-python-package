@@ -1710,6 +1710,26 @@ class TestInlineInsDel(unittest.TestCase):
     Tests inlining of insertions/deletions.
     """
 
+    def setUp(self) -> None:
+        self.design = sc.Design(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[],
+            grid=sc.square)
+
+
+    def test_no_deletion_after_loopout(self) -> None:
+        # not really a test of inlining, but I added the with_deletions and with_insertions to help these
+        # tests, so easier just to test this behavior here
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(8).loopout(0, 5, 10).with_deletions(4)
+
+    def test_no_insertion_after_loopout(self) -> None:
+        # not really a test of inlining, but I added the with_deletions and with_insertions to help these
+        # tests, so easier just to test this behavior here
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(8).loopout(0, 5, 10).with_insertions((4, 2))
+
+
     def test_inline_deletions_insertions__one_deletion(self) -> None:
         """
         before
@@ -1722,10 +1742,8 @@ class TestInlineInsDel(unittest.TestCase):
         |      |       |       |
     0   [----->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions(4)
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=7)
 
@@ -1753,10 +1771,8 @@ class TestInlineInsDel(unittest.TestCase):
         |     |       |       |
     0   [---->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[2, 4])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions([2, 4])
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=22, major_ticks=[0, 6, 14, 22], start=0, end=6)
 
@@ -1772,10 +1788,8 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(4, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_insertions((4, 1))
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=9)
 
@@ -1791,10 +1805,8 @@ class TestInlineInsDel(unittest.TestCase):
         |           |       |       |
     0   [---------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(2, 3), (4, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_insertions([(2, 3), (4, 1)])
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
 
@@ -1810,10 +1822,8 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [-------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4], insertions=[(2, 3)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions(4).with_insertions((2, 3))
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
 
@@ -1829,10 +1839,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[9])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(9)
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
@@ -1849,10 +1857,8 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . | . . . . . . | . . . . . . . |
          [ - - - - - - - - - >
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[8])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(8)
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
@@ -1868,10 +1874,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[7])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(7)
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=11)
 
@@ -1887,10 +1891,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(9, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((9, 1))
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
@@ -1906,10 +1908,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(8, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((8, 1))
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
@@ -1925,10 +1925,8 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(7, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((7, 1))
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=13)
 
@@ -1944,10 +1942,8 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [------------------------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 24, deletions=[19], insertions=[(5, 2), (11, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(24).with_deletions(19).with_insertions([(5, 2), (11, 1)])
         design.inline_deletions_insertions()
         self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
 
@@ -1964,13 +1960,9 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . . | . . . . . . . . | . . . . . . |
          [ - - - - - - - - - - - - - - > [ - - - - - - - >
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[
-                sc.Strand([sc.Domain(0, True, 0, 14, deletions=[2], insertions=[(5, 2), (10, 1)])]),
-                sc.Strand([sc.Domain(0, True, 14, 24, deletions=[19])]),
-            ],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(14).with_deletions(2).with_insertions([(5, 2), (10, 1)])
+        design.draw_strand(0, 14).to(24).with_deletions(19)
         design.inline_deletions_insertions()
         self.assertEqual(1, len(design.helices))
         self.assertEqual(2, len(design.strands))

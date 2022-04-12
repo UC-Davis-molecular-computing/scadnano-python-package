@@ -2529,10 +2529,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
         via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
@@ -2551,17 +2552,20 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
-        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
-        via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` or :any:`Loopout` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-            design.draw_strand(0, 5).to(8).with_domain_label('domain 1')\\
-                .cross(1).to(5).with_domain_label('domain 2')\\
+            design.draw_strand(0, 5)\\
+                .to(8).with_domain_label('domain 1')\\
+                .cross(1)\\
+                .to(5).with_domain_label('domain 2')\\
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
@@ -2572,6 +2576,90 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
+        return self
+
+    def with_deletions(self,
+                       deletions: Union[int, Iterable[int]]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `deletions` as the deletion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_deletions(4)\\
+                .cross(1)\\
+                .move(-8).with_deletions([2, 3])
+
+        :param deletions:
+            a single int, or an Iterable of ints, indicating the offset at which to put the deletion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create a deletion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_deletions immediately after a call to '
+                             f'to, move, or update_to')
+        if not isinstance(deletions, int) and not hasattr(deletions, '__iter__'):
+            raise ValueError(f'deletions must be a single int or an iterable of ints, '
+                             f'but it is {type(deletions)}')
+        if isinstance(deletions, int):
+            last_domain.deletions = [deletions]
+        else:
+            last_domain.deletions = list(deletions)
+
+        return self
+
+    def with_insertions(self, insertions: Union[Tuple[int, int], Iterable[Tuple[int, int]]]) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `insertions` as the insertion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_insertions((4, 2))\\
+                .cross(1)\\
+                .move(-8).with_insertions([(2, 3), (3, 3)])
+
+        :param insertions:
+            a single pair of ints (tuple), or an Iterable of pairs of ints (tuples)
+            indicating the offset at which to put the insertion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create an insertion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_insertions immediately after a call to '
+                             f'to, move, or update_to')
+
+        type_msg = (f'insertions must be a single pair of ints or an iterable of pairs of ints, '
+                    f'but it is {type(insertions)}')
+
+        if not hasattr(insertions, '__iter__'):
+            raise ValueError(type_msg)
+        if isinstance(insertions, tuple) and len(insertions) > 0 and isinstance(insertions[0], int):
+            last_domain.insertions = [insertions]
+        else:
+            for ins in insertions:
+                if not (isinstance(ins, tuple) and len(ins) > 0 and isinstance(ins[0], int)):
+                    raise ValueError(type_msg)
+            last_domain.insertions = list(insertions)
+
         return self
 
 
