@@ -1500,6 +1500,19 @@ class TestExportCadnanoV2(unittest.TestCase):
             design.to_cadnano_v2_json()
         self.assertTrue('Loopouts' in context.exception.args[0])
 
+    def test_extension(self) -> None:
+        """ We do not handle Extensions
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=Grid.square)
+        sb = design.draw_strand(0, 0)
+
+        sb.extension(5)
+        sb.to(10)
+
+        with self.assertRaises(ValueError) as context:
+            design.to_cadnano_v2_json()
+        self.assertTrue('Extensions' in context.exception.args[0])
+
 
 class TestDesignFromJson(unittest.TestCase):
     """
