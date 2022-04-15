@@ -2045,6 +2045,16 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return self_seq_idx_start
 
 
+@dataclass
+class Extension(_JSONSerializable, Generic[DomainLabel]):
+    length: int
+    label: Optional[DomainLabel] = None
+    name: Optional[str] = None
+    dna_sequence: Optional[str] = None
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
+        raise NotImplementedError()
+
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
@@ -2223,6 +2233,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             raise ValueError('no Strand created yet; make at least one domain first')
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
+        return self
+
+    def extension(self, length: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        TODO: write doc
+        """
         return self
 
     # remove quotes when Py3.6 support dropped
@@ -2613,7 +2629,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]]
+    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2707,7 +2723,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __init__(self,
-                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]],
+                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]],
                  circular: bool = False, color: Optional[Color] = None,
                  idt: Optional[IDTFields] = None,
                  is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
@@ -6027,7 +6043,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout] = None, check_length: bool = False) -> None:
+                   domain: Union[Domain, Loopout, Extension] = None, check_length: bool = False) -> None:
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
