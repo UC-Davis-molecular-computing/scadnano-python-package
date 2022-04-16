@@ -91,7 +91,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design_from_json.strands))
         self.assertEqual(expected_strand, design_from_json.strands[0])
 
-    def test_strand__extension_3p_from_to(self) -> None:
+    def test_strand__3p_extension(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
@@ -105,7 +105,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__extension_5p(self) -> None:
+    def test_strand__5p_extension(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
 
@@ -120,13 +120,28 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__update_to_after_extension_5p_ok(self) -> None:
+    def test_strand__update_to_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
 
         sb.extension(5)
         sb.to(10)
         sb.update_to(15)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 15),
+        ])
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__move_after_5p_extension_ok(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+
+        sb.extension(5)
+        sb.move(15)
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Extension(5),
@@ -152,6 +167,15 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.to(15)
+
+    def test_strand__move_after_non_5p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.move(10)
+        sb.extension(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.move(5)
 
     def test_strand__cross_after_extension_should_raise_error(self) -> None:
         design = self.design_6helix
