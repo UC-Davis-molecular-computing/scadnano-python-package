@@ -92,7 +92,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design_from_json.strands[0])
 
     def test_strand__extension_3p_from_to(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
 
@@ -106,7 +106,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__extension_5p(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
 
         sb.extension(5)
@@ -121,7 +121,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__update_to_after_extension_5p_ok(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
 
         sb.extension(5)
@@ -137,7 +137,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__lone_extension_should_not_add_strand(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
 
         sb.extension(5)
@@ -145,7 +145,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(0, len(design.strands))
 
     def test_strand__to_after_non_5p_extension_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(5)
@@ -154,7 +154,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.to(15)
 
     def test_strand__cross_after_extension_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.extension(5)
 
@@ -162,7 +162,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.cross(1)
 
     def test_strand__extension_after_loopout_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 3)
@@ -171,7 +171,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.extension(5)
 
     def test_strand__extension_after_extension_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(4)
@@ -180,7 +180,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.extension(5)
 
     def test_strand__update_to_after_non_5p_extension_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(4)
@@ -189,7 +189,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.update_to(15)
 
     def test_strand__as_circular_with_extension_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(4)
@@ -198,7 +198,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.as_circular()
 
     def test_strand__extension_on_circular_strand_should_raise_error(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.as_circular()
@@ -207,7 +207,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
             sb.extension(4)
 
     def test_strand__extension_with_label(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(5)
@@ -221,7 +221,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__with_sequence_on_extension(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(5)
@@ -235,7 +235,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__with_domain_sequence_on_extension(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(5)
@@ -249,7 +249,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__extension_with_name(self) -> None:
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(5)
