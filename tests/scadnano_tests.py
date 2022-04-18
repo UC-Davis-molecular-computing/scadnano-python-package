@@ -3307,6 +3307,42 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             design.add_full_crossover(0, 1, 8, True)
 
+    def test_add_half_crossover_on_extension_ok(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+        0          ------->
+
+        1          <------]
+
+        After:
+                □
+                 \
+                  \
+        0          -------+
+                          |
+        1          <------+
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).extension(5).to(8)
+        design.draw_strand(1, 8).to(0)
+
+        # Action
+        design.add_half_crossover(0, 1, 8, True)
+
+        # Validation
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 8),
+            sc.Domain(1, False, 0, 8)
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
 
 class TestAutocalculatedData(unittest.TestCase):
 
