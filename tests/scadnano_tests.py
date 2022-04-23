@@ -3381,6 +3381,40 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             design.add_half_crossover(0, 1, 0, True)
 
+    def test_nick_on_extension(self) -> None:
+        """
+        Before:
+                     ↗
+                    /
+                   /
+                  /
+        0 [-------
+
+        After:
+                     ↗
+                    /
+                   /
+                  /
+        0 [-->[---
+        """
+        # Setup
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).extension(5).to(8)
+
+        # Nick
+        design.add_nick(0, 4, True)
+
+        # Verification
+        expected_strand1: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 4),
+        ])
+        expected_strand2: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 4, 8),
+            sc.Extension(5)
+        ])
+        self.assertEquals(2, len(design.strands))
+        self.assertIn(expected_strand1, design.strands)
+        self.assertIn(expected_strand2, design.strands)
 
 class TestAutocalculatedData(unittest.TestCase):
 
