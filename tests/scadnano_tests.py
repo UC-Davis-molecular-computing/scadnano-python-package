@@ -4784,6 +4784,28 @@ class TestJSON(unittest.TestCase):
         design.to_json()
         # should be no error getting here
 
+    def test_from_json_extension_design(self) -> None:
+        json_str = """
+        {
+          "version": "0.17.3",
+          "grid": "square",
+          "helices": [
+            {"grid_position": [0, 0], "max_offset": 100}
+          ],
+          "strands": [
+            {
+              "domains": [
+                  {"helix": 0, "forward": true, "start": 0, "end": 10},
+                  {"extension": 5}
+                ],
+              "is_scaffold": true
+            }
+          ]
+        }
+        """
+        design = sc.Design.from_scadnano_json_str(json_str)
+        self.assertEqual(sc.Extension(5), design.strands[0].domains[1])
+
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
