@@ -3295,6 +3295,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0 [------- [------>
 
         1 <------] <------]
+
+        Error:
+                     ↗
+                    /
+                   /
+                  /
+        0 [------+ +------>
+                 | |
+        1 <------+ +------]
         """
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
@@ -3343,6 +3352,35 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
+
+    def test_add_half_crossover_on_extension_error(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+        0          ------->
+
+        1          <------]
+
+        Error:
+                □
+                 \
+                  \
+        0          +------>
+                   |
+        1          +------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).extension(5).to(8)
+        design.draw_strand(1, 8).to(0)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_half_crossover(0, 1, 0, True)
+
 
 class TestAutocalculatedData(unittest.TestCase):
 
