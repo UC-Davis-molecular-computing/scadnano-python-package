@@ -4806,6 +4806,20 @@ class TestJSON(unittest.TestCase):
         design = sc.Design.from_scadnano_json_str(json_str)
         self.assertEqual(sc.Extension(5), design.strands[0].domains[1])
 
+    def test_to_json_extension_design(self) -> None:
+        # Setup
+        design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
+        design.draw_strand(0, 0).to(10).extension(5)
+
+        # Action
+        result = design.to_json()
+
+        # Verify
+        document = json.loads(result)
+        self.assertEqual(2, len(document["strands"][0]["domains"]))
+        self.assertIn("extension")
+        self.assertEqual(5, document["strands"][0]["domains"][1]["extension"])
+
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
