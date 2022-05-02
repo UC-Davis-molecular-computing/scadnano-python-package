@@ -2242,6 +2242,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         return self
 
+    def with_relative_offset(self, relative_offset: Tuple[float, float]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        TODO: write doc
+        """
+        return self
+
     # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """

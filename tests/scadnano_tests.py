@@ -286,6 +286,20 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
+    def test_strand__with_relative_offset(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0).to(10).extension(5)
+
+        sb.with_relative_offset((1.1, -1.4))
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Extension(5, (1.1, -1.4))
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+
     def test_strand__0_0_to_10_cross_1_to_5(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
