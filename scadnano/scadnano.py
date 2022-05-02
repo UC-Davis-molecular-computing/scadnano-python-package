@@ -2059,6 +2059,20 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
         raise NotImplementedError()
 
+@dataclass
+class ExtensionBuilder(Generic[DomainLabel]):
+    length: Optional[int] = None
+    relative_offset: Optional[Tuple[float, float]] = None
+    label: Optional[DomainLabel] = None
+    name: Optional[str] = None
+    dna_sequence: Optional[str] = None
+
+    def build(self) -> Extension:
+        assert self.length is not None
+        assert self.relative_offset is not None
+        return Extension(self.length, self.relative_offset, self.label, self.name, self.dna_sequence)
+
+
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
@@ -2178,6 +2192,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand: Optional[Strand[StrandLabel, DomainLabel]] = None
         self.just_moved_to_helix: bool = True
         self.last_domain: Optional[Domain[DomainLabel]] = None
+        self.extension_5p_builder: Optional[ExtensionBuilder] = None
 
     @property
     def strand(self) -> 'Strand[StrandLabel, DomainLabel]':
@@ -2245,10 +2260,10 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             # 5' extension
-            pass
+            self.extension_5p_builder = ExtensionBuilder(length)
         else:
             # 3' extension
-            ext: Extension = Extension(length, self._determine_default_relative_offset_for_3p_extension())
+            ext: Extension = Extension(length, self._determine_default_relative_offset_for_3p_extension_based_on_last_domain())
             self.design.append_domain(self._strand, ext)
         return self
 
@@ -2258,11 +2273,17 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         return self
 
-    def _determine_default_relative_offset_for_3p_extension(self) -> Tuple[float, float]:
+    def _determine_default_relative_offset_for_3p_extension_based_on_last_domain(self) -> Tuple[float, float]:
         assert self._strand is not None
         last_domain = self._strand.domains[-1]
         assert isinstance(last_domain, Domain)
-        return (1, -1) if last_domain.forward else (-1, 1)
+        return self._determine_default_relative_offset_for_3p_extension(last_domain.forward)
+
+    def _determine_default_relative_offset_for_3p_extension(self, forward: bool) -> Tuple[float, float]:
+        return (1, -1) if forward else (-1, 1)
+
+    def _determine_default_relative_offset_for_5p_extension(self, forward: bool) -> Tuple[float, float]:
+        return (-1, -1) if forward else (1, 1)
 
 
     # remove quotes when Py3.6 support dropped
@@ -2333,12 +2354,23 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         if self._strand is not None:
             self.design.append_domain(self._strand, domain)
         else:
-            self._strand = Strand(domains=[domain])
+            self._strand = Strand(domains=self._create_initial_substrands_list(domain))
             self.design.add_strand(self._strand)
 
         self.current_offset = offset
 
         return self
+
+    def _create_initial_substrands_list(self, domain: Domain):
+        domains: List[Union[Domain, Loopout, Extension]] = []
+        self._add_extension_5p_if_not_none(domains, domain.forward)
+        domains.append(domain)
+        return domains
+
+    def _add_extension_5p_if_not_none(self, substrands: List[Union[Domain, Loopout, Extension]], forward: bool):
+        if self.extension_5p_builder is not None:
+            self.extension_5p_builder.relative_offset = (-1, -1) if forward else (1, 1)
+            substrands.append(self.extension_5p_builder.build())
 
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
