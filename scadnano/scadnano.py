@@ -2052,6 +2052,9 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     label: Optional[DomainLabel] = None
     name: Optional[str] = None
     dna_sequence: Optional[str] = None
+    # not serialized; for efficiency
+    # remove quotes when Py3.6 support dropped
+    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
         raise NotImplementedError()
@@ -2240,6 +2243,13 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         TODO: write doc
         """
+        if self._strand is None:
+            # 5' extension
+            pass
+        else:
+            # 3' extension
+            ext: Extension = Extension(length, self._determine_default_relative_offset_for_3p_extension())
+            self.design.append_domain(self._strand, ext)
         return self
 
     def with_relative_offset(self, relative_offset: Tuple[float, float]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2247,6 +2257,13 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         TODO: write doc
         """
         return self
+
+    def _determine_default_relative_offset_for_3p_extension(self) -> Tuple[float, float]:
+        assert self._strand is not None
+        last_domain = self._strand.domains[-1]
+        assert isinstance(last_domain, Domain)
+        return (1, -1) if last_domain.forward else (-1, 1)
+
 
     # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -3251,7 +3268,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
-    def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         # add wildcard symbols to DNA sequence to maintain its length
         if self.dna_sequence is not None:
             domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
@@ -5917,7 +5934,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
-    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout, Extension]) -> None:
         """
         Same as :any:`Design.insert_domain`, but inserts at end.
 
@@ -5926,7 +5943,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         self.insert_domain(strand, len(strand.domains), domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``design.insert_domain(strand, domain, 0)``
         inserts ``domain`` as the new first :any:`Domain`."""
