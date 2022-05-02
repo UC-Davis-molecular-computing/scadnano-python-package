@@ -2048,6 +2048,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
     length: int
+    relative_offset: Tuple[float, float]
     label: Optional[DomainLabel] = None
     name: Optional[str] = None
     dna_sequence: Optional[str] = None

@@ -100,7 +100,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5),
+            sc.Extension(5, (1, -1)),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -113,7 +113,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb.to(10)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5),
+            sc.Extension(5, (-1, -1)),
             sc.Domain(0, True, 0, 10),
         ])
 
@@ -129,7 +129,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb.update_to(15)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5),
+            sc.Extension(5, (-1, -1)),
             sc.Domain(0, True, 0, 15),
         ])
 
@@ -144,7 +144,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb.move(15)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5),
+            sc.Extension(5, (-1, -1)),
             sc.Domain(0, True, 0, 15),
         ])
 
@@ -239,7 +239,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5, label="ext1"),
+            sc.Extension(5, (1, -1), label="ext1"),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -253,7 +253,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10, dna_sequence="A"*10),
-            sc.Extension(5, dna_sequence="G"*5),
+            sc.Extension(5, (1, -1), dna_sequence="G"*5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -267,7 +267,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10, dna_sequence="?"*10),
-            sc.Extension(5, dna_sequence="G"*5),
+            sc.Extension(5, (1, -1), dna_sequence="G"*5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -281,7 +281,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5, name="ext1"),
+            sc.Extension(5, (1, -1), name="ext1"),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -889,13 +889,12 @@ class TestImportCadnanoV2(unittest.TestCase):
         #
         design.write_scadnano_file(directory=self.output_path,
                                    filename=f'{file_name}.{sc.default_scadnano_file_extension}')
-    
+
     def test_same_helix_crossover(self) -> None:
         file_name = "test_paranemic_crossover"
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
         self.assertEqual(4, len(design.helices))
-
 
     def test_2_stape_2_helix_origami_deletions_insertions(self) -> None:
         file_name = "test_2_stape_2_helix_origami_deletions_insertions"
@@ -3229,12 +3228,25 @@ class TestNickLigateAndCrossover(unittest.TestCase):
             design.ligate(0, 10, True)
 
     def test_ligate_on_non_extension_side_ok(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+        0          --------->[-------->
+        After:
+        Before:
+                □
+                 \
+                  \
+        0          ------------------->
+        """
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
         design.draw_strand(0, 0).extension(5).to(10)
         design.draw_strand(0, 10).to(20)
         design.ligate(0, 10, True)
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5),
+            sc.Extension(5, (-1, -1)),
             sc.Domain(0, True, 0, 20)
         ])
         self.assertEqual(1, len(design.strands))
@@ -3279,7 +3291,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         expected_strand_1: sc.Strand = sc.Strand([
             sc.Domain(1, False, 8, 16),
             sc.Domain(0, True, 8, 16),
-            sc.Extension(5)
+            sc.Extension(5, (1, -1))
         ])
         self.assertEqual(2, len(design.strands))
         self.assertIn(expected_strand_0, design.strands)
@@ -3346,7 +3358,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
 
         # Validation
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5),
+            sc.Extension(5, (-1, -1)),
             sc.Domain(0, True, 0, 8),
             sc.Domain(1, False, 0, 8)
         ])
@@ -3410,11 +3422,12 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         ])
         expected_strand2: sc.Strand = sc.Strand([
             sc.Domain(0, True, 4, 8),
-            sc.Extension(5)
+            sc.Extension(5, (1, -1))
         ])
         self.assertEquals(2, len(design.strands))
         self.assertIn(expected_strand1, design.strands)
         self.assertIn(expected_strand2, design.strands)
+
 
 class TestAutocalculatedData(unittest.TestCase):
 
@@ -4796,7 +4809,7 @@ class TestJSON(unittest.TestCase):
             {
               "domains": [
                   {"helix": 0, "forward": true, "start": 0, "end": 10},
-                  {"extension": 5}
+                  {"extension": 5, "relative_offset": [1.4, -0.3]}
                 ],
               "is_scaffold": true
             }
@@ -4804,9 +4817,9 @@ class TestJSON(unittest.TestCase):
         }
         """
         design = sc.Design.from_scadnano_json_str(json_str)
-        self.assertEqual(sc.Extension(5), design.strands[0].domains[1])
+        self.assertEqual(sc.Extension(5, (1.4, -0.3)), design.strands[0].domains[1])
 
-    def test_to_json_extension_design(self) -> None:
+    def test_to_json_extension_design__extension(self) -> None:
         # Setup
         design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
         design.draw_strand(0, 0).to(10).extension(5)
@@ -4817,8 +4830,22 @@ class TestJSON(unittest.TestCase):
         # Verify
         document = json.loads(result)
         self.assertEqual(2, len(document["strands"][0]["domains"]))
-        self.assertIn("extension")
+        self.assertIn("extension", document["strands"][0]["domains"][1])
         self.assertEqual(5, document["strands"][0]["domains"][1]["extension"])
+
+    def test_to_json_extension_design__relative_offset(self) -> None:
+        # Setup
+        design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
+        design.draw_strand(0, 0).to(10).extension(5).with_relative_offset((1.4, -0.3))
+
+        # Action
+        result = design.to_json()
+
+        # Verify
+        document = json.loads(result)
+        self.assertEqual(2, len(document["strands"][0]["domains"]))
+        self.assertIn("relative_offset", document["strands"][0]["domains"][1])
+        self.assertEqual([1.4, -0.3], document["strands"][0]["domains"][1]["relative_offset"])
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
@@ -7264,6 +7291,7 @@ class TestOxdnaExport(unittest.TestCase):
             sqr_dist2 = sum([x ** 2 for x in diff2])
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
+
 
 class TestPlateMaps(unittest.TestCase):
 
