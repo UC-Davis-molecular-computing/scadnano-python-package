@@ -131,6 +131,16 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         assert isinstance(ext, sc.Extension)
         self.assertEqual((1, -1), ext.relative_offset)
 
+    def test_strand__5p_extension_forward_default_relative_offset(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension(5)
+        sb.to(10)
+
+        ext = design.strands[0].domains[0]
+        assert isinstance(ext, sc.Extension)
+        self.assertEqual((-1, -1), ext.relative_offset)
+
     def test_strand__update_to_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
