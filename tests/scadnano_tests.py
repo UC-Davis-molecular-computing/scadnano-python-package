@@ -249,11 +249,20 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             sb.update_to(15)
 
-    def test_strand__as_circular_with_extension_should_raise_error(self) -> None:
+    def test_strand__as_circular_with_3p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension(4)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.as_circular()
+
+    def test_strand__as_circular_with_5p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension(4)
+        sb.to(10)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.as_circular()
