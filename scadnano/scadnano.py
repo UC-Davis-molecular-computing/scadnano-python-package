@@ -2260,7 +2260,15 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     def extension(self, length: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        TODO: write doc
+        Add extension.
+
+        If called before any domains have been created, then the extension will only be added
+        when a domain has been created.
+
+        If called after domains have been created, then the extension will be added to the end
+        of the strand.
+
+        Extensions can either be at the start or end of a strand and not in the middle.
         """
         if self._strand is None:
             # 5' extension
