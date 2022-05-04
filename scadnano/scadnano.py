@@ -2059,6 +2059,10 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
         raise NotImplementedError()
 
+    def dna_length(self) -> int:
+        """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
+        return self.length
+
 @dataclass
 class ExtensionBuilder(Generic[DomainLabel]):
     length: Optional[int] = None
@@ -2964,6 +2968,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, "cannot have a 5' modification on a circular strand")
         if circular and self.modification_3p is not None:
             raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        if circular and self.contains_extensions():
+            raise StrandError(self, "Cannot have extension on a circular strand")
         self.circular = circular
 
     def set_linear(self) -> None:
@@ -3339,6 +3345,10 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Loopout):
                 return True
         return False
+
+    def contains_extensions(self) -> bool:
+        assert len(self.domains) > 0
+        return isinstance(self.domains[0], Extension) or isinstance(self.domains[-1], Extension)
 
     def first_bound_domain(self) -> Domain:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
