@@ -96,7 +96,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb = design.draw_strand(0, 0)
         sb.to(10)
 
-        sb.extension(5)
+        sb.extension_3p(5)
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
@@ -107,9 +107,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__5p_extension(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-
-        sb.extension(5)
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
         sb.to(10)
 
         expected_strand: sc.Strand = sc.Strand([
@@ -125,7 +123,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb = design.draw_strand(0, 0)
         sb.to(10)
 
-        sb.extension(5)
+        sb.extension_3p(5)
 
         ext = design.strands[0].domains[1]
         assert isinstance(ext, sc.Extension)
@@ -133,8 +131,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__5p_extension_forward_default_relative_offset(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-        sb.extension(5)
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
         sb.to(10)
 
         ext = design.strands[0].domains[0]
@@ -143,7 +140,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__3p_extension_reverse_default_relative_offset(self) -> None:
         design = self.design_6helix
-        design.draw_strand(0, 10).to(0).extension(5)
+        design.draw_strand(0, 10).to(0).extension_3p(5)
 
         ext = design.strands[0].domains[1]
         assert isinstance(ext, sc.Extension)
@@ -151,7 +148,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__5p_extension_reverse_default_relative_offset(self) -> None:
         design = self.design_6helix
-        design.draw_strand(0, 10).extension(5).to(0)
+        design.draw_strand(0, 10, extension_5p_length=5).to(0)
 
         ext = design.strands[0].domains[0]
         assert isinstance(ext, sc.Extension)
@@ -159,9 +156,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__update_to_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
 
-        sb.extension(5)
         sb.to(10)
         sb.update_to(15)
 
@@ -175,9 +171,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__move_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
 
-        sb.extension(5)
         sb.move(15)
 
         expected_strand: sc.Strand = sc.Strand([
@@ -188,63 +183,62 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__lone_extension_should_not_add_strand(self) -> None:
-        design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-
-        sb.extension(5)
-
-        self.assertEqual(0, len(design.strands))
-
-    def test_strand__to_after_non_5p_extension_should_raise_error(self) -> None:
+    def test_strand__to_after_3p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(5)
+        sb.extension_3p(5)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.to(15)
 
-    def test_strand__move_after_non_5p_extension_should_raise_error(self) -> None:
+    def test_strand__move_after_3p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.move(10)
-        sb.extension(5)
+        sb.extension_3p(5)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.move(5)
 
-    def test_strand__cross_after_extension_should_raise_error(self) -> None:
+    def test_strand__cross_after_5p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-        sb.extension(5)
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.cross(1)
 
-    def test_strand__extension_after_loopout_should_raise_error(self) -> None:
+    def test_strand__cross_after_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_3p(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.cross(1)
+
+    def test_strand__extension_3p_after_loopout_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 3)
 
         with self.assertRaises(sc.IllegalDesignError):
-            sb.extension(5)
+            sb.extension_3p(5)
 
-    def test_strand__extension_after_extension_should_raise_error(self) -> None:
+    def test_strand__extension_3p_after_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(4)
+        sb.extension_3p(4)
 
         with self.assertRaises(sc.IllegalDesignError):
-            sb.extension(5)
+            sb.extension_3p(5)
 
-    def test_strand__update_to_after_non_5p_extension_should_raise_error(self) -> None:
+    def test_strand__update_to_after_3p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(4)
+        sb.extension_3p(4)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.update_to(15)
@@ -253,34 +247,33 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(4)
+        sb.extension_3p(4)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.as_circular()
 
     def test_strand__as_circular_with_5p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-        sb.extension(4)
+        sb = design.draw_strand(0, 0, extension_5p_length=4)
         sb.to(10)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.as_circular()
 
-    def test_strand__extension_on_circular_strand_should_raise_error(self) -> None:
+    def test_strand__extension_3p_on_circular_strand_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.as_circular()
 
         with self.assertRaises(sc.IllegalDesignError):
-            sb.extension(4)
+            sb.extension_3p(4)
 
-    def test_strand__extension_with_label(self) -> None:
+    def test_strand__extension_3p_with_label(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(5)
+        sb.extension_3p(5)
         sb.with_domain_label("ext1")
 
         expected_strand: sc.Strand = sc.Strand([
@@ -290,11 +283,22 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__with_sequence_on_extension(self) -> None:
+    def test_strand__extension_5p_with_label(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb.with_domain_label("ext1")
+        sb.to(10)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5, (-1, -1), label="ext1"),
+            sc.Domain(0, True, 0, 10)
+        ])
+
+    def test_strand__with_sequence_on_3p_extension(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(5)
+        sb.extension_3p(5)
         sb.with_sequence("A"*10 + "G"*5)
 
         expected_strand: sc.Strand = sc.Strand([
@@ -304,11 +308,24 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
+    def test_strand__with_sequence_on_5p_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb.to(10)
+        sb.with_sequence("C"*5 + "T"*10)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5, (-1, -1), dna_sequence="C"*5),
+            sc.Domain(0, True, 0, 10, dna_sequence="T"*10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
     def test_strand__with_domain_sequence_on_extension(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(5)
+        sb.extension_3p(5)
         sb.with_domain_sequence("G"*5)
 
         expected_strand: sc.Strand = sc.Strand([
@@ -322,7 +339,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
-        sb.extension(5)
+        sb.extension_3p(5)
         sb.with_domain_name("ext1")
 
         expected_strand: sc.Strand = sc.Strand([
@@ -334,7 +351,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__with_relative_offset(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0).to(10).extension(5)
+        sb = design.draw_strand(0, 0).to(10).extension_3p(5)
 
         sb.with_relative_offset((1.1, -1.4))
 
@@ -1602,7 +1619,7 @@ class TestExportCadnanoV2(unittest.TestCase):
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=Grid.square)
         sb = design.draw_strand(0, 0)
 
-        sb.extension(5)
+        sb.extension_3p(5)
         sb.to(10)
 
         with self.assertRaises(ValueError) as context:
@@ -3295,7 +3312,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
 
     def test_ligate_on_extension_side_should_error(self) -> None:
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).to(10).extension(5)
+        design.draw_strand(0, 0).to(10).extension_3p(5)
         design.draw_strand(0, 10).to(20)
         with self.assertRaises(sc.IllegalDesignError):
             design.ligate(0, 10, True)
@@ -3315,7 +3332,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0          ------------------->
         """
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).extension(5).to(10)
+        design.draw_strand(0, 0).extension_3p(5).to(10)
         design.draw_strand(0, 10).to(20)
         design.ligate(0, 10, True)
         expected_strand: sc.Strand = sc.Strand([
@@ -3350,7 +3367,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).to(16).extension(5)
+        design.draw_strand(0, 0).to(16).extension_3p(5)
         design.draw_strand(1, 16).to(0)
 
         # Action
@@ -3393,7 +3410,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).to(8).extension(5)
+        design.draw_strand(0, 0).to(8).extension_3p(5)
         design.draw_strand(0, 8).to(16)
         design.draw_strand(1, 8).to(0)
         design.draw_strand(1, 16).to(8)
@@ -3423,7 +3440,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).extension(5).to(8)
+        design.draw_strand(0, 0).extension_3p(5).to(8)
         design.draw_strand(1, 8).to(0)
 
         # Action
@@ -3460,7 +3477,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).extension(5).to(8)
+        design.draw_strand(0, 0).extension_3p(5).to(8)
         design.draw_strand(1, 8).to(0)
 
         with self.assertRaises(sc.IllegalDesignError):
@@ -3484,7 +3501,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         """
         # Setup
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).extension(5).to(8)
+        design.draw_strand(0, 0).extension_3p(5).to(8)
 
         # Nick
         design.add_nick(0, 4, True)
@@ -4895,7 +4912,7 @@ class TestJSON(unittest.TestCase):
     def test_to_json_extension_design__extension(self) -> None:
         # Setup
         design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
-        design.draw_strand(0, 0).to(10).extension(5)
+        design.draw_strand(0, 0).to(10).extension_3p(5)
 
         # Action
         result = design.to_json()
@@ -4909,7 +4926,7 @@ class TestJSON(unittest.TestCase):
     def test_to_json_extension_design__relative_offset(self) -> None:
         # Setup
         design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
-        design.draw_strand(0, 0).to(10).extension(5).with_relative_offset((1.4, -0.3))
+        design.draw_strand(0, 0).to(10).extension_3p(5).with_relative_offset((1.4, -0.3))
 
         # Action
         result = design.to_json()

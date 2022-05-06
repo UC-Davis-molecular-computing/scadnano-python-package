@@ -2188,7 +2188,10 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     """
 
     # remove quotes when Py3.6 support dropped
-    def __init__(self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int):
+    def __init__(
+            self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int,
+            extension_5p_length: int = 0):
+        #TODO: Document extension_5p_length argument
         self.design: Design[StrandLabel, DomainLabel] = design
         self.current_helix: int = helix
         self.current_offset: int = offset
@@ -2258,17 +2261,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def extension(self, length: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_3p(self, length: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Add extension.
-
-        If called before any domains have been created, then the extension will only be added
-        when a domain has been created.
-
-        If called after domains have been created, then the extension will be added to the end
-        of the strand.
-
-        Extensions can either be at the start or end of a strand and not in the middle.
+        Add extension to end of strand. No domains can be added after this function is called.
         """
         if self._strand is None:
             # 5' extension
@@ -5325,7 +5320,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
-    def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
+    def draw_strand(self, helix: int, offset: int, extension_5p_length: int = 0) -> StrandBuilder:
         """Used for chained method building the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
@@ -5383,7 +5378,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param offset: starting offset on `helix`
         :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
         """
-        return StrandBuilder(self, helix, offset)
+        #TODO: Document extension_5p_length argument
+        return StrandBuilder(self, helix, offset, extension_5p_length)
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
         """
