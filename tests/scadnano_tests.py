@@ -100,7 +100,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5, (1, -1)),
+            sc.Extension(num_bases=5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -1713,7 +1713,7 @@ class TestDesignFromJson(unittest.TestCase):
         scaf_loop = scaf.domains[2]
         scaf_ss2 = scaf.domains[3]
 
-        self.assertEqual(3, scaf_loop.length)
+        self.assertEqual(3, scaf_loop.num_bases)
 
         self.assertEqual(1, st_l_ss0.helix)
         self.assertEqual(0, st_l_ss1.helix)

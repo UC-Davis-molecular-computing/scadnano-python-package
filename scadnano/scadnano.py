@@ -2047,8 +2047,9 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
 
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
-    length: int
-    relative_offset: Tuple[float, float]
+    num_bases: int
+    display_length: float = 1.0
+    display_angle: float = 45.0
     label: Optional[DomainLabel] = None
     name: Optional[str] = None
     dna_sequence: Optional[str] = None
@@ -2061,7 +2062,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
 
     def dna_length(self) -> int:
         """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
-        return self.length
+        return self.num_bases
 
 @dataclass
 class ExtensionBuilder(Generic[DomainLabel]):
@@ -2261,17 +2262,16 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def extension_3p(self, length: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_3p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Add extension to end of strand. No domains can be added after this function is called.
         """
         if self._strand is None:
-            # 5' extension
-            self.extension_5p_builder = ExtensionBuilder(length)
-        else:
-            # 3' extension
-            ext: Extension = Extension(length, self._determine_default_relative_offset_for_3p_extension_based_on_last_domain())
-            self.design.append_domain(self._strand, ext)
+            raise IllegalDesignError(
+                'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
+        ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
+                                   display_angle=display_angle)
+        self.design.append_domain(self._strand, ext)
         return self
 
     def with_relative_offset(self, relative_offset: Tuple[float, float]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -7755,7 +7755,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             else:
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for i in range(domain.length):
+                for i in range(domain.num_bases):
                     base = seq[i]
                     nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
                                            base)
