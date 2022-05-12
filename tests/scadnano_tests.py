@@ -107,11 +107,12 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__5p_extension(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
         sb.to(10)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1)),
+            sc.Extension(5),
             sc.Domain(0, True, 0, 10),
         ])
 

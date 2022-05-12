@@ -2189,10 +2189,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     """
 
     # remove quotes when Py3.6 support dropped
-    def __init__(
-            self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int,
-            extension_5p_length: int = 0):
-        #TODO: Document extension_5p_length argument
+    def __init__(self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int):
         self.design: Design[StrandLabel, DomainLabel] = design
         self.current_helix: int = helix
         self.current_offset: int = offset
@@ -2272,6 +2269,15 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
                                    display_angle=display_angle)
         self.design.append_domain(self._strand, ext)
+        return self
+
+    def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        if self._strand is not None:
+            raise IllegalDesignError('Cannot add a 5\' extension when there are already domains. Did you mean to create a 3\' extension?')
+        ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
+                                   display_angle=display_angle)
+        self._strand = Strand(domains=[ext])
+        self.design.add_strand(self._strand)
         return self
 
     def with_relative_offset(self, relative_offset: Tuple[float, float]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2361,23 +2367,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         if self._strand is not None:
             self.design.append_domain(self._strand, domain)
         else:
-            self._strand = Strand(domains=self._create_initial_substrands_list(domain))
+            self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
 
         self.current_offset = offset
 
         return self
-
-    def _create_initial_substrands_list(self, domain: Domain):
-        domains: List[Union[Domain, Loopout, Extension]] = []
-        self._add_extension_5p_if_not_none(domains, domain.forward)
-        domains.append(domain)
-        return domains
-
-    def _add_extension_5p_if_not_none(self, substrands: List[Union[Domain, Loopout, Extension]], forward: bool):
-        if self.extension_5p_builder is not None:
-            self.extension_5p_builder.relative_offset = (-1, -1) if forward else (1, 1)
-            substrands.append(self.extension_5p_builder.build())
 
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -5320,7 +5315,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
-    def draw_strand(self, helix: int, offset: int, extension_5p_length: int = 0) -> StrandBuilder:
+    def draw_strand(self, helix: int, offset: int) -> StrandBuilder:
         """Used for chained method building the :any:`Strand` domain by domain, in order from 5' to 3'.
         For example
 
@@ -5378,8 +5373,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param offset: starting offset on `helix`
         :return: :any:`StrandBuilder` object representing the partially completed :any:`Strand`
         """
-        #TODO: Document extension_5p_length argument
-        return StrandBuilder(self, helix, offset, extension_5p_length)
+        return StrandBuilder(self, helix, offset)
 
     def strand(self, helix: int, offset: int) -> StrandBuilder:
         """
