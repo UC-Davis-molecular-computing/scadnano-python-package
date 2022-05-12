@@ -119,42 +119,6 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__3p_extension_forward_default_relative_offset(self) -> None:
-        design = self.design_6helix
-        sb = design.draw_strand(0, 0)
-        sb.to(10)
-
-        sb.extension_3p(5)
-
-        ext = design.strands[0].domains[1]
-        assert isinstance(ext, sc.Extension)
-        self.assertEqual((1, -1), ext.relative_offset)
-
-    def test_strand__5p_extension_forward_default_relative_offset(self) -> None:
-        design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
-        sb.to(10)
-
-        ext = design.strands[0].domains[0]
-        assert isinstance(ext, sc.Extension)
-        self.assertEqual((-1, -1), ext.relative_offset)
-
-    def test_strand__3p_extension_reverse_default_relative_offset(self) -> None:
-        design = self.design_6helix
-        design.draw_strand(0, 10).to(0).extension_3p(5)
-
-        ext = design.strands[0].domains[1]
-        assert isinstance(ext, sc.Extension)
-        self.assertEqual((-1, 1), ext.relative_offset)
-
-    def test_strand__5p_extension_reverse_default_relative_offset(self) -> None:
-        design = self.design_6helix
-        design.draw_strand(0, 10, extension_5p_length=5).to(0)
-
-        ext = design.strands[0].domains[0]
-        assert isinstance(ext, sc.Extension)
-        self.assertEqual((1, 1), ext.relative_offset)
-
     def test_strand__update_to_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0, extension_5p_length=5)
