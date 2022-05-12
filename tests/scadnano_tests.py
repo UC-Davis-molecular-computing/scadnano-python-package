@@ -121,13 +121,14 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__update_to_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
 
         sb.to(10)
         sb.update_to(15)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1)),
+            sc.Extension(5),
             sc.Domain(0, True, 0, 15),
         ])
 
@@ -136,12 +137,13 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__move_after_5p_extension_ok(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
 
         sb.move(15)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1)),
+            sc.Extension(5),
             sc.Domain(0, True, 0, 15),
         ])
 

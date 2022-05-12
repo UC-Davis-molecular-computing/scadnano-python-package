@@ -2351,6 +2351,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      '(strictly increasing or strictly decreasing) '
                                      'when calling to() twice in a row')
 
+        if self._contains_extension_3p():
+            raise IllegalDesignError('cannot make a new domain once 3\' extension has been added')
+
         if offset > self.current_offset:
             forward = True
             start = self.current_offset
@@ -2373,6 +2376,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.current_offset = offset
 
         return self
+
+    def _contains_extension_3p(self) -> bool:
+        if self._strand is None:
+            return False
+        domains = self._strand.domains
+        return len(domains) > 1 and isinstance(domains[-1], Extension)
 
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
