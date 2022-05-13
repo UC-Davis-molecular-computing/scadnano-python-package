@@ -2413,6 +2413,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
+        if self._is_last_domain_an_extension_3p():
+            raise IllegalDesignError('Cannot call update_to after creating extension_3p.')
         if not self.last_domain:
             return self.to(offset)
 
