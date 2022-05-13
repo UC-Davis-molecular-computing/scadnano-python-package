@@ -2276,6 +2276,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                 'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
         if self._is_last_domain_a_loopout():
             raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
+        if self._is_last_domain_an_extension_3p():
+            raise IllegalDesignError('Cannot add a 3\' extension after another 3\' extension.')
         ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
                                    display_angle=display_angle)
         self.design.append_domain(self._strand, ext)
@@ -2364,7 +2366,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      '(strictly increasing or strictly decreasing) '
                                      'when calling to() twice in a row')
 
-        if self._contains_extension_3p():
+        if self._is_last_domain_an_extension_3p():
             raise IllegalDesignError('cannot make a new domain once 3\' extension has been added')
 
         if offset > self.current_offset:
@@ -2390,11 +2392,10 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
-    def _contains_extension_3p(self) -> bool:
+    def _is_last_domain_an_extension_3p(self) -> bool:
         if self._strand is None:
             return False
-        domains = self._strand.domains
-        return len(domains) > 1 and isinstance(domains[-1], Extension)
+        return len(self._strand.domains) > 1 and self._is_last_domain_an_extension()
 
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
