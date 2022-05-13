@@ -170,7 +170,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__cross_after_5p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
 
         with self.assertRaises(sc.IllegalDesignError):
             sb.cross(1)
@@ -221,7 +222,8 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
     def test_strand__as_circular_with_5p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=4)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(4)
         sb.to(10)
 
         with self.assertRaises(sc.IllegalDesignError):

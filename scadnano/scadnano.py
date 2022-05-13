@@ -2224,6 +2224,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
+        if self._is_last_domain_an_extension():
+            raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
             raise IllegalDesignError('move and offset cannot both be specified:\n'
                                      f'move:   {move}\n'
@@ -2235,6 +2237,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         elif move is not None:
             self.current_offset += move
         return self
+
+    def _is_last_domain_an_extension(self):
+        return isinstance(self._strand.domains[-1], Extension)
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
