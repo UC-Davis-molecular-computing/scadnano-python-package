@@ -2271,6 +2271,15 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         Add extension to end of strand. No domains can be added after this function is called.
         """
+        self._verify_extension_3p_is_valid()
+        assert self._strand is not None
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
+                                   display_angle=display_angle)
+        self.design.append_domain(self._strand, ext)
+        return self
+
+    def _verify_extension_3p_is_valid(self):
         if self._strand is None:
             raise IllegalDesignError(
                 'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
@@ -2278,22 +2287,28 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
         if self._is_last_domain_an_extension_3p():
             raise IllegalDesignError('Cannot add a 3\' extension after another 3\' extension.')
-        ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
-                                   display_angle=display_angle)
-        self.design.append_domain(self._strand, ext)
-        return self
+        self._verify_strand_is_not_circular()
+
+    def _verify_strand_is_not_circular(self):
+        if self._strand.circular:
+            raise IllegalDesignError('Cannot add an extension to a circular strand.')
 
     def _is_last_domain_a_loopout(self):
         return self._is_last_domain_an_instance_of_class(Loopout)
 
     def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
-        if self._strand is not None:
-            raise IllegalDesignError('Cannot add a 5\' extension when there are already domains. Did you mean to create a 3\' extension?')
-        ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
+        self._verify_extension_5p_is_valid()
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
                                    display_angle=display_angle)
         self._strand = Strand(domains=[ext])
         self.design.add_strand(self._strand)
         return self
+
+    def _verify_extension_5p_is_valid(self):
+        if self._strand is not None:
+            raise IllegalDesignError(
+                'Cannot add a 5\' extension when there are already domains. Did you mean to create a 3\' extension?')
 
     def with_relative_offset(self, relative_offset: Tuple[float, float]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
