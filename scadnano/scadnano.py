@@ -2238,8 +2238,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             self.current_offset += move
         return self
 
+    def _is_last_domain_an_instance_of_class(self, cls: Type) -> bool:
+        return isinstance(self._strand.domains[-1], cls)
+
     def _is_last_domain_an_extension(self):
-        return isinstance(self._strand.domains[-1], Extension)
+        return self._is_last_domain_an_instance_of_class(Extension)
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
@@ -2271,10 +2274,15 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         if self._strand is None:
             raise IllegalDesignError(
                 'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
+        if self._is_last_domain_a_loopout():
+            raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
         ext: Extension = Extension(num_bases=num_bases, display_length=display_length,
                                    display_angle=display_angle)
         self.design.append_domain(self._strand, ext)
         return self
+
+    def _is_last_domain_a_loopout(self):
+        return self._is_last_domain_an_instance_of_class(Loopout)
 
     def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         if self._strand is not None:
