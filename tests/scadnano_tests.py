@@ -248,19 +248,20 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5, (1, -1), label="ext1"),
+            sc.Extension(5, label="ext1"),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__extension_5p_with_label(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
         sb.with_domain_label("ext1")
         sb.to(10)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1), label="ext1"),
+            sc.Extension(5, label="ext1"),
             sc.Domain(0, True, 0, 10)
         ])
 
@@ -273,19 +274,20 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10, dna_sequence="A"*10),
-            sc.Extension(5, (1, -1), dna_sequence="G"*5),
+            sc.Extension(5, dna_sequence="G"*5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
     def test_strand__with_sequence_on_5p_extension(self) -> None:
         design = self.design_6helix
-        sb = design.draw_strand(0, 0, extension_5p_length=5)
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
         sb.to(10)
         sb.with_sequence("C"*5 + "T"*10)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1), dna_sequence="C"*5),
+            sc.Extension(5, dna_sequence="C"*5),
             sc.Domain(0, True, 0, 10, dna_sequence="T"*10),
         ])
         self.assertEqual(1, len(design.strands))
@@ -300,7 +302,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10, dna_sequence="?"*10),
-            sc.Extension(5, (1, -1), dna_sequence="G"*5),
+            sc.Extension(5, dna_sequence="G"*5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -314,7 +316,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(5, (1, -1), name="ext1"),
+            sc.Extension(5, name="ext1"),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])

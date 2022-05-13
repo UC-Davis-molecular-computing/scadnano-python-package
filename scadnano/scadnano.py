@@ -2064,6 +2064,14 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
         return self.num_bases
 
+    def set_label(self, label: Optional[DomainLabel]) -> None:
+        """Sets label of this :any:`Extension`."""
+        self.label = label
+
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Extension`."""
+        self.name = name
+
 @dataclass
 class ExtensionBuilder(Generic[DomainLabel]):
     length: Optional[int] = None
