@@ -179,6 +179,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
     def test_strand__cross_after_3p_extension_should_raise_error(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
+        sb.to(5)
         sb.extension_3p(5)
 
         with self.assertRaises(sc.IllegalDesignError):
