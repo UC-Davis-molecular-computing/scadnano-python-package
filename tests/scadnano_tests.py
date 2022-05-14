@@ -1576,9 +1576,9 @@ class TestExportCadnanoV2(unittest.TestCase):
         """
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=Grid.square)
         sb = design.draw_strand(0, 0)
-
-        sb.extension_3p(5)
         sb.to(10)
+        sb.as_scaffold()
+        sb.extension_3p(5)
 
         with self.assertRaises(ValueError) as context:
             design.to_cadnano_v2_json()
@@ -1671,7 +1671,7 @@ class TestDesignFromJson(unittest.TestCase):
         scaf_loop = scaf.domains[2]
         scaf_ss2 = scaf.domains[3]
 
-        self.assertEqual(3, scaf_loop.num_bases)
+        self.assertEqual(3, scaf_loop.length)
 
         self.assertEqual(1, st_l_ss0.helix)
         self.assertEqual(0, st_l_ss1.helix)

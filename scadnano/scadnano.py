@@ -5668,6 +5668,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         '''
         for strand in self.strands:
             for domain in strand.domains:
+                if isinstance(domain, Extension):
+                    raise ValueError(
+                        'We cannot handle designs with Extensions as it is not a cadnano v2 concept')
                 if isinstance(domain, Loopout):
                     raise ValueError(
                         'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
