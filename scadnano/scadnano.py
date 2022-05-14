@@ -792,6 +792,11 @@ domain_label_key = 'label'
 # Loopout keys
 loopout_key = 'loopout'
 
+# Extension keys
+extension_key = 'extension'
+display_length_key = 'display_length'
+display_angle_key = 'display_angle'
+
 # Modification keys
 mod_location_key = 'location'
 mod_display_text_key = 'display_text'
@@ -2072,6 +2077,26 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         """Sets name of this :any:`Extension`."""
         self.name = name
 
+    @staticmethod
+    def from_json(json_map: Dict[str, Any]) -> 'Extension':
+        def float_transformer(x): return float(x)
+        num_bases_str = mandatory_field(Extension, json_map, extension_key)
+        num_bases = int(num_bases_str)
+        display_length = optional_field(_default_extension.display_length,
+                                            json_map, display_length_key, transformer=float_transformer)
+        display_angle = optional_field(_default_extension.display_angle,
+                                           json_map, display_angle_key, transformer=float_transformer)
+        name = json_map.get(domain_name_key)
+        label = json_map.get(domain_label_key)
+        return Extension(
+            num_bases=num_bases,
+            display_length=display_length,
+            display_angle=display_angle,
+            label=label, name=name)
+
+
+# Default Extension object to allow for access to default extension values. num_bases is a dummy.
+_default_extension: Extension = Extension(num_bases=5)
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
@@ -2867,10 +2892,12 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if len(domain_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        domains: List[Union[Domain, Loopout]] = []
+        domains: List[Union[Domain, Loopout, Extension]] = []
         for domain_json in domain_jsons:
             if loopout_key in domain_json:
                 domains.append(Loopout.from_json(domain_json))
+            elif extension_key in domain_json:
+                domains.append(Extension.from_json(domain_json))
             else:
                 domains.append(Domain.from_json(domain_json))
         if isinstance(domains[0], Loopout):
@@ -2883,14 +2910,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
-        color_str = json_map.get(color_key,
-                                 default_scaffold_color if is_scaffold else default_strand_color)
-        if isinstance(color_str, int):
-            def decimal_int_to_hex(d: int) -> str:
-                return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+        color_str = json_map.get(color_key)
 
-            color_str = decimal_int_to_hex(color_str)
-        color = Color(hex_string=color_str)
+        if color_str is None:
+            color = default_scaffold_color if is_scaffold else default_strand_color
+        else:
+            if isinstance(color_str, int):
+                def decimal_int_to_hex(d: int) -> str:
+                    return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+
+                color_str = decimal_int_to_hex(color_str)
+            color = Color(hex_string=color_str)
 
         label = json_map.get(strand_label_key)
 
@@ -5798,7 +5828,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in self.strands:
             _check_type(strand, Strand)
             for substrand in strand.domains:
-                _check_type_is_one_of(substrand, [Domain, Loopout])
+                _check_type_is_one_of(substrand, [Domain, Loopout, Extension])
                 if isinstance(substrand, Domain):
                     _check_type(substrand.helix, int)
                     _check_type(substrand.forward, bool)

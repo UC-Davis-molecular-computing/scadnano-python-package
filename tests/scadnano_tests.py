@@ -4857,7 +4857,7 @@ class TestJSON(unittest.TestCase):
             {
               "domains": [
                   {"helix": 0, "forward": true, "start": 0, "end": 10},
-                  {"extension": 5, "relative_offset": [1.4, -0.3]}
+                  {"extension": 5, "display_length": 1.4, "display_angle": 50.0}
                 ],
               "is_scaffold": true
             }
@@ -4865,7 +4865,7 @@ class TestJSON(unittest.TestCase):
         }
         """
         design = sc.Design.from_scadnano_json_str(json_str)
-        self.assertEqual(sc.Extension(5, (1.4, -0.3)), design.strands[0].domains[1])
+        self.assertEqual(sc.Extension(5, display_length=1.4, display_angle=50.0), design.strands[0].domains[1])
 
     def test_to_json_extension_design__extension(self) -> None:
         # Setup
