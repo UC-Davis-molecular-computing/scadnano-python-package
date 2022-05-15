@@ -4881,20 +4881,6 @@ class TestJSON(unittest.TestCase):
         self.assertIn("extension", document["strands"][0]["domains"][1])
         self.assertEqual(5, document["strands"][0]["domains"][1]["extension"])
 
-    def test_to_json_extension_design__relative_offset(self) -> None:
-        # Setup
-        design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
-        design.draw_strand(0, 0).to(10).extension_3p(5).with_relative_offset((1.4, -0.3))
-
-        # Action
-        result = design.to_json()
-
-        # Verify
-        document = json.loads(result)
-        self.assertEqual(2, len(document["strands"][0]["domains"]))
-        self.assertIn("relative_offset", document["strands"][0]["domains"][1])
-        self.assertEqual([1.4, -0.3], document["strands"][0]["domains"][1]["relative_offset"])
-
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
 
@@ -7371,3 +7357,50 @@ class TestPlateMaps(unittest.TestCase):
 | H   |          |          |          |     |     |     |          |     |     |      |      |      |
 """.strip()
         self.assertEqual(expected_md, actual_md)
+
+
+class TestExtension(unittest.TestCase):
+    def test_to_json_serializable__extension_key_contains_num_bases(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["extension"], 5)
+
+    def test_to_json_serializable__no_display_length_key_when_default_display_length(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("display_length", result)
+
+    def test_to_json_serializable__no_display_angle_key_when_default_display_angle(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("display_angle", result)
+
+    def test_to_json_serializable__no_name_key_when_default_name(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("name", result)
+
+    def test_to_json_serializable__no_label_key_when_default_label(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("label", result)
+
+    def test_to_json_serializable__display_length_key_contains_non_default_display_length(self) -> None:
+        ext = sc.Extension(5, display_length=1.9)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["display_length"], 1.9)
+
+    def test_to_json_serializable__display_angle_key_contains_non_default_display_angle(self) -> None:
+        ext = sc.Extension(5, display_angle=39.9)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["display_angle"], 39.9)
+
+    def test_to_json_serializable__name_key_contains_non_default_name(self) -> None:
+        ext = sc.Extension(5, name="A")
+        result = ext.to_json_serializable()
+        self.assertEqual(result["name"], "A")
+
+    def test_to_json_serializable__label_key_contains_non_default_name(self) -> None:
+        ext = sc.Extension(5, label="ext1")
+        result = ext.to_json_serializable()
+        self.assertEqual(result["label"], "ext1")

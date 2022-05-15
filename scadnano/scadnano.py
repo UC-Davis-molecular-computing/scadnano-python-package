@@ -2063,7 +2063,12 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
-        raise NotImplementedError()
+        json_map: Dict[str, Any] = {extension_key: self.num_bases}
+        self._add_display_length_if_not_default(json_map)
+        self._add_display_angle_if_not_default(json_map)
+        self._add_name_if_not_default(json_map)
+        self._add_label_if_not_default(json_map)
+        return json_map
 
     def dna_length(self) -> int:
         """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
@@ -2093,6 +2098,27 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
             display_length=display_length,
             display_angle=display_angle,
             label=label, name=name)
+
+    def _add_display_length_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_length_key, value_callback=lambda x: x.display_length, json_map=json_map)
+
+    def _add_display_angle_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_angle_key, value_callback=lambda x: x.display_angle, json_map=json_map)
+
+    def _add_name_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_name_key, value_callback=lambda x: x.name, json_map=json_map)
+
+    def _add_label_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_label_key, value_callback=lambda x: x.label, json_map=json_map)
+
+    def _add_key_value_to_json_map_if_not_default(
+            self, key: str, value_callback: Callable[["Extension"], Any], json_map: Dict[str, Any]) -> None:
+        if value_callback(self) != value_callback(_default_extension):
+            json_map[key] = value_callback(self)
 
 
 # Default Extension object to allow for access to default extension values. num_bases is a dummy.
