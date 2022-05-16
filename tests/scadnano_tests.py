@@ -3269,6 +3269,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertIn(scaf, self.origami.strands)
 
     def test_ligate_on_extension_side_should_error(self) -> None:
+        """
+                      ↗
+                     /
+                    /
+            [-------[----->
+                   ^
+                   |
+          error to ligate here
+        """
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
         design.draw_strand(0, 0).to(10).extension_3p(5)
         design.draw_strand(0, 10).to(20)
@@ -3281,24 +3290,28 @@ class TestNickLigateAndCrossover(unittest.TestCase):
                 □
                  \
                   \
-        0          --------->[-------->
+                   --------->[-------->
+
         After:
-        Before:
                 □
                  \
                   \
-        0          ------------------->
+                   ------------------->
         """
+        # Setup
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).extension_3p(5).to(10)
+        design.draw_strand(0, 0).extension_5p(5).to(10)
         design.draw_strand(0, 10).to(20)
+
+        # Action
         design.ligate(0, 10, True)
-        expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1)),
-            sc.Domain(0, True, 0, 20)
-        ])
+
+        # Verify
         self.assertEqual(1, len(design.strands))
-        self.assertEqual(expected_strand, design.strands[0])
+        actual_substrands = design.strands[0].domains
+        self.assertEqual(2, len(actual_substrands))
+        self.assertEqual(sc.Extension(5), actual_substrands[0])
+        self.assertEqual(sc.Domain(0, True, 0, 20), actual_substrands[1])
 
     def test_add_full_crossover_extension_ok(self) -> None:
         """
@@ -3339,7 +3352,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         expected_strand_1: sc.Strand = sc.Strand([
             sc.Domain(1, False, 8, 16),
             sc.Domain(0, True, 8, 16),
-            sc.Extension(5, (1, -1))
+            sc.Extension(5)
         ])
         self.assertEqual(2, len(design.strands))
         self.assertIn(expected_strand_0, design.strands)
@@ -3398,15 +3411,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).extension_3p(5).to(8)
+        design.draw_strand(0, 0).extension_5p(5).to(8)
         design.draw_strand(1, 8).to(0)
 
         # Action
-        design.add_half_crossover(0, 1, 8, True)
+        design.add_half_crossover(0, 1, 7, True)
 
         # Validation
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, (-1, -1)),
+            sc.Extension(5),
             sc.Domain(0, True, 0, 8),
             sc.Domain(1, False, 0, 8)
         ])
@@ -3435,7 +3448,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(0, 0).extension_3p(5).to(8)
+        design.draw_strand(0, 0).extension_5p(5).to(8)
         design.draw_strand(1, 8).to(0)
 
         with self.assertRaises(sc.IllegalDesignError):
@@ -3459,7 +3472,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         """
         # Setup
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).extension_3p(5).to(8)
+        design.draw_strand(0, 0).to(8).extension_3p(5)
 
         # Nick
         design.add_nick(0, 4, True)
@@ -3470,7 +3483,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         ])
         expected_strand2: sc.Strand = sc.Strand([
             sc.Domain(0, True, 4, 8),
-            sc.Extension(5, (1, -1))
+            sc.Extension(5)
         ])
         self.assertEquals(2, len(design.strands))
         self.assertIn(expected_strand1, design.strands)
@@ -4865,7 +4878,9 @@ class TestJSON(unittest.TestCase):
         }
         """
         design = sc.Design.from_scadnano_json_str(json_str)
-        self.assertEqual(sc.Extension(5, display_length=1.4, display_angle=50.0), design.strands[0].domains[1])
+        self.assertEqual(
+            sc.Extension(5, display_length=1.4, display_angle=50.0),
+            design.strands[0].domains[1])
 
     def test_to_json_extension_design__extension(self) -> None:
         # Setup
