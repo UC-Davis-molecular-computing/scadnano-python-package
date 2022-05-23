@@ -7028,6 +7028,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             strand_5p = strand_right
             strand_3p = strand_left
 
+        if strand_5p.domains[0] != dom_5p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_5p.name}"'
+                                     f'does not reside on the 5\' end of the strand.')
+
+        if strand_3p.domains[-1] != dom_3p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_3p.name}"'
+                                     f'does not reside on the 3\' of the strand.')
+
         if strand_left is strand_right:
             # join domains and make strand circular
             strand = strand_left
