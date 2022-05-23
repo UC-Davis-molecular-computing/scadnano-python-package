@@ -7134,13 +7134,27 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
             strand_last = strand2
+            domain_first = domain1
+            domain_last = domain2
         elif domain1.offset_5p() == offset and domain2.offset_3p() == offset2:
             strand_first = strand2
             strand_last = strand1
+            domain_first = domain2
+            domain_last = domain1
         else:
             raise IllegalDesignError("Cannot add half crossover. Must have one domain have its "
                                      "5' end at the given offset and the other with its 3' end at the "
                                      "given offset, but this is not the case.")
+
+        if strand_first.domains[-1] is not domain_first:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_first.name} is expected to be on the 3'"
+                f"end of the strand, but this is not the case.")
+
+        if strand_last.domains[0] is not domain_last:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_last.name} is expected to be on the 5'"
+                f"end of the strand, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
         if strand_first.dna_sequence is None and strand_last.dna_sequence is None:
