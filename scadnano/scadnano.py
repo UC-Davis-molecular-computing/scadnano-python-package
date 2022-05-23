@@ -7823,7 +7823,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             else:
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for i in range(domain.num_bases):
+                for i in range(domain.length):
                     base = seq[i]
                     nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
                                            base)

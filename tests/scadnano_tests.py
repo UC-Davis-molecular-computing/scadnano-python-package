@@ -3268,14 +3268,27 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         ])
         self.assertIn(scaf, self.origami.strands)
 
+    def test_ligate_on_middle_domain_should_error(self) -> None:
+        """
+        [-----+[----->
+              |
+        <-----+
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).to(10).cross(1).to(0)
+        design.draw_strand(0, 10).to(20)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.ligate(0, 10, True)
+
     def test_ligate_on_extension_side_should_error(self) -> None:
         """
                       ↗
                      /
                     /
             [-------[----->
-                   ^
-                   |
+                    ^
+                    |
           error to ligate here
         """
         design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
@@ -3453,6 +3466,24 @@ class TestNickLigateAndCrossover(unittest.TestCase):
 
         with self.assertRaises(sc.IllegalDesignError):
             design.add_half_crossover(0, 1, 0, True)
+
+    def test_add_half_crossover_on_existing_crossover_should_error(self) -> None:
+        """
+        0  +------]
+           |
+        1  +------>
+
+        2  <------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 10).to(0).cross(1).to(10)
+        design.draw_strand(2, 10).to(0)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_half_crossover(1, 2, 0, True)
 
     def test_nick_on_extension(self) -> None:
         """
