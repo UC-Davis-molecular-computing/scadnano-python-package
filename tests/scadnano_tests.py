@@ -623,7 +623,8 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
         design.draw_strand(0, 5).move(5).with_modification_3p(
             sc.Modification3Prime(display_text=name, id=name + '3'))
         design.to_json(True)
@@ -632,8 +633,10 @@ class TestModifications(unittest.TestCase):
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
-        design.draw_strand(0, 0).move(5).with_modification_5p(sc.Modification5Prime(display_text=name, id=name))
-        design.draw_strand(0, 5).move(5).with_modification_3p(sc.Modification3Prime(display_text=name, id=name))
+        design.draw_strand(0, 0).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=name, id=name))
+        design.draw_strand(0, 5).move(5).with_modification_3p(
+            sc.Modification3Prime(display_text=name, id=name))
         with self.assertRaises(sc.IllegalDesignError):
             design.to_json(True)
 
@@ -756,7 +759,7 @@ class TestModifications(unittest.TestCase):
 
     def test_to_json_serializable(self) -> None:
         biotin5 = mod.biotin_5p
-        biotin5 = dataclasses.replace(biotin5, connector_length = 6)
+        biotin5 = dataclasses.replace(biotin5, connector_length=6)
         self.assertEqual(r'/5Biosg/', biotin5.idt_text)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
@@ -1421,6 +1424,24 @@ class TestExportCadnanoV2(unittest.TestCase):
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
         # To help with debugging, uncomment these lines to write out the
         self.assertEqual(6, len(output_design.helices))
+
+        # scadnano and/or cadnano file
+        #
+        # design.write_scadnano_file(directory=self.input_path,
+        #                            filename=f'test_6_helix_origami_rectangle.{self.ext}')
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_6_helix_origami_rectangle.json')
+
+    def test_export_no_whitespace(self) -> None:
+        design = rect.create(num_helices=6, num_cols=10, nick_pattern=rect.staggered,
+                             twist_correction_deletion_spacing=3)
+        output_json_with_space = design.to_cadnano_v2_json(whitespace=True)
+        self.assertIn(' ', output_json_with_space)
+        self.assertIn('\n', output_json_with_space)
+        output_json_no_space = design.to_cadnano_v2_json(whitespace=False)
+        self.assertNotIn(' ', output_json_no_space)
+        self.assertNotIn('\n', output_json_no_space)
+
         # scadnano and/or cadnano file
         #
         # design.write_scadnano_file(directory=self.input_path,
@@ -1947,6 +1968,40 @@ class TestInlineInsDel(unittest.TestCase):
     Tests inlining of insertions/deletions.
     """
 
+    def setUp(self) -> None:
+        self.design = sc.Design(
+            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
+            strands=[],
+            grid=sc.square)
+
+    def test_no_deletion_after_loopout(self) -> None:
+        # not really a test of inlining, but I added the with_deletions and with_insertions to help these
+        # tests, so easier just to test this behavior here
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(8).loopout(0, 5, 10).with_deletions(4)
+
+    def test_no_insertion_after_loopout(self) -> None:
+        # not really a test of inlining, but I added the with_deletions and with_insertions to help these
+        # tests, so easier just to test this behavior here
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(8).loopout(0, 5, 10).with_insertions((4, 2))
+
+    def test_deletion_below_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 4).move(4).with_deletions(2)
+
+    def test_deletion_above_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(4).with_deletions(6)
+
+    def test_insertion_below_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 4).move(4).with_insertions((2, 1))
+
+    def test_insertion_above_range(self) -> None:
+        with self.assertRaises(ValueError):
+            self.design.draw_strand(0, 0).move(4).with_insertions((6, 1))
+
     def test_inline_deletions_insertions__one_deletion(self) -> None:
         """
         before
@@ -1959,10 +2014,8 @@ class TestInlineInsDel(unittest.TestCase):
         |      |       |       |
     0   [----->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions(4)
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=7)
 
@@ -1990,10 +2043,8 @@ class TestInlineInsDel(unittest.TestCase):
         |     |       |       |
     0   [---->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[2, 4])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions([2, 4])
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=22, major_ticks=[0, 6, 14, 22], start=0, end=6)
 
@@ -2009,10 +2060,8 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(4, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_insertions((4, 1))
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=9)
 
@@ -2028,10 +2077,8 @@ class TestInlineInsDel(unittest.TestCase):
         |           |       |       |
     0   [---------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, insertions=[(2, 3), (4, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_insertions([(2, 3), (4, 1)])
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
 
@@ -2047,10 +2094,8 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [-------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 8, deletions=[4], insertions=[(2, 3)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(8).with_deletions(4).with_insertions((2, 3))
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
 
@@ -2066,10 +2111,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[9])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(9)
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
@@ -2086,10 +2129,8 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . | . . . . . . | . . . . . . . |
          [ - - - - - - - - - >
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[8])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(8)
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
@@ -2105,10 +2146,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |      |       |
     0   [--------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, deletions=[7])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_deletions(7)
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=11)
 
@@ -2124,10 +2163,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(9, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((9, 1))
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
@@ -2143,10 +2180,8 @@ class TestInlineInsDel(unittest.TestCase):
         |       |        |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(8, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((8, 1))
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
@@ -2162,10 +2197,8 @@ class TestInlineInsDel(unittest.TestCase):
         |        |       |       |
     0   [----------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 12, insertions=[(7, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(12).with_insertions((7, 1))
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=13)
 
@@ -2181,10 +2214,8 @@ class TestInlineInsDel(unittest.TestCase):
         |         |       |       |
     0   [------------------------->
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[sc.Strand([sc.Domain(0, True, 0, 24, deletions=[19], insertions=[(5, 2), (11, 1)])])],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(24).with_deletions(19).with_insertions([(5, 2), (11, 1)])
         design.inline_deletions_insertions()
         self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
 
@@ -2201,13 +2232,9 @@ class TestInlineInsDel(unittest.TestCase):
         | . . . . . . . . | . . . . . . . . | . . . . . . |
          [ - - - - - - - - - - - - - - > [ - - - - - - - >
         """
-        design = sc.Design(
-            helices=[sc.Helix(max_offset=24, major_tick_distance=8)],
-            strands=[
-                sc.Strand([sc.Domain(0, True, 0, 14, deletions=[2], insertions=[(5, 2), (10, 1)])]),
-                sc.Strand([sc.Domain(0, True, 14, 24, deletions=[19])]),
-            ],
-            grid=sc.square)
+        design = self.design
+        design.draw_strand(0, 0).move(14).with_deletions(2).with_insertions([(5, 2), (10, 1)])
+        design.draw_strand(0, 14).to(24).with_deletions(19)
         design.inline_deletions_insertions()
         self.assertEqual(1, len(design.helices))
         self.assertEqual(2, len(design.strands))
@@ -2475,9 +2502,15 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertIn(sc.Strand([sc.Domain(0, True, 0, 8, dna_sequence='ACGTACGA')]), design.strands)
         self.assertIn(sc.Strand([sc.Domain(0, True, 8, 16, dna_sequence='AACCGGTA')]), design.strands)
         # existing Strands
-        self.assertIn(sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]), design.strands)
-        self.assertIn(sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]), design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(0, False, 0, 16, dna_sequence=remove_whitespace('TACCGGTT TCGTACGT'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, True, 0, 16, dna_sequence=remove_whitespace('AAACCCGG TTTGGGCC'))]),
+            design.strands)
+        self.assertIn(
+            sc.Strand([sc.Domain(1, False, 0, 16, dna_sequence=remove_whitespace('GGCCCAAA CCGGGTTT'))]),
+            design.strands)
         # DNA
         strand = strand_matching(design.strands, 0, True, 0, 8)
         self.assertEqual(remove_whitespace('ACGTACGA'), strand.dna_sequence)
@@ -6891,7 +6924,7 @@ class TestOxdnaExport(unittest.TestCase):
         }
         design = sc.Design(helices=helices, groups=groups)
         design.draw_strand(0, 0).move(7).cross(1).move(-7)
-        design.draw_strand(2, 7).move(-7).cross(3).move(7) # unlike basic design, put strand on helices 2,3
+        design.draw_strand(2, 7).move(-7).cross(3).move(7)  # unlike basic design, put strand on helices 2,3
 
         # expected values for verification
         expected_num_nucleotides = 7 * 4

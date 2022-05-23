@@ -2669,10 +2669,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
         via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
@@ -2691,17 +2692,20 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
-        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
-        via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` or :any:`Loopout` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-            design.draw_strand(0, 5).to(8).with_domain_label('domain 1')\\
-                .cross(1).to(5).with_domain_label('domain 2')\\
+            design.draw_strand(0, 5)\\
+                .to(8).with_domain_label('domain 1')\\
+                .cross(1)\\
+                .to(5).with_domain_label('domain 2')\\
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
@@ -2712,6 +2716,103 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
+        return self
+
+    def with_deletions(self,
+                       deletions: Union[int, Iterable[int]]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `deletions` as the deletion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_deletions(4)\\
+                .cross(1)\\
+                .move(-8).with_deletions([2, 3])
+
+        :param deletions:
+            a single int, or an Iterable of ints, indicating the offset at which to put the deletion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create a deletion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_deletions immediately after a call to '
+                             f'to, move, or update_to')
+        if not isinstance(deletions, int) and not hasattr(deletions, '__iter__'):
+            raise ValueError(f'deletions must be a single int or an iterable of ints, '
+                             f'but it is {type(deletions)}')
+        if isinstance(deletions, int):
+            last_domain.deletions = [deletions]
+        else:
+            last_domain.deletions = list(deletions)
+
+        for deletion in last_domain.deletions:
+            if not last_domain.start <= deletion < last_domain.end:
+                raise IllegalDesignError(f'all deletions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but deletion={deletion} is outside '
+                                         f'that range')
+
+        return self
+
+    def with_insertions(self, insertions: Union[Tuple[int, int], Iterable[Tuple[int, int]]]) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `insertions` as the insertion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_insertions((4, 2))\\
+                .cross(1)\\
+                .move(-8).with_insertions([(2, 3), (3, 3)])
+
+        :param insertions:
+            a single pair of ints (tuple), or an Iterable of pairs of ints (tuples)
+            indicating the offset at which to put the insertion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create an insertion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_insertions immediately after a call to '
+                             f'to, move, or update_to')
+
+        type_msg = (f'insertions must be a single pair of ints or an iterable of pairs of ints, '
+                    f'but it is {type(insertions)}')
+
+        if not hasattr(insertions, '__iter__'):
+            raise ValueError(type_msg)
+        if isinstance(insertions, tuple) and len(insertions) > 0 and isinstance(insertions[0], int):
+            last_domain.insertions = [insertions]
+        else:
+            for ins in insertions:
+                if not (isinstance(ins, tuple) and len(ins) > 0 and isinstance(ins[0], int)):
+                    raise ValueError(type_msg)
+            last_domain.insertions = list(insertions)
+
+        for insertion in last_domain.insertions:
+            insertion_offset, _ = insertion
+            if not last_domain.start <= insertion_offset < last_domain.end:
+                raise IllegalDesignError(f'all insertions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but insertion={insertion} at offset '
+                                         f'{insertion_offset} is outside that range')
+
         return self
 
 
@@ -5752,22 +5853,33 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return dct
 
-    def to_cadnano_v2_json(self, name: str = '') -> str:
+    def to_cadnano_v2_json(self, name: str = '', whitespace: bool = True) -> str:
         """Converts the design to the cadnano v2 format.
 
         Please see the spec
         https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
         for more info on that format.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param name:
             Name of the design.
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
         :return:
             a string in the cadnano v2 format representing this :any:`Design`
         """
         content_serializable = self.to_cadnano_v2_serializable(name)
 
         encoder = _SuppressableIndentEncoder
-        return json.dumps(content_serializable, cls=encoder, indent=2)
+        content = json.dumps(content_serializable, cls=encoder, indent=2)
+        if not whitespace:
+            # remove whitespace
+            content = ''.join(content.split())
+        return content
 
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
@@ -6778,14 +6890,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = default_scadnano_file_extension
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None) -> None:
+    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None,
+                              whitespace: bool = True) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param directory:
             directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
+
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
 
         :param filename:
             The output file has the same name as the running script but with ``.py`` changed to ``.json``,
@@ -6794,8 +6915,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
-        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory,
-                                                      filename)
+        content = self.to_cadnano_v2_json(name=name, whitespace=whitespace)
+        write_file_same_name_as_running_python_script(content, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
