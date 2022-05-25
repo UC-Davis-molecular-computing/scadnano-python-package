@@ -367,9 +367,13 @@ We used chained method calls to create scaffold "precursor" strands,
 i.e., one long strand per helix, going the opposite direction as the scaffold.
 In subsequent sections we will also add nicks and crossovers to these,
 to create the staple strands.
+Above, we called the method 
+[Design.draw_strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand)
+to create the scaffold precursors.
 It is also possible, though typically more verbose, to explicitly create `Domain` objects, 
 to be passed into the `Strand` constructor. 
-For the staple precursor strands we do this to show how it works.
+For the staple precursor strands, we do this to show how it works, though it would typically be simpler and easier to read to call 
+[Design.draw_strand](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand).
 
 Each `Strand` is specified primarily by a list of `Domain`'s, and each `Domain` is specified primarily by 4 fields: 
 integer `helix` (actually, *index* of a helix),
