@@ -4044,7 +4044,58 @@ class PlateMap:
             from IPython.display import display, Markdown
             display(Markdown(maps_strs))
 
-        It uses the Python tabulate package (https://pypi.org/project/tabulate/).
+        Markdown format is used by default, generating a string such as this:
+
+        .. code-block:: none
+
+            plate "5 monomer synthesis"
+
+            |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
+            | A   | mon0 | mon0_F |        | adp0 |          |     |     |     |     |      |      |      |
+            | B   | mon1 | mon1_Q | mon1_F | adp1 | adp_sst1 |     |     |     |     |      |      |      |
+            | C   | mon2 | mon2_F | mon2_Q | adp2 | adp_sst2 |     |     |     |     |      |      |      |
+            | D   | mon3 | mon3_Q | mon3_F | adp3 | adp_sst3 |     |     |     |     |      |      |      |
+            | E   | mon4 |        | mon4_Q | adp4 | adp_sst4 |     |     |     |     |      |      |      |
+            | F   |      |        |        | adp5 |          |     |     |     |     |      |      |      |
+            | G   |      |        |        |      |          |     |     |     |     |      |      |      |
+            | H   |      |        |        |      |          |     |     |     |     |      |      |      |
+
+        or, with the :meth:`PlateMap.to_table` parameter `well_marker` set to ``'*'``
+        (in case you don't need to see the strand names and just want to see which wells are marked):
+
+        .. code-block:: none
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
+            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
+            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+
+        If `well_marker` is not specified, then each strand must have a name. `well_marker` can also
+        be a function of the well; for instance, if it is the identity function ``lambda x:x``, then each
+        well has its own address as the entry:
+
+        .. code-block:: none
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | A1  | A2  |     | A4  |     |     |     |     |     |      |      |      |
+            | B   | B1  | B2  | B3  | B4  | B5  |     |     |     |     |      |      |      |
+            | C   | C1  | C2  | C3  | C4  | C5  |     |     |     |     |      |      |      |
+            | D   | D1  | D2  | D3  | D4  | D5  |     |     |     |     |      |      |      |
+            | E   | E1  |     | E3  | E4  | E5  |     |     |     |     |      |      |      |
+            | F   |     |     |     | F4  |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+        This method uses the Python tabulate package (https://pypi.org/project/tabulate/).
         The parameters are identical to that of the `tabulate` function and are passed along to it,
         except for `tabular_data` and `headers`, which are computed from this plate map.
         In particular, the parameter `tablefmt` has default value `'pipe'`,
@@ -5190,9 +5241,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                    strands: Optional[Iterable[Strand]] = None,
                    ) -> List[PlateMap]:
         """
-        Generates plate maps from this :any:`Design` in Markdown format, for example:
+        Returns a list of :any:`PlateMap`'s from this :any:`Design`. Each :any:`PlateMap` can be
+        exported to a string, in Markdown format by default, by calling :meth:`PlateMap.to_table`,
+        generating a string such as this:
 
-        .. code-block::
+        .. code-block:: none
+
+            plate "5 monomer synthesis"
 
             |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
             |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
@@ -5205,44 +5260,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             | G   |      |        |        |      |          |     |     |     |     |      |      |      |
             | H   |      |        |        |      |          |     |     |     |     |      |      |      |
 
-        or, with `well_marker` set to ``'*'`` (in case you don't need to see the strand names and just
-        want to see which wells are marked):
-
-        .. code-block::
-
-            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
-            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
-            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
-            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
-            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
-            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
-            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
-
-
-        If `well_marker` is not specified, then each strand must have a name. `well_marker` can also
-        be a function of the well; for instance, if it is the identity function ``lambda x:x``, then each
-        well has its own address as the entry:
-
-        .. code-block::
-
-            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
-            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
-            | A   | A1  | A2  |     | A4  |     |     |     |     |     |      |      |      |
-            | B   | B1  | B2  | B3  | B4  | B5  |     |     |     |     |      |      |      |
-            | C   | C1  | C2  | C3  | C4  | C5  |     |     |     |     |      |      |      |
-            | D   | D1  | D2  | D3  | D4  | D5  |     |     |     |     |      |      |      |
-            | E   | E1  |     | E3  | E4  | E5  |     |     |     |     |      |      |      |
-            | F   |     |     |     | F4  |     |     |     |     |     |      |      |      |
-            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
-            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
-
+        See the documentation for :meth:`PlateMap.to_table` for more information on configuring the
+        returned string format.
 
         All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
-        specified are exported. The number of strings in the returned list is equal to the number of
-        different plate names specified across all :any:`Strand`'s in the design.
+        specified are included in some returned :any:`PlateMap`. The number of :any:`PlateMap`'s in the
+        returned list is equal to the number of different plate names specified across all
+        :any:`Strand`'s in the design.
 
         If parameter `strands` is given, then a subset of strands is included. This is useful for
         specifying a mix of strands for a particular experiment, which come from a plate but does not
@@ -5254,10 +5278,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param plate_type:
             Type of plate: 96 or 384 well.
         :param strands:
-            If specified, only the :any:`Strand`'s in `strands` are put in the plate map.
+            If specified, only the :any:`Strand`'s in `strands` are put in the :any:`PlateMap`.
         :return:
-            dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
-            in this design with IDT plates specified
+            list of :any:`PlateMap`'s for :any:`Strand`'s in this design with IDT plates specified;
+            length of list is equal to number of unique plate names among all :any:`Strand`'s in this design
         """
         if strands is None:
             strands = self.strands
