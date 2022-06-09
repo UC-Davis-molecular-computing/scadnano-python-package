@@ -792,6 +792,11 @@ domain_label_key = 'label'
 # Loopout keys
 loopout_key = 'loopout'
 
+# Extension keys
+extension_key = 'extension'
+display_length_key = 'display_length'
+display_angle_key = 'display_angle'
+
 # Modification keys
 mod_location_key = 'location'
 mod_display_text_key = 'display_text'
@@ -1924,7 +1929,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     It is illegal for two consecutive :any:`Domain`'s to both
     be :any:`Loopout`'s,
     or for a :any:`Loopout` to occur on either end of the :any:`Strand`
-    (i.e., each :any:`Strand` must begin and end with a :any:`Domain`).
+    (i.e., each :any:`Strand` must begin and end with a :any:`Domain` or :any:`Extension`).
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -2044,6 +2049,135 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
                                  for prev_domain in domains[:self_domain_idx])
         return self_seq_idx_start
 
+
+@dataclass
+class Extension(_JSONSerializable, Generic[DomainLabel]):
+    """Represents a single-stranded extension on either the 3' or 5'
+    end of :any:`Strand`.
+
+    One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
+    :any:`Domain` make sense for :any:`Extension`, so they are not related to each other in the type
+    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either the 3' or 5' end of the :any:`Strand`. It is illegal for an :any:`Extension` to be placed
+    in the middle of the :any:`Strand` or for an :any:`Extension` to be adjacent to a :any:`Loopout`.
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        domain = sc.Domain(helix=0, forward=True, start=0, end=10)
+        toehold = sc.Extension(num_bases=5)
+        strand = sc.Strand([domain, toehold])
+
+    It can also be created with chained method calls
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=10)])
+        design.draw_strand(0,0).move(10).extension_3p(5)
+    """
+
+    num_bases: int
+    """Length (in DNA bases) of this :any:`Loopout`."""
+
+    display_length: float = 1.0
+    """Length (in nm) to display in the scadnano web app."""
+
+    display_angle: float = 45.0
+    """
+    Angle (in degrees) to display in the scadnano web app.
+
+    This angle is relative to the "rotation frame" of the adjacent domain.
+    0 degrees means parallel to the adjacent domain.
+    90 degrees means pointing away from the helix.
+    180 degrees means means antiparallel to the adjacent domain (overlapping).
+    """
+
+    label: Optional[DomainLabel] = None
+    """
+    Generic "label" object to associate to this :any:`Extension`.
+
+    Useful for associating extra information with the :any:`Extension` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int)
+    that is naturally JSON serializable. (Calling
+    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
+    on the object should succeed without having to specify a custom encoder.)
+    """
+
+    name: Optional[str] = None
+    """
+    Optional name to give this :any:`Extension`.
+    """
+
+    dna_sequence: Optional[str] = None
+    """DNA sequence of this :any:`Extension`, or ``None`` if no DNA sequence has been assigned."""
+
+    # not serialized; for efficiency
+    # remove quotes when Py3.6 support dropped
+    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
+        json_map: Dict[str, Any] = {extension_key: self.num_bases}
+        self._add_display_length_if_not_default(json_map)
+        self._add_display_angle_if_not_default(json_map)
+        self._add_name_if_not_default(json_map)
+        self._add_label_if_not_default(json_map)
+        return json_map
+
+    def dna_length(self) -> int:
+        """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
+        return self.num_bases
+
+    def set_label(self, label: Optional[DomainLabel]) -> None:
+        """Sets label of this :any:`Extension`."""
+        self.label = label
+
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Extension`."""
+        self.name = name
+
+    @staticmethod
+    def from_json(json_map: Dict[str, Any]) -> 'Extension':
+        def float_transformer(x): return float(x)
+        num_bases_str = mandatory_field(Extension, json_map, extension_key)
+        num_bases = int(num_bases_str)
+        display_length = optional_field(_default_extension.display_length,
+                                            json_map, display_length_key, transformer=float_transformer)
+        display_angle = optional_field(_default_extension.display_angle,
+                                           json_map, display_angle_key, transformer=float_transformer)
+        name = json_map.get(domain_name_key)
+        label = json_map.get(domain_label_key)
+        return Extension(
+            num_bases=num_bases,
+            display_length=display_length,
+            display_angle=display_angle,
+            label=label, name=name)
+
+    def _add_display_length_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_length_key, value_callback=lambda x: x.display_length, json_map=json_map)
+
+    def _add_display_angle_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_angle_key, value_callback=lambda x: x.display_angle, json_map=json_map)
+
+    def _add_name_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_name_key, value_callback=lambda x: x.name, json_map=json_map)
+
+    def _add_label_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_label_key, value_callback=lambda x: x.label, json_map=json_map)
+
+    def _add_key_value_to_json_map_if_not_default(
+            self, key: str, value_callback: Callable[["Extension"], Any], json_map: Dict[str, Any]) -> None:
+        if value_callback(self) != value_callback(_default_extension):
+            json_map[key] = value_callback(self)
+
+
+# Default Extension object to allow for access to default extension values. num_bases is a dummy.
+_default_extension: Extension = Extension(num_bases=5)
 
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
@@ -2190,6 +2324,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
+        if self._is_last_domain_an_extension():
+            raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
             raise IllegalDesignError('move and offset cannot both be specified:\n'
                                      f'move:   {move}\n'
@@ -2201,6 +2337,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         elif move is not None:
             self.current_offset += move
         return self
+
+    def _is_last_domain_an_instance_of_class(self, cls: Type) -> bool:
+        return isinstance(self._strand.domains[-1], cls)
+
+    def _is_last_domain_an_extension(self):
+        return self._is_last_domain_an_instance_of_class(Extension)
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
@@ -2224,6 +2366,64 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
         return self
+
+    def extension_3p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 3' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
+        """
+        self._verify_extension_3p_is_valid()
+        assert self._strand is not None
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
+                                   display_angle=display_angle)
+        self.design.append_domain(self._strand, ext)
+        return self
+
+    def _verify_extension_3p_is_valid(self):
+        if self._strand is None:
+            raise IllegalDesignError(
+                'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
+        if self._is_last_domain_a_loopout():
+            raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
+        if self._is_last_domain_an_extension_3p():
+            raise IllegalDesignError('Cannot add a 3\' extension after another 3\' extension.')
+        self._verify_strand_is_not_circular()
+
+    def _verify_strand_is_not_circular(self):
+        if self._strand.circular:
+            raise IllegalDesignError('Cannot add an extension to a circular strand.')
+
+    def _is_last_domain_a_loopout(self):
+        return self._is_last_domain_an_instance_of_class(Loopout)
+
+    def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 5' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
+        """
+        self._verify_extension_5p_is_valid()
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
+                                   display_angle=display_angle)
+        self._strand = Strand(domains=[ext])
+        self.design.add_strand(self._strand)
+        return self
+
+    def _verify_extension_5p_is_valid(self):
+        if self._strand is not None:
+            raise IllegalDesignError(
+                'Cannot add a 5\' extension when there are already domains. Did you mean to create a 3\' extension?')
 
     # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2277,6 +2477,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      '(strictly increasing or strictly decreasing) '
                                      'when calling to() twice in a row')
 
+        if self._is_last_domain_an_extension_3p():
+            raise IllegalDesignError('cannot make a new domain once 3\' extension has been added')
+
         if offset > self.current_offset:
             forward = True
             start = self.current_offset
@@ -2300,6 +2503,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
+    def _is_last_domain_an_extension_3p(self) -> bool:
+        if self._strand is None:
+            return False
+        return len(self._strand.domains) > 1 and self._is_last_domain_an_extension()
+
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
@@ -2316,6 +2524,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
+        if self._is_last_domain_an_extension_3p():
+            raise IllegalDesignError('Cannot call update_to after creating extension_3p.')
         if not self.last_domain:
             return self.to(offset)
 
@@ -2714,7 +2924,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]]
+    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2808,7 +3018,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __init__(self,
-                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]],
+                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]],
                  circular: bool = False, color: Optional[Color] = None,
                  idt: Optional[IDTFields] = None,
                  is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
@@ -2879,10 +3089,12 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if len(domain_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        domains: List[Union[Domain, Loopout]] = []
+        domains: List[Union[Domain, Loopout, Extension]] = []
         for domain_json in domain_jsons:
             if loopout_key in domain_json:
                 domains.append(Loopout.from_json(domain_json))
+            elif extension_key in domain_json:
+                domains.append(Extension.from_json(domain_json))
             else:
                 domains.append(Domain.from_json(domain_json))
         if isinstance(domains[0], Loopout):
@@ -2895,14 +3107,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
-        color_str = json_map.get(color_key,
-                                 default_scaffold_color if is_scaffold else default_strand_color)
-        if isinstance(color_str, int):
-            def decimal_int_to_hex(d: int) -> str:
-                return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+        color_str = json_map.get(color_key)
 
-            color_str = decimal_int_to_hex(color_str)
-        color = Color(hex_string=color_str)
+        if color_str is None:
+            color = default_scaffold_color if is_scaffold else default_strand_color
+        else:
+            if isinstance(color_str, int):
+                def decimal_int_to_hex(d: int) -> str:
+                    return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+
+                color_str = decimal_int_to_hex(color_str)
+            color = Color(hex_string=color_str)
 
         label = json_map.get(strand_label_key)
 
@@ -2993,6 +3208,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, "cannot have a 5' modification on a circular strand")
         if circular and self.modification_3p is not None:
             raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        if circular and self.contains_extensions():
+            raise StrandError(self, "Cannot have extension on a circular strand")
         self.circular = circular
 
     def set_linear(self) -> None:
@@ -3329,7 +3546,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
-    def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         # add wildcard symbols to DNA sequence to maintain its length
         if self.dna_sequence is not None:
             domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
@@ -3368,6 +3585,10 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Loopout):
                 return True
         return False
+
+    def contains_extensions(self) -> bool:
+        assert len(self.domains) > 0
+        return isinstance(self.domains[0], Extension) or isinstance(self.domains[-1], Extension)
 
     def first_bound_domain(self) -> Domain:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
@@ -5698,6 +5919,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         '''
         for strand in self.strands:
             for domain in strand.domains:
+                if isinstance(domain, Extension):
+                    raise ValueError(
+                        'We cannot handle designs with Extensions as it is not a cadnano v2 concept')
                 if isinstance(domain, Loopout):
                     raise ValueError(
                         'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
@@ -5836,7 +6060,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in self.strands:
             _check_type(strand, Strand)
             for substrand in strand.domains:
-                _check_type_is_one_of(substrand, [Domain, Loopout])
+                _check_type_is_one_of(substrand, [Domain, Loopout, Extension])
                 if isinstance(substrand, Domain):
                     _check_type(substrand.helix, int)
                     _check_type(substrand.forward, bool)
@@ -6030,7 +6254,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
-    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout, Extension]) -> None:
         """
         Same as :any:`Design.insert_domain`, but inserts at end.
 
@@ -6039,7 +6263,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         self.insert_domain(strand, len(strand.domains), domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``design.insert_domain(strand, domain, 0)``
         inserts ``domain`` as the new first :any:`Domain`."""
@@ -6163,7 +6387,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout] = None, check_length: bool = False) -> None:
+                   domain: Union[Domain, Loopout, Extension] = None, check_length: bool = False) -> None:
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -7019,6 +7243,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             strand_5p = strand_right
             strand_3p = strand_left
 
+        if strand_5p.domains[0] != dom_5p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_5p.name}"'
+                                     f'does not reside on the 5\' end of the strand.')
+
+        if strand_3p.domains[-1] != dom_3p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_3p.name}"'
+                                     f'does not reside on the 3\' of the strand.')
+
         if strand_left is strand_right:
             # join domains and make strand circular
             strand = strand_left
@@ -7117,13 +7349,27 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
             strand_last = strand2
+            domain_first = domain1
+            domain_last = domain2
         elif domain1.offset_5p() == offset and domain2.offset_3p() == offset2:
             strand_first = strand2
             strand_last = strand1
+            domain_first = domain2
+            domain_last = domain1
         else:
             raise IllegalDesignError("Cannot add half crossover. Must have one domain have its "
                                      "5' end at the given offset and the other with its 3' end at the "
                                      "given offset, but this is not the case.")
+
+        if strand_first.domains[-1] is not domain_first:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_first.name} is expected to be on the 3'"
+                f"end of the strand, but this is not the case.")
+
+        if strand_last.domains[0] is not domain_last:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_last.name} is expected to be on the 5'"
+                f"end of the strand, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
         if strand_first.dna_sequence is None and strand_last.dna_sequence is None:

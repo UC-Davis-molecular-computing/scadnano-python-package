@@ -91,6 +91,249 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design_from_json.strands))
         self.assertEqual(expected_strand, design_from_json.strands[0])
 
+    def test_strand__3p_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+
+        sb.extension_3p(5)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Extension(num_bases=5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__5p_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+        sb.to(10)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 10),
+        ])
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__update_to_after_5p_extension_ok(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+
+        sb.to(10)
+        sb.update_to(15)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 15),
+        ])
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__move_after_5p_extension_ok(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+
+        sb.move(15)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 15),
+        ])
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__to_after_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.to(15)
+
+    def test_strand__move_after_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.move(10)
+        sb.extension_3p(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.move(5)
+
+    def test_strand__cross_after_5p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.cross(1)
+
+    def test_strand__cross_after_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(5)
+        sb.extension_3p(5)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.cross(1)
+
+    def test_strand__extension_3p_after_loopout_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.loopout(1, 3)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.extension_3p(5)
+
+    def test_strand__extension_3p_after_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(4)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.extension_3p(5)
+
+    def test_strand__update_to_after_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(4)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.update_to(15)
+
+    def test_strand__as_circular_with_3p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(4)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.as_circular()
+
+    def test_strand__as_circular_with_5p_extension_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(4)
+        sb.to(10)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.as_circular()
+
+    def test_strand__extension_3p_on_circular_strand_should_raise_error(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.as_circular()
+
+        with self.assertRaises(sc.IllegalDesignError):
+            sb.extension_3p(4)
+
+    def test_strand__extension_3p_with_label(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(5)
+        sb.with_domain_label("ext1")
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Extension(5, label="ext1"),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__extension_5p_with_label(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+        sb.with_domain_label("ext1")
+        sb.to(10)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5, label="ext1"),
+            sc.Domain(0, True, 0, 10)
+        ])
+
+    def test_strand__with_sequence_on_3p_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(5)
+        sb.with_sequence("A"*10 + "G"*5)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10, dna_sequence="A"*10),
+            sc.Extension(5, dna_sequence="G"*5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__with_sequence_on_5p_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.extension_5p(5)
+        sb.to(10)
+        sb.with_sequence("C"*5 + "T"*10)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5, dna_sequence="C"*5),
+            sc.Domain(0, True, 0, 10, dna_sequence="T"*10),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__with_domain_sequence_on_extension(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(5)
+        sb.with_domain_sequence("G"*5)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10, dna_sequence="?"*10),
+            sc.Extension(5, dna_sequence="G"*5),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__extension_with_name(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.extension_3p(5)
+        sb.with_domain_name("ext1")
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Extension(5, name="ext1"),
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_strand__with_relative_offset(self) -> None:
+        design = self.design_6helix
+        sb = design.draw_strand(0, 0).to(10)
+
+        sb.extension_3p(5, display_length=1.4, display_angle=30)
+
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 10),
+            sc.Extension(5, display_length=1.4, display_angle=30)
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
     def test_strand__0_0_to_10_cross_1_to_5(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
@@ -1349,6 +1592,19 @@ class TestExportCadnanoV2(unittest.TestCase):
             design.to_cadnano_v2_json()
         self.assertTrue('Loopouts' in context.exception.args[0])
 
+    def test_extension(self) -> None:
+        """ We do not handle Extensions
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=Grid.square)
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.as_scaffold()
+        sb.extension_3p(5)
+
+        with self.assertRaises(ValueError) as context:
+            design.to_cadnano_v2_json()
+        self.assertTrue('Extensions' in context.exception.args[0])
+
 
 class TestDesignFromJson(unittest.TestCase):
     """
@@ -1761,9 +2017,9 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_deletions(4)
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=7)
+        self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=7)
 
-    def helix0_strand0_inlined_test(self, design, max_offset, major_ticks, start, end):
+    def assert_helix0_strand0_inlined(self, design, max_offset, major_ticks, start, end):
         self.assertEqual(1, len(design.helices))
         self.assertEqual(1, len(design.strands))
         helix = design.helices[0]
@@ -1790,7 +2046,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_deletions([2, 4])
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=22, major_ticks=[0, 6, 14, 22], start=0, end=6)
+        self.assert_helix0_strand0_inlined(design, max_offset=22, major_ticks=[0, 6, 14, 22], start=0, end=6)
 
     def test_inline_deletions_insertions__one_insertion(self) -> None:
         """
@@ -1807,7 +2063,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_insertions((4, 1))
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=9)
+        self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=9)
 
     def test_inline_deletions_insertions__two_insertions(self) -> None:
         """
@@ -1824,7 +2080,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_insertions([(2, 3), (4, 1)])
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
+        self.assert_helix0_strand0_inlined(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
 
     def test_inline_deletions_insertions__one_deletion_one_insertion(self) -> None:
         """
@@ -1841,7 +2097,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_deletions(4).with_insertions((2, 3))
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
+        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
 
     def test_inline_deletions_insertions__one_deletion_right_of_major_tick(self) -> None:
         """
@@ -1858,7 +2114,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_deletions(9)
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
+        self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_deletion_on_major_tick(self) -> None:
         """
@@ -1876,7 +2132,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_deletions(8)
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
+        self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 8, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_deletion_left_of_major_tick(self) -> None:
         """
@@ -1893,7 +2149,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_deletions(7)
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=11)
+        self.assert_helix0_strand0_inlined(design, max_offset=23, major_ticks=[0, 7, 15, 23], start=0, end=11)
 
     def test_inline_deletions_insertions__one_insertion_right_of_major_tick(self) -> None:
         """
@@ -1910,7 +2166,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_insertions((9, 1))
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
+        self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__one_insertion_on_major_tick(self) -> None:
         """
@@ -1927,7 +2183,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_insertions((8, 1))
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
+        self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 8, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__one_insertion_left_of_major_tick(self) -> None:
         """
@@ -1944,7 +2200,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(12).with_insertions((7, 1))
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=13)
+        self.assert_helix0_strand0_inlined(design, max_offset=25, major_ticks=[0, 9, 17, 25], start=0, end=13)
 
     def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains(self) -> None:
         """
@@ -1961,7 +2217,7 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(24).with_deletions(19).with_insertions([(5, 2), (11, 1)])
         design.inline_deletions_insertions()
-        self.helix0_strand0_inlined_test(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
+        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
 
     def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains_two_strands(self) -> None:
         """
@@ -3044,6 +3300,299 @@ class TestNickLigateAndCrossover(unittest.TestCase):
             sc.Domain(5, False, 48, 96),
         ])
         self.assertIn(scaf, self.origami.strands)
+
+    def test_ligate_on_middle_domain_should_error_3p_case(self) -> None:
+        """
+        Error to ligate here
+               |
+               v
+        [-----+[----->
+              |
+        <-----+
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).to(10).cross(1).to(0)
+        design.draw_strand(0, 10).to(20)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.ligate(0, 10, True)
+
+    def test_ligate_on_middle_domain_should_error_5p_case(self) -> None:
+        """
+        Error to ligate here
+               |
+               v
+        [----->+----->
+               |
+               +-----]
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).to(10)
+        design.draw_strand(1, 20).to(10).cross(0).to(20)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.ligate(0, 10, True)
+
+    def test_ligate_on_extension_side_should_error(self) -> None:
+        """
+                      ↗
+                     /
+                    /
+            [-------[----->
+                    ^
+                    |
+          error to ligate here
+        """
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).to(10).extension_3p(5)
+        design.draw_strand(0, 10).to(20)
+        with self.assertRaises(sc.IllegalDesignError):
+            design.ligate(0, 10, True)
+
+    def test_ligate_on_non_extension_side_ok(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+                   --------->[-------->
+
+        After:
+                □
+                 \
+                  \
+                   ------------------->
+        """
+        # Setup
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).extension_5p(5).to(10)
+        design.draw_strand(0, 10).to(20)
+
+        # Action
+        design.ligate(0, 10, True)
+
+        # Verify
+        self.assertEqual(1, len(design.strands))
+        actual_substrands = design.strands[0].domains
+        self.assertEqual(2, len(actual_substrands))
+        self.assertEqual(sc.Extension(5), actual_substrands[0])
+        self.assertEqual(sc.Domain(0, True, 0, 20), actual_substrands[1])
+
+    def test_add_full_crossover_extension_ok(self) -> None:
+        """
+        Before:
+                              ↗
+                             /
+                            /
+                           /
+        0 [------- --------
+
+        1 <------- -------]
+
+        After:
+
+                              ↗
+                             /
+                            /
+                           /
+        0 [------+ +-------
+                 | |
+        1 <------+ +------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).to(16).extension_3p(5)
+        design.draw_strand(1, 16).to(0)
+
+        # Action
+        design.add_full_crossover(0, 1, 8, True)
+
+        # Validation
+        expected_strand_0: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 8),
+            sc.Domain(1, False, 0, 8)
+        ])
+        expected_strand_1: sc.Strand = sc.Strand([
+            sc.Domain(1, False, 8, 16),
+            sc.Domain(0, True, 8, 16),
+            sc.Extension(5)
+        ])
+        self.assertEqual(2, len(design.strands))
+        self.assertIn(expected_strand_0, design.strands)
+        self.assertIn(expected_strand_1, design.strands)
+
+    def test_add_full_crossover_on_extension_error(self) -> None:
+        """
+        Before:
+                     ↗
+                    /
+                   /
+                  /
+        0 [------- [------>
+
+        1 <------] <------]
+
+        Error:
+                     ↗
+                    /
+                   /
+                  /
+        0 [------+ +------>
+                 | |
+        1 <------+ +------]
+        """
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).to(8).extension_3p(5)
+        design.draw_strand(0, 8).to(16)
+        design.draw_strand(1, 8).to(0)
+        design.draw_strand(1, 16).to(8)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_full_crossover(0, 1, 8, True)
+
+    def test_add_half_crossover_on_extension_ok(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+        0          ------->
+
+        1          <------]
+
+        After:
+                □
+                 \
+                  \
+        0          -------+
+                          |
+        1          <------+
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).extension_5p(5).to(8)
+        design.draw_strand(1, 8).to(0)
+
+        # Action
+        design.add_half_crossover(0, 1, 7, True)
+
+        # Validation
+        expected_strand: sc.Strand = sc.Strand([
+            sc.Extension(5),
+            sc.Domain(0, True, 0, 8),
+            sc.Domain(1, False, 0, 8)
+        ])
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual(expected_strand, design.strands[0])
+
+    def test_add_half_crossover_on_extension_error(self) -> None:
+        """
+        Before:
+                □
+                 \
+                  \
+        0          ------->
+
+        1          <------]
+
+        Error:
+                □
+                 \
+                  \
+        0          +------>
+                   |
+        1          +------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 0).extension_5p(5).to(8)
+        design.draw_strand(1, 8).to(0)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_half_crossover(0, 1, 0, True)
+
+    def test_add_half_crossover_on_existing_crossover_should_error_5p_case(self) -> None:
+        """
+        0  +------]
+           |
+        1  +------>
+           ^
+            error to cross here
+           v
+        2  <------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(0, 10).to(0).cross(1).to(10)
+        design.draw_strand(2, 10).to(0)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_half_crossover(1, 2, 0, True)
+
+    def test_add_half_crossover_on_existing_crossover_should_error_3p_case(self) -> None:
+        """
+        0  <------+
+                  |
+        1  [------+
+                  ^
+            error to cross here
+                  v
+        2  <------]
+        """
+        # Setup
+        design: sc.Design = sc.Design(
+            helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
+        )
+        design.draw_strand(1,0).to(10).cross(0).to(0)
+        design.draw_strand(2,10).to(0)
+
+        with self.assertRaises(sc.IllegalDesignError):
+            design.add_half_crossover(1, 2, 9, True)
+
+    def test_nick_on_extension(self) -> None:
+        """
+        Before:
+                     ↗
+                    /
+                   /
+                  /
+        0 [-------
+
+        After:
+                     ↗
+                    /
+                   /
+                  /
+        0 [-->[---
+        """
+        # Setup
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).to(8).extension_3p(5)
+
+        # Nick
+        design.add_nick(0, 4, True)
+
+        # Verification
+        expected_strand1: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 0, 4),
+        ])
+        expected_strand2: sc.Strand = sc.Strand([
+            sc.Domain(0, True, 4, 8),
+            sc.Extension(5)
+        ])
+        self.assertEquals(2, len(design.strands))
+        self.assertIn(expected_strand1, design.strands)
+        self.assertIn(expected_strand2, design.strands)
 
 
 class TestAutocalculatedData(unittest.TestCase):
@@ -4413,6 +4962,44 @@ class TestJSON(unittest.TestCase):
         design = sc.Design(helices=[helix], strands=[strand_f, strand_r], grid=sc.square)
         design.to_json()
         # should be no error getting here
+
+    def test_from_json_extension_design(self) -> None:
+        json_str = """
+        {
+          "version": "0.17.3",
+          "grid": "square",
+          "helices": [
+            {"grid_position": [0, 0], "max_offset": 100}
+          ],
+          "strands": [
+            {
+              "domains": [
+                  {"helix": 0, "forward": true, "start": 0, "end": 10},
+                  {"extension": 5, "display_length": 1.4, "display_angle": 50.0}
+                ],
+              "is_scaffold": true
+            }
+          ]
+        }
+        """
+        design = sc.Design.from_scadnano_json_str(json_str)
+        self.assertEqual(
+            sc.Extension(5, display_length=1.4, display_angle=50.0),
+            design.strands[0].domains[1])
+
+    def test_to_json_extension_design__extension(self) -> None:
+        # Setup
+        design = sc.Design(helices=[sc.Helix(max_offset=100)], strands=[], grid=sc.square)
+        design.draw_strand(0, 0).to(10).extension_3p(5)
+
+        # Action
+        result = design.to_json()
+
+        # Verify
+        document = json.loads(result)
+        self.assertEqual(2, len(document["strands"][0]["domains"]))
+        self.assertIn("extension", document["strands"][0]["domains"][1])
+        self.assertEqual(5, document["strands"][0]["domains"][1]["extension"])
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
@@ -6890,3 +7477,50 @@ class TestPlateMaps(unittest.TestCase):
 | H   |          |          |          |     |     |     |          |     |     |      |      |      |
 """.strip()
         self.assertEqual(expected_md, actual_md)
+
+
+class TestExtension(unittest.TestCase):
+    def test_to_json_serializable__extension_key_contains_num_bases(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["extension"], 5)
+
+    def test_to_json_serializable__no_display_length_key_when_default_display_length(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("display_length", result)
+
+    def test_to_json_serializable__no_display_angle_key_when_default_display_angle(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("display_angle", result)
+
+    def test_to_json_serializable__no_name_key_when_default_name(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("name", result)
+
+    def test_to_json_serializable__no_label_key_when_default_label(self) -> None:
+        ext = sc.Extension(5)
+        result = ext.to_json_serializable()
+        self.assertNotIn("label", result)
+
+    def test_to_json_serializable__display_length_key_contains_non_default_display_length(self) -> None:
+        ext = sc.Extension(5, display_length=1.9)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["display_length"], 1.9)
+
+    def test_to_json_serializable__display_angle_key_contains_non_default_display_angle(self) -> None:
+        ext = sc.Extension(5, display_angle=39.9)
+        result = ext.to_json_serializable()
+        self.assertEqual(result["display_angle"], 39.9)
+
+    def test_to_json_serializable__name_key_contains_non_default_name(self) -> None:
+        ext = sc.Extension(5, name="A")
+        result = ext.to_json_serializable()
+        self.assertEqual(result["name"], "A")
+
+    def test_to_json_serializable__label_key_contains_non_default_name(self) -> None:
+        ext = sc.Extension(5, label="ext1")
+        result = ext.to_json_serializable()
+        self.assertEqual(result["label"], "ext1")
