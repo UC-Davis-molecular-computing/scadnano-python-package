@@ -1929,7 +1929,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     It is illegal for two consecutive :any:`Domain`'s to both
     be :any:`Loopout`'s,
     or for a :any:`Loopout` to occur on either end of the :any:`Strand`
-    (i.e., each :any:`Strand` must begin and end with a :any:`Domain`).
+    (i.e., each :any:`Strand` must begin and end with a :any:`Domain` or :any:`Extension`).
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -2052,6 +2052,31 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
 
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
+    """Represents a single-stranded extension on either the 3' or 5'
+    end of :any:`Strand`.
+
+    One could think of a :any:`Extension` as a type of :any:`Domain`, but none of the fields of
+    :any:`Domain` make sense for :any:`Extension`, so they are not related to each other in the type
+    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either the 3' or 5' end of the :any:`Strand`. It is illegal for a :any:`Extension` to be placed
+    in the middle of the :any:`Strand` or for an :any:`Extension` to be adjacent to a :any:`Loopout`.
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        domain = sc.Domain(helix=0, forward=True, start=0, end=10)
+        toehold = sc.Extension(num_bases=5)
+        strand = sc.Strand([domain, toehold])
+
+    It can also be created with chained method calls
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=10)])
+        design.draw_strand(0,0).move(10).extension_3p(5)
+    """
     num_bases: int
     display_length: float = 1.0
     display_angle: float = 45.0
