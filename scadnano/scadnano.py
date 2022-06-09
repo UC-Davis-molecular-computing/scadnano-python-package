@@ -2055,9 +2055,9 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     """Represents a single-stranded extension on either the 3' or 5'
     end of :any:`Strand`.
 
-    One could think of a :any:`Extension` as a type of :any:`Domain`, but none of the fields of
+    One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
     :any:`Domain` make sense for :any:`Extension`, so they are not related to each other in the type
-    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either the 3' or 5' end of the :any:`Strand`. It is illegal for a :any:`Extension` to be placed
+    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either the 3' or 5' end of the :any:`Strand`. It is illegal for an :any:`Extension` to be placed
     in the middle of the :any:`Strand` or for an :any:`Extension` to be adjacent to a :any:`Loopout`.
 
     .. code-block:: Python
@@ -2077,12 +2077,42 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
         design.draw_strand(0,0).move(10).extension_3p(5)
     """
+
     num_bases: int
+    """Length (in DNA bases) of this :any:`Loopout`."""
+
     display_length: float = 1.0
+    """Length (in nm) to display in the scadnano web app."""
+
     display_angle: float = 45.0
+    """
+    Angle (in degrees) to display in the scadnano web app.
+
+    This angle is relative to the "rotation frame" of the adjacent domain.
+    0 degrees means parallel to the adjacent domain.
+    90 degrees means pointing away from the helix.
+    180 degrees means means antiparallel to the adjacent domain (overlapping).
+    """
+
     label: Optional[DomainLabel] = None
+    """
+    Generic "label" object to associate to this :any:`Extension`.
+
+    Useful for associating extra information with the :any:`Extension` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int)
+    that is naturally JSON serializable. (Calling
+    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
+    on the object should succeed without having to specify a custom encoder.)
+    """
+
     name: Optional[str] = None
+    """
+    Optional name to give this :any:`Extension`.
+    """
+
     dna_sequence: Optional[str] = None
+    """DNA sequence of this :any:`Extension`, or ``None`` if no DNA sequence has been assigned."""
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -2339,7 +2369,13 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
     def extension_3p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
-        Add extension to end of strand. No domains can be added after this function is called.
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 3' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
         """
         self._verify_extension_3p_is_valid()
         assert self._strand is not None
@@ -2367,6 +2403,15 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self._is_last_domain_an_instance_of_class(Loopout)
 
     def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 5' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
+        """
         self._verify_extension_5p_is_valid()
         ext: Extension = Extension(num_bases=num_bases,
                                    display_length=display_length,
