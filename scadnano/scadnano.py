@@ -2296,7 +2296,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
     This is an intermediate object created when using chained method building by calling
-    :py:meth:`Design.strand`, for example
+    :py:meth:`Design.draw_strand`, for example
 
     .. code-block:: Python
 
