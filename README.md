@@ -254,7 +254,7 @@ Documentation is available in the [API docs](https://scadnano-python-package.rea
 
 ## StrandBuilder object for iteratively building up strands with many domains
 
-The method `Design.draw_strand`, as well as all those that follow it in a chained method call (e.g., `move`, `cross`, etc.) all return an instance of the class `StrandBuilder`.
+The method `Design.draw_strand`, as well as all those that follow it in a chained method call (e.g., `move`, `cross`, etc.) all return an instance of the class [`StrandBuilder`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.StrandBuilder).
 Above, that `StrandBuilder` instance is anonymous, i.e., never assigned to a variable. 
 Some long strands may be easier to specify with loops, for example an M13 scaffold strand for an origami. 
 If so, then to use the above methods, assign the `StrandBuilder` object to a variable, and call the relevant methods on that object to build up the strand in each iteration of the loop. 
