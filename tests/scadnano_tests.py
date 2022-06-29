@@ -2835,6 +2835,60 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         msg = str(ctx.exception)
         self.assertIn('already a crossover', msg)
 
+    def test_add_half_crossover__horizontal_crossovers_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------+^+------>
+    1   <------+^+------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).move(8)
+        design.draw_strand(1, 16).move(-8).move(-8)
+
+        self.assertEqual(2, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_half_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn('is expected to be on the', msg) # both 3' and 5' are problems, so just make sure
+        self.assertIn('end of the strand', msg) # one of them is mentioned here
+
+    def test_add_half_crossover__top_horizontal_crossover_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------+^+------>
+    1   <------] <------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).move(8)
+        design.draw_strand(1, 16).move(-8)
+        design.draw_strand(1, 8).move(-8)
+
+        self.assertEqual(3, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_half_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn("is expected to be on the 5' end of the strand", msg)
+
+    def test_add_half_crossover__bottom_horizontal_crossover_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------> [------>
+    1   <------+^+------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8)
+        design.draw_strand(0, 8).move(8)
+        design.draw_strand(1, 16).move(-8).move(-8)
+
+        self.assertEqual(3, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_half_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn("is expected to be on the 3' end of the strand", msg)
+
     def test_add_half_crossover__small_design_H0_reverse_8(self) -> None:
         """
         0        8        16

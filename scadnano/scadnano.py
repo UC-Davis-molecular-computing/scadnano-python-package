@@ -7391,12 +7391,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         if strand_first.domains[-1] is not domain_first:
             raise IllegalDesignError(
-                f"Domain to add crossover to: {domain_first} is expected to be on the 3'"
+                f"Domain to add crossover to: {domain_first} is expected to be on the 3' "
                 f"end of the strand, but this is not the case.")
 
         if strand_last.domains[0] is not domain_last:
             raise IllegalDesignError(
-                f"Domain to add crossover to: {domain_last} is expected to be on the 5'"
+                f"Domain to add crossover to: {domain_last} is expected to be on the 5' "
                 f"end of the strand, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
