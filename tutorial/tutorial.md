@@ -245,6 +245,7 @@ We drew the scaffold precursor on helix 23 as two strands, each half the length 
 But we could alternately think of it as one strand of length 288 that has had a "nick" created in the middle, so we could have created it similarly to the other helices and then called the method [Design.add_nick](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.add_nick). This is how we will create the staples later, which have many more nicks on each helix than the scaffold.
 
 The chained method calls in this case don't show how to create a strand with crossovers; see the [example on the README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#abbreviated-syntax-with-chained-methods) for a more representative example of creating a complete strand spanning several helices with chained method calls.
+Note also that one may wish to assign the `StrandBuilder` object returned by `Design.draw_strand` to a variable if a strand with many domains is incrementally built up over many iterations of a loop; see the [example on the README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#strandbuilder-object-for-iteratively-building-up-strands-with-many-domains) of how to specify a long scaffold strand in this way.
 
 Execute the script. The file `24_helix_rectangle.sc` is getting large now, so we won't show the whole thing, but the `strands` field should be non-empty now and start something like this:
 
