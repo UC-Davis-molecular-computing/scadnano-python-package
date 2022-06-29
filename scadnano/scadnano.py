@@ -7473,8 +7473,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             #   --<---+^+---<--  not domain_left.is_3p_domain() or not domain_right.is_3p_domain()
             if (not domain_left.is_5p_domain() or not domain_right.is_3p_domain() or
                 not domain_left.is_3p_domain() or not domain_right.is_5p_domain()):
-                raise IllegalDesignError('cannot add crossover at this position '
-                                         'because there is already a crossover here')
+                raise IllegalDesignError('cannot add crossover at address '
+                                         f'(helix={helix}, offset={offset}, forward={forward}) '
+                                         'because there is already a crossover there')
 
     def inline_deletions_insertions(self) -> None:
         """
