@@ -6,12 +6,11 @@ import json
 import math
 from typing import Iterable, Union, Dict, Any
 
-import xlrd
+import xlrd  # type: ignore
 
 import scadnano as sc
 import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
-from scadnano.scadnano import Grid, Helix
 
 
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int,
@@ -270,11 +269,11 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension_3p(5)
-        sb.with_sequence("A"*10 + "G"*5)
+        sb.with_sequence("A" * 10 + "G" * 5)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Domain(0, True, 0, 10, dna_sequence="A"*10),
-            sc.Extension(5, dna_sequence="G"*5),
+            sc.Domain(0, True, 0, 10, dna_sequence="A" * 10),
+            sc.Extension(5, dna_sequence="G" * 5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -284,11 +283,11 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb = design.draw_strand(0, 0)
         sb.extension_5p(5)
         sb.to(10)
-        sb.with_sequence("C"*5 + "T"*10)
+        sb.with_sequence("C" * 5 + "T" * 10)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Extension(5, dna_sequence="C"*5),
-            sc.Domain(0, True, 0, 10, dna_sequence="T"*10),
+            sc.Extension(5, dna_sequence="C" * 5),
+            sc.Domain(0, True, 0, 10, dna_sequence="T" * 10),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -298,11 +297,11 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.extension_3p(5)
-        sb.with_domain_sequence("G"*5)
+        sb.with_domain_sequence("G" * 5)
 
         expected_strand: sc.Strand = sc.Strand([
-            sc.Domain(0, True, 0, 10, dna_sequence="?"*10),
-            sc.Extension(5, dna_sequence="G"*5),
+            sc.Domain(0, True, 0, 10, dna_sequence="?" * 10),
+            sc.Extension(5, dna_sequence="G" * 5),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -952,7 +951,7 @@ class TestImportCadnanoV2(unittest.TestCase):
         design = sc.Design.from_cadnano_v2(directory=self.input_path,
                                            filename=file_name + ".json")
         self.assertEqual(2, len(design.helices))
-        self.assertEqual(design.grid, Grid.square)
+        self.assertEqual(design.grid, sc.Grid.square)
         self.assertEqual(2, len(design.helices))
         output_helix_0 = design.helices[0]
         output_helix_1 = design.helices[1]
@@ -1077,7 +1076,8 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         for strand in d.strands:
             d.assign_dna(strand, 'A' * 32, assign_complement=False)
 
-    def _get_names_idt(self, design: sc.Design, key: sc.KeyFunction[sc.Strand]) -> str:
+    @staticmethod
+    def _get_names_idt(design: sc.Design, key: sc.KeyFunction[sc.Strand]) -> str:
         # call design.to_idt_bulk_input_format with given key functions,
         # get IDT names of strands exported, and return them joined into a single string
         idt_str = design.to_idt_bulk_input_format(key=key)
@@ -1399,7 +1399,7 @@ class TestExportCadnanoV2(unittest.TestCase):
 
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
         # To help with debugging, uncomment these lines to write out the
-        self.assertEqual(output_design.grid, Grid.square)
+        self.assertEqual(output_design.grid, sc.Grid.square)
         self.assertEqual(2, len(output_design.helices))
         output_helix_0 = output_design.helices[0]
         output_helix_1 = output_design.helices[1]
@@ -1595,7 +1595,7 @@ class TestExportCadnanoV2(unittest.TestCase):
     def test_extension(self) -> None:
         """ We do not handle Extensions
         """
-        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=Grid.square)
+        design: sc.Design = sc.Design(helices=[sc.Helix(max_offset=100)], grid=sc.Grid.square)
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.as_scaffold()
@@ -2080,7 +2080,8 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_insertions([(2, 3), (4, 1)])
         design.inline_deletions_insertions()
-        self.assert_helix0_strand0_inlined(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0, end=12)
+        self.assert_helix0_strand0_inlined(design, max_offset=28, major_ticks=[0, 12, 20, 28], start=0,
+                                           end=12)
 
     def test_inline_deletions_insertions__one_deletion_one_insertion(self) -> None:
         """
@@ -2097,7 +2098,8 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(8).with_deletions(4).with_insertions((2, 3))
         design.inline_deletions_insertions()
-        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0, end=10)
+        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 18, 26], start=0,
+                                           end=10)
 
     def test_inline_deletions_insertions__one_deletion_right_of_major_tick(self) -> None:
         """
@@ -2217,7 +2219,8 @@ class TestInlineInsDel(unittest.TestCase):
         design = self.design
         design.draw_strand(0, 0).move(24).with_deletions(19).with_insertions([(5, 2), (11, 1)])
         design.inline_deletions_insertions()
-        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0, end=26)
+        self.assert_helix0_strand0_inlined(design, max_offset=26, major_ticks=[0, 10, 19, 26], start=0,
+                                           end=26)
 
     def test_inline_deletions_insertions__deletions_insertions_in_multiple_domains_two_strands(self) -> None:
         """
@@ -2778,6 +2781,59 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertEqual(remove_whitespace('AAACCCGG TCGTACGT'), strand.dna_sequence)
         strand = strand_matching(design.strands, 1, False, 0, 16)
         self.assertEqual(remove_whitespace('GGCCCAAA CCGGGTTT'), strand.dna_sequence)
+
+    def test_add_full_crossover__horizontal_crossovers_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------+^+------>
+    1   <------+^+------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).move(8)
+        design.draw_strand(1, 16).move(-8).move(-8)
+
+        self.assertEqual(2, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn('already a crossover', msg)
+
+    def test_add_full_crossover__top_horizontal_crossover_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------+^+------>
+    1   <------] <------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).move(8)
+        design.draw_strand(1, 16).move(-8)
+        design.draw_strand(1, 8).move(-8)
+
+        self.assertEqual(3, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn('already a crossover', msg)
+
+    def test_add_full_crossover__bottom_horizontal_crossover_already_there(self) -> None:
+        """
+        0       8        16
+    0   [------> [------>
+    1   <------+^+------]
+        """
+        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design.draw_strand(0, 0).move(8)
+        design.draw_strand(0, 8).move(8)
+        design.draw_strand(1, 16).move(-8).move(-8)
+
+        self.assertEqual(3, len(design.strands))
+
+        with self.assertRaises(sc.IllegalDesignError) as ctx:
+            design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+        msg = str(ctx.exception)
+        self.assertIn('already a crossover', msg)
 
     def test_add_half_crossover__small_design_H0_reverse_8(self) -> None:
         """
@@ -3553,8 +3609,8 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         design: sc.Design = sc.Design(
             helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
         )
-        design.draw_strand(1,0).to(10).cross(0).to(0)
-        design.draw_strand(2,10).to(0)
+        design.draw_strand(1, 0).to(10).cross(0).to(0)
+        design.draw_strand(2, 10).to(0)
 
         with self.assertRaises(sc.IllegalDesignError):
             design.add_half_crossover(1, 2, 9, True)
@@ -5028,9 +5084,9 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
 
     def test_domains_not_none_in_Strand_constructor(self) -> None:
         with self.assertRaises(sc.IllegalDesignError):
-            sc.Strand(domains=None)
+            sc.Strand(domains=None)  # type: ignore
         with self.assertRaises(sc.IllegalDesignError):
-            sc.Strand(domains=[None])
+            sc.Strand(domains=[None])  # type: ignore
 
     def test_strands_not_specified_in_Design_constructor(self) -> None:
         design = sc.Design(helices=[])
@@ -5048,7 +5104,6 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         self.assertEqual(0, len(design.strands))
 
     def test_consecutive_domains_loopout(self) -> None:
-        helices = [sc.Helix(max_offset=10)]
         ss1 = sc.Domain(0, True, 0, 3)
         ss2 = sc.Loopout(4)
         ss3 = sc.Loopout(4)
@@ -5059,11 +5114,11 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         # now the Strand constructor checks, so that means we can't set up a bad Strand for the Design check
         # strand = sc.Strand([ss1, ss2])
         # strand.domains.append(ss3)
+        # helices = [sc.Helix(max_offset=10)]
         # with self.assertRaises(sc.IllegalDesignError):
         #     sc.Design(helices=helices, strands=[strand], grid=sc.square)
 
     def test_singleton_loopout(self) -> None:
-        helices = [sc.Helix(max_offset=10)]
         loopout = sc.Loopout(4)
         with self.assertRaises(sc.StrandError):
             sc.Strand([loopout])
@@ -5072,6 +5127,7 @@ class TestIllegalStructuresPrevented(unittest.TestCase):
         # now the Strand constructor checks, so that means we can't set up a bad Strand for the Design check
         # strand = sc.Strand([])
         # strand.domains.append(loopout)
+        # helices = [sc.Helix(max_offset=10)]
         # with self.assertRaises(sc.StrandError):
         #     sc.Design(helices=helices, strands=[strand], grid=sc.square)
 

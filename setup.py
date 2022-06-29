@@ -56,5 +56,6 @@ setup(name='scadnano',
         'xlwt',
         'dataclasses>=0.6; python_version < "3.7"',
         'tabulate',
-      ]
+      ],
+      tests_require=['xlrd'],
 )

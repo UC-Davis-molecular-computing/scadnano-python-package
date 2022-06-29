@@ -1917,6 +1917,34 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
+    def is_extreme_domain(self, five_prime: bool) -> bool:
+        """
+        :param five_prime:
+            whether to ask about 5' end or 3' end
+        :return:
+            Whether this :any:`Domain` is the 5' or 3' most :any:`Domain` on its :any:`Strand`.
+            (which depends on parameter `five_prime`
+        """
+        if self._parent_strand is None:
+            end = "5'" if five_prime else "3'"
+            raise ValueError(f'cannot tell if this Domain is {end} since it is not yet assigned to a Strand')
+        idx = 0 if five_prime else -1
+        return self == self._parent_strand.domains[idx]
+
+    def is_5p_domain(self) -> bool:
+        """
+        :return:
+            Whether this :any:`Domain` is the 5' most :any:`Domain` on its :any:`Strand`.
+        """
+        return self.is_extreme_domain(True)
+
+    def is_3p_domain(self) -> bool:
+        """
+        :return:
+            Whether this :any:`Domain` is the 3' most :any:`Domain` on its :any:`Strand`.
+        """
+        return self.is_extreme_domain(False)
+
 
 @dataclass
 class Loopout(_JSONSerializable, Generic[DomainLabel]):
@@ -7363,12 +7391,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         if strand_first.domains[-1] is not domain_first:
             raise IllegalDesignError(
-                f"Domain to add crossover to: {domain_first.name} is expected to be on the 3'"
+                f"Domain to add crossover to: {domain_first} is expected to be on the 3'"
                 f"end of the strand, but this is not the case.")
 
         if strand_last.domains[0] is not domain_last:
             raise IllegalDesignError(
-                f"Domain to add crossover to: {domain_last.name} is expected to be on the 5'"
+                f"Domain to add crossover to: {domain_last} is expected to be on the 5'"
                 f"end of the strand, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
@@ -7437,7 +7465,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if domain_left == domain_right:
             self.add_nick(helix, offset, forward)
         else:
+            # there's already a nick here, unless either has a crossover
             assert domain_left.end == domain_right.start
+
+            # disallowed situations:
+            #   -->---+^+--->--  not domain_left.is_5p_domain() or not domain_right.is_3p_domain()
+            #   --<---+^+---<--  not domain_left.is_3p_domain() or not domain_right.is_3p_domain()
+            if (not domain_left.is_5p_domain() or not domain_right.is_3p_domain() or
+                not domain_left.is_3p_domain() or not domain_right.is_5p_domain()):
+                raise IllegalDesignError('cannot add crossover at this position '
+                                         'because there is already a crossover here')
 
     def inline_deletions_insertions(self) -> None:
         """
