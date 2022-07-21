@@ -1044,7 +1044,7 @@ class ModificationInternal(Modification):
 ##########################################################################
 
 
-@dataclass
+@dataclass(frozen=True)
 class Position3D(_JSONSerializable):
     """
     Position (x,y,z) in 3D space.
