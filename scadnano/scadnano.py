@@ -6705,7 +6705,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = 'idt'
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
+    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: Optional[str] = None,
                                    key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False,
                                    only_strands_with_idt: bool = False,
