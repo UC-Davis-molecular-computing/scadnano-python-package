@@ -2078,6 +2078,10 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return self_seq_idx_start
 
 
+default_display_angle = 45.0
+
+default_display_length = 1.0
+
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
     """Represents a single-stranded extension on either the 3' or 5'
@@ -2085,7 +2089,8 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
 
     One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
     :any:`Domain` make sense for :any:`Extension`, so they are not related to each other in the type
-    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either the 3' or 5' end of the :any:`Strand`. It is illegal for an :any:`Extension` to be placed
+    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either
+    the 3' or 5' end of the :any:`Strand`. It is illegal for an :any:`Extension` to be placed
     in the middle of the :any:`Strand` or for an :any:`Extension` to be adjacent to a :any:`Loopout`.
 
     .. code-block:: Python
@@ -2109,10 +2114,10 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     num_bases: int
     """Length (in DNA bases) of this :any:`Loopout`."""
 
-    display_length: float = 1.0
+    display_length: float = default_display_length
     """Length (in nm) to display in the scadnano web app."""
 
-    display_angle: float = 45.0
+    display_angle: float = default_display_angle
     """
     Angle (in degrees) to display in the scadnano web app.
 
@@ -2451,7 +2456,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def _verify_extension_5p_is_valid(self):
         if self._strand is not None:
             raise IllegalDesignError(
-                'Cannot add a 5\' extension when there are already domains. Did you mean to create a 3\' extension?')
+                'Cannot add a 5\' extension when there are already domains. '
+                'Did you mean to create a 3\' extension?')
 
     # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2541,14 +2547,16 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
-        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call. This is an
-        "absolute move", whereas :py:meth:`StrandBuilder.move` is a "relative move".
+        :meth:`StrandBuilder.update_to` are equivalent to only making the final call.
 
-        If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
-        then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
+        Generally there's no point in calling :meth:`StrandBuilder.update_to` in one line of code.
+        It is intended to help when a large, complex strand is being constructed in a loop.
+
+        If :meth:`StrandBuilder.cross` or :meth:`StrandBuilder.loopout` was just called,
+        then :meth:`StrandBuilder.to` and :meth:`StrandBuilder.update_to` have the same effect.
 
         :param offset: new offset to extend to. If less than offset of the last call to
-            :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
+            :meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
@@ -2704,15 +2712,21 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         via a call to
         :py:meth:`StrandBuilder.to`,
         :py:meth:`StrandBuilder.update_to`,
+        :py:meth:`StrandBuilder.move`,
+        :py:meth:`StrandBuilder.extension_5p`,
+        :py:meth:`StrandBuilder.extension_3p`,
         or
         :py:meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-            design.draw_strand(0, 5).to(8).with_domain_sequence('AAA')\\
-                .cross(1).to(5).with_domain_sequence('TTT')\\
+            design.draw_strand(0, 5)\\
+                .extension_5p(2).with_domain_sequence('TT')\\
+                .to(8).with_domain_sequence('AAA')\\
+                .cross(1).move(-3).with_domain_sequence('TTT')\\
                 .loopout(2, 4).with_domain_sequence('CCCC')\\
-                .to(10).with_domain_sequence('GGGGG')
+                .to(10).with_domain_sequence('GGGGG')\\
+                .extension_3p(4).with_domain_sequence('AAAA')
 
         :param sequence: the DNA sequence to assign to the :any:`Domain`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
