@@ -793,7 +793,7 @@ domain_label_key = 'label'
 loopout_key = 'loopout'
 
 # Extension keys
-extension_key = 'extension'
+extension_key = 'extension_num_bases'
 display_length_key = 'display_length'
 display_angle_key = 'display_angle'
 
@@ -2082,6 +2082,7 @@ default_display_angle = 45.0
 
 default_display_length = 1.0
 
+
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
     """Represents a single-stranded extension on either the 3' or 5'
@@ -2150,13 +2151,14 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) \
+            -> Union[Dict[str, Any], NoIndent]:
         json_map: Dict[str, Any] = {extension_key: self.num_bases}
         self._add_display_length_if_not_default(json_map)
         self._add_display_angle_if_not_default(json_map)
         self._add_name_if_not_default(json_map)
         self._add_label_if_not_default(json_map)
-        return json_map
+        return NoIndent(json_map) if suppress_indent else json_map
 
     def dna_length(self) -> int:
         """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
@@ -2173,12 +2175,13 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     @staticmethod
     def from_json(json_map: Dict[str, Any]) -> 'Extension':
         def float_transformer(x): return float(x)
+
         num_bases_str = mandatory_field(Extension, json_map, extension_key)
         num_bases = int(num_bases_str)
         display_length = optional_field(_default_extension.display_length,
-                                            json_map, display_length_key, transformer=float_transformer)
+                                        json_map, display_length_key, transformer=float_transformer)
         display_angle = optional_field(_default_extension.display_angle,
-                                           json_map, display_angle_key, transformer=float_transformer)
+                                       json_map, display_angle_key, transformer=float_transformer)
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
         return Extension(
@@ -2357,7 +2360,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
-        if self._is_last_domain_an_extension():
+        if self._most_recently_added_substrand_is_extension():
             raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
             raise IllegalDesignError('move and offset cannot both be specified:\n'
@@ -2371,11 +2374,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             self.current_offset += move
         return self
 
-    def _is_last_domain_an_instance_of_class(self, cls: Type) -> bool:
+    def _most_recently_added_substrand_is_instance_of_class(self, cls: Type) -> bool:
         return isinstance(self._strand.domains[-1], cls)
 
-    def _is_last_domain_an_extension(self):
-        return self._is_last_domain_an_instance_of_class(Extension)
+    def _most_recently_added_substrand_is_extension(self):
+        return self._most_recently_added_substrand_is_instance_of_class(Extension)
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
@@ -2400,7 +2403,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def extension_3p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_3p(self, num_bases: int, display_length: float = 1.0,
+                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 3' :any:`Extension`.
@@ -2422,9 +2426,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         if self._strand is None:
             raise IllegalDesignError(
                 'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
-        if self._is_last_domain_a_loopout():
+        if self._most_recently_added_substrand_is_loopout():
             raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
-        if self._is_last_domain_an_extension_3p():
+        if self._most_recently_added_substrand_is_extension_3p():
             raise IllegalDesignError('Cannot add a 3\' extension after another 3\' extension.')
         self._verify_strand_is_not_circular()
 
@@ -2432,10 +2436,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         if self._strand.circular:
             raise IllegalDesignError('Cannot add an extension to a circular strand.')
 
-    def _is_last_domain_a_loopout(self):
-        return self._is_last_domain_an_instance_of_class(Loopout)
+    def _most_recently_added_substrand_is_loopout(self):
+        return self._most_recently_added_substrand_is_instance_of_class(Loopout)
 
-    def extension_5p(self, num_bases: int, display_length: float = 1.0, display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_5p(self, num_bases: int, display_length: float = 1.0,
+                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 5' :any:`Extension`.
@@ -2511,7 +2516,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      '(strictly increasing or strictly decreasing) '
                                      'when calling to() twice in a row')
 
-        if self._is_last_domain_an_extension_3p():
+        if self._most_recently_added_substrand_is_extension_3p():
             raise IllegalDesignError('cannot make a new domain once 3\' extension has been added')
 
         if offset > self.current_offset:
@@ -2537,10 +2542,10 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
-    def _is_last_domain_an_extension_3p(self) -> bool:
+    def _most_recently_added_substrand_is_extension_3p(self) -> bool:
         if self._strand is None:
             return False
-        return len(self._strand.domains) > 1 and self._is_last_domain_an_extension()
+        return len(self._strand.domains) > 1 and self._most_recently_added_substrand_is_extension()
 
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2560,7 +2565,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
-        if self._is_last_domain_an_extension_3p():
+        if self._most_recently_added_substrand_is_extension_3p():
             raise IllegalDesignError('Cannot call update_to after creating extension_3p.')
         if not self.last_domain:
             return self.to(offset)
@@ -3127,21 +3132,27 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
-        domain_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
-        if len(domain_jsons) == 0:
+        substrand_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
+        if len(substrand_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        domains: List[Union[Domain, Loopout, Extension]] = []
-        for domain_json in domain_jsons:
-            if loopout_key in domain_json:
-                domains.append(Loopout.from_json(domain_json))
-            elif extension_key in domain_json:
-                domains.append(Extension.from_json(domain_json))
+        substrands: List[Union[Domain, Loopout, Extension]] = []
+        for substrand_json in substrand_jsons:
+            if loopout_key in substrand_json:
+                substrands.append(Loopout.from_json(substrand_json))
+            elif extension_key in substrand_json:
+                substrands.append(Extension.from_json(substrand_json))
+            elif helix_idx_key in substrand_json:
+                substrands.append(Domain.from_json(substrand_json))
             else:
-                domains.append(Domain.from_json(domain_json))
-        if isinstance(domains[0], Loopout):
+                raise IllegalDesignError('unrecognized substrand; does not have any of these keys:\n'
+                                         f'{extension_key} for an Extension, '
+                                         f'{loopout_key} for a Loopout, or'
+                                         f'{helix_idx_key} for a Domain.\n'
+                                         f'JSON: {substrand_json}')
+        if isinstance(substrands[0], Loopout):
             raise IllegalDesignError('Loopout at beginning of Strand not supported')
-        if isinstance(domains[-1], Loopout):
+        if isinstance(substrands[-1], Loopout):
             raise IllegalDesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
@@ -3173,7 +3184,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             name = idt_dict[idt_name_key]
 
         return Strand(
-            domains=domains,
+            domains=substrands,
             dna_sequence=dna_sequence,
             circular=circular,
             color=color,
@@ -7486,7 +7497,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             #   -->---+^+--->--  not domain_left.is_5p_domain() or not domain_right.is_3p_domain()
             #   --<---+^+---<--  not domain_left.is_3p_domain() or not domain_right.is_3p_domain()
             if (not domain_left.is_5p_domain() or not domain_right.is_3p_domain() or
-                not domain_left.is_3p_domain() or not domain_right.is_5p_domain()):
+                    not domain_left.is_3p_domain() or not domain_right.is_5p_domain()):
                 raise IllegalDesignError('cannot add crossover at address '
                                          f'(helix={helix}, offset={offset}, forward={forward}) '
                                          'because there is already a crossover there')
@@ -8114,8 +8125,10 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 # these will be updated later, for now we just need the base
                 for i in range(domain.length):
                     base = seq[i]
-                    nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
-                                           base)
+                    center = _OxdnaVector()
+                    normal = _OxdnaVector(0, -1, 0)
+                    forward = _OxdnaVector(0, 0, 1)
+                    nuc = _OxdnaNucleotide(center, normal, forward, base)
                     dom_strand.nucleotides.append(nuc)
                 dom_strands.append((dom_strand, True))
 
