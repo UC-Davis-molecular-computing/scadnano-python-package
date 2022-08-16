@@ -8024,6 +8024,14 @@ def _oxdna_random_sequence(length: int) -> str:
     return seq
 
 
+def get_normal_vector_to(vec: _OxdnaVector) -> _OxdnaVector:
+    unit = _OxdnaVector(1, 0, 0)
+    normalized_vec = vec.normalize()
+    if abs(1 - normalized_vec.dot(unit)) < 0.001:
+        unit = _OxdnaVector(0, 1, 0)
+    return unit.cross(vec)
+
+
 def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
     geometry = design.geometry
@@ -8060,9 +8068,9 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                      design.helices.items()}
 
     for strand in design.strands:
-        dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
+        strand_domains: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
-            dom_strand = _OxdnaStrand()
+            ox_strand = _OxdnaStrand()
             seq = domain.dna_sequence
             if seq is None:
                 seq = 'T' * domain.dna_length()
@@ -8098,25 +8106,27 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                         if offset in insertions:
                             num = insertions[offset]
                             for i in range(num):
-                                r = origin_ + forward * (
+                                cen = origin_ + forward * (
                                         offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                                b = normal.rotate(step_rot * (offset + mod - num + i), forward)
-                                n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
-                                nuc = _OxdnaNucleotide(r, b, n, seq[index])
-                                dom_strand.nucleotides.append(nuc)
+                                norm = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                                forw = -forward if domain.forward else forward
+                                nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
+                                ox_strand.nucleotides.append(nuc)
                                 index += 1
 
-                        r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                        b = normal.rotate(step_rot * (offset + mod), forward)
-                        n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
-                        nuc = _OxdnaNucleotide(r, b, n, seq[index])
-                        dom_strand.nucleotides.append(nuc)
+                        cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        norm = normal.rotate(step_rot * (offset + mod), forward)
+                        # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                        forw = -forward if domain.forward else forward
+                        nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
+                        ox_strand.nucleotides.append(nuc)
                         index += 1
 
                 # strands are stored from 5' to 3' end
                 if not domain.forward:
-                    dom_strand.nucleotides.reverse()
-                dom_strands.append((dom_strand, False))
+                    ox_strand.nucleotides.reverse()
+                strand_domains.append((ox_strand, False))
             # because we need to know the positions of nucleotides before and after the loopout
             # we temporarily store domain strands with a boolean that is true if it's a loopout
             # handle loopouts
@@ -8129,23 +8139,23 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                     normal = _OxdnaVector(0, -1, 0)
                     forward = _OxdnaVector(0, 0, 1)
                     nuc = _OxdnaNucleotide(center, normal, forward, base)
-                    dom_strand.nucleotides.append(nuc)
-                dom_strands.append((dom_strand, True))
+                    ox_strand.nucleotides.append(nuc)
+                strand_domains.append((ox_strand, True))
 
         sstrand = _OxdnaStrand()
         # process loopouts and join strands
-        for i in range(len(dom_strands)):
-            dstrand, is_loopout = dom_strands[i]
+        for i in range(len(strand_domains)):
+            dstrand, is_loopout = strand_domains[i]
             if is_loopout:
-                prev_nuc = dom_strands[i - 1][0].nucleotides[-1]
-                next_nuc = dom_strands[i + 1][0].nucleotides[0]
+                prev_nuc = strand_domains[i - 1][0].nucleotides[-1]
+                next_nuc = strand_domains[i + 1][0].nucleotides[0]
 
                 strand_length = len(dstrand.nucleotides)
 
                 # now we position loopouts relative to the previous and next strand
                 # for now we use a linear interpolation
                 forward = next_nuc.center - prev_nuc.center
-                normal = (prev_nuc.forward + next_nuc.forward) * 0.5
+                normal = get_normal_vector_to(forward)
 
                 for loopout_idx in range(strand_length):
                     pos = prev_nuc.center + forward * ((loopout_idx + 1) / (strand_length + 1))
