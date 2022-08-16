@@ -8027,7 +8027,7 @@ def _oxdna_random_sequence(length: int) -> str:
 def get_normal_vector_to(vec: _OxdnaVector) -> _OxdnaVector:
     unit = _OxdnaVector(1, 0, 0)
     normalized_vec = vec.normalize()
-    if abs(1 - normalized_vec.dot(unit)) < 0.001:
+    if 1 - abs(normalized_vec.dot(unit)) < 0.001:
         unit = _OxdnaVector(0, 1, 0)
     return unit.cross(vec)
 
@@ -8160,7 +8160,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 for loopout_idx in range(strand_length):
                     pos = prev_nuc.center + forward * ((loopout_idx + 1) / (strand_length + 1))
                     old_nuc = dstrand.nucleotides[loopout_idx]
-                    new_nuc = _OxdnaNucleotide(pos, normal, forward.normalize(), old_nuc.base)
+                    new_nuc = _OxdnaNucleotide(pos, normal.normalize(), forward.normalize(), old_nuc.base)
                     dstrand.nucleotides[loopout_idx] = new_nuc
 
             sstrand = sstrand.join(dstrand)
