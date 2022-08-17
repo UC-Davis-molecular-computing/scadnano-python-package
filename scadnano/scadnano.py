@@ -2128,7 +2128,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     90 degrees means pointing away from the helix.
     180 degrees means means antiparallel to the adjacent domain (overlapping).
     If a forward strand, will go above the strand; if a reverse strand, will go below,
-    for degrees stritly between 0 and 180.
+    for degrees strictly between 0 and 180.
     """
 
     label: Optional[DomainLabel] = None
