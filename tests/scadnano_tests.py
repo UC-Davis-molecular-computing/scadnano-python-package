@@ -2850,8 +2850,8 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError) as ctx:
             design.add_half_crossover(helix=0, helix2=1, offset=8, forward=True)
         msg = str(ctx.exception)
-        self.assertIn('is expected to be on the', msg) # both 3' and 5' are problems, so just make sure
-        self.assertIn('end of the strand', msg) # one of them is mentioned here
+        self.assertIn('is expected to be on the', msg)  # both 3' and 5' are problems, so just make sure
+        self.assertIn('end of the strand', msg)  # one of them is mentioned here
 
     def test_add_half_crossover__top_horizontal_crossover_already_there(self) -> None:
         """
@@ -5109,7 +5109,7 @@ class TestJSON(unittest.TestCase):
         document = json.loads(result)
         self.assertEqual(2, len(document["strands"][0]["domains"]))
         self.assertIn(sc.extension_key, document["strands"][0]["domains"][1])
-        self.assertEqual(5, document["strands"][0]["domains"][1]["extension"])
+        self.assertEqual(5, document["strands"][0]["domains"][1][sc.extension_key])
 
 
 class TestIllegalStructuresPrevented(unittest.TestCase):
