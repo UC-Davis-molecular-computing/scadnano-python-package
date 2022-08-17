@@ -2114,7 +2114,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     """
 
     num_bases: int
-    """Length (in DNA bases) of this :any:`Loopout`."""
+    """Length (in DNA bases) of this :any:`Extension`."""
 
     display_length: float = default_display_length
     """Length (in nm) to display in the scadnano web app."""
@@ -2127,6 +2127,8 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     0 degrees means parallel to the adjacent domain.
     90 degrees means pointing away from the helix.
     180 degrees means means antiparallel to the adjacent domain (overlapping).
+    If a forward strand, will go above the strand; if a reverse strand, will go below,
+    for degrees stritly between 0 and 180.
     """
 
     label: Optional[DomainLabel] = None
