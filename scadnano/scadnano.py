@@ -2110,14 +2110,26 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
-        design.draw_strand(0,0).extension_5p(6).move(10).extension_3p(5)
+        design.draw_strand(0,0).extension_5p(3).move(10).extension_3p(2)
+
+    which makes this strand with an :any:`Extension` on side of the length-10 :any:`Domain`:
+
+    .. code-block:: none
+
+       [
+        \              >
+         \            /
+          \          /
+           ----------
     """
 
     num_bases: int
     """Length (in DNA bases) of this :any:`Extension`."""
 
     display_length: float = default_display_length
-    """Length (in nm) to display in the scadnano web app."""
+    """
+    Length (in nm) to display the line representing the :any:`Extension` in the scadnano web app.
+    """
 
     display_angle: float = default_display_angle
     """
