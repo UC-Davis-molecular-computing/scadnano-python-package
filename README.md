@@ -27,6 +27,7 @@ If you find scadnano useful in a scientific project, please cite its associated 
 * [Installation](#installation)
 * [Example](#example)
 * [Abbreviated syntax with chained methods](#abbreviated-syntax-with-chained-methods)
+* [StrandBuilder object for iteratively building up strands with many domains](#strandbuilder-object-for-iteratively-building-up-strands-with-many-domains)
 * [Tutorial](#tutorial)
 * [API documentation](#api-documentation)
 * [Other examples](#other-examples)
@@ -36,7 +37,7 @@ If you find scadnano useful in a scientific project, please cite its associated 
 
 This package is used to write Python scripts outputting `.sc` files readable by [scadnano](https://scadnano.org), a web application useful for displaying and manually editing these structures. The purpose of this module is to help automate some of the task of creating DNA designs, as well as making large-scale changes to them that are easier to describe programmatically than to do by hand in the scadnano web interface.
 
-Early versions of this project didn't have well-defined versions. However, we will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time. 
+We will try to announce breaking changes (and possibly new features) under the [GitHub releases page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases). The version numbers in this Python library repo and the [web interface repo](https://github.com/UC-Davis-molecular-computing/scadnano/releases) won't always advance at the same time, and sometimes a feature is supported in one before the other.
 
 Following [semantic versioning](https://semver.org/), version numbers are major.minor.patch, i.e., version 0.9.2 has minor version number 9. Prior to version 1.0.0, when a breaking change is made, this will increment the minor version (for example, going from 0.9.4 to 0.10.0). After version 1.0.0, breaking changes will increment the major version.
 
@@ -171,7 +172,7 @@ import scadnano as sc
 import modifications as mod
 
 
-def create_design():
+def create_design() -> sc.Design:
     # helices
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
@@ -216,14 +217,10 @@ Running the code above produces a `.sc` file that, if loaded into scadnano, shou
 
 
 ## Abbreviated syntax with chained methods
-Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the Design. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above script using these chained methods
+Instead of explicitly creating variables and objects representing each domain in each strand, there is a shorter syntax using chained method calls. Instead of the above, create only the helices first, then create the Design. Then strands can be added using a shorter syntax, to describe how to draw the strand starting at the 5' end and moving to the 3' end. The following is a modified version of the above `create_design` function using these chained methods:
 
 ```python
-import scadnano as sc
-import modifications as mod
-
-
-def create_design():
+def create_design() -> sc.Design:
     # helices
     helices = [sc.Helix(max_offset=48), sc.Helix(max_offset=48)]
 
@@ -250,15 +247,34 @@ def create_design():
     design.assign_dna(design.scaffold, 'AACGT' * 18)
 
     return design
-
-
-if __name__ == '__main__':
-    design = create_design()
-    design.write_scadnano_file(directory='output_designs')
 ```
 
 Documentation is available in the [API docs](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand).
 
+
+## StrandBuilder object for iteratively building up strands with many domains
+
+The method [`Design.draw_strand`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.Design.draw_strand), as well as all those that follow it in a chained method call (e.g., `move`, `cross`, etc.) all return an instance of the class [`StrandBuilder`](https://scadnano-python-package.readthedocs.io/en/latest/#scadnano.StrandBuilder).
+Above, that `StrandBuilder` instance is anonymous, i.e., never assigned to a variable. 
+Some long strands may be easier to specify with loops, for example an M13 scaffold strand for an origami. 
+If so, then to use the above methods, assign the `StrandBuilder` object to a variable, and call the relevant methods on that object to build up the strand in each iteration of the loop. 
+For example, the following modification of the above `create_design` function creates a linear scaffold strand that zig-zags back and forth across 32 helices:
+
+```python
+def create_design() -> sc.Design:
+    num_helices = 32
+    helices = [sc.Helix(max_offset=200) for _ in range(num_helices)]
+    design = sc.Design(helices=helices, grid=sc.square)
+    strand_builder = design.draw_strand(0, 0)
+    for helix in range(num_helices):
+        # move forward if on an even helix, otherwise move in reverse
+        move_distance = 200 if helix % 2 == 0 else -200
+        strand_builder.move(move_distance)
+        if helix < 31: # crossover to next helix, unless it's the last helix
+            strand_builder.cross(helix + 1)
+    strand_builder.as_scaffold()
+    return design
+```
 
 
 

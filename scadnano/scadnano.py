@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.3"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.5"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -792,6 +792,11 @@ domain_label_key = 'label'
 # Loopout keys
 loopout_key = 'loopout'
 
+# Extension keys
+extension_key = 'extension_num_bases'
+display_length_key = 'display_length'
+display_angle_key = 'display_angle'
+
 # Modification keys
 mod_location_key = 'location'
 mod_display_text_key = 'display_text'
@@ -1039,7 +1044,7 @@ class ModificationInternal(Modification):
 ##########################################################################
 
 
-@dataclass
+@dataclass(frozen=True)
 class Position3D(_JSONSerializable):
     """
     Position (x,y,z) in 3D space.
@@ -1912,6 +1917,34 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         """Return offsets of insertions (but not their lengths)."""
         return [ins_off for (ins_off, _) in self.insertions]
 
+    def is_extreme_domain(self, five_prime: bool) -> bool:
+        """
+        :param five_prime:
+            whether to ask about 5' end or 3' end
+        :return:
+            Whether this :any:`Domain` is the 5' or 3' most :any:`Domain` on its :any:`Strand`.
+            (which depends on parameter `five_prime`
+        """
+        if self._parent_strand is None:
+            end = "5'" if five_prime else "3'"
+            raise ValueError(f'cannot tell if this Domain is {end} since it is not yet assigned to a Strand')
+        idx = 0 if five_prime else -1
+        return self == self._parent_strand.domains[idx]
+
+    def is_5p_domain(self) -> bool:
+        """
+        :return:
+            Whether this :any:`Domain` is the 5' most :any:`Domain` on its :any:`Strand`.
+        """
+        return self.is_extreme_domain(True)
+
+    def is_3p_domain(self) -> bool:
+        """
+        :return:
+            Whether this :any:`Domain` is the 3' most :any:`Domain` on its :any:`Strand`.
+        """
+        return self.is_extreme_domain(False)
+
 
 @dataclass
 class Loopout(_JSONSerializable, Generic[DomainLabel]):
@@ -1924,7 +1957,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     It is illegal for two consecutive :any:`Domain`'s to both
     be :any:`Loopout`'s,
     or for a :any:`Loopout` to occur on either end of the :any:`Strand`
-    (i.e., each :any:`Strand` must begin and end with a :any:`Domain`).
+    (i.e., each :any:`Strand` must begin and end with a :any:`Domain` or :any:`Extension`).
 
     For example, one use of a loopout is to describe a hairpin (a.k.a.,
     `stem-loop <https://en.wikipedia.org/wiki/Stem-loop>`_).
@@ -2045,6 +2078,143 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return self_seq_idx_start
 
 
+default_display_angle = 45.0
+
+default_display_length = 1.0
+
+
+@dataclass
+class Extension(_JSONSerializable, Generic[DomainLabel]):
+    """Represents a single-stranded extension on either the 3' or 5'
+    end of :any:`Strand`.
+
+    One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
+    :any:`Domain` make sense for :any:`Extension`, so they are not related to each other in the type
+    hierarchy. It is interpreted that an :any:`Extension` is a single-stranded region that resides on either
+    the 3' or 5' end of the :any:`Strand`. It is illegal for an :any:`Extension` to be placed
+    in the middle of the :any:`Strand` or for an :any:`Extension` to be adjacent to a :any:`Loopout`.
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        domain = sc.Domain(helix=0, forward=True, start=0, end=10)
+        toehold = sc.Extension(num_bases=5)
+        strand = sc.Strand([domain, toehold])
+
+    It can also be created with chained method calls
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=10)])
+        design.draw_strand(0,0).move(10).extension_3p(5)
+    """
+
+    num_bases: int
+    """Length (in DNA bases) of this :any:`Loopout`."""
+
+    display_length: float = default_display_length
+    """Length (in nm) to display in the scadnano web app."""
+
+    display_angle: float = default_display_angle
+    """
+    Angle (in degrees) to display in the scadnano web app.
+
+    This angle is relative to the "rotation frame" of the adjacent domain.
+    0 degrees means parallel to the adjacent domain.
+    90 degrees means pointing away from the helix.
+    180 degrees means means antiparallel to the adjacent domain (overlapping).
+    """
+
+    label: Optional[DomainLabel] = None
+    """
+    Generic "label" object to associate to this :any:`Extension`.
+
+    Useful for associating extra information with the :any:`Extension` that will be serialized, for example,
+    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int)
+    that is naturally JSON serializable. (Calling
+    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
+    on the object should succeed without having to specify a custom encoder.)
+    """
+
+    name: Optional[str] = None
+    """
+    Optional name to give this :any:`Extension`.
+    """
+
+    dna_sequence: Optional[str] = None
+    """DNA sequence of this :any:`Extension`, or ``None`` if no DNA sequence has been assigned."""
+
+    # not serialized; for efficiency
+    # remove quotes when Py3.6 support dropped
+    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) \
+            -> Union[Dict[str, Any], NoIndent]:
+        json_map: Dict[str, Any] = {extension_key: self.num_bases}
+        self._add_display_length_if_not_default(json_map)
+        self._add_display_angle_if_not_default(json_map)
+        self._add_name_if_not_default(json_map)
+        self._add_label_if_not_default(json_map)
+        return NoIndent(json_map) if suppress_indent else json_map
+
+    def dna_length(self) -> int:
+        """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
+        return self.num_bases
+
+    def set_label(self, label: Optional[DomainLabel]) -> None:
+        """Sets label of this :any:`Extension`."""
+        self.label = label
+
+    def set_name(self, name: str) -> None:
+        """Sets name of this :any:`Extension`."""
+        self.name = name
+
+    @staticmethod
+    def from_json(json_map: Dict[str, Any]) -> 'Extension':
+        def float_transformer(x): return float(x)
+
+        num_bases_str = mandatory_field(Extension, json_map, extension_key)
+        num_bases = int(num_bases_str)
+        display_length = optional_field(_default_extension.display_length,
+                                        json_map, display_length_key, transformer=float_transformer)
+        display_angle = optional_field(_default_extension.display_angle,
+                                       json_map, display_angle_key, transformer=float_transformer)
+        name = json_map.get(domain_name_key)
+        label = json_map.get(domain_label_key)
+        return Extension(
+            num_bases=num_bases,
+            display_length=display_length,
+            display_angle=display_angle,
+            label=label, name=name)
+
+    def _add_display_length_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_length_key, value_callback=lambda x: x.display_length, json_map=json_map)
+
+    def _add_display_angle_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=display_angle_key, value_callback=lambda x: x.display_angle, json_map=json_map)
+
+    def _add_name_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_name_key, value_callback=lambda x: x.name, json_map=json_map)
+
+    def _add_label_if_not_default(self, json_map) -> None:
+        self._add_key_value_to_json_map_if_not_default(
+            key=domain_label_key, value_callback=lambda x: x.label, json_map=json_map)
+
+    def _add_key_value_to_json_map_if_not_default(
+            self, key: str, value_callback: Callable[["Extension"], Any], json_map: Dict[str, Any]) -> None:
+        if value_callback(self) != value_callback(_default_extension):
+            json_map[key] = value_callback(self)
+
+
+# Default Extension object to allow for access to default extension values. num_bases is a dummy.
+_default_extension: Extension = Extension(num_bases=5)
+
 _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
@@ -2134,7 +2304,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
     This is an intermediate object created when using chained method building by calling
-    :py:meth:`Design.strand`, for example
+    :py:meth:`Design.draw_strand`, for example
 
     .. code-block:: Python
 
@@ -2190,6 +2360,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
+        if self._most_recently_added_substrand_is_extension():
+            raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
             raise IllegalDesignError('move and offset cannot both be specified:\n'
                                      f'move:   {move}\n'
@@ -2201,6 +2373,12 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         elif move is not None:
             self.current_offset += move
         return self
+
+    def _most_recently_added_substrand_is_instance_of_class(self, cls: Type) -> bool:
+        return isinstance(self._strand.domains[-1], cls)
+
+    def _most_recently_added_substrand_is_extension(self):
+        return self._most_recently_added_substrand_is_instance_of_class(Extension)
 
     # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
@@ -2224,6 +2402,67 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
         return self
+
+    def extension_3p(self, num_bases: int, display_length: float = 1.0,
+                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 3' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
+        """
+        self._verify_extension_3p_is_valid()
+        assert self._strand is not None
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
+                                   display_angle=display_angle)
+        self.design.append_domain(self._strand, ext)
+        return self
+
+    def _verify_extension_3p_is_valid(self):
+        if self._strand is None:
+            raise IllegalDesignError(
+                'Cannot add a 3\' extension when there are no domains. Did you mean to create a 5\' extension?')
+        if self._most_recently_added_substrand_is_loopout():
+            raise IllegalDesignError('Cannot add a 3\' extension immediately after a loopout.')
+        if self._most_recently_added_substrand_is_extension_3p():
+            raise IllegalDesignError('Cannot add a 3\' extension after another 3\' extension.')
+        self._verify_strand_is_not_circular()
+
+    def _verify_strand_is_not_circular(self):
+        if self._strand.circular:
+            raise IllegalDesignError('Cannot add an extension to a circular strand.')
+
+    def _most_recently_added_substrand_is_loopout(self):
+        return self._most_recently_added_substrand_is_instance_of_class(Loopout)
+
+    def extension_5p(self, num_bases: int, display_length: float = 1.0,
+                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
+        the :any:`Strand` as a 5' :any:`Extension`.
+
+        :param num_bases: number of bases of :any:`Extension` to add
+        :param display_length: display length of :any:`Extension` to add
+        :param display_angle: display angle of :any:`Extension` to add
+        :return: self
+        """
+        self._verify_extension_5p_is_valid()
+        ext: Extension = Extension(num_bases=num_bases,
+                                   display_length=display_length,
+                                   display_angle=display_angle)
+        self._strand = Strand(domains=[ext])
+        self.design.add_strand(self._strand)
+        return self
+
+    def _verify_extension_5p_is_valid(self):
+        if self._strand is not None:
+            raise IllegalDesignError(
+                'Cannot add a 5\' extension when there are already domains. '
+                'Did you mean to create a 3\' extension?')
 
     # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
@@ -2277,6 +2516,9 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      '(strictly increasing or strictly decreasing) '
                                      'when calling to() twice in a row')
 
+        if self._most_recently_added_substrand_is_extension_3p():
+            raise IllegalDesignError('cannot make a new domain once 3\' extension has been added')
+
         if offset > self.current_offset:
             forward = True
             start = self.current_offset
@@ -2300,22 +2542,31 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
+    def _most_recently_added_substrand_is_extension_3p(self) -> bool:
+        if self._strand is None:
+            return False
+        return len(self._strand.domains) > 1 and self._most_recently_added_substrand_is_extension()
+
     # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
-        :py:meth:`StrandBuilder.update_to` are equivalent to only making the final call. This is an
-        "absolute move", whereas :py:meth:`StrandBuilder.move` is a "relative move".
+        :meth:`StrandBuilder.update_to` are equivalent to only making the final call.
 
-        If :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout` was just called,
-        then :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to` have the same effect.
+        Generally there's no point in calling :meth:`StrandBuilder.update_to` in one line of code.
+        It is intended to help when a large, complex strand is being constructed in a loop.
+
+        If :meth:`StrandBuilder.cross` or :meth:`StrandBuilder.loopout` was just called,
+        then :meth:`StrandBuilder.to` and :meth:`StrandBuilder.update_to` have the same effect.
 
         :param offset: new offset to extend to. If less than offset of the last call to
-            :py:meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
+            :meth:`StrandBuilder.cross` or :py:meth:`StrandBuilder.loopout`,
             the new :any:`Domain` is reverse, otherwise it is forward.
         :return: self
         """
+        if self._most_recently_added_substrand_is_extension_3p():
+            raise IllegalDesignError('Cannot call update_to after creating extension_3p.')
         if not self.last_domain:
             return self.to(offset)
 
@@ -2466,15 +2717,21 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         via a call to
         :py:meth:`StrandBuilder.to`,
         :py:meth:`StrandBuilder.update_to`,
+        :py:meth:`StrandBuilder.move`,
+        :py:meth:`StrandBuilder.extension_5p`,
+        :py:meth:`StrandBuilder.extension_3p`,
         or
         :py:meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-            design.draw_strand(0, 5).to(8).with_domain_sequence('AAA')\\
-                .cross(1).to(5).with_domain_sequence('TTT')\\
+            design.draw_strand(0, 5)\\
+                .extension_5p(2).with_domain_sequence('TT')\\
+                .to(8).with_domain_sequence('AAA')\\
+                .cross(1).move(-3).with_domain_sequence('TTT')\\
                 .loopout(2, 4).with_domain_sequence('CCCC')\\
-                .to(10).with_domain_sequence('GGGGG')
+                .to(10).with_domain_sequence('GGGGG')\\
+                .extension_3p(4).with_domain_sequence('AAAA')
 
         :param sequence: the DNA sequence to assign to the :any:`Domain`
         :param assign_complement: whether to automatically assign the complement to existing :any:`Strand`'s
@@ -2529,10 +2786,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
         via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
@@ -2551,17 +2809,20 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
-        the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
-        via a call to
-        :py:meth:`StrandBuilder.to`,
-        :py:meth:`StrandBuilder.update_to`,
+        the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` or :any:`Loopout` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`,
         or
-        :py:meth:`StrandBuilder.loopout`, e.g.,
+        :meth:`StrandBuilder.loopout`, e.g.,
 
         .. code-block:: Python
 
-            design.draw_strand(0, 5).to(8).with_domain_label('domain 1')\\
-                .cross(1).to(5).with_domain_label('domain 2')\\
+            design.draw_strand(0, 5)\\
+                .to(8).with_domain_label('domain 1')\\
+                .cross(1)\\
+                .to(5).with_domain_label('domain 2')\\
                 .loopout(2, 4).with_domain_label('domain 3')\\
                 .to(10).with_domain_label('domain 4')
 
@@ -2572,6 +2833,103 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             raise ValueError('no Strand created yet; make at least one domain first')
         last_domain = self._strand.domains[-1]
         last_domain.set_label(label)
+        return self
+
+    def with_deletions(self,
+                       deletions: Union[int, Iterable[int]]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `deletions` as the deletion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_deletions(4)\\
+                .cross(1)\\
+                .move(-8).with_deletions([2, 3])
+
+        :param deletions:
+            a single int, or an Iterable of ints, indicating the offset at which to put the deletion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create a deletion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_deletions immediately after a call to '
+                             f'to, move, or update_to')
+        if not isinstance(deletions, int) and not hasattr(deletions, '__iter__'):
+            raise ValueError(f'deletions must be a single int or an iterable of ints, '
+                             f'but it is {type(deletions)}')
+        if isinstance(deletions, int):
+            last_domain.deletions = [deletions]
+        else:
+            last_domain.deletions = list(deletions)
+
+        for deletion in last_domain.deletions:
+            if not last_domain.start <= deletion < last_domain.end:
+                raise IllegalDesignError(f'all deletions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but deletion={deletion} is outside '
+                                         f'that range')
+
+        return self
+
+    def with_insertions(self, insertions: Union[Tuple[int, int], Iterable[Tuple[int, int]]]) \
+            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Assigns `insertions` as the insertion(s) of the most recently created
+        :any:`Domain` the :any:`Strand` being built. This should be called immediately after
+        a :any:`Domain` is created via a call to
+        :meth:`StrandBuilder.to`,
+        :meth:`StrandBuilder.move`,
+        :meth:`StrandBuilder.update_to`, e.g.,
+
+        .. code-block:: Python
+
+            design.draw_strand(0, 0)\\
+                .move(8).with_insertions((4, 2))\\
+                .cross(1)\\
+                .move(-8).with_insertions([(2, 3), (3, 3)])
+
+        :param insertions:
+            a single pair of ints (tuple), or an Iterable of pairs of ints (tuples)
+            indicating the offset at which to put the insertion(s)
+        :return: self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+        if not isinstance(last_domain, Domain):
+            raise ValueError(f'can only create an insertion on a bound Domain, not a {type(last_domain)};\n'
+                             f'be sure only to call with_insertions immediately after a call to '
+                             f'to, move, or update_to')
+
+        type_msg = (f'insertions must be a single pair of ints or an iterable of pairs of ints, '
+                    f'but it is {type(insertions)}')
+
+        if not hasattr(insertions, '__iter__'):
+            raise ValueError(type_msg)
+        if isinstance(insertions, tuple) and len(insertions) > 0 and isinstance(insertions[0], int):
+            last_domain.insertions = [insertions]
+        else:
+            for ins in insertions:
+                if not (isinstance(ins, tuple) and len(ins) > 0 and isinstance(ins[0], int)):
+                    raise ValueError(type_msg)
+            last_domain.insertions = list(insertions)
+
+        for insertion in last_domain.insertions:
+            insertion_offset, _ = insertion
+            if not last_domain.start <= insertion_offset < last_domain.end:
+                raise IllegalDesignError(f'all insertions must be between start={last_domain.start} '
+                                         f'and end={last_domain.end}, but insertion={insertion} at offset '
+                                         f'{insertion_offset} is outside that range')
+
         return self
 
 
@@ -2613,7 +2971,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]]
+    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -2707,7 +3065,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __init__(self,
-                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel]]],
+                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]],
                  circular: bool = False, color: Optional[Color] = None,
                  idt: Optional[IDTFields] = None,
                  is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
@@ -2774,19 +3132,27 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
-        domain_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
-        if len(domain_jsons) == 0:
+        substrand_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
+        if len(substrand_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
 
-        domains: List[Union[Domain, Loopout]] = []
-        for domain_json in domain_jsons:
-            if loopout_key in domain_json:
-                domains.append(Loopout.from_json(domain_json))
+        substrands: List[Union[Domain, Loopout, Extension]] = []
+        for substrand_json in substrand_jsons:
+            if loopout_key in substrand_json:
+                substrands.append(Loopout.from_json(substrand_json))
+            elif extension_key in substrand_json:
+                substrands.append(Extension.from_json(substrand_json))
+            elif helix_idx_key in substrand_json:
+                substrands.append(Domain.from_json(substrand_json))
             else:
-                domains.append(Domain.from_json(domain_json))
-        if isinstance(domains[0], Loopout):
+                raise IllegalDesignError('unrecognized substrand; does not have any of these keys:\n'
+                                         f'{extension_key} for an Extension, '
+                                         f'{loopout_key} for a Loopout, or'
+                                         f'{helix_idx_key} for a Domain.\n'
+                                         f'JSON: {substrand_json}')
+        if isinstance(substrands[0], Loopout):
             raise IllegalDesignError('Loopout at beginning of Strand not supported')
-        if isinstance(domains[-1], Loopout):
+        if isinstance(substrands[-1], Loopout):
             raise IllegalDesignError('Loopout at end of Strand not supported')
 
         is_scaffold = json_map.get(is_scaffold_key, False)
@@ -2794,14 +3160,17 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
-        color_str = json_map.get(color_key,
-                                 default_scaffold_color if is_scaffold else default_strand_color)
-        if isinstance(color_str, int):
-            def decimal_int_to_hex(d: int) -> str:
-                return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+        color_str = json_map.get(color_key)
 
-            color_str = decimal_int_to_hex(color_str)
-        color = Color(hex_string=color_str)
+        if color_str is None:
+            color = default_scaffold_color if is_scaffold else default_strand_color
+        else:
+            if isinstance(color_str, int):
+                def decimal_int_to_hex(d: int) -> str:
+                    return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+
+                color_str = decimal_int_to_hex(color_str)
+            color = Color(hex_string=color_str)
 
         label = json_map.get(strand_label_key)
 
@@ -2815,7 +3184,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             name = idt_dict[idt_name_key]
 
         return Strand(
-            domains=domains,
+            domains=substrands,
             dna_sequence=dna_sequence,
             circular=circular,
             color=color,
@@ -2892,6 +3261,8 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise StrandError(self, "cannot have a 5' modification on a circular strand")
         if circular and self.modification_3p is not None:
             raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        if circular and self.contains_extensions():
+            raise StrandError(self, "Cannot have extension on a circular strand")
         self.circular = circular
 
     def set_linear(self) -> None:
@@ -3228,7 +3599,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self.set_dna_sequence(new_dna_sequence)
         # self.dna_sequence = _pad_dna(new_dna_sequence, self.dna_length())
 
-    def insert_domain(self, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         # add wildcard symbols to DNA sequence to maintain its length
         if self.dna_sequence is not None:
             domain.dna_sequence = DNA_base_wildcard * domain.dna_length()
@@ -3267,6 +3638,10 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Loopout):
                 return True
         return False
+
+    def contains_extensions(self) -> bool:
+        assert len(self.domains) > 0
+        return isinstance(self.domains[0], Extension) or isinstance(self.domains[-1], Extension)
 
     def first_bound_domain(self) -> Domain:
         """First :any:`Domain` (i.e., not a :any:`Loopout`) on this :any:`Strand`.
@@ -3939,11 +4314,62 @@ class PlateMap:
         .. code-block:: python
 
             plate_maps = design.plate_maps()
-            maps_strs = '\n\n'.join(plate_map.to_table() for plate_map in plate_maps)
+            maps_strs = '\\n\\n'.join(plate_map.to_table() for plate_map in plate_maps)
             from IPython.display import display, Markdown
             display(Markdown(maps_strs))
 
-        It uses the Python tabulate package (https://pypi.org/project/tabulate/).
+        Markdown format is used by default, generating a string such as this:
+
+        .. code-block:: none
+
+            plate "5 monomer synthesis"
+
+            |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
+            | A   | mon0 | mon0_F |        | adp0 |          |     |     |     |     |      |      |      |
+            | B   | mon1 | mon1_Q | mon1_F | adp1 | adp_sst1 |     |     |     |     |      |      |      |
+            | C   | mon2 | mon2_F | mon2_Q | adp2 | adp_sst2 |     |     |     |     |      |      |      |
+            | D   | mon3 | mon3_Q | mon3_F | adp3 | adp_sst3 |     |     |     |     |      |      |      |
+            | E   | mon4 |        | mon4_Q | adp4 | adp_sst4 |     |     |     |     |      |      |      |
+            | F   |      |        |        | adp5 |          |     |     |     |     |      |      |      |
+            | G   |      |        |        |      |          |     |     |     |     |      |      |      |
+            | H   |      |        |        |      |          |     |     |     |     |      |      |      |
+
+        or, with the :meth:`PlateMap.to_table` parameter `well_marker` set to ``'*'``
+        (in case you don't need to see the strand names and just want to see which wells are marked):
+
+        .. code-block:: none
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
+            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
+            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
+            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+
+        If `well_marker` is not specified, then each strand must have a name. `well_marker` can also
+        be a function of the well; for instance, if it is the identity function ``lambda x:x``, then each
+        well has its own address as the entry:
+
+        .. code-block:: none
+
+            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
+            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
+            | A   | A1  | A2  |     | A4  |     |     |     |     |     |      |      |      |
+            | B   | B1  | B2  | B3  | B4  | B5  |     |     |     |     |      |      |      |
+            | C   | C1  | C2  | C3  | C4  | C5  |     |     |     |     |      |      |      |
+            | D   | D1  | D2  | D3  | D4  | D5  |     |     |     |     |      |      |      |
+            | E   | E1  |     | E3  | E4  | E5  |     |     |     |     |      |      |      |
+            | F   |     |     |     | F4  |     |     |     |     |     |      |      |      |
+            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
+            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
+
+        This method uses the Python tabulate package (https://pypi.org/project/tabulate/).
         The parameters are identical to that of the `tabulate` function and are passed along to it,
         except for `tabular_data` and `headers`, which are computed from this plate map.
         In particular, the parameter `tablefmt` has default value `'pipe'`,
@@ -3964,7 +4390,8 @@ class PlateMap:
         :param title_level:
             The "title" is the first line of the returned string, which contains the plate's name
             and volume to pipette. The `title_level` controls the size, with 1 being the largest size,
-            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML).
+            (header level 1, e.g., # title in Markdown or <h1>title</h1> in HTML)
+            and 6 being the smallest size.
         :param warn_unsupported_title_format:
             If True, prints a warning if `tablefmt` is a currently unsupported option for the title.
             The currently supported formats for the title are 'github', 'html', 'unsafehtml', 'rst',
@@ -5088,9 +5515,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                    strands: Optional[Iterable[Strand]] = None,
                    ) -> List[PlateMap]:
         """
-        Generates plate maps from this :any:`Design` in Markdown format, for example:
+        Returns a list of :any:`PlateMap`'s from this :any:`Design`. Each :any:`PlateMap` can be
+        exported to a string, in Markdown format by default, by calling :meth:`PlateMap.to_table`,
+        generating a string such as this:
 
-        .. code-block::
+        .. code-block:: none
+
+            plate "5 monomer synthesis"
 
             |     | 1    | 2      | 3      | 4    | 5        | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
             |-----|------|--------|--------|------|----------|-----|-----|-----|-----|------|------|------|
@@ -5103,44 +5534,13 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             | G   |      |        |        |      |          |     |     |     |     |      |      |      |
             | H   |      |        |        |      |          |     |     |     |     |      |      |      |
 
-        or, with `well_marker` set to ``'*'`` (in case you don't need to see the strand names and just
-        want to see which wells are marked):
-
-        .. code-block::
-
-            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
-            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
-            | A   | *   | *   |     | *   |     |     |     |     |     |      |      |      |
-            | B   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | C   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | D   | *   | *   | *   | *   | *   |     |     |     |     |      |      |      |
-            | E   | *   |     | *   | *   | *   |     |     |     |     |      |      |      |
-            | F   |     |     |     | *   |     |     |     |     |     |      |      |      |
-            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
-            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
-
-
-        If `well_marker` is not specified, then each strand must have a name. `well_marker` can also
-        be a function of the well; for instance, if it is the identity function ``lambda x:x``, then each
-        well has its own address as the entry:
-
-        .. code-block::
-
-            |     | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   | 11   | 12   |
-            |-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|------|------|------|
-            | A   | A1  | A2  |     | A4  |     |     |     |     |     |      |      |      |
-            | B   | B1  | B2  | B3  | B4  | B5  |     |     |     |     |      |      |      |
-            | C   | C1  | C2  | C3  | C4  | C5  |     |     |     |     |      |      |      |
-            | D   | D1  | D2  | D3  | D4  | D5  |     |     |     |     |      |      |      |
-            | E   | E1  |     | E3  | E4  | E5  |     |     |     |     |      |      |      |
-            | F   |     |     |     | F4  |     |     |     |     |     |      |      |      |
-            | G   |     |     |     |     |     |     |     |     |     |      |      |      |
-            | H   |     |     |     |     |     |     |     |     |     |      |      |      |
-
+        See the documentation for :meth:`PlateMap.to_table` for more information on configuring the
+        returned string format.
 
         All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
-        specified are exported. The number of strings in the returned list is equal to the number of
-        different plate names specified across all :any:`Strand`'s in the design.
+        specified are included in some returned :any:`PlateMap`. The number of :any:`PlateMap`'s in the
+        returned list is equal to the number of different plate names specified across all
+        :any:`Strand`'s in the design.
 
         If parameter `strands` is given, then a subset of strands is included. This is useful for
         specifying a mix of strands for a particular experiment, which come from a plate but does not
@@ -5152,10 +5552,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param plate_type:
             Type of plate: 96 or 384 well.
         :param strands:
-            If specified, only the :any:`Strand`'s in `strands` are put in the plate map.
+            If specified, only the :any:`Strand`'s in `strands` are put in the :any:`PlateMap`.
         :return:
-            dict mapping plate names to markdown strings specifying plate maps for :any:`Strand`'s
-            in this design with IDT plates specified
+            list of :any:`PlateMap`'s for :any:`Strand`'s in this design with IDT plates specified;
+            length of list is equal to number of unique plate names among all :any:`Strand`'s in this design
         """
         if strands is None:
             strands = self.strands
@@ -5572,6 +5972,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         '''
         for strand in self.strands:
             for domain in strand.domains:
+                if isinstance(domain, Extension):
+                    raise ValueError(
+                        'We cannot handle designs with Extensions as it is not a cadnano v2 concept')
                 if isinstance(domain, Loopout):
                     raise ValueError(
                         'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
@@ -5597,22 +6000,33 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return dct
 
-    def to_cadnano_v2_json(self, name: str = '') -> str:
+    def to_cadnano_v2_json(self, name: str = '', whitespace: bool = True) -> str:
         """Converts the design to the cadnano v2 format.
 
         Please see the spec
         https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
         for more info on that format.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param name:
             Name of the design.
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
         :return:
             a string in the cadnano v2 format representing this :any:`Design`
         """
         content_serializable = self.to_cadnano_v2_serializable(name)
 
         encoder = _SuppressableIndentEncoder
-        return json.dumps(content_serializable, cls=encoder, indent=2)
+        content = json.dumps(content_serializable, cls=encoder, indent=2)
+        if not whitespace:
+            # remove whitespace
+            content = ''.join(content.split())
+        return content
 
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
@@ -5699,7 +6113,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         for strand in self.strands:
             _check_type(strand, Strand)
             for substrand in strand.domains:
-                _check_type_is_one_of(substrand, [Domain, Loopout])
+                _check_type_is_one_of(substrand, [Domain, Loopout, Extension])
                 if isinstance(substrand, Domain):
                     _check_type(substrand.helix, int)
                     _check_type(substrand.forward, bool)
@@ -5893,7 +6307,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if isinstance(domain, Domain):
                 self.helices[domain.helix].domains.remove(domain)
 
-    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
+    def append_domain(self, strand: Strand, domain: Union[Domain, Loopout, Extension]) -> None:
         """
         Same as :any:`Design.insert_domain`, but inserts at end.
 
@@ -5902,7 +6316,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         self.insert_domain(strand, len(strand.domains), domain)
 
-    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout]) -> None:
+    def insert_domain(self, strand: Strand, order: int, domain: Union[Domain, Loopout, Extension]) -> None:
         """Insert `Domain` into `strand` at index given by `order`. Uses same indexing as Python lists,
         e.g., ``design.insert_domain(strand, domain, 0)``
         inserts ``domain`` as the new first :any:`Domain`."""
@@ -6026,7 +6440,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout] = None, check_length: bool = False) -> None:
+                   domain: Union[Domain, Loopout, Extension] = None, check_length: bool = False) -> None:
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -6316,7 +6730,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = 'idt'
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: str = None,
+    def write_idt_plate_excel_file(self, *, directory: str = '.', filename: Optional[str] = None,
                                    key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False,
                                    only_strands_with_idt: bool = False,
@@ -6623,14 +7037,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             extension = default_scadnano_file_extension
         write_file_same_name_as_running_python_script(contents, extension, directory, filename)
 
-    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None) -> None:
+    def write_cadnano_v2_file(self, directory: str = '.', filename: Optional[str] = None,
+                              whitespace: bool = True) -> None:
         """Write ``.json`` file representing this :any:`Design`, suitable for reading by cadnano v2.
 
         The string written is that returned by :meth:`Design.to_cadnano_v2`.
 
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
         :param directory:
             directory in which to place the file, either absolute or relative to
             the current working directory. Default is the current working directory.
+
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
 
         :param filename:
             The output file has the same name as the running script but with ``.py`` changed to ``.json``,
@@ -6639,8 +7062,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             then if filename is not specified, the design will be written to ``my_origami.json``.
         """
         name = _get_filename_same_name_as_running_python_script(directory, 'json', filename)
-        write_file_same_name_as_running_python_script(self.to_cadnano_v2_json(name), 'json', directory,
-                                                      filename)
+        content = self.to_cadnano_v2_json(name=name, whitespace=whitespace)
+        write_file_same_name_as_running_python_script(content, 'json', directory, filename)
 
     def add_nick(self, helix: int, offset: int, forward: bool, new_color: bool = True) -> None:
         """Add nick to :any:`Domain` on :any:`Helix` with index `helix`,
@@ -6873,6 +7296,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             strand_5p = strand_right
             strand_3p = strand_left
 
+        if strand_5p.domains[0] != dom_5p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_5p.name}"'
+                                     f'does not reside on the 5\' end of the strand.')
+
+        if strand_3p.domains[-1] != dom_3p:
+            raise IllegalDesignError(f'Domain to be ligated "{dom_3p.name}"'
+                                     f'does not reside on the 3\' of the strand.')
+
         if strand_left is strand_right:
             # join domains and make strand circular
             strand = strand_left
@@ -6971,13 +7402,27 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if domain1.offset_3p() == offset and domain2.offset_5p() == offset2:
             strand_first = strand1
             strand_last = strand2
+            domain_first = domain1
+            domain_last = domain2
         elif domain1.offset_5p() == offset and domain2.offset_3p() == offset2:
             strand_first = strand2
             strand_last = strand1
+            domain_first = domain2
+            domain_last = domain1
         else:
             raise IllegalDesignError("Cannot add half crossover. Must have one domain have its "
                                      "5' end at the given offset and the other with its 3' end at the "
                                      "given offset, but this is not the case.")
+
+        if strand_first.domains[-1] is not domain_first:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_first} is expected to be on the 3' "
+                f"end of the strand, but this is not the case.")
+
+        if strand_last.domains[0] is not domain_last:
+            raise IllegalDesignError(
+                f"Domain to add crossover to: {domain_last} is expected to be on the 5' "
+                f"end of the strand, but this is not the case.")
 
         new_domains = strand_first.domains + strand_last.domains
         if strand_first.dna_sequence is None and strand_last.dna_sequence is None:
@@ -7045,7 +7490,17 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         if domain_left == domain_right:
             self.add_nick(helix, offset, forward)
         else:
+            # there's already a nick here, unless either has a crossover
             assert domain_left.end == domain_right.start
+
+            # disallowed situations:
+            #   -->---+^+--->--  not domain_left.is_5p_domain() or not domain_right.is_3p_domain()
+            #   --<---+^+---<--  not domain_left.is_3p_domain() or not domain_right.is_3p_domain()
+            if (not domain_left.is_5p_domain() or not domain_right.is_3p_domain() or
+                    not domain_left.is_3p_domain() or not domain_right.is_5p_domain()):
+                raise IllegalDesignError('cannot add crossover at address '
+                                         f'(helix={helix}, offset={offset}, forward={forward}) '
+                                         'because there is already a crossover there')
 
     def inline_deletions_insertions(self) -> None:
         """
@@ -7569,6 +8024,14 @@ def _oxdna_random_sequence(length: int) -> str:
     return seq
 
 
+def get_normal_vector_to(vec: _OxdnaVector) -> _OxdnaVector:
+    unit = _OxdnaVector(1, 0, 0)
+    normalized_vec = vec.normalize()
+    if 1 - abs(normalized_vec.dot(unit)) < 0.001:
+        unit = _OxdnaVector(0, 1, 0)
+    return unit.cross(vec)
+
+
 def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
     geometry = design.geometry
@@ -7605,9 +8068,9 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                      design.helices.items()}
 
     for strand in design.strands:
-        dom_strands: List[Tuple[_OxdnaStrand, bool]] = []
+        strand_domains: List[Tuple[_OxdnaStrand, bool]] = []
         for domain in strand.domains:
-            dom_strand = _OxdnaStrand()
+            ox_strand = _OxdnaStrand()
             seq = domain.dna_sequence
             if seq is None:
                 seq = 'T' * domain.dna_length()
@@ -7643,25 +8106,27 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                         if offset in insertions:
                             num = insertions[offset]
                             for i in range(num):
-                                r = origin_ + forward * (
+                                cen = origin_ + forward * (
                                         offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                                b = normal.rotate(step_rot * (offset + mod - num + i), forward)
-                                n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
-                                nuc = _OxdnaNucleotide(r, b, n, seq[index])
-                                dom_strand.nucleotides.append(nuc)
+                                norm = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                                forw = -forward if domain.forward else forward
+                                nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
+                                ox_strand.nucleotides.append(nuc)
                                 index += 1
 
-                        r = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                        b = normal.rotate(step_rot * (offset + mod), forward)
-                        n = -forward if domain.forward else forward  # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
-                        nuc = _OxdnaNucleotide(r, b, n, seq[index])
-                        dom_strand.nucleotides.append(nuc)
+                        cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        norm = normal.rotate(step_rot * (offset + mod), forward)
+                        # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+                        forw = -forward if domain.forward else forward
+                        nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
+                        ox_strand.nucleotides.append(nuc)
                         index += 1
 
                 # strands are stored from 5' to 3' end
                 if not domain.forward:
-                    dom_strand.nucleotides.reverse()
-                dom_strands.append((dom_strand, False))
+                    ox_strand.nucleotides.reverse()
+                strand_domains.append((ox_strand, False))
             # because we need to know the positions of nucleotides before and after the loopout
             # we temporarily store domain strands with a boolean that is true if it's a loopout
             # handle loopouts
@@ -7670,30 +8135,32 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 # these will be updated later, for now we just need the base
                 for i in range(domain.length):
                     base = seq[i]
-                    nuc = _OxdnaNucleotide(_OxdnaVector(), _OxdnaVector(0, -1, 0), _OxdnaVector(0, 0, 1),
-                                           base)
-                    dom_strand.nucleotides.append(nuc)
-                dom_strands.append((dom_strand, True))
+                    center = _OxdnaVector()
+                    normal = _OxdnaVector(0, -1, 0)
+                    forward = _OxdnaVector(0, 0, 1)
+                    nuc = _OxdnaNucleotide(center, normal, forward, base)
+                    ox_strand.nucleotides.append(nuc)
+                strand_domains.append((ox_strand, True))
 
         sstrand = _OxdnaStrand()
         # process loopouts and join strands
-        for i in range(len(dom_strands)):
-            dstrand, is_loopout = dom_strands[i]
+        for i in range(len(strand_domains)):
+            dstrand, is_loopout = strand_domains[i]
             if is_loopout:
-                prev_nuc = dom_strands[i - 1][0].nucleotides[-1]
-                next_nuc = dom_strands[i + 1][0].nucleotides[0]
+                prev_nuc = strand_domains[i - 1][0].nucleotides[-1]
+                next_nuc = strand_domains[i + 1][0].nucleotides[0]
 
                 strand_length = len(dstrand.nucleotides)
 
                 # now we position loopouts relative to the previous and next strand
                 # for now we use a linear interpolation
                 forward = next_nuc.center - prev_nuc.center
-                normal = (prev_nuc.forward + next_nuc.forward) * 0.5
+                normal = get_normal_vector_to(forward)
 
                 for loopout_idx in range(strand_length):
                     pos = prev_nuc.center + forward * ((loopout_idx + 1) / (strand_length + 1))
                     old_nuc = dstrand.nucleotides[loopout_idx]
-                    new_nuc = _OxdnaNucleotide(pos, normal, forward.normalize(), old_nuc.base)
+                    new_nuc = _OxdnaNucleotide(pos, normal.normalize(), forward.normalize(), old_nuc.base)
                     dstrand.nucleotides[loopout_idx] = new_nuc
 
             sstrand = sstrand.join(dstrand)
