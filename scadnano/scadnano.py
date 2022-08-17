@@ -2099,8 +2099,9 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         domain = sc.Domain(helix=0, forward=True, start=0, end=10)
-        toehold = sc.Extension(num_bases=5)
-        strand = sc.Strand([domain, toehold])
+        left_toehold = sc.Extension(num_bases=6)
+        right_toehold = sc.Extension(num_bases=5)
+        strand = sc.Strand([left_toehold, domain, right_toehold])
 
     It can also be created with chained method calls
 
@@ -2109,7 +2110,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
-        design.draw_strand(0,0).move(10).extension_3p(5)
+        design.draw_strand(0,0).extension_5p(6).move(10).extension_3p(5)
     """
 
     num_bases: int
@@ -2161,7 +2162,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         return NoIndent(json_map) if suppress_indent else json_map
 
     def dna_length(self) -> int:
-        """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
+        """Length of this :any:`Extension`; same as field :data:`Extension.num_bases`."""
         return self.num_bases
 
     def set_label(self, label: Optional[DomainLabel]) -> None:
