@@ -1236,16 +1236,68 @@ class HelixGroup(_JSONSerializable):
         return self.helices_view_order.index(idx)
 
 
-# def in_browser() -> bool:
-#     """Test if this code is running in the browser.
-#
-#     Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
-#     running in the browser."""
-#     try:
-#         import pyodide  # type: ignore
-#         return True
-#     except ImportError:
-#         return False
+@dataclass
+class Geometry(_JSONSerializable):
+    """Parameters controlling some geometric visualization/physical aspects of Design."""
+
+    rise_per_base_pair: float = 0.332
+    """Distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
+
+    helix_radius: float = 1.0
+    """Radius of a DNA helix in nanometers."""
+
+    bases_per_turn: float = 10.5
+    """Number of DNA base pairs in a full turn of DNA."""
+
+    minor_groove_angle: float = 150.0
+    """Minor groove angle in degrees."""
+
+    inter_helix_gap: float = 1.0
+    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+
+    def distance_between_helices(self) -> float:
+        return 2 * self.helix_radius + self.inter_helix_gap
+
+    def is_default(self) -> bool:
+        return self == _default_geometry
+
+    @staticmethod
+    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
+        geometry = Geometry()
+        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
+                                                     rise_per_base_pair_key,
+                                                     legacy_keys=legacy_rise_per_base_pair_keys)
+        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
+        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
+                                                 bases_per_turn_key)
+        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
+                                                     minor_groove_angle_key)
+        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
+                                                  inter_helix_gap_key)
+        return geometry
+
+    @staticmethod
+    def keys() -> List[str]:
+        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
+                inter_helix_gap_key]
+
+    def values(self) -> List[float]:
+        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
+                self.inter_helix_gap]
+
+    @staticmethod
+    def default_values() -> List[float]:
+        return _default_geometry.values()
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = OrderedDict()
+        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
+            if val != val_default:
+                dct[name] = val
+        return dct
+
+
+_default_geometry = Geometry()
 
 
 @dataclass
@@ -1531,6 +1583,23 @@ class Helix(_JSONSerializable):
 
     def major_ticks_is_default(self) -> bool:
         return self.major_ticks is None
+
+    def backbone_angle_at_offset(self, offset: int, forward: bool, geometry: Geometry) -> float:
+        """
+        Computes the backbone angle at *offset* for the strand in the direction given by *forward*.
+
+        :param offset:
+            offset on this helix
+        :param forward:
+            whether to compute angle for the forward or reverse strand
+        :return:
+            backbone angle at *offset* for the strand in the direction given by *forward*.
+        """
+        degrees_per_base = 360 / geometry.bases_per_turn
+        angle = self.roll + offset * degrees_per_base
+        if not forward:
+            angle += geometry.minor_groove_angle
+        return angle
 
 
 def _is_close(x1: float, x2: float) -> bool:
@@ -4119,69 +4188,6 @@ def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, 
             return value
     return default_value
 
-
-@dataclass
-class Geometry(_JSONSerializable):
-    """Parameters controlling some geometric visualization/physical aspects of Design."""
-
-    rise_per_base_pair: float = 0.332
-    """Distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
-
-    helix_radius: float = 1.0
-    """Radius of a DNA helix in nanometers."""
-
-    bases_per_turn: float = 10.5
-    """Number of DNA base pairs in a full turn of DNA."""
-
-    minor_groove_angle: float = 150.0
-    """Minor groove angle in degrees."""
-
-    inter_helix_gap: float = 1.0
-    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
-
-    def distance_between_helices(self) -> float:
-        return 2 * self.helix_radius + self.inter_helix_gap
-
-    def is_default(self) -> bool:
-        return self == _default_geometry
-
-    @staticmethod
-    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
-        geometry = Geometry()
-        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
-                                                     rise_per_base_pair_key,
-                                                     legacy_keys=legacy_rise_per_base_pair_keys)
-        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
-        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
-                                                 bases_per_turn_key)
-        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
-                                                     minor_groove_angle_key)
-        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
-                                                  inter_helix_gap_key)
-        return geometry
-
-    @staticmethod
-    def keys() -> List[str]:
-        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
-                inter_helix_gap_key]
-
-    def values(self) -> List[float]:
-        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
-                self.inter_helix_gap]
-
-    @staticmethod
-    def default_values() -> List[float]:
-        return _default_geometry.values()
-
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
-        dct: Dict[str, Any] = OrderedDict()
-        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
-            if val != val_default:
-                dct[name] = val
-        return dct
-
-
-_default_geometry = Geometry()
 
 ##############################################################################
 # plate maps
@@ -8084,7 +8090,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
 
     for strand in design.strands:
         strand_domains: List[Tuple[_OxdnaStrand, bool]] = []
-        for domain in strand.domains:
+        for i, domain in enumerate(strand.domains):
             ox_strand = _OxdnaStrand()
             seq = domain.dna_sequence
             if seq is None:
@@ -8130,7 +8136,8 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                                 ox_strand.nucleotides.append(nuc)
                                 index += 1
 
-                        cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        cen = origin_ + forward * (
+                                    offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         norm = normal.rotate(step_rot * (offset + mod), forward)
                         # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                         forw = -forward if domain.forward else forward
@@ -8145,7 +8152,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             # because we need to know the positions of nucleotides before and after the loopout
             # we temporarily store domain strands with a boolean that is true if it's a loopout
             # handle loopouts
-            else:
+            elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
                 for i in range(domain.length):
@@ -8156,6 +8163,15 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                     nuc = _OxdnaNucleotide(center, normal, forward, base)
                     ox_strand.nucleotides.append(nuc)
                 strand_domains.append((ox_strand, True))
+            elif isinstance(domain, Extension):
+                is_5p = i == 0
+                nucleotides = _compute_extension_nucleotides(design=design, strand=strand, is_5p=is_5p,
+                                                             helix_vectors=helix_vectors,
+                                                             mod_map=mod_map)
+                ox_strand.nucleotides.extend(nucleotides)
+                strand_domains.append((ox_strand, False))
+            else:
+                raise ValueError(f'unsupported substrand type {domain}')
 
         sstrand = _OxdnaStrand()
         # process loopouts and join strands
@@ -8181,3 +8197,53 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             sstrand = sstrand.join(dstrand)
         system.strands.append(sstrand)
     return system
+
+
+#FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
+def _compute_extension_nucleotides(
+        design: Design,
+        strand: Strand,
+        is_5p: bool,
+        helix_vectors: Dict[int, Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]],
+        mod_map: Dict[int, List[int]]) \
+        -> List[_OxdnaNucleotide]:
+    geometry = design.geometry
+    step_rot = -360 / geometry.bases_per_turn
+
+    adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
+    adj_helix = design.helices[adj_dom.helix]
+    offset = adj_dom.offset_5p() if is_5p else adj_dom.offset_3p() # offset of attached end of domain
+
+    origin_, forward, normal = helix_vectors[adj_dom.helix]
+
+    if not adj_dom.forward:
+        normal = normal.rotate(-geometry.minor_groove_angle, forward)
+
+    # oxDNA will rotate our backbone vector by +- _GROOVE_GAMMA (20 degrees)
+    # we apply the opposite rotation so that we get the expected vector from scadnano in oxDNA
+    groove_gamma_correction = _GROOVE_GAMMA if adj_dom.forward else -_GROOVE_GAMMA
+    normal = normal.rotate(groove_gamma_correction, forward).normalize()
+
+    # rotate normal by angle about the forward vector to get vector pointing at backbone at attached_offset
+    mod = mod_map[adj_dom.helix][offset - adj_helix.min_offset]
+    cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+    norm = normal.rotate(step_rot * (offset + mod), forward)
+    # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+    forw = -forward if adj_dom.forward else forward
+    ext = strand.domains[0] if is_5p else strand.domains[-1]
+    seq = ext.dna_sequence
+    if is_5p:
+        seq = seq[::-1]
+
+    new_forw = norm
+    new_norm = forw
+    nucs = []
+    for base in seq:
+        cen += norm
+        nuc = _OxdnaNucleotide(cen, new_norm, new_forw, base)
+        nucs.append(nuc)
+
+    if is_5p:
+        nucs = nucs[::-1]
+
+    return nucs
