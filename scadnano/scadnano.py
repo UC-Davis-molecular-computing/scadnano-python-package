@@ -3606,7 +3606,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 strand_complement_builder.append(wildcards)
 
         for (domain_idx, domain_self) in enumerate(self.domains):
-            if isinstance(domain_self, Loopout):
+            if isinstance(domain_self, (Loopout, Extension)):
                 domain_self_dna_sequence = DNA_base_wildcard * domain_self.dna_length()
             else:
                 helix = domain_self.helix
