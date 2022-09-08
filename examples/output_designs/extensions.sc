@@ -4,27 +4,27 @@
   "helices": [
     {"max_offset": 32, "grid_position": [0, 0]},
     {"max_offset": 32, "grid_position": [0, 1]},
-    {"max_offset": 32, "grid_position": [0, 2]}
+    {"max_offset": 32, "grid_position": [0, 2], "roll": 30}
   ],
   "modifications_in_design": {
-    "/5Cy5/": {
-      "display_text": "Cy5",
-      "idt_text": "/5Cy5/",
-      "display_connector": false,
-      "location": "5'"
-    },
     "/3Cy3Sp/": {
       "display_text": "Cy3",
       "idt_text": "/3Cy3Sp/",
       "display_connector": false,
       "location": "3'"
+    },
+    "/5Cy5/": {
+      "display_text": "Cy5",
+      "idt_text": "/5Cy5/",
+      "display_connector": false,
+      "location": "5'"
     }
   },
   "strands": [
     {
       "name": "strand1",
       "color": "#f74308",
-      "sequence": "TTTTTGGGGGGGGCCCCCCCCTTTGGGGGGGGAAAAAAA",
+      "sequence": "TATTTGGGGGGGGCCCCCCCCTTTGGGGGGGGATAAAAA",
       "domains": [
         {"extension_num_bases": 5, "display_length": 2.5, "name": "ext_5p 1"},
         {"name": "domain 1", "helix": 0, "forward": true, "start": 0, "end": 8},
@@ -39,7 +39,7 @@
     {
       "name": "strand2",
       "color": "#57bb00",
-      "sequence": "AAAAACCCCCCCCGGGGGGGGAAACCCCCCCCTTTTTTT",
+      "sequence": "ATAAACCCCCCCCGGGGGGGGAAACCCCCCCCTATTTTT",
       "domains": [
         {"extension_num_bases": 5, "display_length": 3.5, "display_angle": 60, "name": "ext_5p 2"},
         {"helix": 0, "forward": false, "start": 16, "end": 24},
