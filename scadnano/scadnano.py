@@ -8210,6 +8210,7 @@ def _compute_extension_nucleotides(
     geometry = design.geometry
     step_rot = -360 / geometry.bases_per_turn
 
+
     adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
     adj_helix = design.helices[adj_dom.helix]
     offset = adj_dom.offset_5p() if is_5p else adj_dom.offset_3p() # offset of attached end of domain
@@ -8231,7 +8232,10 @@ def _compute_extension_nucleotides(
     # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
     forw = -forward if adj_dom.forward else forward
     ext = strand.domains[0] if is_5p else strand.domains[-1]
+
     seq = ext.dna_sequence
+    if seq is None:
+        seq = 'T' * ext.dna_length()
     if is_5p:
         seq = seq[::-1]
 
