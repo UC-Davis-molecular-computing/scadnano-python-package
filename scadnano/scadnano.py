@@ -6946,6 +6946,45 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
+    def to_oxview_format(self, warn_duplicate_strands: bool = True) -> dict:
+        import datetime
+        self._check_legal_design(warn_duplicate_strands)
+        system = _convert_design_to_oxdna_system(self)
+
+        oxvstrands: List[Dict[str, Any]] = []
+        nuc_count = 0
+        strand_count = 0
+        for scstrand, oxstrand in zip(self.strands, system.strands):
+            strand_count += 1
+            oxvnucs: List[Dict[str, Any]] = []
+            oxvstrand = {'id': strand_count, 'class': 'NucleicAcidStrand', 'end5': nuc_count, 'end3': nuc_count+len(oxstrand.nucleotides), 'monomers': oxvnucs}
+            if scstrand.color is not None:
+                scolor = scstrand.color.to_cadnano_v2_int_hex()
+            else:
+                scolor = None
+            
+            for ni, nuc in enumerate(oxstrand.nucleotides):
+                oxvnuc = {'id': nuc_count, 'p': [nuc.r.x, nuc.r.y, nuc.r.z],
+                            'a1': [nuc.b.x, nuc.b.y, nuc.b.z], 'a3': [nuc.n.x, nuc.n.y, nuc.n.z], 'class': 'DNA', 'type': nuc.base, 'cluster': 1}
+                if ni != 0:
+                    oxvnuc['n5'] = nuc_count - 1
+                if ni != len(oxstrand.nucleotides) - 1:
+                    oxvnuc['n3'] = nuc_count + 1
+                if scolor is not None:
+                    oxvnuc['color'] = scolor
+                nuc_count += 1
+                oxvnucs.append(oxvnuc)
+            oxvstrands.append(oxvstrand)
+
+        b = system.compute_bounding_box()
+        oxvsystem = {'box': [b.x, b.y, b.z], 'date': datetime.datetime.now().isoformat(), 'systems': [{'id': 0, 'strands': oxvstrands}], 'forces': [], 'selections': []}
+
+        return oxvsystem
+
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True,) -> None:
+        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names)
+        write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
+
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
 
