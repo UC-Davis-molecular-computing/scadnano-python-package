@@ -6946,43 +6946,78 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxview_format(self, warn_duplicate_strands: bool = True) -> dict:
+    def to_oxview_format(self, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> dict:
+        """
+        Exports to oxView format.
+
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.        
+        """
         import datetime
-        self._check_legal_design(warn_duplicate_strands)
+        self._check_legal_design(warn_duplicate_strand_names)
         system = _convert_design_to_oxdna_system(self)
 
-        oxvstrands: List[Dict[str, Any]] = []
+        oxview_strands: List[Dict[str, Any]] = []
         nuc_count = 0
         strand_count = 0
-        for scstrand, oxstrand in zip(self.strands, system.strands):
+        for sc_strand, oxdna_strand in zip(self.strands, system.strands):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
-            oxvstrand = {'id': strand_count, 'class': 'NucleicAcidStrand', 'end5': nuc_count, 'end3': nuc_count+len(oxstrand.nucleotides), 'monomers': oxvnucs}
-            if scstrand.color is not None:
-                scolor = scstrand.color.to_cadnano_v2_int_hex()
+            oxvstrand = {'id': strand_count, 
+                         'class': 'NucleicAcidStrand', 
+                         'end5': nuc_count, 
+                         'end3': nuc_count+len(oxdna_strand.nucleotides), 
+                         'monomers': oxvnucs}
+            if use_strand_colors and (sc_strand.color is not None):
+                scolor = sc_strand.color.to_cadnano_v2_int_hex()
             else:
                 scolor = None
             
-            for ni, nuc in enumerate(oxstrand.nucleotides):
-                oxvnuc = {'id': nuc_count, 'p': [nuc.r.x, nuc.r.y, nuc.r.z],
-                            'a1': [nuc.b.x, nuc.b.y, nuc.b.z], 'a3': [nuc.n.x, nuc.n.y, nuc.n.z], 'class': 'DNA', 'type': nuc.base, 'cluster': 1}
-                if ni != 0:
+            for index_in_strand, nuc in enumerate(oxdna_strand.nucleotides):
+                oxvnuc = {'id': nuc_count, 
+                          'p': [nuc.r.x, nuc.r.y, nuc.r.z],
+                          'a1': [nuc.b.x, nuc.b.y, nuc.b.z],
+                          'a3': [nuc.n.x, nuc.n.y, nuc.n.z],
+                          'class': 'DNA', 
+                          'type': nuc.base, 
+                          'cluster': 1}
+                if index_in_strand != 0:
                     oxvnuc['n5'] = nuc_count - 1
-                if ni != len(oxstrand.nucleotides) - 1:
+                if index_in_strand != len(oxdna_strand.nucleotides) - 1:
                     oxvnuc['n3'] = nuc_count + 1
-                if scolor is not None:
+                if use_strand_colors and (scolor is not None):
                     oxvnuc['color'] = scolor
                 nuc_count += 1
                 oxvnucs.append(oxvnuc)
-            oxvstrands.append(oxvstrand)
+            oxview_strands.append(oxvstrand)
 
         b = system.compute_bounding_box()
-        oxvsystem = {'box': [b.x, b.y, b.z], 'date': datetime.datetime.now().isoformat(), 'systems': [{'id': 0, 'strands': oxvstrands}], 'forces': [], 'selections': []}
+        oxvsystem = {'box': [b.x, b.y, b.z], 
+                     'date': datetime.datetime.now().isoformat(), 
+                     'systems': [{'id': 0, 'strands': oxview_strands}], 
+                     'forces': [], 'selections': []}
 
         return oxvsystem
 
-    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True,) -> None:
-        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names)
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
+        """Writes an oxView file rerpesenting this design.
+
+        :param directory:
+            directy in which to write the file (default: current working directory)
+        :param filename:
+            name of the file to write (default: name of the running script with .oxview extension)
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.
+        """
+        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names, use_strand_colors=use_strand_colors)
         write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
 
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
