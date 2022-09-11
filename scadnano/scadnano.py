@@ -64,7 +64,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
+from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
     TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -7882,6 +7882,11 @@ class _OxdnaVector:
 
     def __repr__(self) -> str:
         return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
+
+    def __iter__(self) -> Iterator[float]:
+        yield self.x
+        yield self.y
+        yield self.z
 
     # counterclockwise rotation around axis
     # units of angle is degrees

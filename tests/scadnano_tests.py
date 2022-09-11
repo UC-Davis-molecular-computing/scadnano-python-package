@@ -14,6 +14,7 @@ import scadnano as sc
 import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
 
+from scadnano.scadnano import _convert_design_to_oxdna_system
 
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int,
                     end: int) -> sc.Strand:
@@ -6880,6 +6881,78 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         #     self.assertEqual("TTTTACG", ss1.dna_sequence_in(4, 10))
         #     self.assertEqual("TTTACGTACGT", ss1.dna_sequence_in(2, 10))
 
+
+class TestOxviewExport(unittest.TestCase):
+    def test_export(self):
+        "Ensures that OxView export matches OxDNA export."
+        # Uses the basic design from OxdnaExport
+        helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
+        design = sc.Design(helices=helices, grid=sc.square)
+        design.draw_strand(0, 0).move(7).cross(1).move(-7).with_color(
+            sc.Color(254, 123, 222))
+        design.draw_strand(0, 7).move(-7).cross(1).move(7)
+
+        oxdna_system = _convert_design_to_oxdna_system(design)
+
+        oxv = design.to_oxview_format(use_strand_colors=True)
+        oxv_no_color = design.to_oxview_format(use_strand_colors=False)
+
+        # Is the box correct?
+        self.assertEqual(list(oxdna_system.compute_bounding_box()), oxv['box'])
+
+        # Do we have the same number of strands?
+        self.assertEqual(len(oxdna_system.strands),
+                         len(oxv['systems'][0]['strands']))
+
+        for i, (oxdna_strand, oxview_strand, oxview_nocolor_strand,
+                des_strand) in enumerate(
+                    zip(oxdna_system.strands, oxv['systems'][0]['strands'],
+                        oxv_no_color['systems'][0]['strands'],
+                        design.strands)):
+            self.assertEqual(i + 1, oxview_strand['id'])
+
+            if des_strand.color:
+                scolor = des_strand.color.to_cadnano_v2_int_hex()
+            else:
+                scolor = None
+
+            self.assertEqual(len(oxdna_strand.nucleotides),
+                             len(oxview_strand['monomers']))
+            for j, (oxdna_nt, oxview_nt, oxview_nocolor_nt) in enumerate(
+                    zip(oxdna_strand.nucleotides, oxview_strand['monomers'],
+                        oxview_nocolor_strand['monomers'])):
+                self.assertListEqual(list(oxdna_nt.r), oxview_nt['p'])
+                self.assertListEqual(list(oxdna_nt.b), oxview_nt['a1'])
+                self.assertListEqual(list(oxdna_nt.n), oxview_nt['a3'])
+                if scolor is not None:
+                    self.assertEqual(scolor, oxview_nt['color'])
+                    self.assertNotIn('color', oxview_nocolor_nt)
+                else:
+                    self.assertNotIn('color', oxview_nt)
+                    self.assertNotIn('color', oxview_nocolor_nt)
+                self.assertEqual(oxdna_nt.base, oxview_nt['type'])
+
+    def test_export_file(self):
+        "Ensures that file export works, and writes a suitable JSON file that matches the output."
+        self.maxDiff = None
+        helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
+        design = sc.Design(helices=helices, grid=sc.square)
+        design.draw_strand(0, 0).move(7).cross(1).move(-7).with_color(
+            sc.Color(254, 123, 222))
+        design.draw_strand(0, 7).move(-7).cross(1).move(7)
+
+        oxv = design.to_oxview_format(use_strand_colors=True)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
+            design.write_oxview_file(filename=f.name)
+            with open(f.name, 'r') as f2:
+                oxv2 = json.load(f2)
+
+        # The dates won't be equal, so delete them
+        del oxv['date']
+        del oxv2['date']
+
+        self.assertEqual(oxv, oxv2)
 
 class TestOxdnaExport(unittest.TestCase):
     def setUp(self) -> None:
