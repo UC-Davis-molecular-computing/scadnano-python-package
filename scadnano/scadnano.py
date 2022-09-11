@@ -6994,8 +6994,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
 
-        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
-        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension, add_extension=True)
+        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension, add_extension=True)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
@@ -7722,7 +7722,7 @@ def _name_of_this_script() -> str:
 
 
 def write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                  filename: Optional[str] = None) -> None:
+                                                  filename: Optional[str] = None, add_extension: bool = False) -> None:
     """
     Writes a text file with `contents` whose name is (by default) the same as the name of the
     currently running script, but with extension ``.py`` changed to `extension`.
@@ -7736,16 +7736,18 @@ def write_file_same_name_as_running_python_script(contents: str, extension: str,
     :param filename:
         filename to use instead of the currently running script
     """
-    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename)
+    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename, add_extension=add_extension)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename: Optional[str]) -> str:
+                                                     filename: Optional[str], add_extension: bool = False) -> str:
     # if filename is not None, assume it has an extension
     if filename is None:
         filename = _name_of_this_script() + '.' + extension
+    elif add_extension:
+        filename += '.' + extension
     relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
