@@ -1,5 +1,7 @@
 import dataclasses
 import os
+import sys
+import tempfile
 import unittest
 import re
 import json
@@ -7556,6 +7558,27 @@ class TestOxdnaExport(unittest.TestCase):
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
 
+    def test_file_output(self) -> None:
+        # Arbitrary design
+        helix = [sc.Helix(max_offset=14)]
+        design = sc.Design(helices=helix, grid=sc.square)
+        design.draw_strand(0, 0).to(4).loopout(0, 4).to(7)
+        design.draw_strand(0, 7).to(0)
+
+        scriptname = os.path.basename(sys.argv[0])[:-3]
+
+        dat, top = design.to_oxdna_format()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # First, write to the directory, in which case the names should be the script name
+            design.write_oxdna_files(directory=tmpdir)
+            self.assertEqual(top, open(tmpdir + '/' + scriptname + '.top').read())
+            self.assertEqual(dat, open(tmpdir + '/' + scriptname + '.dat').read())
+
+            # Now, write, to a specific filename without extensions
+            design.write_oxdna_files(directory=tmpdir, filename_no_extension='oxdna-Export with spaces in name')
+            self.assertEqual(top, open(tmpdir + '/oxdna-Export with spaces in name.top').read())
+            self.assertEqual(dat, open(tmpdir + '/oxdna-Export with spaces in name.dat').read())
 
 class TestPlateMaps(unittest.TestCase):
 
