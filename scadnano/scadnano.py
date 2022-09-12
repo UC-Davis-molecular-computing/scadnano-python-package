@@ -6964,9 +6964,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         oxview_strands: List[Dict[str, Any]] = []
         nuc_count = 0
         strand_count = 0
+        strand_nuc_start = [-1]
         for sc_strand, oxdna_strand in zip(self.strands, system.strands):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
+            strand_nuc_start.append(nuc_count)
             oxvstrand = {'id': strand_count, 
                          'class': 'NucleicAcidStrand', 
                          'end5': nuc_count, 
@@ -6994,6 +6996,38 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 nuc_count += 1
                 oxvnucs.append(oxvnuc)
             oxview_strands.append(oxvstrand)
+
+        for si1, (sc_strand, oxv_strand) in enumerate(zip(self.strands, oxview_strands)):
+            for si2, strand2 in enumerate(self.strands):
+                if not sc_strand.overlaps(strand2):
+                    continue
+                s1_nuc_idx = strand_nuc_start[si1+1]
+                for (domain_idx1, domain1) in enumerate(sc_strand.domains):
+                    if isinstance(domain1, (Loopout, Extension)):
+                        continue
+                    s2_nuc_idx = strand_nuc_start[si2+1]
+                    for (domain_idx2, domain2) in enumerate(strand2.domains):
+                        if isinstance(domain2, (Loopout, Extension)):
+                            continue
+                        if not domain1.overlaps(domain2):
+                            continue
+                        overlap_left, overlap_right = domain1.compute_overlap(domain2)
+                        s1_left = domain1.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s1_right = domain1.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        s2_left = domain2.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s2_right = domain2.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        if domain1.forward:
+                            d1range = range(s1_left, s1_right)
+                            d2range = range(s2_left, s2_right, -1)
+                        else:
+                            d1range = range(s1_right+1, s1_left+1)
+                            d2range = range(s2_right-1, s2_left-1, -1)
+                        assert len(d1range) == len(d2range)
+                        for d1, d2 in zip(d1range, d2range):
+                            oxv_strand['monomers'][d1]['bp'] = s2_nuc_idx + d2
+                            if 'bp' in oxview_strands[si2]['monomers'][d2]:
+                                if oxview_strands[si2]['monomers'][d2]['bp'] != s1_nuc_idx + d1:
+                                    print (s2_nuc_idx+d2, s1_nuc_idx+d1, oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
 
         b = system.compute_bounding_box()
         oxvsystem = {'box': [b.x, b.y, b.z], 
