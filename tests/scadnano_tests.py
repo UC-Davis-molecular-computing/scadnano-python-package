@@ -6932,6 +6932,61 @@ class TestOxviewExport(unittest.TestCase):
                     self.assertNotIn('color', oxview_nocolor_nt)
                 self.assertEqual(oxdna_nt.base, oxview_nt['type'])
 
+    def test_bp(self):
+        des  = sc.Design()
+        des.set_grid(sc.Grid.square)
+        des.helices = {i :sc.Helix(max_offset=20, idx=i, grid_position=(0,i)) for i in range(3)}
+        des.draw_strand(0, 0).to(6).with_deletions(4).to(15).cross(1, 9).to(20).with_insertions((15, 2)).cross(0).to(9)
+        des.draw_strand(1, 0).to(9).cross(0).to(0).with_deletions(4)
+        des.draw_strand(1, 20).to(2).with_insertions((15, 2)).cross(2, 0).to(20).with_sequence('TTTCTCATGGGAAGCAAACTCGGTTTCCGCGTCGGATAGT')
+        des.draw_strand(2, 8).to(5).loopout(2, 5, 4).to(0)
+        des.draw_strand(2, 20).extension_5p(8).to(12).extension_3p(8).with_sequence('ATACTGGAACTACGCGCGTGAATT', assign_complement=False)
+
+        oxv = des.to_oxview_format()
+
+        strands = oxv['systems'][0]['strands']
+
+        # Basic complements with a deletion (wildcard sequences)
+        for i in range(0, 8):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[1]['monomers'][-i-1]['id'])
+            self.assertEqual(strands[1]['monomers'][-i-1]['bp'], strands[0]['monomers'][i]['id'])
+
+        # Self-complementary strand (wildcard sequences)
+        for i in range(8, 14):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[0]['monomers'][7-i]['id'])
+
+        # Insertion (defined sequences)
+        for i in range(14, 27):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[2]['monomers'][26-i]['id'])
+
+        # Before, in, and after a loopout (one strand with no sequence, one with defined sequence)
+        for i in range(0, 3):
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][27-i]['id'])
+
+        for i in range(3, 8):
+            self.assertNotIn('bp', strands[3]['monomers'][i])
+
+        for i in range(8, 12):
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][23+8-i]['id'])
+
+        # Mismatches should not be paired; also, extensions:
+        for i in range(0, 8): # 5p extension
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+        for i in range(8, 12): # complementary
+            print(i)
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][40+7-i]['id'])
+        for i in range(12, 14): # two mismatches
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+            self.assertNotIn('bp', strands[2]['monomers'][32+15-i])
+        for i in range(14, 16): # complementary again
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][32+15-i]['id'])
+        for i in range(16, len(strands[4]['monomers'])): # 3p extension
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+        
+        # Unbound region
+        for i in range(28, 32):
+            self.assertNotIn('bp', strands[2]['monomers'][i])
+
     def test_export_file(self):
         "Ensures that file export works, and writes a suitable JSON file that matches the output."
         self.maxDiff = None
