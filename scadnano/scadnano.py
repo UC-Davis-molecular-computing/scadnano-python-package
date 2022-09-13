@@ -6965,7 +6965,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         nuc_count = 0
         strand_count = 0
         strand_nuc_start = [-1]
-        for sc_strand, oxdna_strand in zip(self.strands, system.strands):
+        for strand1, oxdna_strand in zip(self.strands, system.strands):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
             strand_nuc_start.append(nuc_count)
@@ -6974,8 +6974,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                          'end5': nuc_count, 
                          'end3': nuc_count+len(oxdna_strand.nucleotides), 
                          'monomers': oxvnucs}
-            if use_strand_colors and (sc_strand.color is not None):
-                scolor = sc_strand.color.to_cadnano_v2_int_hex()
+            if use_strand_colors and (strand1.color is not None):
+                scolor = strand1.color.to_cadnano_v2_int_hex()
             else:
                 scolor = None
             
@@ -6997,16 +6997,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 oxvnucs.append(oxvnuc)
             oxview_strands.append(oxvstrand)
 
-        for si1, (sc_strand, oxv_strand) in enumerate(zip(self.strands, oxview_strands)):
+        for si1, (strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
             for si2, strand2 in enumerate(self.strands):
-                if not sc_strand.overlaps(strand2):
+                if not strand1.overlaps(strand2):
                     continue
                 s1_nuc_idx = strand_nuc_start[si1+1]
-                for (domain_idx1, domain1) in enumerate(sc_strand.domains):
+                for domain1 in strand1.domains:
                     if isinstance(domain1, (Loopout, Extension)):
                         continue
                     s2_nuc_idx = strand_nuc_start[si2+1]
-                    for (domain_idx2, domain2) in enumerate(strand2.domains):
+                    for domain2 in strand2.domains:
                         if isinstance(domain2, (Loopout, Extension)):
                             continue
                         if not domain1.overlaps(domain2):
@@ -7023,8 +7023,19 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                             d1range = range(s1_right+1, s1_left+1)
                             d2range = range(s2_right-1, s2_left-1, -1)
                         assert len(d1range) == len(d2range)
+
+                        # Check for mismatches, and do not add a pair if the bases are *known*
+                        # to mismatch.  (FIXME: this must be changed if scadnano later supports
+                        # degenerate base codes.)
                         for d1, d2 in zip(d1range, d2range):
-                            oxv_strand['monomers'][d1]['bp'] = s2_nuc_idx + d2
+                            if ((strand1.dna_sequence is not None) and 
+                                (strand2.dna_sequence is not None) and
+                                (strand1.dna_sequence[d1] != "?") and
+                                (strand2.dna_sequence[d2] != "?") and
+                                (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                                continue
+
+                            oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
                             if 'bp' in oxview_strands[si2]['monomers'][d2]:
                                 if oxview_strands[si2]['monomers'][d2]['bp'] != s1_nuc_idx + d1:
                                     print (s2_nuc_idx+d2, s1_nuc_idx+d1, oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
