@@ -64,7 +64,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
+from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
     TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -6946,6 +6946,125 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
+    def to_oxview_format(self, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> dict:
+        """
+        Exports to oxView format.
+
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.        
+        """
+        import datetime
+        self._check_legal_design(warn_duplicate_strand_names)
+        system = _convert_design_to_oxdna_system(self)
+
+        oxview_strands: List[Dict[str, Any]] = []
+        nuc_count = 0
+        strand_count = 0
+        strand_nuc_start = [-1]
+        for strand1, oxdna_strand in zip(self.strands, system.strands):
+            strand_count += 1
+            oxvnucs: List[Dict[str, Any]] = []
+            strand_nuc_start.append(nuc_count)
+            oxvstrand = {'id': strand_count, 
+                         'class': 'NucleicAcidStrand', 
+                         'end5': nuc_count, 
+                         'end3': nuc_count+len(oxdna_strand.nucleotides), 
+                         'monomers': oxvnucs}
+            if use_strand_colors and (strand1.color is not None):
+                scolor = strand1.color.to_cadnano_v2_int_hex()
+            else:
+                scolor = None
+            
+            for index_in_strand, nuc in enumerate(oxdna_strand.nucleotides):
+                oxvnuc = {'id': nuc_count, 
+                          'p': [nuc.r.x, nuc.r.y, nuc.r.z],
+                          'a1': [nuc.b.x, nuc.b.y, nuc.b.z],
+                          'a3': [nuc.n.x, nuc.n.y, nuc.n.z],
+                          'class': 'DNA', 
+                          'type': nuc.base, 
+                          'cluster': 1}
+                if index_in_strand != 0:
+                    oxvnuc['n5'] = nuc_count - 1
+                if index_in_strand != len(oxdna_strand.nucleotides) - 1:
+                    oxvnuc['n3'] = nuc_count + 1
+                if use_strand_colors and (scolor is not None):
+                    oxvnuc['color'] = scolor
+                nuc_count += 1
+                oxvnucs.append(oxvnuc)
+            oxview_strands.append(oxvstrand)
+
+        for si1, (strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
+            for si2, strand2 in enumerate(self.strands):
+                if not strand1.overlaps(strand2):
+                    continue
+                s1_nuc_idx = strand_nuc_start[si1+1]
+                for domain1 in strand1.domains:
+                    if isinstance(domain1, (Loopout, Extension)):
+                        continue
+                    s2_nuc_idx = strand_nuc_start[si2+1]
+                    for domain2 in strand2.domains:
+                        if isinstance(domain2, (Loopout, Extension)):
+                            continue
+                        if not domain1.overlaps(domain2):
+                            continue
+                        overlap_left, overlap_right = domain1.compute_overlap(domain2)
+                        s1_left = domain1.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s1_right = domain1.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        s2_left = domain2.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s2_right = domain2.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        if domain1.forward:
+                            d1range = range(s1_left, s1_right)
+                            d2range = range(s2_left, s2_right, -1)
+                        else:
+                            d1range = range(s1_right+1, s1_left+1)
+                            d2range = range(s2_right-1, s2_left-1, -1)
+                        assert len(d1range) == len(d2range)
+
+                        # Check for mismatches, and do not add a pair if the bases are *known*
+                        # to mismatch.  (FIXME: this must be changed if scadnano later supports
+                        # degenerate base codes.)
+                        for d1, d2 in zip(d1range, d2range):
+                            if ((strand1.dna_sequence is not None) and 
+                                (strand2.dna_sequence is not None) and
+                                (strand1.dna_sequence[d1] != "?") and
+                                (strand2.dna_sequence[d2] != "?") and
+                                (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                                continue
+
+                            oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
+                            if 'bp' in oxview_strands[si2]['monomers'][d2]:
+                                if oxview_strands[si2]['monomers'][d2]['bp'] != s1_nuc_idx + d1:
+                                    print (s2_nuc_idx+d2, s1_nuc_idx+d1, oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
+
+        b = system.compute_bounding_box()
+        oxvsystem = {'box': [b.x, b.y, b.z], 
+                     'date': datetime.datetime.now().isoformat(), 
+                     'systems': [{'id': 0, 'strands': oxview_strands}], 
+                     'forces': [], 'selections': []}
+
+        return oxvsystem
+
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
+        """Writes an oxView file rerpesenting this design.
+
+        :param directory:
+            directy in which to write the file (default: current working directory)
+        :param filename:
+            name of the file to write (default: name of the running script with .oxview extension)
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.
+        """
+        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names, use_strand_colors=use_strand_colors)
+        write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
+
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
 
@@ -7808,6 +7927,11 @@ class _OxdnaVector:
 
     def __repr__(self) -> str:
         return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
+
+    def __iter__(self) -> Iterator[float]:
+        yield self.x
+        yield self.y
+        yield self.z
 
     # counterclockwise rotation around axis
     # units of angle is degrees
