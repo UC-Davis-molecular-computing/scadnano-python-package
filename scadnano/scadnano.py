@@ -7823,6 +7823,31 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def grid_of_helix(self, helix):
         pass
 
+    def add_helix(self, idx: int, helix: Helix) -> None:
+        """
+        Adds `helix` as a new :any:`Helix` with index `idx` to this Design.
+
+        :param idx:
+            index of new :any:`Helix`
+        :param helix:
+            the new :any:`Helix`
+        """
+        if idx in self.helices:
+            raise ValueError(f'there is already a helix with idx = {idx} in this design:\n'
+                             f'{self.helices[idx]}')
+        if helix.group not in self.groups:
+            raise ValueError(f'Helix group is {helix.group} but this design has no group with that name:\n'
+                             f'existing groups = {", ".join(self.groups.keys())}')
+
+        self.helices[idx] = helix
+
+        group = self.groups[helix.group]
+        group.helices_view_order.append(idx)
+
+        self._ensure_helices_distinct_objects()
+        self._set_helices_grid_positions_or_positions()
+        self._assign_default_helices_view_orders_to_groups()
+
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
@@ -8263,7 +8288,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                                 index += 1
 
                         cen = origin_ + forward * (
-                                    offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         norm = normal.rotate(step_rot * (offset + mod), forward)
                         # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                         forw = -forward if domain.forward else forward
@@ -8325,7 +8350,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     return system
 
 
-#FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
+# FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
 def _compute_extension_nucleotides(
         design: Design,
         strand: Strand,
@@ -8336,10 +8361,9 @@ def _compute_extension_nucleotides(
     geometry = design.geometry
     step_rot = -360 / geometry.bases_per_turn
 
-
     adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
     adj_helix = design.helices[adj_dom.helix]
-    offset = adj_dom.offset_5p() if is_5p else adj_dom.offset_3p() # offset of attached end of domain
+    offset = adj_dom.offset_5p() if is_5p else adj_dom.offset_3p()  # offset of attached end of domain
 
     origin_, forward, normal = helix_vectors[adj_dom.helix]
 
