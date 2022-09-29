@@ -2622,6 +2622,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
 
+        self.design._check_strand_has_legal_offsets_in_helices(self._strand)
+
         self.current_offset = offset
 
         return self
@@ -7120,7 +7122,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
     # so I removed it.
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
+    def write_scadnano_file(self, filename: Optional[str] = None, directory: str = '.',
                             extension: Optional[str] = None,
                             suppress_indent: bool = True,
                             warn_duplicate_strand_names: bool = True) -> None:
@@ -7136,12 +7138,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         The string written is that returned by :meth:`Design.to_json`.
 
-        :param directory:
-            directory in which to put file (default: current working directory)
         :param filename:
             filename (default: name of script with ``.py`` replaced by
             ``.sc``).
             Mutually exclusive with `extension`
+        :param directory:
+            directory in which to put file (default: current working directory)
         :param extension:
             extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
