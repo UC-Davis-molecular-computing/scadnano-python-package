@@ -2147,7 +2147,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return self_seq_idx_start
 
 
-default_display_angle = 45.0
+default_display_angle = 35.0
 
 default_display_length = 1.0
 
@@ -2487,8 +2487,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def extension_3p(self, num_bases: int, display_length: float = 1.0,
-                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_3p(self,
+                     num_bases: int,
+                     display_length: float = default_display_length,
+                     display_angle: float = default_display_angle
+                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 3' :any:`Extension`.
@@ -2523,8 +2526,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def _most_recently_added_substrand_is_loopout(self):
         return self._most_recently_added_substrand_is_instance_of_class(Loopout)
 
-    def extension_5p(self, num_bases: int, display_length: float = 1.0,
-                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_5p(self,
+                     num_bases: int,
+                     display_length: float = default_display_length,
+                     display_angle: float = default_display_angle
+                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 5' :any:`Extension`.
