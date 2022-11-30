@@ -5472,7 +5472,7 @@ class TestCircularStrandEdits(unittest.TestCase):
     '''
 
     def setUp(self) -> None:
-        helices = [sc.Helix(max_offset=10) for _ in range(3)]
+        helices = [sc.Helix(max_offset=50) for _ in range(3)]
         self.design = sc.Design(helices=helices, strands=[])
         self.design.draw_strand(0, 0).move(10).cross(1).move(-10)
         self.design.draw_strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
