@@ -7000,10 +7000,12 @@ class TestOxviewExport(unittest.TestCase):
 
         oxv = design.to_oxview_format(use_strand_colors=True)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             design.write_oxview_file(filename=f.name)
-            with open(f.name, 'r') as f2:
-                oxv2 = json.load(f2)
+            filename = f.name
+        with open(filename, 'r') as f2:
+            oxv2 = json.load(f2)
+        os.unlink(filename)
 
         # The dates won't be equal, so delete them
         del oxv['date']
