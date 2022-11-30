@@ -2181,7 +2181,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
         design.draw_strand(0,0).extension_5p(3).move(10).extension_3p(2)
 
-    which makes this strand with an :any:`Extension` on side of the length-10 :any:`Domain`:
+    which makes this strand with an :any:`Extension` on the side of the length-10 :any:`Domain`:
 
     .. code-block:: none
 
