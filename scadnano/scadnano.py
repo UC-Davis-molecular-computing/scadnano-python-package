@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # commented out for now to support Py3.6, which does not support this feature
 # from __future__ import annotations
 
-__version__ = "0.17.5"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.17.6"  # version line; WARNING: do not remove or change this line or comment
 
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
@@ -64,7 +64,7 @@ import itertools
 import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
-from typing import Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
+from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
     TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
@@ -1236,16 +1236,68 @@ class HelixGroup(_JSONSerializable):
         return self.helices_view_order.index(idx)
 
 
-# def in_browser() -> bool:
-#     """Test if this code is running in the browser.
-#
-#     Checks for existence of package "pyodide" used in pyodide. If present it is assumed the code is
-#     running in the browser."""
-#     try:
-#         import pyodide  # type: ignore
-#         return True
-#     except ImportError:
-#         return False
+@dataclass
+class Geometry(_JSONSerializable):
+    """Parameters controlling some geometric visualization/physical aspects of Design."""
+
+    rise_per_base_pair: float = 0.332
+    """Distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
+
+    helix_radius: float = 1.0
+    """Radius of a DNA helix in nanometers."""
+
+    bases_per_turn: float = 10.5
+    """Number of DNA base pairs in a full turn of DNA."""
+
+    minor_groove_angle: float = 150.0
+    """Minor groove angle in degrees."""
+
+    inter_helix_gap: float = 1.0
+    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+
+    def distance_between_helices(self) -> float:
+        return 2 * self.helix_radius + self.inter_helix_gap
+
+    def is_default(self) -> bool:
+        return self == _default_geometry
+
+    @staticmethod
+    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
+        geometry = Geometry()
+        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
+                                                     rise_per_base_pair_key,
+                                                     legacy_keys=legacy_rise_per_base_pair_keys)
+        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
+        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
+                                                 bases_per_turn_key)
+        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
+                                                     minor_groove_angle_key)
+        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
+                                                  inter_helix_gap_key)
+        return geometry
+
+    @staticmethod
+    def keys() -> List[str]:
+        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
+                inter_helix_gap_key]
+
+    def values(self) -> List[float]:
+        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
+                self.inter_helix_gap]
+
+    @staticmethod
+    def default_values() -> List[float]:
+        return _default_geometry.values()
+
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
+        dct: Dict[str, Any] = OrderedDict()
+        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
+            if val != val_default:
+                dct[name] = val
+        return dct
+
+
+_default_geometry = Geometry()
 
 
 @dataclass
@@ -1531,6 +1583,23 @@ class Helix(_JSONSerializable):
 
     def major_ticks_is_default(self) -> bool:
         return self.major_ticks is None
+
+    def backbone_angle_at_offset(self, offset: int, forward: bool, geometry: Geometry) -> float:
+        """
+        Computes the backbone angle at *offset* for the strand in the direction given by *forward*.
+
+        :param offset:
+            offset on this helix
+        :param forward:
+            whether to compute angle for the forward or reverse strand
+        :return:
+            backbone angle at *offset* for the strand in the direction given by *forward*.
+        """
+        degrees_per_base = 360 / geometry.bases_per_turn
+        angle = self.roll + offset * degrees_per_base
+        if not forward:
+            angle += geometry.minor_groove_angle
+        return angle
 
 
 def _is_close(x1: float, x2: float) -> bool:
@@ -2078,7 +2147,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return self_seq_idx_start
 
 
-default_display_angle = 45.0
+default_display_angle = 35.0
 
 default_display_length = 1.0
 
@@ -2099,8 +2168,9 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         domain = sc.Domain(helix=0, forward=True, start=0, end=10)
-        toehold = sc.Extension(num_bases=5)
-        strand = sc.Strand([domain, toehold])
+        left_toehold = sc.Extension(num_bases=6)
+        right_toehold = sc.Extension(num_bases=5)
+        strand = sc.Strand([left_toehold, domain, right_toehold])
 
     It can also be created with chained method calls
 
@@ -2109,14 +2179,26 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         import scadnano as sc
 
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
-        design.draw_strand(0,0).move(10).extension_3p(5)
+        design.draw_strand(0,0).extension_5p(3).move(10).extension_3p(2)
+
+    which makes this strand with an :any:`Extension` on the side of the length-10 :any:`Domain`:
+
+    .. code-block:: none
+
+       [
+        \              >
+         \            /
+          \          /
+           ----------
     """
 
     num_bases: int
-    """Length (in DNA bases) of this :any:`Loopout`."""
+    """Length (in DNA bases) of this :any:`Extension`."""
 
     display_length: float = default_display_length
-    """Length (in nm) to display in the scadnano web app."""
+    """
+    Length (in nm) to display the line representing the :any:`Extension` in the scadnano web app.
+    """
 
     display_angle: float = default_display_angle
     """
@@ -2126,6 +2208,8 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     0 degrees means parallel to the adjacent domain.
     90 degrees means pointing away from the helix.
     180 degrees means means antiparallel to the adjacent domain (overlapping).
+    If a forward strand, will go above the strand; if a reverse strand, will go below,
+    for degrees strictly between 0 and 180.
     """
 
     label: Optional[DomainLabel] = None
@@ -2161,7 +2245,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         return NoIndent(json_map) if suppress_indent else json_map
 
     def dna_length(self) -> int:
-        """Length of this :any:`Extension`; same as field :py:data:`Extension.length`."""
+        """Length of this :any:`Extension`; same as field :data:`Extension.num_bases`."""
         return self.num_bases
 
     def set_label(self, label: Optional[DomainLabel]) -> None:
@@ -2403,8 +2487,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.append_domain(self._strand, Loopout(length))
         return self
 
-    def extension_3p(self, num_bases: int, display_length: float = 1.0,
-                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_3p(self,
+                     num_bases: int,
+                     display_length: float = default_display_length,
+                     display_angle: float = default_display_angle
+                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 3' :any:`Extension`.
@@ -2439,8 +2526,11 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def _most_recently_added_substrand_is_loopout(self):
         return self._most_recently_added_substrand_is_instance_of_class(Loopout)
 
-    def extension_5p(self, num_bases: int, display_length: float = 1.0,
-                     display_angle: float = 45.0) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def extension_5p(self,
+                     num_bases: int,
+                     display_length: float = default_display_length,
+                     display_angle: float = default_display_angle
+                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 5' :any:`Extension`.
@@ -2537,6 +2627,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         else:
             self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
+
+        self.design._check_strand_has_legal_offsets_in_helices(self._strand)
 
         self.current_offset = offset
 
@@ -3522,7 +3614,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 strand_complement_builder.append(wildcards)
 
         for (domain_idx, domain_self) in enumerate(self.domains):
-            if isinstance(domain_self, Loopout):
+            if isinstance(domain_self, (Loopout, Extension)):
                 domain_self_dna_sequence = DNA_base_wildcard * domain_self.dna_length()
             else:
                 helix = domain_self.helix
@@ -4104,69 +4196,6 @@ def optional_field(default_value: Any, json_map: Dict[str, Any], main_key: str, 
             return value
     return default_value
 
-
-@dataclass
-class Geometry(_JSONSerializable):
-    """Parameters controlling some geometric visualization/physical aspects of Design."""
-
-    rise_per_base_pair: float = 0.332
-    """Distance in nanometers between two adjacent base pairs along the length of a DNA double helix."""
-
-    helix_radius: float = 1.0
-    """Radius of a DNA helix in nanometers."""
-
-    bases_per_turn: float = 10.5
-    """Number of DNA base pairs in a full turn of DNA."""
-
-    minor_groove_angle: float = 150.0
-    """Minor groove angle in degrees."""
-
-    inter_helix_gap: float = 1.0
-    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
-
-    def distance_between_helices(self) -> float:
-        return 2 * self.helix_radius + self.inter_helix_gap
-
-    def is_default(self) -> bool:
-        return self == _default_geometry
-
-    @staticmethod
-    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
-        geometry = Geometry()
-        geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
-                                                     rise_per_base_pair_key,
-                                                     legacy_keys=legacy_rise_per_base_pair_keys)
-        geometry.helix_radius = optional_field(_default_geometry.helix_radius, json_map, helix_radius_key)
-        geometry.bases_per_turn = optional_field(_default_geometry.bases_per_turn, json_map,
-                                                 bases_per_turn_key)
-        geometry.minor_groove_angle = optional_field(_default_geometry.minor_groove_angle, json_map,
-                                                     minor_groove_angle_key)
-        geometry.inter_helix_gap = optional_field(_default_geometry.inter_helix_gap, json_map,
-                                                  inter_helix_gap_key)
-        return geometry
-
-    @staticmethod
-    def keys() -> List[str]:
-        return [rise_per_base_pair_key, helix_radius_key, bases_per_turn_key, minor_groove_angle_key,
-                inter_helix_gap_key]
-
-    def values(self) -> List[float]:
-        return [self.rise_per_base_pair, self.helix_radius, self.bases_per_turn, self.minor_groove_angle,
-                self.inter_helix_gap]
-
-    @staticmethod
-    def default_values() -> List[float]:
-        return _default_geometry.values()
-
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
-        dct: Dict[str, Any] = OrderedDict()
-        for name, val, val_default in zip(Geometry.keys(), self.values(), Geometry.default_values()):
-            if val != val_default:
-                dct[name] = val
-        return dct
-
-
-_default_geometry = Geometry()
 
 ##############################################################################
 # plate maps
@@ -6925,6 +6954,125 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
+    def to_oxview_format(self, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> dict:
+        """
+        Exports to oxView format.
+
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.        
+        """
+        import datetime
+        self._check_legal_design(warn_duplicate_strand_names)
+        system = _convert_design_to_oxdna_system(self)
+
+        oxview_strands: List[Dict[str, Any]] = []
+        nuc_count = 0
+        strand_count = 0
+        strand_nuc_start = [-1]
+        for strand1, oxdna_strand in zip(self.strands, system.strands):
+            strand_count += 1
+            oxvnucs: List[Dict[str, Any]] = []
+            strand_nuc_start.append(nuc_count)
+            oxvstrand = {'id': strand_count, 
+                         'class': 'NucleicAcidStrand', 
+                         'end5': nuc_count, 
+                         'end3': nuc_count+len(oxdna_strand.nucleotides), 
+                         'monomers': oxvnucs}
+            if use_strand_colors and (strand1.color is not None):
+                scolor = strand1.color.to_cadnano_v2_int_hex()
+            else:
+                scolor = None
+            
+            for index_in_strand, nuc in enumerate(oxdna_strand.nucleotides):
+                oxvnuc = {'id': nuc_count, 
+                          'p': [nuc.r.x, nuc.r.y, nuc.r.z],
+                          'a1': [nuc.b.x, nuc.b.y, nuc.b.z],
+                          'a3': [nuc.n.x, nuc.n.y, nuc.n.z],
+                          'class': 'DNA', 
+                          'type': nuc.base, 
+                          'cluster': 1}
+                if index_in_strand != 0:
+                    oxvnuc['n5'] = nuc_count - 1
+                if index_in_strand != len(oxdna_strand.nucleotides) - 1:
+                    oxvnuc['n3'] = nuc_count + 1
+                if use_strand_colors and (scolor is not None):
+                    oxvnuc['color'] = scolor
+                nuc_count += 1
+                oxvnucs.append(oxvnuc)
+            oxview_strands.append(oxvstrand)
+
+        for si1, (strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
+            for si2, strand2 in enumerate(self.strands):
+                if not strand1.overlaps(strand2):
+                    continue
+                s1_nuc_idx = strand_nuc_start[si1+1]
+                for domain1 in strand1.domains:
+                    if isinstance(domain1, (Loopout, Extension)):
+                        continue
+                    s2_nuc_idx = strand_nuc_start[si2+1]
+                    for domain2 in strand2.domains:
+                        if isinstance(domain2, (Loopout, Extension)):
+                            continue
+                        if not domain1.overlaps(domain2):
+                            continue
+                        overlap_left, overlap_right = domain1.compute_overlap(domain2)
+                        s1_left = domain1.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s1_right = domain1.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        s2_left = domain2.domain_offset_to_strand_dna_idx(overlap_left, False)
+                        s2_right = domain2.domain_offset_to_strand_dna_idx(overlap_right, False)
+                        if domain1.forward:
+                            d1range = range(s1_left, s1_right)
+                            d2range = range(s2_left, s2_right, -1)
+                        else:
+                            d1range = range(s1_right+1, s1_left+1)
+                            d2range = range(s2_right-1, s2_left-1, -1)
+                        assert len(d1range) == len(d2range)
+
+                        # Check for mismatches, and do not add a pair if the bases are *known*
+                        # to mismatch.  (FIXME: this must be changed if scadnano later supports
+                        # degenerate base codes.)
+                        for d1, d2 in zip(d1range, d2range):
+                            if ((strand1.dna_sequence is not None) and 
+                                (strand2.dna_sequence is not None) and
+                                (strand1.dna_sequence[d1] != "?") and
+                                (strand2.dna_sequence[d2] != "?") and
+                                (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                                continue
+
+                            oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
+                            if 'bp' in oxview_strands[si2]['monomers'][d2]:
+                                if oxview_strands[si2]['monomers'][d2]['bp'] != s1_nuc_idx + d1:
+                                    print (s2_nuc_idx+d2, s1_nuc_idx+d1, oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
+
+        b = system.compute_bounding_box()
+        oxvsystem = {'box': [b.x, b.y, b.z], 
+                     'date': datetime.datetime.now().isoformat(), 
+                     'systems': [{'id': 0, 'strands': oxview_strands}], 
+                     'forces': [], 'selections': []}
+
+        return oxvsystem
+
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
+        """Writes an oxView file rerpesenting this design.
+
+        :param directory:
+            directy in which to write the file (default: current working directory)
+        :param filename:
+            name of the file to write (default: name of the running script with .oxview extension)
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_color:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.
+        """
+        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names, use_strand_colors=use_strand_colors)
+        write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
+
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
 
@@ -6973,14 +7121,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
 
-        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension)
-        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension)
+        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension, add_extension=True)
+        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension, add_extension=True)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
     # so I removed it.
     # @_docstring_parameter(default_extension=default_scadnano_file_extension)
-    def write_scadnano_file(self, directory: str = '.', filename: Optional[str] = None,
+    def write_scadnano_file(self, filename: Optional[str] = None, directory: str = '.',
                             extension: Optional[str] = None,
                             suppress_indent: bool = True,
                             warn_duplicate_strand_names: bool = True) -> None:
@@ -6996,12 +7144,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         The string written is that returned by :meth:`Design.to_json`.
 
-        :param directory:
-            directory in which to put file (default: current working directory)
         :param filename:
             filename (default: name of script with ``.py`` replaced by
             ``.sc``).
             Mutually exclusive with `extension`
+        :param directory:
+            directory in which to put file (default: current working directory)
         :param extension:
             extension for filename (default: ``.sc``)
             Mutually exclusive with `filename`
@@ -7683,6 +7831,31 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def grid_of_helix(self, helix):
         pass
 
+    def add_helix(self, idx: int, helix: Helix) -> None:
+        """
+        Adds `helix` as a new :any:`Helix` with index `idx` to this Design.
+
+        :param idx:
+            index of new :any:`Helix`
+        :param helix:
+            the new :any:`Helix`
+        """
+        if idx in self.helices:
+            raise ValueError(f'there is already a helix with idx = {idx} in this design:\n'
+                             f'{self.helices[idx]}')
+        if helix.group not in self.groups:
+            raise ValueError(f'Helix group is {helix.group} but this design has no group with that name:\n'
+                             f'existing groups = {", ".join(self.groups.keys())}')
+
+        self.helices[idx] = helix
+
+        group = self.groups[helix.group]
+        group.helices_view_order.append(idx)
+
+        self._ensure_helices_distinct_objects()
+        self._set_helices_grid_positions_or_positions()
+        self._assign_default_helices_view_orders_to_groups()
+
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
@@ -7701,7 +7874,7 @@ def _name_of_this_script() -> str:
 
 
 def write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                  filename: Optional[str] = None) -> None:
+                                                  filename: Optional[str] = None, add_extension: bool = False) -> None:
     """
     Writes a text file with `contents` whose name is (by default) the same as the name of the
     currently running script, but with extension ``.py`` changed to `extension`.
@@ -7715,16 +7888,18 @@ def write_file_same_name_as_running_python_script(contents: str, extension: str,
     :param filename:
         filename to use instead of the currently running script
     """
-    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename)
+    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename, add_extension=add_extension)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename: Optional[str]) -> str:
+                                                     filename: Optional[str], add_extension: bool = False) -> str:
     # if filename is not None, assume it has an extension
     if filename is None:
         filename = _name_of_this_script() + '.' + extension
+    elif add_extension:
+        filename += '.' + extension
     relative_filename = _create_directory_and_set_filename(directory, filename)
     return relative_filename
 
@@ -7785,6 +7960,11 @@ class _OxdnaVector:
 
     def __repr__(self) -> str:
         return '_OxdnaVector({}, {}, {})'.format(self.x, self.y, self.z)
+
+    def __iter__(self) -> Iterator[float]:
+        yield self.x
+        yield self.y
+        yield self.z
 
     # counterclockwise rotation around axis
     # units of angle is degrees
@@ -8069,7 +8249,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
 
     for strand in design.strands:
         strand_domains: List[Tuple[_OxdnaStrand, bool]] = []
-        for domain in strand.domains:
+        for i, domain in enumerate(strand.domains):
             ox_strand = _OxdnaStrand()
             seq = domain.dna_sequence
             if seq is None:
@@ -8115,7 +8295,8 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                                 ox_strand.nucleotides.append(nuc)
                                 index += 1
 
-                        cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                        cen = origin_ + forward * (
+                                offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
                         norm = normal.rotate(step_rot * (offset + mod), forward)
                         # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                         forw = -forward if domain.forward else forward
@@ -8130,7 +8311,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             # because we need to know the positions of nucleotides before and after the loopout
             # we temporarily store domain strands with a boolean that is true if it's a loopout
             # handle loopouts
-            else:
+            elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
                 for i in range(domain.length):
@@ -8141,6 +8322,15 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                     nuc = _OxdnaNucleotide(center, normal, forward, base)
                     ox_strand.nucleotides.append(nuc)
                 strand_domains.append((ox_strand, True))
+            elif isinstance(domain, Extension):
+                is_5p = i == 0
+                nucleotides = _compute_extension_nucleotides(design=design, strand=strand, is_5p=is_5p,
+                                                             helix_vectors=helix_vectors,
+                                                             mod_map=mod_map)
+                ox_strand.nucleotides.extend(nucleotides)
+                strand_domains.append((ox_strand, False))
+            else:
+                raise ValueError(f'unsupported substrand type {domain}')
 
         sstrand = _OxdnaStrand()
         # process loopouts and join strands
@@ -8166,3 +8356,56 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             sstrand = sstrand.join(dstrand)
         system.strands.append(sstrand)
     return system
+
+
+# FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
+def _compute_extension_nucleotides(
+        design: Design,
+        strand: Strand,
+        is_5p: bool,
+        helix_vectors: Dict[int, Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]],
+        mod_map: Dict[int, List[int]]) \
+        -> List[_OxdnaNucleotide]:
+    geometry = design.geometry
+    step_rot = -360 / geometry.bases_per_turn
+
+    adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
+    adj_helix = design.helices[adj_dom.helix]
+    offset = adj_dom.offset_5p() if is_5p else adj_dom.offset_3p()  # offset of attached end of domain
+
+    origin_, forward, normal = helix_vectors[adj_dom.helix]
+
+    if not adj_dom.forward:
+        normal = normal.rotate(-geometry.minor_groove_angle, forward)
+
+    # oxDNA will rotate our backbone vector by +- _GROOVE_GAMMA (20 degrees)
+    # we apply the opposite rotation so that we get the expected vector from scadnano in oxDNA
+    groove_gamma_correction = _GROOVE_GAMMA if adj_dom.forward else -_GROOVE_GAMMA
+    normal = normal.rotate(groove_gamma_correction, forward).normalize()
+
+    # rotate normal by angle about the forward vector to get vector pointing at backbone at attached_offset
+    mod = mod_map[adj_dom.helix][offset - adj_helix.min_offset]
+    cen = origin_ + forward * (offset + mod) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+    norm = normal.rotate(step_rot * (offset + mod), forward)
+    # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
+    forw = -forward if adj_dom.forward else forward
+    ext = strand.domains[0] if is_5p else strand.domains[-1]
+
+    seq = ext.dna_sequence
+    if seq is None:
+        seq = 'T' * ext.dna_length()
+    if is_5p:
+        seq = seq[::-1]
+
+    new_forw = norm
+    new_norm = forw
+    nucs = []
+    for base in seq:
+        cen += norm
+        nuc = _OxdnaNucleotide(cen, new_norm, new_forw, base)
+        nucs.append(nuc)
+
+    if is_5p:
+        nucs = nucs[::-1]
+
+    return nucs

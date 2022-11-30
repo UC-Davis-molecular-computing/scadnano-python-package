@@ -1,5 +1,7 @@
 import dataclasses
 import os
+import sys
+import tempfile
 import unittest
 import re
 import json
@@ -12,6 +14,7 @@ import scadnano as sc
 import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
 
+from scadnano.scadnano import _convert_design_to_oxdna_system
 
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int,
                     end: int) -> sc.Strand:
@@ -1218,10 +1221,12 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
         # add 10 strands in excess of 3 plates
         for plate_type in [sc.PlateType.wells96, sc.PlateType.wells384]:
+            num_strands = 3 * plate_type.num_wells_per_plate() + 10
             filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xls'
-            helices = [sc.Helix(max_offset=100) for _ in range(1)]
+            max_offset = num_strands * strand_len
+            helices = [sc.Helix(max_offset=max_offset) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
-            for strand_idx in range(3 * plate_type.num_wells_per_plate() + 10):
+            for strand_idx in range(num_strands):
                 design.draw_strand(0, strand_len * strand_idx).move(strand_len).with_name(f's{strand_idx}')
                 design.strands[-1].set_dna_sequence('T' * strand_len)
 
@@ -5467,7 +5472,7 @@ class TestCircularStrandEdits(unittest.TestCase):
     '''
 
     def setUp(self) -> None:
-        helices = [sc.Helix(max_offset=10) for _ in range(3)]
+        helices = [sc.Helix(max_offset=50) for _ in range(3)]
         self.design = sc.Design(helices=helices, strands=[])
         self.design.draw_strand(0, 0).move(10).cross(1).move(-10)
         self.design.draw_strand(0, 15).move(5).cross(1).move(-10).cross(0).move(5)
@@ -6879,6 +6884,135 @@ class TestSubstrandDNASequenceIn(unittest.TestCase):
         #     self.assertEqual("TTTACGTACGT", ss1.dna_sequence_in(2, 10))
 
 
+class TestOxviewExport(unittest.TestCase):
+    def test_export(self):
+        "Ensures that OxView export matches OxDNA export."
+        # Uses the basic design from OxdnaExport
+        helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
+        design = sc.Design(helices=helices, grid=sc.square)
+        design.draw_strand(0, 0).move(7).cross(1).move(-7).with_color(
+            sc.Color(254, 123, 222))
+        design.draw_strand(0, 7).move(-7).cross(1).move(7)
+
+        oxdna_system = _convert_design_to_oxdna_system(design)
+
+        oxv = design.to_oxview_format(use_strand_colors=True)
+        oxv_no_color = design.to_oxview_format(use_strand_colors=False)
+
+        # Is the box correct?
+        self.assertEqual(list(oxdna_system.compute_bounding_box()), oxv['box'])
+
+        # Do we have the same number of strands?
+        self.assertEqual(len(oxdna_system.strands),
+                         len(oxv['systems'][0]['strands']))
+
+        for i, (oxdna_strand, oxview_strand, oxview_nocolor_strand,
+                des_strand) in enumerate(
+                    zip(oxdna_system.strands, oxv['systems'][0]['strands'],
+                        oxv_no_color['systems'][0]['strands'],
+                        design.strands)):
+            self.assertEqual(i + 1, oxview_strand['id'])
+
+            if des_strand.color:
+                scolor = des_strand.color.to_cadnano_v2_int_hex()
+            else:
+                scolor = None
+
+            self.assertEqual(len(oxdna_strand.nucleotides),
+                             len(oxview_strand['monomers']))
+            for j, (oxdna_nt, oxview_nt, oxview_nocolor_nt) in enumerate(
+                    zip(oxdna_strand.nucleotides, oxview_strand['monomers'],
+                        oxview_nocolor_strand['monomers'])):
+                self.assertListEqual(list(oxdna_nt.r), oxview_nt['p'])
+                self.assertListEqual(list(oxdna_nt.b), oxview_nt['a1'])
+                self.assertListEqual(list(oxdna_nt.n), oxview_nt['a3'])
+                if scolor is not None:
+                    self.assertEqual(scolor, oxview_nt['color'])
+                    self.assertNotIn('color', oxview_nocolor_nt)
+                else:
+                    self.assertNotIn('color', oxview_nt)
+                    self.assertNotIn('color', oxview_nocolor_nt)
+                self.assertEqual(oxdna_nt.base, oxview_nt['type'])
+
+    def test_bp(self):
+        des  = sc.Design()
+        des.set_grid(sc.Grid.square)
+        des.helices = {i :sc.Helix(max_offset=20, idx=i, grid_position=(0,i)) for i in range(3)}
+        des.draw_strand(0, 0).to(6).with_deletions(4).to(15).cross(1, 9).to(20).with_insertions((15, 2)).cross(0).to(9)
+        des.draw_strand(1, 0).to(9).cross(0).to(0).with_deletions(4)
+        des.draw_strand(1, 20).to(2).with_insertions((15, 2)).cross(2, 0).to(20).with_sequence('TTTCTCATGGGAAGCAAACTCGGTTTCCGCGTCGGATAGT')
+        des.draw_strand(2, 8).to(5).loopout(2, 5, 4).to(0)
+        des.draw_strand(2, 20).extension_5p(8).to(12).extension_3p(8).with_sequence('ATACTGGAACTACGCGCGTGAATT', assign_complement=False)
+
+        oxv = des.to_oxview_format()
+
+        strands = oxv['systems'][0]['strands']
+
+        # Basic complements with a deletion (wildcard sequences)
+        for i in range(0, 8):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[1]['monomers'][-i-1]['id'])
+            self.assertEqual(strands[1]['monomers'][-i-1]['bp'], strands[0]['monomers'][i]['id'])
+
+        # Self-complementary strand (wildcard sequences)
+        for i in range(8, 14):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[0]['monomers'][7-i]['id'])
+
+        # Insertion (defined sequences)
+        for i in range(14, 27):
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[2]['monomers'][26-i]['id'])
+
+        # Before, in, and after a loopout (one strand with no sequence, one with defined sequence)
+        for i in range(0, 3):
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][27-i]['id'])
+
+        for i in range(3, 8):
+            self.assertNotIn('bp', strands[3]['monomers'][i])
+
+        for i in range(8, 12):
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][23+8-i]['id'])
+
+        # Mismatches should not be paired; also, extensions:
+        for i in range(0, 8): # 5p extension
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+        for i in range(8, 12): # complementary
+            print(i)
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][40+7-i]['id'])
+        for i in range(12, 14): # two mismatches
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+            self.assertNotIn('bp', strands[2]['monomers'][32+15-i])
+        for i in range(14, 16): # complementary again
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][32+15-i]['id'])
+        for i in range(16, len(strands[4]['monomers'])): # 3p extension
+            self.assertNotIn('bp', strands[4]['monomers'][i])
+        
+        # Unbound region
+        for i in range(28, 32):
+            self.assertNotIn('bp', strands[2]['monomers'][i])
+
+    def test_export_file(self):
+        "Ensures that file export works, and writes a suitable JSON file that matches the output."
+        self.maxDiff = None
+        helices = [sc.Helix(max_offset=7), sc.Helix(max_offset=7)]
+        design = sc.Design(helices=helices, grid=sc.square)
+        design.draw_strand(0, 0).move(7).cross(1).move(-7).with_color(
+            sc.Color(254, 123, 222))
+        design.draw_strand(0, 7).move(-7).cross(1).move(7)
+
+        oxv = design.to_oxview_format(use_strand_colors=True)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            design.write_oxview_file(filename=f.name)
+            filename = f.name
+        with open(filename, 'r') as f2:
+            oxv2 = json.load(f2)
+        os.unlink(filename)
+
+        # The dates won't be equal, so delete them
+        del oxv['date']
+        del oxv2['date']
+
+        self.assertEqual(oxv, oxv2)
+
 class TestOxdnaExport(unittest.TestCase):
     def setUp(self) -> None:
         self.OX_UNITS_TO_NM = 0.8518
@@ -7556,6 +7690,27 @@ class TestOxdnaExport(unittest.TestCase):
 
             self.assertAlmostEqual(self.EXPECTED_ADJ_NUC_CM_DIST2, sqr_dist2)
 
+    def test_file_output(self) -> None:
+        # Arbitrary design
+        helix = [sc.Helix(max_offset=14)]
+        design = sc.Design(helices=helix, grid=sc.square)
+        design.draw_strand(0, 0).to(4).loopout(0, 4).to(7)
+        design.draw_strand(0, 7).to(0)
+
+        scriptname = os.path.basename(sys.argv[0])[:-3]
+
+        dat, top = design.to_oxdna_format()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # First, write to the directory, in which case the names should be the script name
+            design.write_oxdna_files(directory=tmpdir)
+            self.assertEqual(top, open(tmpdir + '/' + scriptname + '.top').read())
+            self.assertEqual(dat, open(tmpdir + '/' + scriptname + '.dat').read())
+
+            # Now, write, to a specific filename without extensions
+            design.write_oxdna_files(directory=tmpdir, filename_no_extension='oxdna-Export with spaces in name')
+            self.assertEqual(top, open(tmpdir + '/oxdna-Export with spaces in name.top').read())
+            self.assertEqual(dat, open(tmpdir + '/oxdna-Export with spaces in name.dat').read())
 
 class TestPlateMaps(unittest.TestCase):
 
