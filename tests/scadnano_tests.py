@@ -1221,10 +1221,12 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
         # add 10 strands in excess of 3 plates
         for plate_type in [sc.PlateType.wells96, sc.PlateType.wells384]:
+            num_strands = 3 * plate_type.num_wells_per_plate() + 10
             filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xls'
-            helices = [sc.Helix(max_offset=100) for _ in range(1)]
+            max_offset = num_strands * strand_len
+            helices = [sc.Helix(max_offset=max_offset) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
-            for strand_idx in range(3 * plate_type.num_wells_per_plate() + 10):
+            for strand_idx in range(num_strands):
                 design.draw_strand(0, strand_len * strand_idx).move(strand_len).with_name(f's{strand_idx}')
                 design.strands[-1].set_dna_sequence('T' * strand_len)
 
