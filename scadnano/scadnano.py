@@ -3291,6 +3291,31 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             return False
         return self.domains == other.domains
 
+    def equiv(self, other: Any) -> bool:
+        """
+        Determines whether this strand could be a copy of `other`, up to the currently
+        defined sequences for each.  This method does not require that the names, domain names,
+        labels, colors, etc. be the same.
+        """
+        if not isinstance(other, Strand):
+            return False
+        elif self.modification_3p != other.modification_3p:
+            return False
+        elif self.modification_5p != other.modification_5p:
+            return False
+        elif self.modifications_int != other.modifications_int:
+            return False
+        elif self.circular != other.circular:
+            return False
+        if len(self.domains) != len(other.domains):
+            return False
+        for d1, d2 in zip(self.domains, other.domains):
+            if d1.dna_sequence != d2.dna_sequence:
+                return False
+            if d1.dna_length() != d2.dna_length():
+                return False
+        return True
+
     def __hash__(self) -> int:
         return hash(self.domains)
 
@@ -7813,9 +7838,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def _warn_if_strand_names_not_unique(self) -> None:
         names = [strand.name for strand in self.strands if strand.name is not None]
         if len(names) > len(set(names)):
-            for name1, name2 in itertools.combinations(names, 2):
-                if name1 == name2:
-                    print(f'WARNING: there are two strands with name {name1}')
+            for strand1, strand2 in itertools.combinations(self.strands, 2):
+                if (strand1.name == strand2.name) and not strand1.equiv(strand2):
+                    print(f'WARNING: there are two non-equivalent strands with name {strand1.name}.')
 
     def strand_with_name(self, name: str) -> Optional[Strand]:
         """

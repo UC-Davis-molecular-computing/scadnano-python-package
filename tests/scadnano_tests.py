@@ -4083,6 +4083,53 @@ class TestHelixGroups(unittest.TestCase):
         with self.assertRaises(sc.IllegalDesignError):
             sc.Design.from_scadnano_json_str(json_str)
 
+class TestDuplicates(unittest.TestCase):
+    def test_warn_duplicate(self) -> None:
+        import contextlib
+        import io
+
+        # Same name, but all equivalent:
+        out = io.StringIO()
+        helices = [sc.Helix(max_offset=30) for _ in range(10)]
+        des = sc.Design(helices = helices, grid=sc.square)
+        des.draw_strand(0, 0).to(10).cross(1,9).to(-1).with_name("strand_ name!")
+        des.draw_strand(2, 1).to(11).to(21).with_name("strand_ name!")
+        des.draw_strand(3, 22).to(12).to(2).with_name("strand_ name!")
+        with contextlib.redirect_stdout(out):
+            des._warn_if_strand_names_not_unique()
+        self.assertNotRegex(out.getvalue(), "WARNING: there are two ")
+
+        # One sequence assigned, one not (should warn):
+        out = io.StringIO()
+        helices = [sc.Helix(max_offset=30) for _ in range(10)]
+        des = sc.Design(helices = helices, grid=sc.square)
+        des.draw_strand(2, 1).to(11).to(21).with_name("strand_ name!")
+        des.draw_strand(3, 22).to(12).to(2).with_name("strand_ name!").with_sequence("GTCCGTAGAGGCTACTGTCT")
+        with contextlib.redirect_stdout(out):
+            des._warn_if_strand_names_not_unique()
+        self.assertRegex(out.getvalue(), "WARNING: there are two non-equivalent strands with name strand_ name!")
+
+        # One more domain:
+        out = io.StringIO()
+        helices = [sc.Helix(max_offset=30) for _ in range(10)]
+        des = sc.Design(helices = helices, grid=sc.square)
+        des.draw_strand(2, 1).to(11).to(21).to(30).with_name("strand_ name!")
+        des.draw_strand(3, 22).to(12).to(2).with_name("strand_ name!")
+        with contextlib.redirect_stdout(out):
+            des._warn_if_strand_names_not_unique()
+        self.assertRegex(out.getvalue(), "WARNING: there are two non-equivalent strands with name strand_ name!")
+
+        # Modification:
+        biotin_5p = sc.Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        out = io.StringIO()
+        helices = [sc.Helix(max_offset=30) for _ in range(10)]
+        des = sc.Design(helices = helices, grid=sc.square)
+        des.draw_strand(2, 1).to(11).to(21).to(30).with_name("strand_ name!").with_modification_5p(biotin_5p)
+        des.draw_strand(3, 22).to(12).to(2).with_name("strand_ name!")
+        with contextlib.redirect_stdout(out):
+            des._warn_if_strand_names_not_unique()
+        self.assertRegex(out.getvalue(), "WARNING: there are two non-equivalent strands with name strand_ name!")
+
 
 class TestNames(unittest.TestCase):
 
