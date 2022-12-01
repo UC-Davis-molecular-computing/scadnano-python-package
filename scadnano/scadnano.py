@@ -4710,7 +4710,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                  strands: List[Strand] = None,
                  grid: Grid = Grid.none,
                  helices_view_order: List[int] = None,
-                 geometry: Geometry = None) -> None:
+                 geometry: Geometry = None,
+                 warn_duplicate_strand_names: bool = True) -> None:
         """
         :param helices:
             List of :any:`Helix`'s; if missing, set based on `strands`.
@@ -4792,9 +4793,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helices_in_group = [self.helices[idx] for idx in helix_idxs_in_group]
             _check_helices_grid_legal(group.grid, helices_in_group)
 
-        self.__post_init__()
+        self.__post_init__(warn_duplicate_strand_names=warn_duplicate_strand_names)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, warn_duplicate_strand_names: bool = True) -> None:
         # XXX: exact order of these calls is important
         self._ensure_helices_distinct_objects()
         self._ensure_strands_distinct_objects()
@@ -4803,7 +4804,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         self._set_helices_min_max_offsets(update=False)
         self._ensure_helix_groups_exist()
         self._assign_default_helices_view_orders_to_groups()
-        self._check_legal_design()
+        self._check_legal_design(warn_duplicate_strand_names=warn_duplicate_strand_names)
 
         if self.automatically_assign_color:
             self._assign_colors_to_strands()
@@ -4890,7 +4891,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return self.groups[helix.group].roll + helix.roll
 
     @staticmethod
-    def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_file(filename: str, warn_duplicate_strand_names: bool = True) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the file with the given name.
 
@@ -4899,10 +4900,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         with open(filename) as f:
             json_str = f.read()
-        return Design.from_scadnano_json_str(json_str)
+        return Design.from_scadnano_json_str(json_str, warn_duplicate_strand_names=warn_duplicate_strand_names)
 
     @staticmethod
-    def from_scadnano_json_str(json_str: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_json_str(json_str: str, warn_duplicate_strand_names: bool = True) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the given JSON string.
 
@@ -4911,7 +4912,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         json_map = json.loads(json_str)
         try:
-            design = Design.from_scadnano_json_map(json_map)
+            design = Design.from_scadnano_json_map(json_map, warn_duplicate_strand_names=warn_duplicate_strand_names)
             return design
         except KeyError as e:
             raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {e}')
@@ -5104,7 +5105,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_scadnano_json_map(
-            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
+            json_map: dict, warn_duplicate_strand_names: bool = True) -> 'Design':  # remove quotes when Py3.6 support dropped
         """
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
@@ -5160,6 +5161,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             grid=grid,
             helices_view_order=helices_view_order,
             geometry=geometry,
+            warn_duplicate_strand_names=warn_duplicate_strand_names,
         )
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
