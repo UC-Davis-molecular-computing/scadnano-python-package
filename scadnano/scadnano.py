@@ -4729,7 +4729,8 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
     return overlapping_domains
 
 
-def bases_complementary(base1: str, base2: str) -> bool:
+def bases_complementary(base1: str, base2: str, allow_wildcard: bool = False,
+                        allow_none: bool = False) -> bool:
     """
     Indicates if `base1` and `base2` are complementary DNA bases.
 
@@ -4737,9 +4738,21 @@ def bases_complementary(base1: str, base2: str) -> bool:
         first DNA base
     :param base2:
         second DNA base
+    :param allow_wildcard:
+        if true a "wildcard" (the symbol '?') is considered to be complementary to anything
+    :param allow_none:
+        if true the object None is considered to be complementary to anything
     :return:
         whether `base1` and `base2` are complementary DNA bases
     """
+    if allow_none and (base1 is None or base2 is None):
+        return True
+    elif not allow_none and (base1 is None or base2 is None):
+        return False
+
+    if allow_wildcard and (base1 == DNA_base_wildcard or base2 == DNA_base_wildcard):
+        return True
+
     if len(base1) != 1 or len(base2) != 1:
         raise ValueError(f'base1 and base2 must each be a single character: '
                          f'base1 = {base1}, base2 = {base2}')
@@ -4748,7 +4761,8 @@ def bases_complementary(base1: str, base2: str) -> bool:
     return {base1, base2} == {'A', 'T'} or {base1, base2} == {'C', 'G'}
 
 
-def reverse_complementary(seq1: str, seq2: str) -> bool:
+def reverse_complementary(seq1: str, seq2: str, allow_wildcard: bool = False,
+                          allow_none: bool = False) -> bool:
     """
     Indicates if `seq1` and `seq2` are reverse complementary DNA sequences.
 
@@ -4756,13 +4770,22 @@ def reverse_complementary(seq1: str, seq2: str) -> bool:
         first DNA sequence
     :param seq1:
         second DNA sequence
+    :param allow_wildcard:
+        if true a "wildcard" (the symbol '?') is considered to be complementary to anything
+    :param allow_none:
+        if true the object None is considered to be complementary to anything
     :return:
         whether `seq1` and `seq2` are reverse complementary DNA sequences
     """
+    if allow_none and (seq1 is None or seq2 is None):
+        return True
+    elif not allow_none and (seq1 is None or seq2 is None):
+        return False
+
     if len(seq1) != len(seq2):
         return False
     for b1, b2 in zip(seq1, seq2[::]):
-        if not bases_complementary(b1, b2):
+        if not bases_complementary(b1, b2, allow_wildcard, allow_none):
             return False
     return True
 
@@ -5374,9 +5397,14 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for dom1, dom2 in overlapping_domains:
                 start, end = dom1.compute_overlap(dom2)
                 for offset in range(start, end):
-                    base1 = dom1.dna_sequence_in(offset, offset)
-                    base2 = dom2.dna_sequence_in(offset, offset)
-                    if allow_mismatches or bases_complementary(base1, base2):
+                    if offset in dom1.deletions or offset in dom2.deletions:
+                        continue
+                    seq1 = dom1.dna_sequence_in(offset, offset)
+                    seq2 = dom2.dna_sequence_in(offset, offset)
+                    # we use reverse_complementary instead of base_complementary here to allow for insertions
+                    # that may give a larger DNA sequence than length 1 at a given offset
+                    if allow_mismatches or reverse_complementary(seq1, seq2,
+                                                                 allow_wildcard=True, allow_none=True):
                         offsets.append(offset)
             if len(offsets) > 0:
                 base_pairs[idx] = offsets

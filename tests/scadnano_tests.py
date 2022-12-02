@@ -7829,11 +7829,11 @@ class TestBasePairs(unittest.TestCase):
         self.design.draw_strand(0, 36).to(34).with_sequence('TT')
         self.design.draw_strand(0, 39).to(37).with_sequence('TT')
         # helix 1 forward
-        self.design.draw_strand(1, 4).to(17).with_sequence('A'*13)
-        self.design.draw_strand(1, 20).to(24).with_sequence('A'*4)
+        self.design.draw_strand(1, 4).to(17).with_sequence('A' * 13)
+        self.design.draw_strand(1, 20).to(24).with_sequence('A' * 4)
         # helix 1 reverse
         self.design.draw_strand(1, 12).to(8).with_sequence('TGTT')
-        self.design.draw_strand(1, 26).to(13).with_sequence('T'*13)
+        self.design.draw_strand(1, 26).to(13).with_sequence('T' * 13)
 
     def test_find_overlapping_domains(self) -> None:
         d01f = self.design.strands[0].domains[0]
@@ -7933,6 +7933,7 @@ class TestBasePairs(unittest.TestCase):
         1     [----------->   [-->
                   <--] <-----------]
         '''
+
     def test_design_base_pairs_no_mismatches(self) -> None:
         base_pairs = self.design.base_pairs(allow_mismatches=False)
         self.assertEqual(len(base_pairs), 2)
@@ -7986,3 +7987,93 @@ class TestBasePairs(unittest.TestCase):
                   <--] <-----------]
                     X
         '''
+
+    def test_design_base_pairs_no_dna(self) -> None:
+        '''
+          0123456789
+        0 [-------->
+          <---]<---]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10)
+        design.draw_strand(0, 5).move(-5)
+        design.draw_strand(0, 10).move(-5)
+
+        base_pairs = design.base_pairs()
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 10)
+
+        for offset in range(10):
+            self.assertIn(offset, base_pairs[0])
+
+    def test_design_base_pairs_dna_on_some_strands_and_mismatches(self) -> None:
+        '''
+          0123456789
+          AAAAAAAAAA
+        0 [-------->
+          <---]<---]
+          TTCTT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_sequence('A'*10)
+        design.draw_strand(0, 5).move(-5).with_sequence('TTCTT')
+        design.draw_strand(0, 10).move(-5)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 9)
+
+        for offset in range(10):
+            if offset != 2:
+                self.assertIn(offset, base_pairs[0])
+
+    def test_design_base_pairs_deletions_insertions(self) -> None:
+        '''
+          0123456789
+                AA
+          A  AAAAAAA
+        0 [XX---II->
+          <-XX]<-II]
+          TT  TTTTTT
+                 TT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
+            .with_sequence('A'*10)
+        design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
+        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('TTTTTTT')
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 5)
+
+        self.assertIn(0, base_pairs[0])
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
+        self.assertIn(9, base_pairs[0])
+
+    def test_design_base_pairs_deletions_insertions_mismatch_in_insertion(self) -> None:
+        '''
+          0123456789
+                AA
+          A  AAAAAAA
+        0 [XX---II->
+          <-XX]<-II]
+          TT  TTTTTT
+                 CT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
+            .with_sequence('A'*10)
+        design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
+        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('TTTCTTT')
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 4)
+
+        self.assertIn(0, base_pairs[0])
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(9, base_pairs[0])
