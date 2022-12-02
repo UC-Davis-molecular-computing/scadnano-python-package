@@ -4686,6 +4686,9 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
     forward_domains.sort(key=lambda domain: domain.start)
     reverse_domains.sort(key=lambda domain: domain.start)
 
+    if len(forward_domains) == 0 or len(reverse_domains) == 0:
+        return []
+
     # need to be efficient to remove the front element repeatedly
     reverse_domains = collections.deque(reverse_domains)
 

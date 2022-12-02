@@ -8090,3 +8090,14 @@ class TestBasePairs(unittest.TestCase):
 
         base_pairs = design.base_pairs(allow_mismatches=False)
         self.assertEqual(len(base_pairs), 0)
+
+    def test_no_base_pairs_only_forward_strand(self) -> None:
+        '''
+          0123456789
+          [-->
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(4)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 0)
