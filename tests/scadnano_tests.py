@@ -6638,7 +6638,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---???---???---???---ACG---???---???-
          098   765   432   109   876   543   210
         """
-        design.draw_strand(0, 12).to(15).with_sequence('TGC')
+        design.draw_strand(0, 12).to(15).with_sequence('TGC', assign_complement=True)
         self.assertEqual('TGC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -6664,10 +6664,10 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         sb = design.draw_strand(0, 9).to(12)
-        sb.with_domain_sequence('AAC')
+        sb.with_domain_sequence('AAC', assign_complement=True)
         sb.cross(0, offset=3)
         sb.to(6)
-        sb.with_domain_sequence('TTC')
+        sb.with_domain_sequence('TTC', assign_complement=True)
         self.assertEqual('AAC TTC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -6682,12 +6682,12 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         design.draw_strand(0, 6).to(9) \
-            .with_domain_sequence('GGA') \
+            .with_domain_sequence('GGA', assign_complement=True) \
             .cross(0, offset=15) \
             .to(18) \
-            .with_domain_sequence('TTG') \
+            .with_domain_sequence('TTG', assign_complement=True) \
             .to(21) \
-            .with_domain_sequence('GCA')
+            .with_domain_sequence('GCA', assign_complement=True)
         self.assertEqual('GGA TTG GCA'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('TGC CAA GCA GTT TCC GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -7004,10 +7004,12 @@ class TestOxviewExport(unittest.TestCase):
 
         oxv = design.to_oxview_format(use_strand_colors=True)
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json') as f:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             design.write_oxview_file(filename=f.name)
-            with open(f.name, 'r') as f2:
-                oxv2 = json.load(f2)
+            filename = f.name
+        with open(filename, 'r') as f2:
+            oxv2 = json.load(f2)
+        os.unlink(filename)
 
         # The dates won't be equal, so delete them
         del oxv['date']
@@ -7799,37 +7801,39 @@ class TestExtension(unittest.TestCase):
 class TestBasePairs(unittest.TestCase):
     def setUp(self) -> None:
         '''
+        X shows position of mismatches
                     111111111122222222223333333333
           0123456789012345678901234567890123456789
         0 [-->[-->    [-->    [-->    [-->
            <] <--------]   <-]      <-]     <] <]
-
+               X
                     111111111122222222223333333333
           0123456789012345678901234567890123456789
         1     [----------->   [-->
                   <--] <-----------]
+                    X
         '''
         helices = [sc.Helix(max_offset=40) for _ in range(2)]
         self.design = sc.Design(helices=helices)
         # helix 0 forward
-        self.design.draw_strand(0, 0).move(4)
-        self.design.draw_strand(0, 4).move(4)
-        self.design.draw_strand(0, 12).move(4)
-        self.design.draw_strand(0, 20).move(4)
-        self.design.draw_strand(0, 28).move(4)
+        self.design.draw_strand(0, 0).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 4).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 12).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 20).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 28).move(4).with_sequence('AAAA')
         # helix 0 reverse
-        self.design.draw_strand(0, 3).move(-2)
-        self.design.draw_strand(0, 14).to(4)
-        self.design.draw_strand(0, 20).to(17)
-        self.design.draw_strand(0, 29).to(26)
-        self.design.draw_strand(0, 36).to(34)
-        self.design.draw_strand(0, 39).to(37)
+        self.design.draw_strand(0, 3).move(-2).with_sequence('TT')
+        self.design.draw_strand(0, 14).to(4).with_sequence('TTTTTTTTCT')
+        self.design.draw_strand(0, 20).to(17).with_sequence('TTT')
+        self.design.draw_strand(0, 29).to(26).with_sequence('TTT')
+        self.design.draw_strand(0, 36).to(34).with_sequence('TT')
+        self.design.draw_strand(0, 39).to(37).with_sequence('TT')
         # helix 1 forward
-        self.design.draw_strand(1, 4).to(17)
-        self.design.draw_strand(1, 20).to(24)
+        self.design.draw_strand(1, 4).to(17).with_sequence('A'*13)
+        self.design.draw_strand(1, 20).to(24).with_sequence('A'*4)
         # helix 1 reverse
-        self.design.draw_strand(1, 12).to(8)
-        self.design.draw_strand(1, 26).to(13)
+        self.design.draw_strand(1, 12).to(8).with_sequence('TGTT')
+        self.design.draw_strand(1, 26).to(13).with_sequence('T'*13)
 
     def test_find_overlapping_domains(self) -> None:
         d01f = self.design.strands[0].domains[0]
@@ -7878,44 +7882,46 @@ class TestBasePairs(unittest.TestCase):
                   <--] <-----------]
         '''
 
-    def test_design_base_pairs(self) -> None:
-        base_pairs = self.design.base_pairs()
-        self.assertEqual(len(base_pairs), 21)
+    def test_design_base_pairs_mismatches(self) -> None:
+        base_pairs = self.design.base_pairs(allow_mismatches=True)
+        self.assertEqual(len(base_pairs), 2)
+        self.assertEqual(len(base_pairs[0]), 9)
+        self.assertEqual(len(base_pairs[1]), 12)
 
         # d01f, d01r
-        self.assertIn((0, 1), base_pairs)
-        self.assertIn((0, 2), base_pairs)
+        self.assertIn(1, base_pairs[0])
+        self.assertIn(2, base_pairs[0])
 
         # d02f, d02r
-        self.assertIn((0, 4), base_pairs)
-        self.assertIn((0, 5), base_pairs)
-        self.assertIn((0, 6), base_pairs)
-        self.assertIn((0, 7), base_pairs)
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(6, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
 
         # d03f, d02r
-        self.assertIn((0, 12), base_pairs)
-        self.assertIn((0, 13), base_pairs)
+        self.assertIn(12, base_pairs[0])
+        self.assertIn(13, base_pairs[0])
 
         # d05f, d04r
-        self.assertIn((0, 28), base_pairs)
+        self.assertIn(28, base_pairs[0])
 
         # d11f, d11r
-        self.assertIn((1, 8), base_pairs)
-        self.assertIn((1, 9), base_pairs)
-        self.assertIn((1, 10), base_pairs)
-        self.assertIn((1, 11), base_pairs)
+        self.assertIn(8, base_pairs[1])
+        self.assertIn(9, base_pairs[1])
+        self.assertIn(10, base_pairs[1])
+        self.assertIn(11, base_pairs[1])
 
         # d11f, d12r
-        self.assertIn((1, 13), base_pairs)
-        self.assertIn((1, 14), base_pairs)
-        self.assertIn((1, 15), base_pairs)
-        self.assertIn((1, 16), base_pairs)
+        self.assertIn(13, base_pairs[1])
+        self.assertIn(14, base_pairs[1])
+        self.assertIn(15, base_pairs[1])
+        self.assertIn(16, base_pairs[1])
 
         # d12f, d12r
-        self.assertIn((1, 20), base_pairs)
-        self.assertIn((1, 21), base_pairs)
-        self.assertIn((1, 22), base_pairs)
-        self.assertIn((1, 23), base_pairs)
+        self.assertIn(20, base_pairs[1])
+        self.assertIn(21, base_pairs[1])
+        self.assertIn(22, base_pairs[1])
+        self.assertIn(23, base_pairs[1])
         '''
                     111111111122222222223333333333
           0123456789012345678901234567890123456789
@@ -7926,4 +7932,57 @@ class TestBasePairs(unittest.TestCase):
           0123456789012345678901234567890123456789
         1     [----------->   [-->
                   <--] <-----------]
+        '''
+    def test_design_base_pairs_no_mismatches(self) -> None:
+        base_pairs = self.design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 2)
+        self.assertEqual(len(base_pairs[0]), 8)
+        self.assertEqual(len(base_pairs[1]), 11)
+
+        # d01f, d01r
+        self.assertIn(1, base_pairs[0])
+        self.assertIn(2, base_pairs[0])
+
+        # d02f, d02r
+        self.assertIn(4, base_pairs[0])
+        # self.assertIn(5, base_pairs[0]) # mismatch
+        self.assertIn(6, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
+
+        # d03f, d02r
+        self.assertIn(12, base_pairs[0])
+        self.assertIn(13, base_pairs[0])
+
+        # d05f, d04r
+        self.assertIn(28, base_pairs[0])
+
+        # d11f, d11r
+        self.assertIn(8, base_pairs[1])
+        self.assertIn(9, base_pairs[1])
+        # self.assertIn(10, base_pairs[1]) # mismatch
+        self.assertIn(11, base_pairs[1])
+
+        # d11f, d12r
+        self.assertIn(13, base_pairs[1])
+        self.assertIn(14, base_pairs[1])
+        self.assertIn(15, base_pairs[1])
+        self.assertIn(16, base_pairs[1])
+
+        # d12f, d12r
+        self.assertIn(20, base_pairs[1])
+        self.assertIn(21, base_pairs[1])
+        self.assertIn(22, base_pairs[1])
+        self.assertIn(23, base_pairs[1])
+        '''
+        X shows position of mismatches
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        0 [-->[-->    [-->    [-->    [-->
+           <] <--------]   <-]      <-]     <] <]
+               X
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        1     [----------->   [-->
+                  <--] <-----------]
+                    X
         '''
