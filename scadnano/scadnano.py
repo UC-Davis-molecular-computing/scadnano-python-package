@@ -5358,6 +5358,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         Base pairs in this design, represented as a dict mapping a :data:`Helix.idx` to a list of offsets
         on that helix where two strands are.
 
+        If a :any:`Helix` has no base pairs, then its :data:`Helix.idx` is not a key in the returned dict.
+
         :param allow_mismatches:
             if True, then all offsets on a :any:`Helix` where there is both a forward and reverse
             :any:`Domain` will be included. Otherwise, only offsets where the :any:`Domain`'s have
@@ -5367,7 +5369,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         base_pairs = {}
         for idx, helix in self.helices.items():
-            offsets = base_pairs[idx] = []
+            offsets = []
             overlapping_domains = find_overlapping_domains_on_helix(helix)
             for dom1, dom2 in overlapping_domains:
                 start, end = dom1.compute_overlap(dom2)
@@ -5376,6 +5378,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     base2 = dom2.dna_sequence_in(offset, offset)
                     if allow_mismatches or bases_complementary(base1, base2):
                         offsets.append(offset)
+            if len(offsets) > 0:
+                base_pairs[idx] = offsets
 
         return base_pairs
 
