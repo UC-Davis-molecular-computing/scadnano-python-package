@@ -4715,10 +4715,10 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
                 #    [--r_dom--->
                 # reverse_domain can't overlap *next* forward_domain, so safe to remove
                 reverse_domains.popleft()
-                if len(reverse_domains) == 0:
-                    break
-                else:
+                if len(reverse_domains) > 0:
                     reverse_domain = reverse_domains[0]
+                else:
+                    break
             else:
                 # [---f_dom--->   [---next_f_dom-->
                 #      [----r_dom->[--next_r_dom---->
