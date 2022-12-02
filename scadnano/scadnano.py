@@ -4672,15 +4672,6 @@ def _check_type_is_one_of(obj: Any, expected_types: Iterable) -> None:
                              f'but instead it is of type {type(obj)}')
 
 
-def _popleft(queue: Deque[T]) -> Optional[T]:
-    # return left element of queue if queue is nonempty, otherwise return None
-    try:
-        elt = queue.popleft()
-        return elt
-    except IndexError:
-        return None
-
-
 def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain]]:
     # compute list of pairs of domains that overlap on Helix `helix`
     # assumes that `helix.domains` has been populated by calling `Design._build_domains_on_helix_lists()`
@@ -4774,6 +4765,7 @@ def reverse_complementary(seq1: str, seq2: str) -> bool:
         if not bases_complementary(b1, b2):
             return False
     return True
+
 
 @dataclass
 class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
