@@ -8089,5 +8089,4 @@ class TestBasePairs(unittest.TestCase):
         design.draw_strand(0, 9).move(-4)
 
         base_pairs = design.base_pairs(allow_mismatches=False)
-        self.assertEqual(len(base_pairs), 1)
-        self.assertEqual(len(base_pairs[0]), 0)
+        self.assertEqual(len(base_pairs), 0)
