@@ -56,6 +56,7 @@ so the user must take care not to set them.
 
 __version__ = "0.17.7"  # version line; WARNING: do not remove or change this line or comment
 
+import collections
 import dataclasses
 from abc import abstractmethod, ABC, ABCMeta
 import json
@@ -65,7 +66,7 @@ import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
-    TypeVar, Generic, Callable, AbstractSet
+    TypeVar, Generic, Callable, AbstractSet, Deque
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -1949,8 +1950,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         has nonempty intersection with those of `other`,
         and they appear on the same helix,
         and they point in opposite directions."""  # noqa (suppress PEP warning)
-        return (self.helix == other.helix and
-                self.forward == (not other.forward) and
+        return (self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
     # remove quotes when Py3.6 support dropped
@@ -1965,8 +1965,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         has nonempty intersection with those of `other`,
         and they appear on the same helix,
         and they point in the same direction."""  # noqa (suppress PEP warning)
-        return (self.helix == other.helix and
-                self.forward == other.forward and
+        return (self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
     # remove quotes when Py3.6 support dropped
@@ -1976,6 +1975,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
         Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
         of the same helix)."""
+        if self.helix != other.helix:
+            return -1, -1
         overlap_start = max(self.start, other.start)
         overlap_end = min(self.end, other.end)
         if overlap_start >= overlap_end:  # overlap is empty
@@ -2779,7 +2780,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_sequence(self, sequence: str, assign_complement: bool = True) \
+    def with_sequence(self, sequence: str, assign_complement: bool = False) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
@@ -2801,7 +2802,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) \
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = False) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
@@ -4671,6 +4672,101 @@ def _check_type_is_one_of(obj: Any, expected_types: Iterable) -> None:
                              f'but instead it is of type {type(obj)}')
 
 
+def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain]]:
+    # compute list of pairs of domains that overlap on Helix `helix`
+    # assumes that `helix.domains` has been populated by calling `Design._build_domains_on_helix_lists()`
+    forward_domains = []
+    reverse_domains = []
+    for domain in helix.domains:
+        if domain.forward:
+            forward_domains.append(domain)
+        else:
+            reverse_domains.append(domain)
+
+    forward_domains.sort(key=lambda domain: domain.start)
+    reverse_domains.sort(key=lambda domain: domain.start)
+
+    # need to be efficient to remove the front element repeatedly
+    reverse_domains = collections.deque(reverse_domains)
+
+    overlapping_domains = []
+
+    for forward_domain in forward_domains:
+        reverse_domain = reverse_domains[0]
+        # remove each reverse_domain that strictly precedes forward domain
+        # they cannot overlap forward_domain nor any domain following it in the list forward_domains
+        while reverse_domain.end <= forward_domain.start and len(reverse_domains) > 0:
+            reverse_domains.popleft()
+            if len(reverse_domains) > 0:
+                reverse_domain = reverse_domains[0]
+            else:  # if all reverse domains are gone, we're done
+                return overlapping_domains
+
+        # otherwise we may have found an overlapping reverse_domain, OR forward_domain could precede it
+        # if forward_domain precedes reverse_domain, next inner loop is skipped,
+        # and we go to next forward_domain in the outer loop
+
+        # add each reverse_domain that overlaps forward_domain
+        while forward_domain.overlaps(reverse_domain):
+            overlapping_domains.append((forward_domain, reverse_domain))
+
+            if reverse_domain.end <= forward_domain.end:
+                # [-----f_dom--->[--next_f_dom-->
+                #    [--r_dom--->
+                # reverse_domain can't overlap *next* forward_domain, so safe to remove
+                reverse_domains.popleft()
+                if len(reverse_domains) == 0:
+                    break
+                else:
+                    reverse_domain = reverse_domains[0]
+            else:
+                # [---f_dom--->   [---next_f_dom-->
+                #      [----r_dom->[--next_r_dom---->
+                # reverse_domain possibly overlaps next forward_domain, so keep it in queue
+                # but this is last reverse_domain overlapping current forward_domain, so safe to break loop
+                break
+
+    return overlapping_domains
+
+
+def bases_complementary(base1: str, base2: str) -> bool:
+    """
+    Indicates if `base1` and `base2` are complementary DNA bases.
+
+    :param base1:
+        first DNA base
+    :param base2:
+        second DNA base
+    :return:
+        whether `base1` and `base2` are complementary DNA bases
+    """
+    if len(base1) != 1 or len(base2) != 1:
+        raise ValueError(f'base1 and base2 must each be a single character: '
+                         f'base1 = {base1}, base2 = {base2}')
+    base1 = base1.upper()
+    base2 = base2.upper()
+    return {base1, base2} == {'A', 'T'} or {base1, base2} == {'C', 'G'}
+
+
+def reverse_complementary(seq1: str, seq2: str) -> bool:
+    """
+    Indicates if `seq1` and `seq2` are reverse complementary DNA sequences.
+
+    :param seq1:
+        first DNA sequence
+    :param seq1:
+        second DNA sequence
+    :return:
+        whether `seq1` and `seq2` are reverse complementary DNA sequences
+    """
+    if len(seq1) != len(seq2):
+        return False
+    for b1, b2 in zip(seq1, seq2[::]):
+        if not bases_complementary(b1, b2):
+            return False
+    return True
+
+
 @dataclass
 class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
@@ -4707,7 +4803,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     def __init__(self, *,
                  helices: Optional[Union[List[Helix], Dict[int, Helix]]] = None,
                  groups: Optional[Dict[str, HelixGroup]] = None,
-                 strands: List[Strand] = None,
+                 strands: Iterable[Strand] = None,
                  grid: Grid = Grid.none,
                  helices_view_order: List[int] = None,
                  geometry: Geometry = None) -> None:
@@ -5256,6 +5352,32 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             helix.idx = idx
 
         return helices
+
+    def base_pairs(self, allow_mismatches: bool = False) -> Dict[int, List[int]]:
+        """
+        Base pairs in this design, represented as a dict mapping a :data:`Helix.idx` to a list of offsets
+        on that helix where two strands are.
+
+        :param allow_mismatches:
+            if True, then all offsets on a :any:`Helix` where there is both a forward and reverse
+            :any:`Domain` will be included. Otherwise, only offsets where the :any:`Domain`'s have
+            complementary bases will be included.
+        :return:
+            all base pairs (`helix_idx`, `offset`) in this :any:`Design`
+        """
+        base_pairs = {}
+        for idx, helix in self.helices.items():
+            offsets = base_pairs[idx] = []
+            overlapping_domains = find_overlapping_domains_on_helix(helix)
+            for dom1, dom2 in overlapping_domains:
+                start, end = dom1.compute_overlap(dom2)
+                for offset in range(start, end):
+                    base1 = dom1.dna_sequence_in(offset, offset)
+                    base2 = dom2.dna_sequence_in(offset, offset)
+                    if allow_mismatches or bases_complementary(base1, base2):
+                        offsets.append(offset)
+
+        return base_pairs
 
     @staticmethod
     def assign_modifications_to_strands(strands: List[Strand], strand_jsons: List[dict],
@@ -6954,7 +7076,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         workbook.save(filename_plate)
 
-    def to_oxview_format(self, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> dict:
+    def to_oxview_format(self, warn_duplicate_strand_names: bool = True,
+                         use_strand_colors: bool = True) -> dict:
         """
         Exports to oxView format.
 
@@ -6977,23 +7100,23 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
             strand_nuc_start.append(nuc_count)
-            oxvstrand = {'id': strand_count, 
-                         'class': 'NucleicAcidStrand', 
-                         'end5': nuc_count, 
-                         'end3': nuc_count+len(oxdna_strand.nucleotides), 
+            oxvstrand = {'id': strand_count,
+                         'class': 'NucleicAcidStrand',
+                         'end5': nuc_count,
+                         'end3': nuc_count + len(oxdna_strand.nucleotides),
                          'monomers': oxvnucs}
             if use_strand_colors and (strand1.color is not None):
                 scolor = strand1.color.to_cadnano_v2_int_hex()
             else:
                 scolor = None
-            
+
             for index_in_strand, nuc in enumerate(oxdna_strand.nucleotides):
-                oxvnuc = {'id': nuc_count, 
+                oxvnuc = {'id': nuc_count,
                           'p': [nuc.r.x, nuc.r.y, nuc.r.z],
                           'a1': [nuc.b.x, nuc.b.y, nuc.b.z],
                           'a3': [nuc.n.x, nuc.n.y, nuc.n.z],
-                          'class': 'DNA', 
-                          'type': nuc.base, 
+                          'class': 'DNA',
+                          'type': nuc.base,
                           'cluster': 1}
                 if index_in_strand != 0:
                     oxvnuc['n5'] = nuc_count - 1
@@ -7009,11 +7132,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             for si2, strand2 in enumerate(self.strands):
                 if not strand1.overlaps(strand2):
                     continue
-                s1_nuc_idx = strand_nuc_start[si1+1]
+                s1_nuc_idx = strand_nuc_start[si1 + 1]
                 for domain1 in strand1.domains:
                     if isinstance(domain1, (Loopout, Extension)):
                         continue
-                    s2_nuc_idx = strand_nuc_start[si2+1]
+                    s2_nuc_idx = strand_nuc_start[si2 + 1]
                     for domain2 in strand2.domains:
                         if isinstance(domain2, (Loopout, Extension)):
                             continue
@@ -7028,35 +7151,37 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                             d1range = range(s1_left, s1_right)
                             d2range = range(s2_left, s2_right, -1)
                         else:
-                            d1range = range(s1_right+1, s1_left+1)
-                            d2range = range(s2_right-1, s2_left-1, -1)
+                            d1range = range(s1_right + 1, s1_left + 1)
+                            d2range = range(s2_right - 1, s2_left - 1, -1)
                         assert len(d1range) == len(d2range)
 
                         # Check for mismatches, and do not add a pair if the bases are *known*
                         # to mismatch.  (FIXME: this must be changed if scadnano later supports
                         # degenerate base codes.)
                         for d1, d2 in zip(d1range, d2range):
-                            if ((strand1.dna_sequence is not None) and 
-                                (strand2.dna_sequence is not None) and
-                                (strand1.dna_sequence[d1] != "?") and
-                                (strand2.dna_sequence[d2] != "?") and
-                                (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                            if ((strand1.dna_sequence is not None) and
+                                    (strand2.dna_sequence is not None) and
+                                    (strand1.dna_sequence[d1] != "?") and
+                                    (strand2.dna_sequence[d2] != "?") and
+                                    (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
                                 continue
 
                             oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
                             if 'bp' in oxview_strands[si2]['monomers'][d2]:
                                 if oxview_strands[si2]['monomers'][d2]['bp'] != s1_nuc_idx + d1:
-                                    print (s2_nuc_idx+d2, s1_nuc_idx+d1, oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
+                                    print(s2_nuc_idx + d2, s1_nuc_idx + d1,
+                                          oxview_strands[si2]['monomers'][d2]['bp'], domain1, domain2)
 
         b = system.compute_bounding_box()
-        oxvsystem = {'box': [b.x, b.y, b.z], 
-                     'date': datetime.datetime.now().isoformat(), 
-                     'systems': [{'id': 0, 'strands': oxview_strands}], 
+        oxvsystem = {'box': [b.x, b.y, b.z],
+                     'date': datetime.datetime.now().isoformat(),
+                     'systems': [{'id': 0, 'strands': oxview_strands}],
                      'forces': [], 'selections': []}
 
         return oxvsystem
 
-    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None, warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None,
+                          warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
         """Writes an oxView file rerpesenting this design.
 
         :param directory:
@@ -7070,7 +7195,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.
         """
-        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names, use_strand_colors=use_strand_colors)
+        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names,
+                                          use_strand_colors=use_strand_colors)
         write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
 
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
@@ -7121,8 +7247,10 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         dat, top = self.to_oxdna_format(warn_duplicate_strand_names)
 
-        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension, add_extension=True)
-        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension, add_extension=True)
+        write_file_same_name_as_running_python_script(dat, 'dat', directory, filename_no_extension,
+                                                      add_extension=True)
+        write_file_same_name_as_running_python_script(top, 'top', directory, filename_no_extension,
+                                                      add_extension=True)
 
     # @_docstring_parameter was used to substitute sc in for the filename extension, but it is
     # incompatible with .. code-block:: and caused a very strange and hard-to-determine error,
@@ -7874,7 +8002,8 @@ def _name_of_this_script() -> str:
 
 
 def write_file_same_name_as_running_python_script(contents: str, extension: str, directory: str = '.',
-                                                  filename: Optional[str] = None, add_extension: bool = False) -> None:
+                                                  filename: Optional[str] = None,
+                                                  add_extension: bool = False) -> None:
     """
     Writes a text file with `contents` whose name is (by default) the same as the name of the
     currently running script, but with extension ``.py`` changed to `extension`.
@@ -7888,13 +8017,15 @@ def write_file_same_name_as_running_python_script(contents: str, extension: str,
     :param filename:
         filename to use instead of the currently running script
     """
-    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename, add_extension=add_extension)
+    relative_filename = _get_filename_same_name_as_running_python_script(directory, extension, filename,
+                                                                         add_extension=add_extension)
     with open(relative_filename, 'w') as out_file:
         out_file.write(contents)
 
 
 def _get_filename_same_name_as_running_python_script(directory: str, extension: str,
-                                                     filename: Optional[str], add_extension: bool = False) -> str:
+                                                     filename: Optional[str],
+                                                     add_extension: bool = False) -> str:
     # if filename is not None, assume it has an extension
     if filename is None:
         filename = _name_of_this_script() + '.' + extension
