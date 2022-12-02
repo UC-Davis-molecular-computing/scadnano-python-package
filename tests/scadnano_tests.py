@@ -8077,3 +8077,17 @@ class TestBasePairs(unittest.TestCase):
         self.assertIn(4, base_pairs[0])
         self.assertIn(5, base_pairs[0])
         self.assertIn(9, base_pairs[0])
+
+    def test_no_base_pairs(self) -> None:
+        '''
+          0123456789
+          [-->
+               <--]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(4)
+        design.draw_strand(0, 9).move(-4)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 0)
