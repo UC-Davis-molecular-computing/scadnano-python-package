@@ -2780,7 +2780,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_sequence(self, sequence: str, assign_complement: bool = True) \
+    def with_sequence(self, sequence: str, assign_complement: bool = False) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
@@ -2802,7 +2802,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     # remove quotes when Py3.6 support dropped
-    def with_domain_sequence(self, sequence: str, assign_complement: bool = True) \
+    def with_domain_sequence(self, sequence: str, assign_complement: bool = False) \
             -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
@@ -4738,6 +4738,43 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
     return overlapping_domains
 
 
+def bases_complementary(base1: str, base2: str) -> bool:
+    """
+    Indicates if `base1` and `base2` are complementary DNA bases.
+
+    :param base1:
+        first DNA base
+    :param base2:
+        second DNA base
+    :return:
+        whether `base1` and `base2` are complementary DNA bases
+    """
+    if len(base1) != 1 or len(base2) != 1:
+        raise ValueError(f'base1 and base2 must each be a single character: '
+                         f'base1 = {base1}, base2 = {base2}')
+    base1 = base1.upper()
+    base2 = base2.upper()
+    return {base1, base2} == {'A', 'T'} or {base1, base2} == {'C', 'G'}
+
+
+def reverse_complementary(seq1: str, seq2: str) -> bool:
+    """
+    Indicates if `seq1` and `seq2` are reverse complementary DNA sequences.
+
+    :param seq1:
+        first DNA sequence
+    :param seq1:
+        second DNA sequence
+    :return:
+        whether `seq1` and `seq2` are reverse complementary DNA sequences
+    """
+    if len(seq1) != len(seq2):
+        return False
+    for b1, b2 in zip(seq1, seq2[::]):
+        if not bases_complementary(b1, b2):
+            return False
+    return True
+
 @dataclass
 class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     """Object representing the entire design of the DNA structure."""
@@ -5324,21 +5361,29 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return helices
 
-    def base_pairs(self) -> List[Tuple[int, int]]:
+    def base_pairs(self, allow_mismatches: bool = False) -> Dict[int, List[int]]:
         """
-        List of "addresses" of base pairs in this design. Each address is a pair (`helix_idx`, `offset`)
-        of the address of the *forward* strand in the base pair.
+        Base pairs in this design, represented as a dict mapping a :data:`Helix.idx` to a list of offsets
+        on that helix where two strands are.
 
+        :param allow_mismatches:
+            if True, then all offsets on a :any:`Helix` where there is both a forward and reverse
+            :any:`Domain` will be included. Otherwise, only offsets where the :any:`Domain`'s have
+            complementary bases will be included.
         :return:
             all base pairs (`helix_idx`, `offset`) in this :any:`Design`
         """
-        base_pairs = []
+        base_pairs = {}
         for idx, helix in self.helices.items():
+            offsets = base_pairs[idx] = []
             overlapping_domains = find_overlapping_domains_on_helix(helix)
             for dom1, dom2 in overlapping_domains:
                 start, end = dom1.compute_overlap(dom2)
                 for offset in range(start, end):
-                    base_pairs.append((idx, offset))
+                    base1 = dom1.dna_sequence_in(offset, offset)
+                    base2 = dom2.dna_sequence_in(offset, offset)
+                    if allow_mismatches or bases_complementary(base1, base2):
+                        offsets.append(offset)
 
         return base_pairs
 
