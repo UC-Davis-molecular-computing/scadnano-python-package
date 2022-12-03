@@ -7856,7 +7856,6 @@ class TestBasePairs(unittest.TestCase):
         d12r = self.design.strands[14].domains[0]
 
         overlapping_domains_h0 = sc.find_overlapping_domains_on_helix(self.design.helices[0])
-
         overlapping_domains_h1 = sc.find_overlapping_domains_on_helix(self.design.helices[1])
 
         self.assertEqual(len(overlapping_domains_h0), 4)
@@ -8015,7 +8014,7 @@ class TestBasePairs(unittest.TestCase):
           TTCTT
         '''
         design = sc.Design(helices=[sc.Helix(max_offset=100)])
-        design.draw_strand(0, 0).move(10).with_sequence('A'*10)
+        design.draw_strand(0, 0).move(10).with_sequence('A' * 10)
         design.draw_strand(0, 5).move(-5).with_sequence('TTCTT')
         design.draw_strand(0, 10).move(-5)
 
@@ -8039,9 +8038,9 @@ class TestBasePairs(unittest.TestCase):
         '''
         design = sc.Design(helices=[sc.Helix(max_offset=100)])
         design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
-            .with_sequence('A'*10)
+            .with_sequence('A' * 10)
         design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
-        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('TTTTTTT')
+        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('T' * 7)
 
         base_pairs = design.base_pairs(allow_mismatches=False)
         self.assertEqual(len(base_pairs), 1)
@@ -8065,7 +8064,7 @@ class TestBasePairs(unittest.TestCase):
         '''
         design = sc.Design(helices=[sc.Helix(max_offset=100)])
         design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
-            .with_sequence('A'*10)
+            .with_sequence('A' * 10)
         design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
         design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('TTTCTTT')
 
