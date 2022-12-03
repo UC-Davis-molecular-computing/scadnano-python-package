@@ -67,32 +67,36 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__loopouts_with_labels_to_json(self) -> None:
+    def test_strand__loopouts_with_labels_and_colors_to_json(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 8)
+        sb.with_domain_color(sc.Color(10, 10, 10))
         sb.with_domain_label('loop0')
         sb.to(5)
         sb.with_domain_label('dom1')
+        sb.with_domain_color(sc.Color(20, 20, 20))
         sb.cross(2)
         sb.to(10)
         sb.with_domain_label('dom2')
         sb.loopout(3, 12)
         sb.with_domain_label('loop1')
         sb.to(5)
+        sb.with_color(sc.Color(30, 30, 30))
         design_json_map = design.to_json_serializable(suppress_indent=False)
         design_from_json = sc.Design.from_scadnano_json_map(design_json_map)
         expected_strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Loopout(8, label='loop0'),
-            sc.Domain(1, False, 5, 10, label='dom1'),
+            sc.Loopout(8, label='loop0', color=sc.Color(10, 10, 10)),
+            sc.Domain(1, False, 5, 10, label='dom1', color=sc.Color(20, 20, 20)),
             sc.Domain(2, True, 5, 10, label='dom2'),
             sc.Loopout(12, label='loop1'),
             sc.Domain(3, False, 5, 10),
-        ])
+        ], color=sc.Color(30, 30, 30))
         self.assertEqual(1, len(design_from_json.strands))
         self.assertEqual(expected_strand, design_from_json.strands[0])
+        self.assertEqual(expected_strand.color, sc.Color(30, 30, 30))
 
     def test_strand__3p_extension(self) -> None:
         design = self.design_6helix
@@ -100,10 +104,11 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb.to(10)
 
         sb.extension_3p(5)
+        sb.with_domain_color(sc.Color(10, 10, 10))
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(num_bases=5),
+            sc.Extension(num_bases=5, color=sc.Color(10, 10, 10)),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
