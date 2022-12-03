@@ -197,6 +197,25 @@ class Color(_JSONSerializable):
         # return NoIndent(self.__dict__) if suppress_indent else self.__dict__
         return f'#{self.r:02x}{self.g:02x}{self.b:02x}'
 
+    @staticmethod
+    def from_json(color_json: Union[str, int, None]) -> Union['Color', None]:
+        if color_json is None:
+            return None
+
+        color_str: str
+        if isinstance(color_json, int):
+            def decimal_int_to_hex(d: int) -> str:
+                return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
+
+            color_str = decimal_int_to_hex(color_json)
+        elif isinstance(color_json, str):
+            color_str = color_json
+        else:
+            raise IllegalDesignError(f'color must be a string or int, '
+                                     f'but it is a {type(color_json)}: {color_json}')
+        color = Color(hex_string=color_str)
+        return color
+
     def to_cadnano_v2_int_hex(self) -> int:
         return int(f'{self.r:02x}{self.g:02x}{self.b:02x}', 16)
 
@@ -1679,6 +1698,11 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     """DNA sequence of this Domain, or ``None`` if no DNA sequence has been assigned
     to this :any:`Domain`'s :any:`Strand`."""
 
+    color: Optional[Color] = None
+    """
+    Color to show this domain in the main view. If specified, overrides the field :data:`Strand.color`.
+    """
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -1701,6 +1725,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
             dct[insertions_key] = self.insertions
         if self.label is not None:
             dct[domain_label_key] = self.label
+        if self.color is not None:
+            dct[color_key] = self.color.to_json_serializable(suppress_indent)
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
@@ -1714,6 +1740,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
                           list(map(tuple, json_map.get(insertions_key, []))))  # type: ignore
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
+        color_json = json_map.get(color_key)
+        color = Color.from_json(color_json)
         return Domain(
             helix=helix,
             forward=forward,
@@ -1723,6 +1751,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
             insertions=insertions,
             name=name,
             label=label,
+            color=color,
         )
 
     def __repr__(self) -> str:
@@ -1734,6 +1763,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
                f', end={self.end}') + \
               (f', deletions={self.deletions}' if len(self.deletions) > 0 else '') + \
               (f', insertions={self.insertions}' if len(self.insertions) > 0 else '') + \
+              (f', color={self.color}' if self.color is not None else '') + \
               ')'
         return rep
 
@@ -2077,6 +2107,11 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     dna_sequence: Optional[str] = None
     """DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned."""
 
+    color: Optional[Color] = None
+    """
+    Color to show this loopout in the main view. If specified, overrides the field :data:`Strand.color`.
+    """
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -2088,6 +2123,8 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
             dct[domain_name_key] = self.name
         if self.label is not None:
             dct[domain_label_key] = self.label
+        if self.color is not None:
+            dct[color_key] = self.color.to_json_serializable(suppress_indent)
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
@@ -2098,7 +2135,9 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         length = int(length_str)
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
-        return Loopout(length=length, name=name, label=label)
+        color_json = json_map.get(color_key)
+        color = Color.from_json(color_json)
+        return Loopout(length=length, name=name, label=label, color=color)
 
     def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
         """
@@ -2232,6 +2271,11 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     dna_sequence: Optional[str] = None
     """DNA sequence of this :any:`Extension`, or ``None`` if no DNA sequence has been assigned."""
 
+    color: Optional[Color] = None
+    """
+    Color to show this extension in the main view. If specified, overrides the field :data:`Strand.color`.
+    """
+
     # not serialized; for efficiency
     # remove quotes when Py3.6 support dropped
     _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
@@ -2243,6 +2287,8 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         self._add_display_angle_if_not_default(json_map)
         self._add_name_if_not_default(json_map)
         self._add_label_if_not_default(json_map)
+        if self.color is not None:
+            json_map[color_key] = self.color.to_json_serializable(suppress_indent)
         return NoIndent(json_map) if suppress_indent else json_map
 
     def dna_length(self) -> int:
@@ -2269,11 +2315,16 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
                                        json_map, display_angle_key, transformer=float_transformer)
         name = json_map.get(domain_name_key)
         label = json_map.get(domain_label_key)
+        color_json = json_map.get(color_key)
+        color = Color.from_json(color_json)
         return Extension(
             num_bases=num_bases,
             display_length=display_length,
             display_angle=display_angle,
-            label=label, name=name)
+            label=label,
+            name=name,
+            color=color,
+        )
 
     def _add_display_length_if_not_default(self, json_map) -> None:
         self._add_key_value_to_json_map_if_not_default(
@@ -2840,6 +2891,23 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     # remove quotes when Py3.6 support dropped
+    def with_domain_color(self, color: Color) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+        """
+        Sets most recent :any:`Domain`/:any:`Loopout`/:any:`Extension`
+        to have given color.
+
+        :param color:
+            color to set for :any:`Domain`/:any:`Loopout`/:any:`Extension`
+        :return:
+            self
+        """
+        if self._strand is None:
+            raise ValueError('no Strand created yet; make at least one domain first')
+        last_domain = self._strand.domains[-1]
+        last_domain.color = color
+        return self
+
+    # remove quotes when Py3.6 support dropped
     def with_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
         """
         Assigns `name` as name of the :any:`Strand` being built.
@@ -3253,17 +3321,12 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         dna_sequence = optional_field(None, json_map, dna_sequence_key, legacy_keys=legacy_dna_sequence_keys)
 
-        color_str = json_map.get(color_key)
+        color_json = json_map.get(color_key)
 
-        if color_str is None:
+        if color_json is None:
             color = default_scaffold_color if is_scaffold else default_strand_color
         else:
-            if isinstance(color_str, int):
-                def decimal_int_to_hex(d: int) -> str:
-                    return "#" + "{0:#08x}".format(d, 8)[2:]  # type: ignore
-
-                color_str = decimal_int_to_hex(color_str)
-            color = Color(hex_string=color_str)
+            color = Color.from_json(color_json)
 
         label = json_map.get(strand_label_key)
 
