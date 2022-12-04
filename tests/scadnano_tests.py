@@ -16,6 +16,7 @@ import scadnano.modifications as mod
 
 from scadnano.scadnano import _convert_design_to_oxdna_system
 
+
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int,
                     end: int) -> sc.Strand:
     """
@@ -66,32 +67,36 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
 
-    def test_strand__loopouts_with_labels_to_json(self) -> None:
+    def test_strand__loopouts_with_labels_and_colors_to_json(self) -> None:
         design = self.design_6helix
         sb = design.draw_strand(0, 0)
         sb.to(10)
         sb.loopout(1, 8)
+        sb.with_domain_color(sc.Color(10, 10, 10))
         sb.with_domain_label('loop0')
         sb.to(5)
         sb.with_domain_label('dom1')
+        sb.with_domain_color(sc.Color(20, 20, 20))
         sb.cross(2)
         sb.to(10)
         sb.with_domain_label('dom2')
         sb.loopout(3, 12)
         sb.with_domain_label('loop1')
         sb.to(5)
+        sb.with_color(sc.Color(30, 30, 30))
         design_json_map = design.to_json_serializable(suppress_indent=False)
         design_from_json = sc.Design.from_scadnano_json_map(design_json_map)
         expected_strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Loopout(8, label='loop0'),
-            sc.Domain(1, False, 5, 10, label='dom1'),
+            sc.Loopout(8, label='loop0', color=sc.Color(10, 10, 10)),
+            sc.Domain(1, False, 5, 10, label='dom1', color=sc.Color(20, 20, 20)),
             sc.Domain(2, True, 5, 10, label='dom2'),
             sc.Loopout(12, label='loop1'),
             sc.Domain(3, False, 5, 10),
-        ])
+        ], color=sc.Color(30, 30, 30))
         self.assertEqual(1, len(design_from_json.strands))
         self.assertEqual(expected_strand, design_from_json.strands[0])
+        self.assertEqual(expected_strand.color, sc.Color(30, 30, 30))
 
     def test_strand__3p_extension(self) -> None:
         design = self.design_6helix
@@ -99,10 +104,11 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         sb.to(10)
 
         sb.extension_3p(5)
+        sb.with_domain_color(sc.Color(10, 10, 10))
 
         expected_strand: sc.Strand = sc.Strand([
             sc.Domain(0, True, 0, 10),
-            sc.Extension(num_bases=5),
+            sc.Extension(num_bases=5, color=sc.Color(10, 10, 10)),
         ])
         self.assertEqual(1, len(design.strands))
         self.assertEqual(expected_strand, design.strands[0])
@@ -6637,7 +6643,7 @@ class TestAssignDNAToDomains(unittest.TestCase):
         <???---???---???---???---ACG---???---???-
          098   765   432   109   876   543   210
         """
-        design.draw_strand(0, 12).to(15).with_sequence('TGC')
+        design.draw_strand(0, 12).to(15).with_sequence('TGC', assign_complement=True)
         self.assertEqual('TGC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA ??? ??? ??? ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -6663,10 +6669,10 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         sb = design.draw_strand(0, 9).to(12)
-        sb.with_domain_sequence('AAC')
+        sb.with_domain_sequence('AAC', assign_complement=True)
         sb.cross(0, offset=3)
         sb.to(6)
-        sb.with_domain_sequence('TTC')
+        sb.with_domain_sequence('TTC', assign_complement=True)
         self.assertEqual('AAC TTC'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('??? ??? GCA GTT ??? GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -6681,12 +6687,12 @@ class TestAssignDNAToDomains(unittest.TestCase):
          098   765   432   109   876   543   210
         """
         design.draw_strand(0, 6).to(9) \
-            .with_domain_sequence('GGA') \
+            .with_domain_sequence('GGA', assign_complement=True) \
             .cross(0, offset=15) \
             .to(18) \
-            .with_domain_sequence('TTG') \
+            .with_domain_sequence('TTG', assign_complement=True) \
             .to(21) \
-            .with_domain_sequence('GCA')
+            .with_domain_sequence('GCA', assign_complement=True)
         self.assertEqual('GGA TTG GCA'.replace(' ', ''), design.strands[-1].dna_sequence)
         self.assertEqual('TGC CAA GCA GTT TCC GAA ???'.replace(' ', ''), design.strands[0].dna_sequence)
 
@@ -6908,9 +6914,9 @@ class TestOxviewExport(unittest.TestCase):
 
         for i, (oxdna_strand, oxview_strand, oxview_nocolor_strand,
                 des_strand) in enumerate(
-                    zip(oxdna_system.strands, oxv['systems'][0]['strands'],
-                        oxv_no_color['systems'][0]['strands'],
-                        design.strands)):
+            zip(oxdna_system.strands, oxv['systems'][0]['strands'],
+                oxv_no_color['systems'][0]['strands'],
+                design.strands)):
             self.assertEqual(i + 1, oxview_strand['id'])
 
             if des_strand.color:
@@ -6935,14 +6941,17 @@ class TestOxviewExport(unittest.TestCase):
                 self.assertEqual(oxdna_nt.base, oxview_nt['type'])
 
     def test_bp(self):
-        des  = sc.Design()
+        des = sc.Design()
         des.set_grid(sc.Grid.square)
-        des.helices = {i :sc.Helix(max_offset=20, idx=i, grid_position=(0,i)) for i in range(3)}
-        des.draw_strand(0, 0).to(6).with_deletions(4).to(15).cross(1, 9).to(20).with_insertions((15, 2)).cross(0).to(9)
+        des.helices = {i: sc.Helix(max_offset=20, idx=i, grid_position=(0, i)) for i in range(3)}
+        des.draw_strand(0, 0).to(6).with_deletions(4).to(15).cross(1, 9).to(20).with_insertions(
+            (15, 2)).cross(0).to(9)
         des.draw_strand(1, 0).to(9).cross(0).to(0).with_deletions(4)
-        des.draw_strand(1, 20).to(2).with_insertions((15, 2)).cross(2, 0).to(20).with_sequence('TTTCTCATGGGAAGCAAACTCGGTTTCCGCGTCGGATAGT')
+        des.draw_strand(1, 20).to(2).with_insertions((15, 2)).cross(2, 0).to(20).with_sequence(
+            'TTTCTCATGGGAAGCAAACTCGGTTTCCGCGTCGGATAGT')
         des.draw_strand(2, 8).to(5).loopout(2, 5, 4).to(0)
-        des.draw_strand(2, 20).extension_5p(8).to(12).extension_3p(8).with_sequence('ATACTGGAACTACGCGCGTGAATT', assign_complement=False)
+        des.draw_strand(2, 20).extension_5p(8).to(12).extension_3p(8).with_sequence(
+            'ATACTGGAACTACGCGCGTGAATT', assign_complement=False)
 
         oxv = des.to_oxview_format()
 
@@ -6950,41 +6959,41 @@ class TestOxviewExport(unittest.TestCase):
 
         # Basic complements with a deletion (wildcard sequences)
         for i in range(0, 8):
-            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[1]['monomers'][-i-1]['id'])
-            self.assertEqual(strands[1]['monomers'][-i-1]['bp'], strands[0]['monomers'][i]['id'])
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[1]['monomers'][-i - 1]['id'])
+            self.assertEqual(strands[1]['monomers'][-i - 1]['bp'], strands[0]['monomers'][i]['id'])
 
         # Self-complementary strand (wildcard sequences)
         for i in range(8, 14):
-            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[0]['monomers'][7-i]['id'])
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[0]['monomers'][7 - i]['id'])
 
         # Insertion (defined sequences)
         for i in range(14, 27):
-            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[2]['monomers'][26-i]['id'])
+            self.assertEqual(strands[0]['monomers'][i]['bp'], strands[2]['monomers'][26 - i]['id'])
 
         # Before, in, and after a loopout (one strand with no sequence, one with defined sequence)
         for i in range(0, 3):
-            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][27-i]['id'])
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][27 - i]['id'])
 
         for i in range(3, 8):
             self.assertNotIn('bp', strands[3]['monomers'][i])
 
         for i in range(8, 12):
-            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][23+8-i]['id'])
+            self.assertEqual(strands[3]['monomers'][i]['bp'], strands[2]['monomers'][23 + 8 - i]['id'])
 
         # Mismatches should not be paired; also, extensions:
-        for i in range(0, 8): # 5p extension
+        for i in range(0, 8):  # 5p extension
             self.assertNotIn('bp', strands[4]['monomers'][i])
-        for i in range(8, 12): # complementary
+        for i in range(8, 12):  # complementary
             print(i)
-            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][40+7-i]['id'])
-        for i in range(12, 14): # two mismatches
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][40 + 7 - i]['id'])
+        for i in range(12, 14):  # two mismatches
             self.assertNotIn('bp', strands[4]['monomers'][i])
-            self.assertNotIn('bp', strands[2]['monomers'][32+15-i])
-        for i in range(14, 16): # complementary again
-            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][32+15-i]['id'])
-        for i in range(16, len(strands[4]['monomers'])): # 3p extension
+            self.assertNotIn('bp', strands[2]['monomers'][32 + 15 - i])
+        for i in range(14, 16):  # complementary again
+            self.assertEqual(strands[4]['monomers'][i]['bp'], strands[2]['monomers'][32 + 15 - i]['id'])
+        for i in range(16, len(strands[4]['monomers'])):  # 3p extension
             self.assertNotIn('bp', strands[4]['monomers'][i])
-        
+
         # Unbound region
         for i in range(28, 32):
             self.assertNotIn('bp', strands[2]['monomers'][i])
@@ -7012,6 +7021,7 @@ class TestOxviewExport(unittest.TestCase):
         del oxv2['date']
 
         self.assertEqual(oxv, oxv2)
+
 
 class TestOxdnaExport(unittest.TestCase):
     def setUp(self) -> None:
@@ -7708,9 +7718,11 @@ class TestOxdnaExport(unittest.TestCase):
             self.assertEqual(dat, open(tmpdir + '/' + scriptname + '.dat').read())
 
             # Now, write, to a specific filename without extensions
-            design.write_oxdna_files(directory=tmpdir, filename_no_extension='oxdna-Export with spaces in name')
+            design.write_oxdna_files(directory=tmpdir,
+                                     filename_no_extension='oxdna-Export with spaces in name')
             self.assertEqual(top, open(tmpdir + '/oxdna-Export with spaces in name.top').read())
             self.assertEqual(dat, open(tmpdir + '/oxdna-Export with spaces in name.dat').read())
+
 
 class TestPlateMaps(unittest.TestCase):
 
@@ -7789,3 +7801,307 @@ class TestExtension(unittest.TestCase):
         ext = sc.Extension(5, label="ext1")
         result = ext.to_json_serializable(False)
         self.assertEqual(result[sc.domain_label_key], "ext1")
+
+
+class TestBasePairs(unittest.TestCase):
+    def setUp(self) -> None:
+        '''
+        X shows position of mismatches
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        0 [-->[-->    [-->    [-->    [-->
+           <] <--------]   <-]      <-]     <] <]
+               X
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        1     [----------->   [-->
+                  <--] <-----------]
+                    X
+        '''
+        helices = [sc.Helix(max_offset=40) for _ in range(2)]
+        self.design = sc.Design(helices=helices)
+        # helix 0 forward
+        self.design.draw_strand(0, 0).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 4).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 12).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 20).move(4).with_sequence('AAAA')
+        self.design.draw_strand(0, 28).move(4).with_sequence('AAAA')
+        # helix 0 reverse
+        self.design.draw_strand(0, 3).move(-2).with_sequence('TT')
+        self.design.draw_strand(0, 14).to(4).with_sequence('TTTTTTTTCT')
+        self.design.draw_strand(0, 20).to(17).with_sequence('TTT')
+        self.design.draw_strand(0, 29).to(26).with_sequence('TTT')
+        self.design.draw_strand(0, 36).to(34).with_sequence('TT')
+        self.design.draw_strand(0, 39).to(37).with_sequence('TT')
+        # helix 1 forward
+        self.design.draw_strand(1, 4).to(17).with_sequence('A' * 13)
+        self.design.draw_strand(1, 20).to(24).with_sequence('A' * 4)
+        # helix 1 reverse
+        self.design.draw_strand(1, 12).to(8).with_sequence('TGTT')
+        self.design.draw_strand(1, 26).to(13).with_sequence('T' * 13)
+
+    def test_find_overlapping_domains(self) -> None:
+        d01f = self.design.strands[0].domains[0]
+        d02f = self.design.strands[1].domains[0]
+        d03f = self.design.strands[2].domains[0]
+        d04f = self.design.strands[3].domains[0]
+        d05f = self.design.strands[4].domains[0]
+
+        d01r = self.design.strands[5].domains[0]
+        d02r = self.design.strands[6].domains[0]
+        d03r = self.design.strands[7].domains[0]
+        d04r = self.design.strands[8].domains[0]
+        d05r = self.design.strands[9].domains[0]
+        d06r = self.design.strands[10].domains[0]
+
+        d11f = self.design.strands[11].domains[0]
+        d12f = self.design.strands[12].domains[0]
+
+        d11r = self.design.strands[13].domains[0]
+        d12r = self.design.strands[14].domains[0]
+
+        overlapping_domains_h0 = sc.find_overlapping_domains_on_helix(self.design.helices[0])
+        overlapping_domains_h1 = sc.find_overlapping_domains_on_helix(self.design.helices[1])
+
+        self.assertEqual(len(overlapping_domains_h0), 4)
+        self.assertEqual(len(overlapping_domains_h1), 3)
+
+        self.assertIn((d01f, d01r), overlapping_domains_h0)
+        self.assertIn((d02f, d02r), overlapping_domains_h0)
+        self.assertIn((d03f, d02r), overlapping_domains_h0)
+        self.assertIn((d05f, d04r), overlapping_domains_h0)
+
+        self.assertIn((d11f, d11r), overlapping_domains_h1)
+        self.assertIn((d11f, d12r), overlapping_domains_h1)
+        self.assertIn((d12f, d12r), overlapping_domains_h1)
+        '''
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        0 [-->[-->    [-->    [-->    [-->
+           <] <--------]   <-]      <-]     <] <]
+
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        1     [----------->   [-->
+                  <--] <-----------]
+        '''
+
+    def test_design_base_pairs_mismatches(self) -> None:
+        base_pairs = self.design.base_pairs(allow_mismatches=True)
+        self.assertEqual(len(base_pairs), 2)
+        self.assertEqual(len(base_pairs[0]), 9)
+        self.assertEqual(len(base_pairs[1]), 12)
+
+        # d01f, d01r
+        self.assertIn(1, base_pairs[0])
+        self.assertIn(2, base_pairs[0])
+
+        # d02f, d02r
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(6, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
+
+        # d03f, d02r
+        self.assertIn(12, base_pairs[0])
+        self.assertIn(13, base_pairs[0])
+
+        # d05f, d04r
+        self.assertIn(28, base_pairs[0])
+
+        # d11f, d11r
+        self.assertIn(8, base_pairs[1])
+        self.assertIn(9, base_pairs[1])
+        self.assertIn(10, base_pairs[1])
+        self.assertIn(11, base_pairs[1])
+
+        # d11f, d12r
+        self.assertIn(13, base_pairs[1])
+        self.assertIn(14, base_pairs[1])
+        self.assertIn(15, base_pairs[1])
+        self.assertIn(16, base_pairs[1])
+
+        # d12f, d12r
+        self.assertIn(20, base_pairs[1])
+        self.assertIn(21, base_pairs[1])
+        self.assertIn(22, base_pairs[1])
+        self.assertIn(23, base_pairs[1])
+        '''
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        0 [-->[-->    [-->    [-->    [-->
+           <] <--------]   <-]      <-]     <] <]
+
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        1     [----------->   [-->
+                  <--] <-----------]
+        '''
+
+    def test_design_base_pairs_no_mismatches(self) -> None:
+        base_pairs = self.design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 2)
+        self.assertEqual(len(base_pairs[0]), 8)
+        self.assertEqual(len(base_pairs[1]), 11)
+
+        # d01f, d01r
+        self.assertIn(1, base_pairs[0])
+        self.assertIn(2, base_pairs[0])
+
+        # d02f, d02r
+        self.assertIn(4, base_pairs[0])
+        # self.assertIn(5, base_pairs[0]) # mismatch
+        self.assertIn(6, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
+
+        # d03f, d02r
+        self.assertIn(12, base_pairs[0])
+        self.assertIn(13, base_pairs[0])
+
+        # d05f, d04r
+        self.assertIn(28, base_pairs[0])
+
+        # d11f, d11r
+        self.assertIn(8, base_pairs[1])
+        self.assertIn(9, base_pairs[1])
+        # self.assertIn(10, base_pairs[1]) # mismatch
+        self.assertIn(11, base_pairs[1])
+
+        # d11f, d12r
+        self.assertIn(13, base_pairs[1])
+        self.assertIn(14, base_pairs[1])
+        self.assertIn(15, base_pairs[1])
+        self.assertIn(16, base_pairs[1])
+
+        # d12f, d12r
+        self.assertIn(20, base_pairs[1])
+        self.assertIn(21, base_pairs[1])
+        self.assertIn(22, base_pairs[1])
+        self.assertIn(23, base_pairs[1])
+        '''
+        X shows position of mismatches
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        0 [-->[-->    [-->    [-->    [-->
+           <] <--------]   <-]      <-]     <] <]
+               X
+                    111111111122222222223333333333
+          0123456789012345678901234567890123456789
+        1     [----------->   [-->
+                  <--] <-----------]
+                    X
+        '''
+
+    def test_design_base_pairs_no_dna(self) -> None:
+        '''
+          0123456789
+        0 [-------->
+          <---]<---]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10)
+        design.draw_strand(0, 5).move(-5)
+        design.draw_strand(0, 10).move(-5)
+
+        base_pairs = design.base_pairs()
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 10)
+
+        for offset in range(10):
+            self.assertIn(offset, base_pairs[0])
+
+    def test_design_base_pairs_dna_on_some_strands_and_mismatches(self) -> None:
+        '''
+          0123456789
+          AAAAAAAAAA
+        0 [-------->
+          <---]<---]
+          TTCTT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_sequence('A' * 10)
+        design.draw_strand(0, 5).move(-5).with_sequence('TTCTT')
+        design.draw_strand(0, 10).move(-5)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 9)
+
+        for offset in range(10):
+            if offset != 2:
+                self.assertIn(offset, base_pairs[0])
+
+    def test_design_base_pairs_deletions_insertions(self) -> None:
+        '''
+          0123456789
+                AA
+          A  AAAAAAA
+        0 [XX---II->
+          <-XX]<-II]
+          TT  TTTTTT
+                 TT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
+            .with_sequence('A' * 10)
+        design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
+        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('T' * 7)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 5)
+
+        self.assertIn(0, base_pairs[0])
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(7, base_pairs[0])
+        self.assertIn(9, base_pairs[0])
+
+    def test_design_base_pairs_deletions_insertions_mismatch_in_insertion(self) -> None:
+        '''
+          0123456789
+                AA
+          A  AAAAAAA
+        0 [XX---II->
+          <-XX]<-II]
+          TT  TTTTTT
+                 CT
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(10).with_deletions([1, 2]).with_insertions([(6, 1), (7, 1)]) \
+            .with_sequence('A' * 10)
+        design.draw_strand(0, 5).move(-5).with_deletions([2, 3]).with_sequence('TTT')
+        design.draw_strand(0, 10).move(-5).with_insertions([(7, 1), (8, 1)]).with_sequence('TTTCTTT')
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 4)
+
+        self.assertIn(0, base_pairs[0])
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
+        self.assertIn(9, base_pairs[0])
+
+    def test_no_base_pairs(self) -> None:
+        '''
+          0123456789
+          [-->
+               <--]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(4)
+        design.draw_strand(0, 9).move(-4)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 0)
+
+    def test_no_base_pairs_only_forward_strand(self) -> None:
+        '''
+          0123456789
+          [-->
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0).move(4)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 0)
