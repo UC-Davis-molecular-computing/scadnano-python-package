@@ -66,7 +66,7 @@ import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
-    TypeVar, Generic, Callable, AbstractSet, Deque
+    TypeVar, Generic, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -1130,7 +1130,7 @@ class HelixGroup(_JSONSerializable):
     A :any:`HelixGroup` is useful for grouping together helices that should all be in parallel,
     as part of a design where different groups are not parallel. In particular, each :any:`HelixGroup`
     can be given its own 3D position and pitch/yaw/roll orientation angles. Each :any:`HelixGroup` does
-    not actually *contain* its helices; they are associated through the field `Helix.group`, which is
+    not actually *contain* its helices; they are associated through the field :data:`Helix.group`, which is
     a string representing a key in the dict ``groups`` specified in the constructor for :any:`Design`.
 
     If there are :any:`HelixGroup`'s explicitly specified, then the field :py:data:`Design.grid` is ignored.
@@ -1157,7 +1157,7 @@ class HelixGroup(_JSONSerializable):
     
     Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis,
     when Y-axis points down, Z-axis points right, and X-axis points out of the page.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes.
     Units are degrees."""
 
     roll: float = 0
@@ -1174,7 +1174,7 @@ class HelixGroup(_JSONSerializable):
     Rotation is *clockwise* while looking down onto the main view, 
     i.e., in the X-Z plane, around the Y-axis, 
     when X-axis points down, Z-axis points right, and Y-axis points into the page.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes.
     Units are degrees."""
 
     helices_view_order: Optional[List[int]] = None
@@ -1273,7 +1273,22 @@ class Geometry(_JSONSerializable):
     """Minor groove angle in degrees."""
 
     inter_helix_gap: float = 1.0
-    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+    """
+    Gap between helices in nanometers due to electrostatic repulsion. This is used by the scadnano 
+    web interface to display an appropriate aspect ratio for 2D DNA structures.
+    
+    The default value of 1.0 nm is approximately the average distance, as measured by atomic force
+    microscopy (AFM) images, for 2D DNA origami using the :data:`Grid.square` grid,
+    with 32 base pairs in between consecutive crossovers between two helices. Such a structure with `n` 
+    parallel helices generally is measured to be about 3`n` nm high on AFM images. Since each DNA helix
+    is 2 nm diameter, this implies an average inter-helix gap of 1.0 nm, though of course it is just an 
+    average, and the actual gap varies depending on distance to the nearest crossover: at a crossover 
+    the distance is close to 0 and halfway between two crossovers, the distance is greater than 1 nm. 
+    
+    This value may be inappropriate for designs with different crossover spacing, for example 
+    single-stranded tiles with 21 base pairs between consecutive crossovers. (In that case 0.5 nm seems 
+    to be a more appropriate approximation.)
+    """
 
     def distance_between_helices(self) -> float:
         return 2 * self.helix_radius + self.inter_helix_gap
@@ -1612,6 +1627,8 @@ class Helix(_JSONSerializable):
             offset on this helix
         :param forward:
             whether to compute angle for the forward or reverse strand
+        :param geometry:
+            :any:`Geometry` parameters to determine bases per turn
         :return:
             backbone angle at *offset* for the strand in the direction given by *forward*.
         """
@@ -2680,7 +2697,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
 
-        self.design._check_strand_has_legal_offsets_in_helices(self._strand)
+        self.design._check_strand_has_legal_offsets_in_helices(self._strand)  # noqa
 
         self.current_offset = offset
 
@@ -4746,8 +4763,8 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
         else:
             reverse_domains.append(domain)
 
-    forward_domains.sort(key=lambda domain: domain.start)
-    reverse_domains.sort(key=lambda domain: domain.start)
+    forward_domains.sort(key=lambda dom: dom.start)
+    reverse_domains.sort(key=lambda dom: dom.start)
 
     if len(forward_domains) == 0 or len(reverse_domains) == 0:
         return []
@@ -4834,7 +4851,7 @@ def reverse_complementary(seq1: str, seq2: str, allow_wildcard: bool = False,
 
     :param seq1:
         first DNA sequence
-    :param seq1:
+    :param seq2:
         second DNA sequence
     :param allow_wildcard:
         if true a "wildcard" (the symbol '?') is considered to be complementary to anything
@@ -5448,6 +5465,18 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         on that helix where two strands are.
 
         If a :any:`Helix` has no base pairs, then its :data:`Helix.idx` is not a key in the returned dict.
+
+        An offset with a deletion on either :any:`Domain` is not considered a base pair.
+
+        Insertions are more complex. If `allow_mismatches` is False, then an offset with an insertion on
+        *both* :any:`Domain`'s is considered a *single* base pair so long as the DNA sequences on each
+        insertion are the same length and complementary. If `allow_mismatches` is True then an offset with
+        an insertion on *either* :any:`Domain`'s is considered a *single* base pair regardless of the
+        length or DNA sequences of either insertion.
+
+        To calculate "true" base pairs in the presence of deletions and insertions, it is recommended
+        first to remove the deletions and insertions using the method
+        :meth:`Design.inline_deletions_insertions`.
 
         :param allow_mismatches:
             if True, then all offsets on a :any:`Helix` where there is both a forward and reverse
@@ -7182,7 +7211,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
             have duplicate names. (default: True)
-        :param use_strand_color:
+        :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.        
         """
@@ -7194,7 +7223,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         nuc_count = 0
         strand_count = 0
         strand_nuc_start = [-1]
-        for strand1, oxdna_strand in zip(self.strands, system.strands):
+        for sc_strand, oxdna_strand in zip(self.strands, system.strands):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
             strand_nuc_start.append(nuc_count)
@@ -7203,8 +7232,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                          'end5': nuc_count,
                          'end3': nuc_count + len(oxdna_strand.nucleotides),
                          'monomers': oxvnucs}
-            if use_strand_colors and (strand1.color is not None):
-                scolor = strand1.color.to_cadnano_v2_int_hex()
+            if use_strand_colors and (sc_strand.color is not None):
+                scolor = sc_strand.color.to_cadnano_v2_int_hex()
             else:
                 scolor = None
 
@@ -7289,7 +7318,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
             have duplicate names. (default: True)
-        :param use_strand_color:
+        :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.
         """
@@ -8112,6 +8141,8 @@ def write_file_same_name_as_running_python_script(contents: str, extension: str,
         extension to use
     :param directory:
         directory in which to write file. If not specified, the current working directory is used.
+    :param add_extension:
+        whether to replace `.py` with `extension`
     :param filename:
         filename to use instead of the currently running script
     """
