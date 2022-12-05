@@ -1349,10 +1349,11 @@ class Helix(_JSONSerializable):
     :py:data:`Domain.forward` = ``true`` and the other must have
     :py:data:`Domain.forward` = ``false``.
 
-    Once part of a :any:`Design`, a :any:`Helix` has an index (accessible  via :py:meth:`Helix.idx`
-    once the :any:`Design` is created)
-    representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Domain` is
-    associated to the :any:`Helix` via the integer index :any:`Domain.helix`.
+    Each :any:`Helix` has an index, accessible  via :py:data:`Helix.idx`. By default this
+    is its order in the list of all :any:`Helix`'s (this is how the :any:`Design` constructor sets the
+    field if it is not already set), but it can be manually assigned to be any integer that is unique to the
+    :any:`Helix`. This index is how a :any:`Domain` is
+    associated to the :any:`Helix` via the field :any:`Domain.helix`.
     """
 
     max_offset: Optional[int] = None  # type: ignore
