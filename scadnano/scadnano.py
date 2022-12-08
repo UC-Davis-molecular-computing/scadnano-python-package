@@ -1184,6 +1184,11 @@ class HelixGroup(_JSONSerializable):
     grid: Grid = Grid.none
     """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
 
+    def has_default_position_and_orientation(self):
+        # we don't bother checking grid or helices_view_order because those are written to top-level
+        # fields of Design if the group is otherwise default
+        return self.position == origin and self.pitch == self.roll == self.yaw == 0
+
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Dict[str, Any] = dict()
 
@@ -1790,7 +1795,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
     def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
         """
-        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        :return: The :any:`Strand` that contains this :any:`Domain`.
         """
         if self._parent_strand is None:
             raise ValueError('_parent_strand has not yet been set')
@@ -7256,16 +7261,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 oxvnucs.append(oxvnuc)
             oxview_strands.append(oxvstrand)
 
-        for si1, (strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
-            for si2, strand2 in enumerate(self.strands):
-                if not strand1.overlaps(strand2):
+        for si1, (sc_strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
+            for si2, sc_strand2 in enumerate(self.strands):
+                if not sc_strand1.overlaps(sc_strand2):
                     continue
                 s1_nuc_idx = strand_nuc_start[si1 + 1]
-                for domain1 in strand1.domains:
+                for domain1 in sc_strand1.domains:
                     if isinstance(domain1, (Loopout, Extension)):
                         continue
                     s2_nuc_idx = strand_nuc_start[si2 + 1]
-                    for domain2 in strand2.domains:
+                    for domain2 in sc_strand2.domains:
                         if isinstance(domain2, (Loopout, Extension)):
                             continue
                         if not domain1.overlaps(domain2):
@@ -7287,11 +7292,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                         # to mismatch.  (FIXME: this must be changed if scadnano later supports
                         # degenerate base codes.)
                         for d1, d2 in zip(d1range, d2range):
-                            if ((strand1.dna_sequence is not None) and
-                                    (strand2.dna_sequence is not None) and
-                                    (strand1.dna_sequence[d1] != "?") and
-                                    (strand2.dna_sequence[d2] != "?") and
-                                    (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                            if ((sc_strand1.dna_sequence is not None) and
+                                    (sc_strand2.dna_sequence is not None) and
+                                    (sc_strand1.dna_sequence[d1] != "?") and
+                                    (sc_strand2.dna_sequence[d2] != "?") and
+                                    (wc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
                                 continue
 
                             oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
@@ -8058,7 +8063,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                          f'{", ".join(self.groups.keys())}')
 
     def _has_default_groups(self) -> bool:
-        return len(self.groups) == 1 and default_group_name in self.groups
+        if not (len(self.groups) == 1 and default_group_name in self.groups):
+            return False
+        # even if there's only one group and it has the default name,
+        # need to check its fields for non-default values
+        group = self.groups[default_group_name]
+        return group.has_default_position_and_orientation()
 
     def _assign_default_helices_view_orders_to_groups(self) -> None:
         for name, group in self.groups.items():
