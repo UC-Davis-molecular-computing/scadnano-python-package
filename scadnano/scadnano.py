@@ -5489,7 +5489,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             :any:`Domain` will be included. Otherwise, only offsets where the :any:`Domain`'s have
             complementary bases will be included.
         :return:
-            all base pairs (`helix_idx`, `offset`) in this :any:`Design`
+            dict mapping each helix_idx to a list of offsets on that helix where the base pairs are
         """
         base_pairs = {}
         for idx, helix in self.helices.items():
