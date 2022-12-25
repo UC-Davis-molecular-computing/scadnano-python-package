@@ -8105,3 +8105,33 @@ class TestBasePairs(unittest.TestCase):
 
         base_pairs = design.base_pairs(allow_mismatches=False)
         self.assertEqual(len(base_pairs), 0)
+
+    def test_no_base_pairs_only_reverse_strand(self) -> None:
+        '''
+          0123456789
+              <--]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 8).move(-4)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 0)
+
+    def test_base_pairs_on_forward_strand_ahead_of_reverse_strand(self) -> None:
+        '''
+          0123456789
+            [---->
+          <----]
+        '''
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 2).move(6)
+        design.draw_strand(0, 6).move(-6)
+
+        base_pairs = design.base_pairs(allow_mismatches=False)
+        self.assertEqual(len(base_pairs), 1)
+        self.assertEqual(len(base_pairs[0]), 4)
+
+        self.assertIn(2, base_pairs[0])
+        self.assertIn(3, base_pairs[0])
+        self.assertIn(4, base_pairs[0])
+        self.assertIn(5, base_pairs[0])
