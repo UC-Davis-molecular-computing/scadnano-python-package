@@ -1023,7 +1023,7 @@ class Modification(_JSONSerializable, ABC):
 
     @staticmethod
     def from_json(
-            json_map: Dict[str, Any]) -> 'Modification':  # remove quotes when Py3.6 support dropped
+            json_map: Dict[str, Any]) -> Modification:
         location = json_map[mod_location_key]
         if location == "5'":
             return Modification5Prime.from_json(json_map)
@@ -1061,9 +1061,8 @@ class Modification5Prime(Modification):
         ret[mod_location_key] = "5'"
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Modification5Prime':
+    def from_json(json_map: Dict[str, Any]) -> Modification5Prime:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "5'"
@@ -1098,9 +1097,8 @@ class Modification3Prime(Modification):
         ret[mod_location_key] = "3'"
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Modification3Prime':
+    def from_json(json_map: Dict[str, Any]) -> Modification3Prime:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "3'"
@@ -1138,9 +1136,8 @@ class ModificationInternal(Modification):
                 list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'ModificationInternal':
+    def from_json(json_map: Dict[str, Any]) -> ModificationInternal:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "internal"
@@ -1186,7 +1183,7 @@ class Position3D(_JSONSerializable):
         return dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Position3D':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Position3D:
         if position_origin_key in json_map:
             origin_ = json_map[position_origin_key]
             x = origin_[position_x_key]
@@ -1317,7 +1314,7 @@ class HelixGroup(_JSONSerializable):
         self.helices_view_order = _check_helices_view_order_and_return(self.helices_view_order, helix_idxs)
 
     @staticmethod
-    def from_json(json_map: dict, **kwargs: Any) -> 'HelixGroup':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict, **kwargs: Any) -> HelixGroup:
         grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
         # grid: Grid = Grid.none
         # if grid_key in json_map:
@@ -1398,7 +1395,7 @@ class Geometry(_JSONSerializable):
         return self == _default_geometry
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Geometry:
         geometry = Geometry()
         geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
                                                      rise_per_base_pair_key,
@@ -1621,7 +1618,7 @@ class Helix(_JSONSerializable):
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Helix':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Helix:
         grid_position: Optional[Tuple[int, int]] = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
@@ -1815,7 +1812,7 @@ class Domain(_JSONSerializable):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
+
     _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
@@ -1841,7 +1838,7 @@ class Domain(_JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> Domain:  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Domain:
         helix = mandatory_field(Domain, json_map, helix_idx_key)
         forward = mandatory_field(Domain, json_map, forward_key, legacy_keys=legacy_forward_keys)
         start = mandatory_field(Domain, json_map, start_key)
@@ -1881,7 +1878,7 @@ class Domain(_JSONSerializable):
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
 
-    def strand(self) -> Strand:  # remove quotes when Py3.6 support dropped
+    def strand(self) -> Strand:
         """
         :return: The :any:`Strand` that contains this :any:`Domain`.
         """
@@ -2090,7 +2087,6 @@ class Domain(_JSONSerializable):
         return (self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Py3.6 support dropped
     # def overlaps_illegally(self, other: Domain):
     def overlaps_illegally(self, other: Domain) -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
@@ -2105,8 +2101,6 @@ class Domain(_JSONSerializable):
         return (self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Py3.6 support dropped
-    # def compute_overlap(self, other: Domain) -> Tuple[int, int]:
     def compute_overlap(self, other: Domain) -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Domain and `other`.
 
@@ -2216,7 +2210,7 @@ class Loopout(_JSONSerializable):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
+
     _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True,
@@ -2231,7 +2225,7 @@ class Loopout(_JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Loopout':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Loopout:
         # XXX: this should never fail since we detect whether to call this from_json by the presence
         # of a length key in json_map
         length_str = mandatory_field(Loopout, json_map, loopout_key)
@@ -2242,7 +2236,7 @@ class Loopout(_JSONSerializable):
         color = Color.from_json(color_json)
         return Loopout(length=length, name=name, label=label, color=color)
 
-    def strand(self) -> Strand:  # remove quotes when Py3.6 support dropped
+    def strand(self) -> Strand:
         """
         :return: The :any:`Strand` that contains this :any:`Loopout`.
         """
@@ -2378,7 +2372,7 @@ class Extension(_JSONSerializable):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
+
     _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) \
@@ -2577,7 +2571,6 @@ class StrandBuilder:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
 
-    # remove quotes when Py3.6 support dropped
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> StrandBuilder:
         """
@@ -2616,7 +2609,6 @@ class StrandBuilder:
     def _most_recently_added_substrand_is_extension(self):
         return self._most_recently_added_substrand_is_instance_of_class(Extension)
 
-    # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> StrandBuilder:
         """
@@ -2706,7 +2698,6 @@ class StrandBuilder:
                 'Cannot add a 5\' extension when there are already domains. '
                 'Did you mean to create a 3\' extension?')
 
-    # remove quotes when Py3.6 support dropped
     def move(self, delta: int) -> StrandBuilder:
         """
         Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
@@ -2729,7 +2720,6 @@ class StrandBuilder:
         """
         return self.to(self.current_offset + delta)
 
-    # remove quotes when Py3.6 support dropped
     def to(self, offset: int) -> StrandBuilder:
         """
         Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
@@ -2791,7 +2781,6 @@ class StrandBuilder:
             return False
         return len(self._strand.domains) > 1 and self._most_recently_added_substrand_is_extension()
 
-    # remove quotes when Py3.6 support dropped
     def update_to(self, offset: int) -> StrandBuilder:
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
@@ -2839,7 +2828,6 @@ class StrandBuilder:
         self._strand.set_circular()
         return self
 
-    # remove quotes when Py3.6 support dropped
     def as_scaffold(self) -> StrandBuilder:
         """
         Makes :any:`Strand` being built a scaffold.
@@ -2875,7 +2863,6 @@ class StrandBuilder:
                                      plate=plate, well=well)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_modification_5p(self, mod: Modification5Prime) -> StrandBuilder:
         """
         Sets Strand being built to have given 5' modification.
@@ -2888,7 +2875,6 @@ class StrandBuilder:
         self._strand.set_modification_5p(mod)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_modification_3p(self, mod: Modification3Prime) -> StrandBuilder:
         """
         Sets Strand being built to have given 3' modification.
@@ -2901,7 +2887,6 @@ class StrandBuilder:
         self._strand.set_modification_3p(mod)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool) \
             -> StrandBuilder:
         """
@@ -2917,7 +2902,6 @@ class StrandBuilder:
         self._strand.set_modification_internal(idx, mod, warn_on_no_dna)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_color(self, color: Color) -> StrandBuilder:
         """
         Sets Strand being built to have given color.
@@ -2930,7 +2914,6 @@ class StrandBuilder:
         self._strand.set_color(color)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_sequence(self, sequence: str, assign_complement: bool = False) \
             -> StrandBuilder:
         """
@@ -2952,7 +2935,6 @@ class StrandBuilder:
         self.design.assign_dna(strand=self._strand, sequence=sequence, assign_complement=assign_complement)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_domain_sequence(self, sequence: str, assign_complement: bool = False) \
             -> StrandBuilder:
         """
@@ -2990,7 +2972,6 @@ class StrandBuilder:
                                assign_complement=assign_complement)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_domain_color(self, color: Color) -> StrandBuilder:
         """
         Sets most recent :any:`Domain`/:any:`Loopout`/:any:`Extension`
@@ -3007,7 +2988,6 @@ class StrandBuilder:
         last_domain.color = color
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_name(self, name: str) -> StrandBuilder:
         """
         Assigns `name` as name of the :any:`Strand` being built.
@@ -3024,7 +3004,6 @@ class StrandBuilder:
         self._strand.set_name(name)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_label(self, label: str) -> StrandBuilder:
         """
         Assigns `label` as label of the :any:`Strand` being built.
@@ -3041,7 +3020,6 @@ class StrandBuilder:
         self._strand.set_label(label)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_domain_name(self, name: str) -> StrandBuilder:
         """
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
@@ -3066,7 +3044,6 @@ class StrandBuilder:
         last_domain.set_name(name)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_domain_label(self, label: str) -> StrandBuilder:
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
@@ -3402,12 +3379,12 @@ class Strand(_JSONSerializable):
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         if self.label is not None:
-            dct[strand_label_key] = NoIndent(self.label) if suppress_indent else self.label
+            dct[strand_label_key] = self.label
 
         return dct
 
     @staticmethod
-    def from_json(json_map: dict) -> Strand:  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Strand:
         substrand_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
         if len(substrand_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
@@ -3465,7 +3442,7 @@ class Strand(_JSONSerializable):
             label=label,
         )
 
-    def __eq__(self, other: Any) -> bool:  # remove quotes when Py3.6 support dropped
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Strand):
             return False
         return self.domains == other.domains
@@ -3751,7 +3728,7 @@ class Strand(_JSONSerializable):
         """3' offset of this entire :any:`Strand`, INCLUSIVE."""
         return self.last_domain().offset_3p()
 
-    def overlaps(self, other: Strand) -> bool:  # remove quotes when Py3.6 support dropped
+    def overlaps(self, other: Strand) -> bool:
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
         by `self` has nonempty intersection with those occupied by `other_strand`."""
         for domain_self in self.bound_domains():
@@ -3760,7 +3737,7 @@ class Strand(_JSONSerializable):
                     return True
         return False
 
-    def assign_dna_complement_from(self, other: Strand) -> None:  # remove quotes when Py3.6 support dropped
+    def assign_dna_complement_from(self, other: Strand) -> None:
         """Assuming a DNA sequence has been assigned to `other`, assign its Watson-Crick
         complement to the portions of this Strand that are bound to `other`.
 
@@ -5186,7 +5163,7 @@ class Design(_JSONSerializable):
         return self.groups[helix.group].roll + helix.roll
 
     @staticmethod
-    def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_file(filename: str) -> Design:
         """
         Loads a :any:`Design` from the file with the given name.
 
@@ -5198,7 +5175,7 @@ class Design(_JSONSerializable):
         return Design.from_scadnano_json_str(json_str)
 
     @staticmethod
-    def from_scadnano_json_str(json_str: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_json_str(json_str: str) -> Design:
         """
         Loads a :any:`Design` from the given JSON string.
 
@@ -5406,7 +5383,7 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def from_scadnano_json_map(
-            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
+            json_map: dict) -> Design:
         """
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
@@ -5796,7 +5773,6 @@ class Design(_JSONSerializable):
 
         return strand
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
     def from_cadnano_v2(directory: str = '', filename: Optional[str] = None,
                         json_dict: Optional[dict] = None) -> 'Design':
