@@ -2269,10 +2269,10 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
 
     def __repr__(self) -> str:
         return f'Loopout(' + \
-               (f'{self.name}, ' if self.name is not None else '') + \
-               f'{self.length}, ' + \
-               (f'{self.label}, ' if self.label is not None else '') + \
-               f')'
+            (f'{self.name}, ' if self.name is not None else '') + \
+            f'{self.length}, ' + \
+            (f'{self.label}, ' if self.label is not None else '') + \
+            f')'
 
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
@@ -4414,20 +4414,16 @@ def create_html_with_borders_tablefmt():  # type: ignore
     from functools import partial
     from tabulate import TableFormat, Line
 
-    html_with_borders_tablefmt = TableFormat(
-        lineabove=Line(
-            f"""\
+    lineabove = Line(f"""\
     <style>
     th.{cell_with_border_css_class}, td.{cell_with_border_css_class} {{
         border: 1px solid black;
     }}
     </style>
     <table>\
-    """,
-            "",
-            "",
-            "",
-        ),
+    """, "", "", "", )
+    html_with_borders_tablefmt = TableFormat(  # type: ignore
+        lineabove=lineabove,
         linebelowheader=None,
         linebetweenrows=None,
         linebelow=Line("</table>", "", "", ""),
@@ -5240,8 +5236,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def _helices_from_json(json_map: Dict) -> Tuple[List[Helix],
-                                                    Dict[str, Tuple[float, float, int]],
-                                                    Dict[Tuple[float, float], List[Helix]]]:
+    Dict[str, Tuple[float, float, int]],
+    Dict[Tuple[float, float], List[Helix]]]:
         """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
 
         group_to_pitch_yaw is filled if multiple helix groups are used
@@ -5400,8 +5396,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix],
-                                                                        Dict[str, HelixGroup],
-                                                                        Grid]:
+    Dict[str, HelixGroup],
+    Grid]:
         helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
         groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw,
                                                          pitch_yaw_to_helices)
