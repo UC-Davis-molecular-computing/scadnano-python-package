@@ -2314,7 +2314,8 @@ default_display_length = 1.0
 
 @dataclass
 class Extension(_JSONSerializable, Generic[DomainLabel]):
-    """Represents a single-stranded extension on either the 3' or 5'
+    # using raw string literal for docstring to avoid warning about backslash
+    r"""Represents a single-stranded extension on either the 3' or 5'
     end of :any:`Strand`.
 
     One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
@@ -5235,9 +5236,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return num_groups_used
 
     @staticmethod
-    def _helices_from_json(json_map: Dict) -> Tuple[List[Helix],
-    Dict[str, Tuple[float, float, int]],
-    Dict[Tuple[float, float], List[Helix]]]:
+    def _helices_from_json(json_map: Dict) \
+            -> Tuple[
+                List[Helix],
+                Dict[str, Tuple[float, float, int]],
+                Dict[Tuple[float, float], List[Helix]],
+            ]:
         """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
 
         group_to_pitch_yaw is filled if multiple helix groups are used
@@ -5395,9 +5399,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return groups, grid
 
     @staticmethod
-    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix],
-    Dict[str, HelixGroup],
-    Grid]:
+    def _helices_and_groups_and_grid_from_json(json_map: Dict) \
+            -> Tuple[
+                List[Helix],
+                Dict[str, HelixGroup],
+                Grid,
+            ]:
         helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
         groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw,
                                                          pitch_yaw_to_helices)
@@ -8649,10 +8656,10 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                         # we have to check insertions first because they affect the index
                         if offset in insertions:
                             num = insertions[offset]
-                            for i in range(num):
+                            for j in range(num):
                                 cen = origin_ + forward * (
-                                        offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                                norm = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                        offset + mod - num + j) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                norm = normal.rotate(step_rot * (offset + mod - num + j), forward)
                                 # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                                 forw = -forward if domain.forward else forward
                                 nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
@@ -8678,7 +8685,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for i in range(domain.length):
+                for _ in range(domain.length):
                     base = seq[i]
                     center = _OxdnaVector()
                     normal = _OxdnaVector(0, -1, 0)
