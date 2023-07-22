@@ -51,10 +51,9 @@ so the user must take care not to set them.
 """
 
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
-# commented out for now to support Py3.6, which does not support this feature
-# from __future__ import annotations
+from __future__ import annotations
 
-__version__ = "0.17.7"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.18.0"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -66,7 +65,7 @@ import re
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
-    TypeVar, Generic, Callable, AbstractSet, Deque
+    TypeVar, Callable, AbstractSet
 from collections import defaultdict, OrderedDict, Counter
 import sys
 import os.path
@@ -456,6 +455,12 @@ class M13Variant(enum.Enum):
     https://www.tilibit.com/collections/scaffold-dna/products/single-stranded-scaffold-dna-type-p8064
     """
 
+    p8634 = "p8634"
+    """Variant of M13mp18 that is 8634 bases long. At the time of this writing, not listed as available
+    from any biotech vender, but Tilibit will make it for you if you ask. 
+    (https://www.tilibit.com/pages/contact-us)
+    """
+
 
 def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     """
@@ -732,10 +737,101 @@ TTAATGCGAATTTTAACAAAATATTAACGTTTACAATTTAAATATTTGCTTATACAATCTTCCTGTTTTTGGGGCTTTTC
 TATGATTGACATGCTAGTTTTACGATTACCGTTCATCGATTCTCTTGTTTGCTCCAGACTCTCA
 ''')
 
+_8634 = re.sub(r'\s', '', '''
+GAGTCCACGTTCTTTAATAGTGGACTCTTGTTCCAAACTGGAACAACACTCAACCCTATCTCGGGCTATTCTTTTGATTTATAAGGGATTTTGCCGATTT
+CGGAACCACCATCAAACAGGATTTTCGCCTGCTGGGGCAAACCAGCGTGGACCGCTTGCTGCAACTCTCTCAGGGCCAGGCGGTGAAGGGCAATCAGCTG
+TTGCCCGTCTCACTGGTGAAAAGAAAAACCACCCTGGCGCCCAATACGCAAACCGCCTCTCCCCGCGCGTTGGCCGATTCATTAATGCAGCTGGCACGAC
+AGGTTTCCCGACTGGAAAGCGGGCAGTGAGCGCAACGCAATTAATGTGAGTTAGCTCACTCATTAGGCACCCCAGGCTTTACACTTTATGCTTCCGGCTC
+GTATGTTGTGTGGAATTGTGAGCGGATAACAATTTCACACAGGAAACAGCTATGACCATGATTACGAATTCGAGCTCGGTACCCGGGGATCCATTCTCCT
+GTGACTCGGAAGTGCATTTATCATCTCCATAAAACAAAACCCGCCGTAGCGAGTTCAGATAAAATAAATCCCCGCGAGTGCGAGGATTGTTATGTAATAT
+TGGGTTTAATCATCTATATGTTTTGTACAGAGAGGGCAAGTATCGTTTCCACCGTACTCGTGATAATAATTTTGCACGGTATCAGTCATTTCTCGCACAT
+TGCAGAATGGGGATTTGTCTTCATTAGACTTATAAACCTTCATGGAATATTTGTATGCCGACTCTATATCTATACCTTCATCTACATAAACACCTTCGTG
+ATGTCTGCATGGAGACAAGACACCGGATCTGCACAACATTGATAACGCCCAATCTTTTTGCTCAGACTCTAACTCATTGATACTCATTTATAAACTCCTT
+GCAATGTATGTCGTTTCAGCTAAACGGTATCAGCAATGTTTATGTAAAGAAACAGTAAGATAATACTCAACCCGATGTTTGAGTACGGTCATCATCTGAC
+ACTACAGACTCTGGCATCGCTGTGAAGACGACGCGAAATTCAGCATTTTCACAAGCGTTATCTTTTACAAAACCGATCTCACTCTCCTTTGATGCGAATG
+CCAGCGTCAGACATCATATGCAGATACTCACCTGCATCCTGAACCCATTGACCTCCAACCCCGTAATAGCGATGCGTAATGATGTCGATAGTTACTAACG
+GGTCTTGTTCGATTAACTGCCGCAGAAACTCTTCCAGGTCACCAGTGCAGTGCTTGATAACAGGAGTCTTCCCAGGATGGCGAACAACAAGAAACTGGTT
+TCCGTCTTCACGGACTTCGTTGCTTTCCAGTTTAGCAATACGCTTACTCCCATCCGAGATAACACCTTCGTAATACTCACGCTGCTCGTTGAGTTTTGAT
+TTTGCTGTTTCAAGCTCAACACGCAGTTTCCCTACTGTTAGCGCAATATCCTCGTTCTCCTGGTCGCGGCGTTTGATGTATTGCTGGTTTCTTTCCCGTT
+CATCCAGCAGTTCCAGCACAATCGATGGTGTTACCAATTCATGGAAAAGGTCTGCGTCAAATCCCCAGTCGTCATGCATTGCCTGCTCTGCCGCTTCACG
+CAGTGCCTGAGAGTTAATTTCGCTCACTTCGAACCTCTCTGTTTACTGATAAGTTCCAGATCCTCCTGGCAACTTGCACAAGTCCGACAACCCTGAACGA
+CCAGGCGTCTTCGTTCATCTATCGGATCGCCACACTCACAACAATGAGTGGCAGATATAGCCTGGTGGTTCAGGCGGCGCATTTTTATTGCTGTGTTGCG
+CTGTAATTCTTCTATTTCTGATGCTGAATCAATGATGTCTGCCATCTTTCATTAATCCCTGAACTGTTGGTTAATACGCATGAGGGTGAATGCGAATAAT
+AAAGCTTGGCACTGGCCGTCGTTTTACAACGTCGTGACTGGGAAAACCCTGGCGTTACCCAACTTAATCGCCTTGCAGCACATCCCCCTTTCGCCAGCTG
+GCGTAATAGCGAAGAGGCCCGCACCGATCGCCCTTCCCAACAGTTGCGCAGCCTGAATGGCGAATGGCGCTTTGCCTGGTTTCCGGCACCAGAAGCGGTG
+CCGGAAAGCTGGCTGGAGTGCGATCTTCCTGAGGCCGATACTGTCGTCGTCCCCTCAAACTGGCAGATGCACGGTTACGATGCGCCCATCTACACCAACG
+TGACCTATCCCATTACGGTCAATCCGCCGTTTGTTCCCACGGAGAATCCGACGGGTTGTTACTCGCTCACATTTAATGTTGATGAAAGCTGGCTACAGGA
+AGGCCAGACGCGAATTATTTTTGATGGCGTTCCTATTGGTTAAAAAATGAGCTGATTTAACAAAAATTTAATGCGAATTTTAACAAAATATTAACGTTTA
+CAATTTAAATATTTGCTTATACAATCTTCCTGTTTTTGGGGCTTTTCTGATTATCAACCGGGGTACATATGATTGACATGCTAGTTTTACGATTACCGTT
+CATCGATTCTCTTGTTTGCTCCAGACTCTCAGGCAATGACCTGATAGCCTTTGTAGATCTCTCAAAAATAGCTACCCTCTCCGGCATTAATTTATCAGCT
+AGAACGGTTGAATATCATATTGATGGTGATTTGACTGTCTCCGGCCTTTCTCACCCTTTTGAATCTTTACCTACACATTACTCAGGCATTGCATTTAAAA
+TATATGAGGGTTCTAAAAATTTTTATCCTTGCGTTGAAATAAAGGCTTCTCCCGCAAAAGTATTACAGGGTCATAATGTTTTTGGTACAACCGATTTAGC
+TTTATGCTCTGAGGCTTTATTGCTTAATTTTGCTAATTCTTTGCCTTGCCTGTATGATTTATTGGATGTTAATGCTACTACTATTAGTAGAATTGATGCC
+ACCTTTTCAGCTCGCGCCCCAAATGAAAATATAGCTAAACAGGTTATTGACCATTTGCGAAATGTATCTAATGGTCAAACTAAATCTACTCGTTCGCAGA
+ATTGGGAATCAACTGTTATATGGAATGAAACTTCCAGACACCGTACTTTAGTTGCATATTTAAAACATGTTGAGCTACAGCATTATATTCAGCAATTAAG
+CTCTAAGCCATCCGCAAAAATGACCTCTTATCAAAAGGAGCAATTAAAGGTACTCTCTAATCCTGACCTGTTGGAGTTTGCTTCCGGTCTGGTTCGCTTT
+GAAGCTCGAATTAAAACGCGATATTTGAAGTCTTTCGGGCTTCCTCTTAATCTTTTTGATGCAATCCGCTTTGCTTCTGACTATAATAGTCAGGGTAAAG
+ACCTGATTTTTGATTTATGGTCATTCTCGTTTTCTGAACTGTTTAAAGCATTTGAGGGGGATTCAATGAATATTTATGACGATTCCGCAGTATTGGACGC
+TATCCAGTCTAAACATTTTACTATTACCCCCTCTGGCAAAACTTCTTTTGCAAAAGCCTCTCGCTATTTTGGTTTTTATCGTCGTCTGGTAAACGAGGGT
+TATGATAGTGTTGCTCTTACTATGCCTCGTAATTCCTTTTGGCGTTATGTATCTGCATTAGTTGAATGTGGTATTCCTAAATCTCAACTGATGAATCTTT
+CTACCTGTAATAATGTTGTTCCGTTAGTTCGTTTTATTAACGTAGATTTTTCTTCCCAACGTCCTGACTGGTATAATGAGCCAGTTCTTAAAATCGCATA
+AGGTAATTCACAATGATTAAAGTTGAAATTAAACCATCTCAAGCCCAATTTACTACTCGTTCTGGTGTTTCTCGTCAGGGCAAGCCTTATTCACTGAATG
+AGCAGCTTTGTTACGTTGATTTGGGTAATGAATATCCGGTTCTTGTCAAGATTACTCTTGATGAAGGTCAGCCAGCCTATGCGCCTGGTCTGTACACCGT
+TCATCTGTCCTCTTTCAAAGTTGGTCAGTTCGGTTCCCTTATGATTGACCGTCTGCGCCTCGTTCCGGCTAAGTAACATGGAGCAGGTCGCGGATTTCGA
+CACAATTTATCAGGCGATGATACAAATCTCCGTTGTACTTTGTTTCGCGCTTGGTATAATCGCTGGGGGTCAAAGATGAGTGTTTTAGTGTATTCTTTTG
+CCTCTTTCGTTTTAGGTTGGTGCCTTCGTAGTGGCATTACGTATTTTACCCGTTTAATGGAAACTTCCTCATGAAAAAGTCTTTAGTCCTCAAAGCCTCT
+GTAGCCGTTGCTACCCTCGTTCCGATGCTGTCTTTCGCTGCTGAGGGTGACGATCCCGCAAAAGCGGCCTTTAACTCCCTGCAAGCCTCAGCGACCGAAT
+ATATCGGTTATGCGTGGGCGATGGTTGTTGTCATTGTCGGCGCAACTATCGGTATCAAGCTGTTTAAGAAATTCACCTCGAAAGCAAGCTGATAAACCGA
+TACAATTAAAGGCTCCTTTTGGAGCCTTTTTTTTGGAGATTTTCAACGTGAAAAAATTATTATTCGCAATTCCTTTAGTTGTTCCTTTCTATTCTCACTC
+CGCTGAAACTGTTGAAAGTTGTTTAGCAAAATCCCATACAGAAAATTCATTTACTAACGTCTGGAAAGACGACAAAACTTTAGATCGTTACGCTAACTAT
+GAGGGCTGTCTGTGGAATGCTACAGGCGTTGTAGTTTGTACTGGTGACGAAACTCAGTGTTACGGTACATGGGTTCCTATTGGGCTTGCTATCCCTGAAA
+ATGAGGGTGGTGGCTCTGAGGGTGGCGGTTCTGAGGGTGGCGGTTCTGAGGGTGGCGGTACTAAACCTCCTGAGTACGGTGATACACCTATTCCGGGCTA
+TACTTATATCAACCCTCTCGACGGCACTTATCCGCCTGGTACTGAGCAAAACCCCGCTAATCCTAATCCTTCTCTTGAGGAGTCTCAGCCTCTTAATACT
+TTCATGTTTCAGAATAATAGGTTCCGAAATAGGCAGGGGGCATTAACTGTTTATACGGGCACTGTTACTCAAGGCACTGACCCCGTTAAAACTTATTACC
+AGTACACTCCTGTATCATCAAAAGCCATGTATGACGCTTACTGGAACGGTAAATTCAGAGACTGCGCTTTCCATTCTGGCTTTAATGAGGATTTATTTGT
+TTGTGAATATCAAGGCCAATCGTCTGACCTGCCTCAACCTCCTGTCAATGCTGGCGGCGGCTCTGGTGGTGGTTCTGGTGGCGGCTCTGAGGGTGGTGGC
+TCTGAGGGTGGCGGTTCTGAGGGTGGCGGCTCTGAGGGAGGCGGTTCCGGTGGTGGCTCTGGTTCCGGTGATTTTGATTATGAAAAGATGGCAAACGCTA
+ATAAGGGGGCTATGACCGAAAATGCCGATGAAAACGCGCTACAGTCTGACGCTAAAGGCAAACTTGATTCTGTCGCTACTGATTACGGTGCTGCTATCGA
+TGGTTTCATTGGTGACGTTTCCGGCCTTGCTAATGGTAATGGTGCTACTGGTGATTTTGCTGGCTCTAATTCCCAAATGGCTCAAGTCGGTGACGGTGAT
+AATTCACCTTTAATGAATAATTTCCGTCAATATTTACCTTCCCTCCCTCAATCGGTTGAATGTCGCCCTTTTGTCTTTGGCGCTGGTAAACCATATGAAT
+TTTCTATTGATTGTGACAAAATAAACTTATTCCGTGGTGTCTTTGCGTTTCTTTTATATGTTGCCACCTTTATGTATGTATTTTCTACGTTTGCTAACAT
+ACTGCGTAATAAGGAGTCTTAATCATGCCAGTTCTTTTGGGTATTCCGTTATTATTGCGTTTCCTCGGTTTCCTTCTGGTAACTTTGTTCGGCTATCTGC
+TTACTTTTCTTAAAAAGGGCTTCGGTAAGATAGCTATTGCTATTTCATTGTTTCTTGCTCTTATTATTGGGCTTAACTCAATTCTTGTGGGTTATCTCTC
+TGATATTAGCGCTCAATTACCCTCTGACTTTGTTCAGGGTGTTCAGTTAATTCTCCCGTCTAATGCGCTTCCCTGTTTTTATGTTATTCTCTCTGTAAAG
+GCTGCTATTTTCATTTTTGACGTTAAACAAAAAATCGTTTCTTATTTGGATTGGGATAAATAATATGGCTGTTTATTTTGTAACTGGCAAATTAGGCTCT
+GGAAAGACGCTCGTTAGCGTTGGTAAGATTCAGGATAAAATTGTAGCTGGGTGCAAAATAGCAACTAATCTTGATTTAAGGCTTCAAAACCTCCCGCAAG
+TCGGGAGGTTCGCTAAAACGCCTCGCGTTCTTAGAATACCGGATAAGCCTTCTATATCTGATTTGCTTGCTATTGGGCGCGGTAATGATTCCTACGATGA
+AAATAAAAACGGCTTGCTTGTTCTCGATGAGTGCGGTACTTGGTTTAATACCCGTTCTTGGAATGATAAGGAAAGACAGCCGATTATTGATTGGTTTCTA
+CATGCTCGTAAATTAGGATGGGATATTATTTTTCTTGTTCAGGACTTATCTATTGTTGATAAACAGGCGCGTTCTGCATTAGCTGAACATGTTGTTTATT
+GTCGTCGTCTGGACAGAATTACTTTACCTTTTGTCGGTACTTTATATTCTCTTATTACTGGCTCGAAAATGCCTCTGCCTAAATTACATGTTGGCGTTGT
+TAAATATGGCGATTCTCAATTAAGCCCTACTGTTGAGCGTTGGCTTTATACTGGTAAGAATTTGTATAACGCATATGATACTAAACAGGCTTTTTCTAGT
+AATTATGATTCCGGTGTTTATTCTTATTTAACGCCTTATTTATCACACGGTCGGTATTTCAAACCATTAAATTTAGGTCAGAAGATGAAATTAACTAAAA
+TATATTTGAAAAAGTTTTCTCGCGTTCTTTGTCTTGCGATTGGATTTGCATCAGCATTTACATATAGTTATATAACCCAACCTAAGCCGGAGGTTAAAAA
+GGTAGTCTCTCAGACCTATGATTTTGATAAATTCACTATTGACTCTTCTCAGCGTCTTAATCTAAGCTATCGCTATGTTTTCAAGGATTCTAAGGGAAAA
+TTAATTAATAGCGACGATTTACAGAAGCAAGGTTATTCACTCACATATATTGATTTATGTACTGTTTCCATTAAAAAAGGTAATTCAAATGAAATTGTTA
+AATGTAATTAATTTTGTTTTCTTGATGTTTGTTTCATCATCTTCTTTTGCTCAGGTAATTGAAATGAATAATTCGCCTCTGCGCGATTTTGTAACTTGGT
+ATTCAAAGCAATCAGGCGAATCCGTTATTGTTTCTCCCGATGTAAAAGGTACTGTTACTGTATATTCATCTGACGTTAAACCTGAAAATCTACGCAATTT
+CTTTATTTCTGTTTTACGTGCAAATAATTTTGATATGGTAGGTTCTAACCCTTCCATTATTCAGAAGTATAATCCAAACAATCAGGATTATATTGATGAA
+TTGCCATCATCTGATAATCAGGAATATGATGATAATTCCGCTCCTTCTGGTGGTTTCTTTGTTCCGCAAAATGATAATGTTACTCAAACTTTTAAAATTA
+ATAACGTTCGGGCAAAGGATTTAATACGAGTTGTCGAATTGTTTGTAAAGTCTAATACTTCTAAATCCTCAAATGTATTATCTATTGACGGCTCTAATCT
+ATTAGTTGTTAGTGCTCCTAAAGATATTTTAGATAACCTTCCTCAATTCCTTTCAACTGTTGATTTGCCAACTGACCAGATATTGATTGAGGGTTTGATA
+TTTGAGGTTCAGCAAGGTGATGCTTTAGATTTTTCATTTGCTGCTGGCTCTCAGCGTGGCACTGTTGCAGGCGGTGTTAATACTGACCGCCTCACCTCTG
+TTTTATCTTCTGCTGGTGGTTCGTTCGGTATTTTTAATGGCGATGTTTTAGGGCTATCAGTTCGCGCATTAAAGACTAATAGCCATTCAAAAATATTGTC
+TGTGCCACGTATTCTTACGCTTTCAGGTCAGAAGGGTTCTATCTCTGTTGGCCAGAATGTCCCTTTTATTACTGGTCGTGTGACTGGTGAATCTGCCAAT
+GTAAATAATCCATTTCAGACGATTGAGCGTCAAAATGTAGGTATTTCCATGAGCGTTTTTCCTGTTGCAATGGCTGGCGGTAATATTGTTCTGGATATTA
+CCAGCAAGGCCGATAGTTTGAGTTCTTCTACTCAGGCAAGTGATGTTATTACTAATCAAAGAAGTATTGCTACAACGGTTAATTTGCGTGATGGACAGAC
+TCTTTTACTCGGTGGCCTCACTGATTATAAAAACACTTCTCAGGATTCTGGCGTACCGTTCCTGTCTAAAATCCCTTTAATCGGCCTCCTGTTTAGCTCC
+CGCTCTGATTCTAACGAGGAAAGCACGTTATACGTGCTCGTCAAAGCAACCATAGTACGCGCCCTGTAGCGGCGCATTAAGCGCGGCGGGTGTGGTGGTT
+ACGCGCAGCGTGACCGCTACACTTGCCAGCGCCCTAGCGCCCGCTCCTTTCGCTTTCTTCCCTTCCTTTCTCGCCACGTTCGCCGGCTTTCCCCGTCAAG
+CTCTAAATCGGGGGCTCCCTTTAGGGTTCCGATTTAGTGCTTTACGGCACCTCGACCCCAAAAAACTTGATTTGGGTGATGGTTCACGTAGTGGGCCATC
+GCCCTGATAGACGGTTTTTCGCCCTTTGACGTTG
+''')
+
 _m13_variants = {
     M13Variant.p7249: _7249,
     M13Variant.p7560: _7560,
     M13Variant.p8064: _8064,
+    M13Variant.p8634: _8634,
 }
 
 ##################
@@ -927,7 +1023,7 @@ class Modification(_JSONSerializable, ABC):
 
     @staticmethod
     def from_json(
-            json_map: Dict[str, Any]) -> 'Modification':  # remove quotes when Py3.6 support dropped
+            json_map: Dict[str, Any]) -> Modification:
         location = json_map[mod_location_key]
         if location == "5'":
             return Modification5Prime.from_json(json_map)
@@ -965,9 +1061,8 @@ class Modification5Prime(Modification):
         ret[mod_location_key] = "5'"
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Modification5Prime':
+    def from_json(json_map: Dict[str, Any]) -> Modification5Prime:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "5'"
@@ -1002,9 +1097,8 @@ class Modification3Prime(Modification):
         ret[mod_location_key] = "3'"
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Modification3Prime':
+    def from_json(json_map: Dict[str, Any]) -> Modification3Prime:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "3'"
@@ -1042,9 +1136,8 @@ class ModificationInternal(Modification):
                 list(self.allowed_bases)) if suppress_indent else list(self.allowed_bases)
         return ret
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'ModificationInternal':
+    def from_json(json_map: Dict[str, Any]) -> ModificationInternal:
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "internal"
@@ -1090,7 +1183,7 @@ class Position3D(_JSONSerializable):
         return dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Position3D':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Position3D:
         if position_origin_key in json_map:
             origin_ = json_map[position_origin_key]
             x = origin_[position_x_key]
@@ -1130,7 +1223,7 @@ class HelixGroup(_JSONSerializable):
     A :any:`HelixGroup` is useful for grouping together helices that should all be in parallel,
     as part of a design where different groups are not parallel. In particular, each :any:`HelixGroup`
     can be given its own 3D position and pitch/yaw/roll orientation angles. Each :any:`HelixGroup` does
-    not actually *contain* its helices; they are associated through the field `Helix.group`, which is
+    not actually *contain* its helices; they are associated through the field :data:`Helix.group`, which is
     a string representing a key in the dict ``groups`` specified in the constructor for :any:`Design`.
 
     If there are :any:`HelixGroup`'s explicitly specified, then the field :py:data:`Design.grid` is ignored.
@@ -1157,7 +1250,7 @@ class HelixGroup(_JSONSerializable):
     
     Rotation is *clockwise* in the main view, i.e., clockwise in the Y-Z plane, around the X-axis,
     when Y-axis points down, Z-axis points right, and X-axis points out of the page.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes.
     Units are degrees."""
 
     roll: float = 0
@@ -1174,7 +1267,7 @@ class HelixGroup(_JSONSerializable):
     Rotation is *clockwise* while looking down onto the main view, 
     i.e., in the X-Z plane, around the Y-axis, 
     when X-axis points down, Z-axis points right, and Y-axis points into the page.
-    See https://en.wikipedia.org/wiki/Aircraft_principal_axes
+    See https://en.wikipedia.org/wiki/Aircraft_principal_axes.
     Units are degrees."""
 
     helices_view_order: Optional[List[int]] = None
@@ -1183,6 +1276,11 @@ class HelixGroup(_JSONSerializable):
 
     grid: Grid = Grid.none
     """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
+
+    def has_default_position_and_orientation(self):
+        # we don't bother checking grid or helices_view_order because those are written to top-level
+        # fields of Design if the group is otherwise default
+        return self.position == origin and self.pitch == self.roll == self.yaw == 0
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         dct: Dict[str, Any] = dict()
@@ -1216,7 +1314,7 @@ class HelixGroup(_JSONSerializable):
         self.helices_view_order = _check_helices_view_order_and_return(self.helices_view_order, helix_idxs)
 
     @staticmethod
-    def from_json(json_map: dict, **kwargs: Any) -> 'HelixGroup':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict, **kwargs: Any) -> HelixGroup:
         grid: Grid = optional_field(Grid.none, json_map, grid_key, transformer=Grid)
         # grid: Grid = Grid.none
         # if grid_key in json_map:
@@ -1273,7 +1371,22 @@ class Geometry(_JSONSerializable):
     """Minor groove angle in degrees."""
 
     inter_helix_gap: float = 1.0
-    """Gap between helices in nanometers (due to electrostatic repulsion; needed to display to scale)."""
+    """
+    Gap between helices in nanometers due to electrostatic repulsion. This is used by the scadnano 
+    web interface to display an appropriate aspect ratio for 2D DNA structures.
+    
+    The default value of 1.0 nm is approximately the average distance, as measured by atomic force
+    microscopy (AFM) images, for 2D DNA origami using the :data:`Grid.square` grid,
+    with 32 base pairs in between consecutive crossovers between two helices. Such a structure with `n` 
+    parallel helices generally is measured to be about 3`n` nm high on AFM images. Since each DNA helix
+    is 2 nm diameter, this implies an average inter-helix gap of 1.0 nm, though of course it is just an 
+    average, and the actual gap varies depending on distance to the nearest crossover: at a crossover 
+    the distance is close to 0 and halfway between two crossovers, the distance is greater than 1 nm. 
+    
+    This value may be inappropriate for designs with different crossover spacing, for example 
+    single-stranded tiles with 21 base pairs between consecutive crossovers. (In that case 0.5 nm seems 
+    to be a more appropriate approximation.)
+    """
 
     def distance_between_helices(self) -> float:
         return 2 * self.helix_radius + self.inter_helix_gap
@@ -1282,7 +1395,7 @@ class Geometry(_JSONSerializable):
         return self == _default_geometry
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Geometry':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Geometry:
         geometry = Geometry()
         geometry.rise_per_base_pair = optional_field(_default_geometry.rise_per_base_pair, json_map,
                                                      rise_per_base_pair_key,
@@ -1334,10 +1447,11 @@ class Helix(_JSONSerializable):
     :py:data:`Domain.forward` = ``true`` and the other must have
     :py:data:`Domain.forward` = ``false``.
 
-    Once part of a :any:`Design`, a :any:`Helix` has an index (accessible  via :py:meth:`Helix.idx`
-    once the :any:`Design` is created)
-    representing its order in the list of all :any:`Helix`'s. This index is how a :any:`Domain` is
-    associated to the :any:`Helix` via the integer index :any:`Domain.helix`.
+    Each :any:`Helix` has an index, accessible  via :py:data:`Helix.idx`. By default this
+    is its order in the list of all :any:`Helix`'s (this is how the :any:`Design` constructor sets the
+    field if it is not already set), but it can be manually assigned to be any integer that is unique to the
+    :any:`Helix`. This index is how a :any:`Domain` is
+    associated to the :any:`Helix` via the field :any:`Domain.helix`.
     """
 
     max_offset: Optional[int] = None  # type: ignore
@@ -1437,7 +1551,7 @@ class Helix(_JSONSerializable):
     """Name of the :any:`HelixGroup` to which this :any:`Helix` belongs."""
 
     # for optimization; list of domains on that Helix
-    _domains: List['Domain'] = field(default_factory=list)
+    _domains: List[Domain] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.major_tick_start is None:  # type: ignore
@@ -1504,7 +1618,7 @@ class Helix(_JSONSerializable):
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Helix':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Helix:
         grid_position: Optional[Tuple[int, int]] = None
         if grid_position_key in json_map:
             gp_list = json_map[grid_position_key]
@@ -1579,7 +1693,7 @@ class Helix(_JSONSerializable):
             return list(range(self.major_tick_start, self.max_offset + 1, distance))
 
     @property
-    def domains(self) -> List['Domain']:
+    def domains(self) -> List[Domain]:
         """
         Return :any:`Domain`'s on this :any:`Helix`.
         Assigned when a :any:`Design` is created using this :any:`Helix`.
@@ -1612,6 +1726,8 @@ class Helix(_JSONSerializable):
             offset on this helix
         :param forward:
             whether to compute angle for the forward or reverse strand
+        :param geometry:
+            :any:`Geometry` parameters to determine bases per turn
         :return:
             backbone angle at *offset* for the strand in the direction given by *forward*.
         """
@@ -1626,12 +1742,8 @@ def _is_close(x1: float, x2: float) -> bool:
     return abs(x1 - x2) < _floating_point_tolerance
 
 
-DomainLabel = TypeVar('DomainLabel')
-StrandLabel = TypeVar('StrandLabel')
-
-
 @dataclass
-class Domain(_JSONSerializable, Generic[DomainLabel]):
+class Domain(_JSONSerializable):
     """
     A maximal portion of a :any:`Strand` that is continguous on a single :any:`Helix`.
     A :any:`Strand` contains a list of :any:`Domain`'s (and also potentially :any:`Loopout`'s).
@@ -1683,15 +1795,11 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     
     This is used to interoperate with the dsd DNA sequence design package."""
 
-    label: Optional[DomainLabel] = None
+    label: Optional[str] = None
     """
-    Generic "label" object to associate to this :any:`Domain`.
+    This can be used to attach a "label" to associate to this :any:`Loopout`.
 
-    Useful for associating extra information with the :any:`Domain` that will be serialized, for example,
-    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
-    that is naturally JSON serializable. (Calling 
-    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
-    on the object should succeed without having to specify a custom encoder.)
+    See :any:`Strand.label` for examples.
     """
 
     dna_sequence: Optional[str] = None
@@ -1704,8 +1812,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
-    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
+
+    _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def __post_init__(self) -> None:
         self._check_start_end()
@@ -1730,7 +1838,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Domain':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Domain:
         helix = mandatory_field(Domain, json_map, helix_idx_key)
         forward = mandatory_field(Domain, json_map, forward_key, legacy_keys=legacy_forward_keys)
         start = mandatory_field(Domain, json_map, start_key)
@@ -1770,9 +1878,9 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
 
-    def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+    def strand(self) -> Strand:
         """
-        :return: The :any:`Strand` that contains this :any:`Loopout`.
+        :return: The :any:`Strand` that contains this :any:`Domain`.
         """
         if self._parent_strand is None:
             raise ValueError('_parent_strand has not yet been set')
@@ -1782,7 +1890,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         """Sets name of this :any:`Domain`."""
         self.name = name
 
-    def set_label(self, label: DomainLabel) -> None:
+    def set_label(self, label: str) -> None:
         """Sets label of this :any:`Domain`."""
         self.label = label
 
@@ -1966,11 +2074,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
     #     return ((self.direction == Direction.left and self.start <= offset_to_test < offset_edge) or
     #             (self.direction == Direction.forward and offset_edge < offset_to_test < self.end))
 
-    # The type hint 'Domain' must be in quotes since Domain is not yet defined.
-    # This is a "forward reference": https://www.python.org/dev/peps/pep-0484/#forward-references
-    # remove quotes when Py3.6 support dropped
-    # def overlaps(self, other: Domain) -> bool:
-    def overlaps(self, other: 'Domain') -> bool:
+    def overlaps(self, other: Domain) -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -1983,9 +2087,8 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         return (self.forward == (not other.forward) and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Py3.6 support dropped
     # def overlaps_illegally(self, other: Domain):
-    def overlaps_illegally(self, other: 'Domain') -> bool:
+    def overlaps_illegally(self, other: Domain) -> bool:
         r"""Indicates if this :any:`Domain`'s set of offsets (the set
         :math:`\{x \in \mathbb{N} \mid`
         ``self.start``
@@ -1998,9 +2101,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
         return (self.forward == other.forward and
                 self.compute_overlap(other)[0] >= 0)
 
-    # remove quotes when Py3.6 support dropped
-    # def compute_overlap(self, other: Domain) -> Tuple[int, int]:
-    def compute_overlap(self, other: 'Domain') -> Tuple[int, int]:
+    def compute_overlap(self, other: Domain) -> Tuple[int, int]:
         """Return [left,right) offset indicating overlap between this Domain and `other`.
 
         Return ``(-1,-1)`` if they do not overlap (different helices, or non-overlapping regions
@@ -2047,7 +2148,7 @@ class Domain(_JSONSerializable, Generic[DomainLabel]):
 
 
 @dataclass
-class Loopout(_JSONSerializable, Generic[DomainLabel]):
+class Loopout(_JSONSerializable):
     """Represents a single-stranded loopout on a :any:`Strand`.
 
     One could think of a :any:`Loopout` as a type of :any:`Domain`, but none of the fields of
@@ -2093,15 +2194,11 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Optional[DomainLabel] = None
+    label: Optional[str] = None
     """
-    Generic "label" object to associate to this :any:`Loopout`.
+    This can be used to attach a "label" to associate to this :any:`Loopout`.
 
-    Useful for associating extra information with the :any:`Loopout` that will be serialized, for example,
-    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
-    that is naturally JSON serializable. (Calling 
-    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
-    on the object should succeed without having to specify a custom encoder.)
+    See :any:`Strand.label` for examples.
     """
 
     dna_sequence: Optional[str] = None
@@ -2113,8 +2210,8 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
-    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
+
+    _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True,
                              **kwargs: Any) -> Union[Dict[str, Any], NoIndent]:
@@ -2128,7 +2225,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'Loopout':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: Dict[str, Any]) -> Loopout:
         # XXX: this should never fail since we detect whether to call this from_json by the presence
         # of a length key in json_map
         length_str = mandatory_field(Loopout, json_map, loopout_key)
@@ -2139,7 +2236,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         color = Color.from_json(color_json)
         return Loopout(length=length, name=name, label=label, color=color)
 
-    def strand(self) -> 'Strand':  # remove quotes when Py3.6 support dropped
+    def strand(self) -> Strand:
         """
         :return: The :any:`Strand` that contains this :any:`Loopout`.
         """
@@ -2149,10 +2246,10 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
 
     def __repr__(self) -> str:
         return f'Loopout(' + \
-               (f'{self.name}, ' if self.name is not None else '') + \
-               f'{self.length}, ' + \
-               (f'{self.label}, ' if self.label is not None else '') + \
-               f')'
+            (f'{self.name}, ' if self.name is not None else '') + \
+            f'{self.length}, ' + \
+            (f'{self.label}, ' if self.label is not None else '') + \
+            f')'
 
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
@@ -2161,7 +2258,7 @@ class Loopout(_JSONSerializable, Generic[DomainLabel]):
         """Sets name of this :any:`Loopout`."""
         self.name = name
 
-    def set_label(self, label: Optional[DomainLabel]) -> None:
+    def set_label(self, label: Optional[str]) -> None:
         """Sets label of this :any:`Loopout`."""
         self.label = label
 
@@ -2193,8 +2290,9 @@ default_display_length = 1.0
 
 
 @dataclass
-class Extension(_JSONSerializable, Generic[DomainLabel]):
-    """Represents a single-stranded extension on either the 3' or 5'
+class Extension(_JSONSerializable):
+    # using raw string literal for docstring to avoid warning about backslash
+    r"""Represents a single-stranded extension on either the 3' or 5'
     end of :any:`Strand`.
 
     One could think of an :any:`Extension` as a type of :any:`Domain`, but none of the fields of
@@ -2252,15 +2350,12 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     for degrees strictly between 0 and 180.
     """
 
-    label: Optional[DomainLabel] = None
-    """
-    Generic "label" object to associate to this :any:`Extension`.
+    label: Optional[str] = None
 
-    Useful for associating extra information with the :any:`Extension` that will be serialized, for example,
-    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int)
-    that is naturally JSON serializable. (Calling
-    `json.dumps <https://docs.python.org/3/library/json.html#json.dumps>`_
-    on the object should succeed without having to specify a custom encoder.)
+    """
+    This can be used to attach a "label" to associate to this :any:`Extension`.
+
+    See :any:`Strand.label` for examples.
     """
 
     name: Optional[str] = None
@@ -2277,8 +2372,8 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
     """
 
     # not serialized; for efficiency
-    # remove quotes when Py3.6 support dropped
-    _parent_strand: Optional['Strand'] = field(init=False, repr=False, compare=False, default=None)
+
+    _parent_strand: Optional[Strand] = field(init=False, repr=False, compare=False, default=None)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) \
             -> Union[Dict[str, Any], NoIndent]:
@@ -2295,7 +2390,7 @@ class Extension(_JSONSerializable, Generic[DomainLabel]):
         """Length of this :any:`Extension`; same as field :data:`Extension.num_bases`."""
         return self.num_bases
 
-    def set_label(self, label: Optional[DomainLabel]) -> None:
+    def set_label(self, label: Optional[str]) -> None:
         """Sets label of this :any:`Extension`."""
         self.label = label
 
@@ -2435,7 +2530,7 @@ def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
         raise IllegalDesignError(f'field {field_name} in IDTFields cannot be empty')
 
 
-class StrandBuilder(Generic[StrandLabel, DomainLabel]):
+class StrandBuilder:
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
 
@@ -2461,25 +2556,23 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         strand_builder.as_scaffold()
     """
 
-    # remove quotes when Py3.6 support dropped
-    def __init__(self, design: 'Design[StrandLabel, DomainLabel]', helix: int, offset: int):
-        self.design: Design[StrandLabel, DomainLabel] = design
+    def __init__(self, design: Design, helix: int, offset: int):
+        self.design: Design = design
         self.current_helix: int = helix
         self.current_offset: int = offset
         # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand[StrandLabel, DomainLabel]] = None
+        self._strand: Optional[Strand] = None
         self.just_moved_to_helix: bool = True
-        self.last_domain: Optional[Domain[DomainLabel]] = None
+        self.last_domain: Optional[Domain] = None
 
     @property
-    def strand(self) -> 'Strand[StrandLabel, DomainLabel]':
+    def strand(self) -> Strand:
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
 
-    # remove quotes when Py3.6 support dropped
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Add crossover. To have any effect, must be followed by call to :py:meth:`StrandBuilder.to`
         or :py:meth:`StrandBuilder.move`.
@@ -2516,9 +2609,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def _most_recently_added_substrand_is_extension(self):
         return self._most_recently_added_substrand_is_instance_of_class(Extension)
 
-    # remove quotes when Py3.6 support dropped
     def loopout(self, helix: int, length: int, offset: Optional[int] = None, move: Optional[int] = None) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Like :py:meth:`StrandBuilder.cross`, but creates a :any:`Loopout` instead of a crossover.
 
@@ -2543,7 +2635,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                      num_bases: int,
                      display_length: float = default_display_length,
                      display_angle: float = default_display_angle
-                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+                     ) -> StrandBuilder:
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 3' :any:`Extension`.
@@ -2582,7 +2674,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                      num_bases: int,
                      display_length: float = default_display_length,
                      display_angle: float = default_display_angle
-                     ) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+                     ) -> StrandBuilder:
         """
         Creates an :any:`Extension` after verifying that it is valid to add an :any:`Extension` to
         the :any:`Strand` as a 5' :any:`Extension`.
@@ -2606,8 +2698,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                 'Cannot add a 5\' extension when there are already domains. '
                 'Did you mean to create a 3\' extension?')
 
-    # remove quotes when Py3.6 support dropped
-    def move(self, delta: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def move(self, delta: int) -> StrandBuilder:
         """
         Extends this :any:`StrandBuilder` on the current helix to offset given by the current offset
         plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
@@ -2629,8 +2720,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         """
         return self.to(self.current_offset + delta)
 
-    # remove quotes when Py3.6 support dropped
-    def to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def to(self, offset: int) -> StrandBuilder:
         """
         Extends this :any:`StrandBuilder` on the current helix to offset `offset`,
         which adds a new :any:`Domain` to the :any:`Strand` being built. This is an
@@ -2672,7 +2762,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         else:
             raise IllegalDesignError(f'offset {offset} cannot be equal to current offset')
 
-        domain: Domain[DomainLabel] = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
+        domain: Domain = Domain(helix=self.current_helix, forward=forward, start=start, end=end)
         self.last_domain = domain
         if self._strand is not None:
             self.design.append_domain(self._strand, domain)
@@ -2680,7 +2770,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             self._strand = Strand(domains=[domain])
             self.design.add_strand(self._strand)
 
-        self.design._check_strand_has_legal_offsets_in_helices(self._strand)
+        self.design._check_strand_has_legal_offsets_in_helices(self._strand)  # noqa
 
         self.current_offset = offset
 
@@ -2691,8 +2781,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
             return False
         return len(self._strand.domains) > 1 and self._most_recently_added_substrand_is_extension()
 
-    # remove quotes when Py3.6 support dropped
-    def update_to(self, offset: int) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def update_to(self, offset: int) -> StrandBuilder:
         """
         Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
         a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
@@ -2728,7 +2817,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
         return self
 
-    def as_circular(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def as_circular(self) -> StrandBuilder:
         """
         Makes :any:`Strand` being built circular.
 
@@ -2739,8 +2828,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_circular()
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def as_scaffold(self) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def as_scaffold(self) -> StrandBuilder:
         """
         Makes :any:`Strand` being built a scaffold.
 
@@ -2754,7 +2842,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
     def with_idt(self, scale: str = default_idt_scale,
                  purification: str = default_idt_purification,
                  plate: Optional[str] = None, well: Optional[str] = None) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Gives :any:`IDTFields` value to :any:`Strand` being built.
         Only a name is required; other fields are given reasonable default values.
@@ -2775,8 +2863,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                      plate=plate, well=well)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_modification_5p(self, mod: Modification5Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_modification_5p(self, mod: Modification5Prime) -> StrandBuilder:
         """
         Sets Strand being built to have given 5' modification.
 
@@ -2788,8 +2875,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_modification_5p(mod)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_modification_3p(self, mod: Modification3Prime) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_modification_3p(self, mod: Modification3Prime) -> StrandBuilder:
         """
         Sets Strand being built to have given 3' modification.
 
@@ -2801,9 +2887,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_modification_3p(mod)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Sets Strand being built to have given internal modification.
 
@@ -2817,8 +2902,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_modification_internal(idx, mod, warn_on_no_dna)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_color(self, color: Color) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_color(self, color: Color) -> StrandBuilder:
         """
         Sets Strand being built to have given color.
 
@@ -2830,9 +2914,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_color(color)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_sequence(self, sequence: str, assign_complement: bool = False) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Assigns `sequence` as DNA sequence of the :any:`Strand` being built.
         This should be done after the :any:`Strand`'s structure is done being built, e.g.,
@@ -2852,9 +2935,8 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self.design.assign_dna(strand=self._strand, sequence=sequence, assign_complement=assign_complement)
         return self
 
-    # remove quotes when Py3.6 support dropped
     def with_domain_sequence(self, sequence: str, assign_complement: bool = False) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Assigns `sequence` as DNA sequence of the most recently created :any:`Domain` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2890,8 +2972,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
                                assign_complement=assign_complement)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_domain_color(self, color: Color) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_domain_color(self, color: Color) -> StrandBuilder:
         """
         Sets most recent :any:`Domain`/:any:`Loopout`/:any:`Extension`
         to have given color.
@@ -2907,8 +2988,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         last_domain.color = color
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_name(self, name: str) -> StrandBuilder:
         """
         Assigns `name` as name of the :any:`Strand` being built.
 
@@ -2924,8 +3004,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_name(name)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_label(self, label: StrandLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_label(self, label: str) -> StrandBuilder:
         """
         Assigns `label` as label of the :any:`Strand` being built.
 
@@ -2941,8 +3020,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         self._strand.set_label(label)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_domain_name(self, name: str) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_domain_name(self, name: str) -> StrandBuilder:
         """
         Assigns `name` as of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after a :any:`Domain` is created
@@ -2966,8 +3044,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         last_domain.set_name(name)
         return self
 
-    # remove quotes when Py3.6 support dropped
-    def with_domain_label(self, label: DomainLabel) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+    def with_domain_label(self, label: str) -> StrandBuilder:
         """
         Assigns `label` as label of the most recently created :any:`Domain` or :any:`Loopout` in
         the :any:`Strand` being built. This should be called immediately after
@@ -2997,7 +3074,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     def with_deletions(self,
-                       deletions: Union[int, Iterable[int]]) -> 'StrandBuilder[StrandLabel, DomainLabel]':
+                       deletions: Union[int, Iterable[int]]) -> StrandBuilder:
         """
         Assigns `deletions` as the deletion(s) of the most recently created
         :any:`Domain` the :any:`Strand` being built. This should be called immediately after
@@ -3042,7 +3119,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
         return self
 
     def with_insertions(self, insertions: Union[Tuple[int, int], Iterable[Tuple[int, int]]]) \
-            -> 'StrandBuilder[StrandLabel, DomainLabel]':
+            -> StrandBuilder:
         """
         Assigns `insertions` as the insertion(s) of the most recently created
         :any:`Domain` the :any:`Strand` being built. This should be called immediately after
@@ -3095,7 +3172,7 @@ class StrandBuilder(Generic[StrandLabel, DomainLabel]):
 
 
 @dataclass
-class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
+class Strand(_JSONSerializable):
     """
     Represents a single strand of DNA.
 
@@ -3132,7 +3209,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     uses for the scaffold.
     """
 
-    domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]]
+    domains: List[Union[Domain, Loopout, Extension]]
     """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
@@ -3212,29 +3289,44 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
     This is used to interoperate with the dsd DNA sequence design package.
     """
 
-    label: Optional[StrandLabel] = None
-    """Generic "label" object to associate to this :any:`Strand`.
-    
-    Useful for associating extra information with the Strand that will be serialized, for example,
-    for DNA sequence design. It must be an object (e.g., a dict or primitive type such as str or int) 
-    that is naturally JSON serializable. (Calling ``json.dumps`` on the object should succeed without
-    having to specify a custom encoder.)
+    label: Optional[str] = None
+    """
+    This can be used to attach a "label" to associate to this :any:`Strand`.
+
+    Useful for associating extra information with the :any:`Strand` that will be serialized, for example,
+    for DNA sequence design. It can be useful to create "groups" of strands related in some way.
+
+    Prior to version 0.18.0, this was allowed to be an arbitrary JSON-serializable object. 
+    Now it is just a string 
+    (see https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/261). 
+    To store more structured data, it is necessary to serialize (convert to a string) the data manually.
+    For example, if you want to store a list of numbers, you can do so as a string like this:
+
+    .. code-block:: python
+
+        import json
+        
+        nums = [1, 2, 3]
+        strand.label = json.dumps(nums)  # stores strand.label as the string '[1, 2, 3]'
+        
+        # and to get the structured data back out:
+        nums = json.loads(strand.label)  # nums is now the list [1, 2, 3]
     """
 
     # not serialized; efficient way to see a list of all domains on a given helix
-    _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = field(
+    _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
 
     def __init__(self,
-                 domains: List[Union[Domain[DomainLabel], Loopout[DomainLabel], Extension[DomainLabel]]],
+                 domains: List[Union[Domain, Loopout, Extension]],
                  circular: bool = False, color: Optional[Color] = None,
                  idt: Optional[IDTFields] = None,
                  is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
                  modification_3p: Optional[Modification3Prime] = None,
                  modifications_int: Optional[Dict[int, ModificationInternal]] = None,
                  name: Optional[str] = None,
-                 label: Optional[StrandLabel] = None,
-                 _helix_idx_domain_map: Dict[int, List[Domain[DomainLabel]]] = None,
+                 label: Optional[str] = None,
+                 _helix_idx_domain_map: Dict[int, List[Domain]] = None,
                  dna_sequence: Optional[str] = None):
         self.domains = domains
         self.circular = circular
@@ -3287,12 +3379,12 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         if self.label is not None:
-            dct[strand_label_key] = NoIndent(self.label) if suppress_indent else self.label
+            dct[strand_label_key] = self.label
 
         return dct
 
     @staticmethod
-    def from_json(json_map: dict) -> 'Strand':  # remove quotes when Py3.6 support dropped
+    def from_json(json_map: dict) -> Strand:
         substrand_jsons = mandatory_field(Strand, json_map, domains_key, legacy_keys=legacy_domains_keys)
         if len(substrand_jsons) == 0:
             raise IllegalDesignError(f'{domains_key} list cannot be empty')
@@ -3350,7 +3442,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             label=label,
         )
 
-    def __eq__(self, other: Any) -> bool:  # remove quotes when Py3.6 support dropped
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Strand):
             return False
         return self.domains == other.domains
@@ -3428,7 +3520,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """
         self.set_circular(False)
 
-    def set_domains(self, domains: Iterable[Union[Domain[DomainLabel], Loopout[DomainLabel]]]) -> None:
+    def set_domains(self, domains: Iterable[Union[Domain, Loopout]]) -> None:
         """
         Sets the :any:`Domain`'s/:any:`Loopout`'s of this :any:`Strand` to be `domains`,
         which can contain a mix of :any:`Domain`'s and :any:`Loopout`'s,
@@ -3636,7 +3728,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         """3' offset of this entire :any:`Strand`, INCLUSIVE."""
         return self.last_domain().offset_3p()
 
-    def overlaps(self, other: 'Strand') -> bool:  # remove quotes when Py3.6 support dropped
+    def overlaps(self, other: Strand) -> bool:
         """Indicates whether `self` overlaps `other_strand`, meaning that the set of offsets occupied
         by `self` has nonempty intersection with those occupied by `other_strand`."""
         for domain_self in self.bound_domains():
@@ -3645,7 +3737,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                     return True
         return False
 
-    def assign_dna_complement_from(self, other: 'Strand') -> None:  # remove quotes when Py3.6 support dropped
+    def assign_dna_complement_from(self, other: Strand) -> None:
         """Assuming a DNA sequence has been assigned to `other`, assign its Watson-Crick
         complement to the portions of this Strand that are bound to `other`.
 
@@ -3903,7 +3995,7 @@ class Strand(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return ''.join(ret_list)
 
-    def no_modifications_version(self) -> 'Strand':
+    def no_modifications_version(self) -> Strand:
         """
         :return: version of this :any:`Strand` with no DNA modifications.
         """
@@ -4294,20 +4386,16 @@ def create_html_with_borders_tablefmt():  # type: ignore
     from functools import partial
     from tabulate import TableFormat, Line
 
-    html_with_borders_tablefmt = TableFormat(
-        lineabove=Line(
-            f"""\
+    lineabove = Line(f"""\
     <style>
     th.{cell_with_border_css_class}, td.{cell_with_border_css_class} {{
         border: 1px solid black;
     }}
     </style>
     <table>\
-    """,
-            "",
-            "",
-            "",
-        ),
+    """, "", "", "", )
+    html_with_borders_tablefmt = TableFormat(  # type: ignore
+        lineabove=lineabove,
         linebelowheader=None,
         linebetweenrows=None,
         linebelow=Line("</table>", "", "", ""),
@@ -4746,8 +4834,8 @@ def find_overlapping_domains_on_helix(helix: Helix) -> List[Tuple[Domain, Domain
         else:
             reverse_domains.append(domain)
 
-    forward_domains.sort(key=lambda domain: domain.start)
-    reverse_domains.sort(key=lambda domain: domain.start)
+    forward_domains.sort(key=lambda dom: dom.start)
+    reverse_domains.sort(key=lambda dom: dom.start)
 
     if len(forward_domains) == 0 or len(reverse_domains) == 0:
         return []
@@ -4834,7 +4922,7 @@ def reverse_complementary(seq1: str, seq2: str, allow_wildcard: bool = False,
 
     :param seq1:
         first DNA sequence
-    :param seq1:
+    :param seq2:
         second DNA sequence
     :param allow_wildcard:
         if true a "wildcard" (the symbol '?') is considered to be complementary to anything
@@ -4857,10 +4945,10 @@ def reverse_complementary(seq1: str, seq2: str, allow_wildcard: bool = False,
 
 
 @dataclass
-class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
+class Design(_JSONSerializable):
     """Object representing the entire design of the DNA structure."""
 
-    strands: List[Strand[StrandLabel, DomainLabel]]
+    strands: List[Strand]
     """All of the :any:`Strand`'s in this :any:`Design`.
     
     Required field."""
@@ -5075,7 +5163,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return self.groups[helix.group].roll + helix.roll
 
     @staticmethod
-    def from_scadnano_file(filename: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_file(filename: str) -> Design:
         """
         Loads a :any:`Design` from the file with the given name.
 
@@ -5087,7 +5175,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return Design.from_scadnano_json_str(json_str)
 
     @staticmethod
-    def from_scadnano_json_str(json_str: str) -> 'Design':  # remove quotes when Py3.6 support dropped
+    def from_scadnano_json_str(json_str: str) -> Design:
         """
         Loads a :any:`Design` from the given JSON string.
 
@@ -5119,9 +5207,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return num_groups_used
 
     @staticmethod
-    def _helices_from_json(json_map: Dict) -> Tuple[List[Helix],
-                                                    Dict[str, Tuple[float, float, int]],
-                                                    Dict[Tuple[float, float], List[Helix]]]:
+    def _helices_from_json(json_map: Dict) \
+            -> Tuple[
+                List[Helix],
+                Dict[str, Tuple[float, float, int]],
+                Dict[Tuple[float, float], List[Helix]],
+            ]:
         """Returns list of helices as well as two maps, group_to_pitch_yaw, and pitch_yaw_to_helices
 
         group_to_pitch_yaw is filled if multiple helix groups are used
@@ -5279,9 +5370,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         return groups, grid
 
     @staticmethod
-    def _helices_and_groups_and_grid_from_json(json_map: Dict) -> Tuple[List[Helix],
-                                                                        Dict[str, HelixGroup],
-                                                                        Grid]:
+    def _helices_and_groups_and_grid_from_json(json_map: Dict) \
+            -> Tuple[
+                List[Helix],
+                Dict[str, HelixGroup],
+                Grid,
+            ]:
         helices, group_to_pitch_yaw, pitch_yaw_to_helices = Design._helices_from_json(json_map)
         groups, grid = Design._groups_and_grid_from_json(json_map, helices, group_to_pitch_yaw,
                                                          pitch_yaw_to_helices)
@@ -5289,7 +5383,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
     @staticmethod
     def from_scadnano_json_map(
-            json_map: dict) -> 'Design':  # remove quotes when Py3.6 support dropped
+            json_map: dict) -> Design:
         """
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
@@ -5449,12 +5543,24 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         If a :any:`Helix` has no base pairs, then its :data:`Helix.idx` is not a key in the returned dict.
 
+        An offset with a deletion on either :any:`Domain` is not considered a base pair.
+
+        Insertions are more complex. If `allow_mismatches` is False, then an offset with an insertion on
+        *both* :any:`Domain`'s is considered a *single* base pair so long as the DNA sequences on each
+        insertion are the same length and complementary. If `allow_mismatches` is True then an offset with
+        an insertion on *either* :any:`Domain`'s is considered a *single* base pair regardless of the
+        length or DNA sequences of either insertion.
+
+        To calculate "true" base pairs in the presence of deletions and insertions, it is recommended
+        first to remove the deletions and insertions using the method
+        :meth:`Design.inline_deletions_insertions`.
+
         :param allow_mismatches:
             if True, then all offsets on a :any:`Helix` where there is both a forward and reverse
             :any:`Domain` will be included. Otherwise, only offsets where the :any:`Domain`'s have
             complementary bases will be included.
         :return:
-            all base pairs (`helix_idx`, `offset`) in this :any:`Design`
+            dict mapping each helix_idx to a list of offsets on that helix where the base pairs are
         """
         base_pairs = {}
         for idx, helix in self.helices.items():
@@ -5667,7 +5773,6 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
 
         return strand
 
-    # remove quotes when Py3.6 support dropped
     @staticmethod
     def from_cadnano_v2(directory: str = '', filename: Optional[str] = None,
                         json_dict: Optional[dict] = None) -> 'Design':
@@ -7182,7 +7287,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
             have duplicate names. (default: True)
-        :param use_strand_color:
+        :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.        
         """
@@ -7194,7 +7299,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         nuc_count = 0
         strand_count = 0
         strand_nuc_start = [-1]
-        for strand1, oxdna_strand in zip(self.strands, system.strands):
+        for sc_strand, oxdna_strand in zip(self.strands, system.strands):
             strand_count += 1
             oxvnucs: List[Dict[str, Any]] = []
             strand_nuc_start.append(nuc_count)
@@ -7203,8 +7308,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                          'end5': nuc_count,
                          'end3': nuc_count + len(oxdna_strand.nucleotides),
                          'monomers': oxvnucs}
-            if use_strand_colors and (strand1.color is not None):
-                scolor = strand1.color.to_cadnano_v2_int_hex()
+            if use_strand_colors and (sc_strand.color is not None):
+                scolor = sc_strand.color.to_cadnano_v2_int_hex()
             else:
                 scolor = None
 
@@ -7226,16 +7331,16 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                 oxvnucs.append(oxvnuc)
             oxview_strands.append(oxvstrand)
 
-        for si1, (strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
-            for si2, strand2 in enumerate(self.strands):
-                if not strand1.overlaps(strand2):
+        for si1, (sc_strand1, oxv_strand1) in enumerate(zip(self.strands, oxview_strands)):
+            for si2, sc_strand2 in enumerate(self.strands):
+                if not sc_strand1.overlaps(sc_strand2):
                     continue
                 s1_nuc_idx = strand_nuc_start[si1 + 1]
-                for domain1 in strand1.domains:
+                for domain1 in sc_strand1.domains:
                     if isinstance(domain1, (Loopout, Extension)):
                         continue
                     s2_nuc_idx = strand_nuc_start[si2 + 1]
-                    for domain2 in strand2.domains:
+                    for domain2 in sc_strand2.domains:
                         if isinstance(domain2, (Loopout, Extension)):
                             continue
                         if not domain1.overlaps(domain2):
@@ -7257,11 +7362,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                         # to mismatch.  (FIXME: this must be changed if scadnano later supports
                         # degenerate base codes.)
                         for d1, d2 in zip(d1range, d2range):
-                            if ((strand1.dna_sequence is not None) and
-                                    (strand2.dna_sequence is not None) and
-                                    (strand1.dna_sequence[d1] != "?") and
-                                    (strand2.dna_sequence[d2] != "?") and
-                                    (wc(strand1.dna_sequence[d1]) != strand2.dna_sequence[d2])):
+                            if ((sc_strand1.dna_sequence is not None) and
+                                    (sc_strand2.dna_sequence is not None) and
+                                    (sc_strand1.dna_sequence[d1] != "?") and
+                                    (sc_strand2.dna_sequence[d2] != "?") and
+                                    (wc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
                                 continue
 
                             oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
@@ -7289,7 +7394,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
             have duplicate names. (default: True)
-        :param use_strand_color:
+        :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.
         """
@@ -7490,8 +7595,8 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         order = domains.index(domain_to_remove)
         domains_before = domains[:order]
         domains_after = domains[order + 1:]
-        domain_left: Domain[DomainLabel] = Domain(helix, forward, domain_to_remove.start, offset)
-        domain_right: Domain[DomainLabel] = Domain(helix, forward, offset, domain_to_remove.end)
+        domain_left: Domain = Domain(helix, forward, domain_to_remove.start, offset)
+        domain_right: Domain = Domain(helix, forward, offset, domain_to_remove.end)
 
         # "before" and "after" mean in the 5' --> 3' direction, i.e., if a reverse domain:
         # <--------]
@@ -7553,7 +7658,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             self.strands.remove(strand)
 
             idt_present = strand.idt is not None
-            strand_before: Strand[StrandLabel, DomainLabel] = Strand(
+            strand_before: Strand = Strand(
                 domains=domains_before,
                 dna_sequence=seq_before_whole,
                 color=strand.color,
@@ -7561,7 +7666,7 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             )
 
             color_after = next(self.color_cycler) if new_color else strand.color
-            strand_after: Strand[StrandLabel, DomainLabel] = Strand(
+            strand_after: Strand = Strand(
                 domains=domains_after,
                 dna_sequence=seq_after_whole,
                 color=color_after,
@@ -7637,11 +7742,11 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
         strand_left = dom_left.strand()
         strand_right = dom_right.strand()
 
-        dom_new: Domain[DomainLabel] = Domain(helix=helix, forward=forward, start=dom_left.start,
-                                              end=dom_right.end,
-                                              deletions=dom_left.deletions + dom_right.deletions,
-                                              insertions=dom_left.insertions + dom_right.insertions,
-                                              name=dom_left.name, label=dom_left.label)
+        dom_new: Domain = Domain(helix=helix, forward=forward, start=dom_left.start,
+                                 end=dom_right.end,
+                                 deletions=dom_left.deletions + dom_right.deletions,
+                                 insertions=dom_left.insertions + dom_right.insertions,
+                                 name=dom_left.name, label=dom_left.label)
 
         # normalize 5'/3' distinction; below refers to which Strand has the 5'/3' end that will be ligated
         # So strand_5p is the one whose 3' end will be the 3' end of the whole new Strand
@@ -7807,9 +7912,9 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
             raise IllegalDesignError(
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
-        new_strand: Strand[StrandLabel, DomainLabel] = Strand(domains=new_domains, color=strand_first.color,
-                                                              dna_sequence=new_dna, idt=strand_first.idt,
-                                                              is_scaffold=strand1.is_scaffold or strand2.is_scaffold)
+        new_strand: Strand = Strand(domains=new_domains, color=strand_first.color,
+                                    dna_sequence=new_dna, idt=strand_first.idt,
+                                    is_scaffold=strand1.is_scaffold or strand2.is_scaffold)
 
         # put new strand in place where strand_first was
         strand_first_idx = self.strands.index(strand_first)
@@ -8028,7 +8133,12 @@ class Design(_JSONSerializable, Generic[StrandLabel, DomainLabel]):
                                          f'{", ".join(self.groups.keys())}')
 
     def _has_default_groups(self) -> bool:
-        return len(self.groups) == 1 and default_group_name in self.groups
+        if not (len(self.groups) == 1 and default_group_name in self.groups):
+            return False
+        # even if there's only one group and it has the default name,
+        # need to check its fields for non-default values
+        group = self.groups[default_group_name]
+        return group.has_default_position_and_orientation()
 
     def _assign_default_helices_view_orders_to_groups(self) -> None:
         for name, group in self.groups.items():
@@ -8112,6 +8222,8 @@ def write_file_same_name_as_running_python_script(contents: str, extension: str,
         extension to use
     :param directory:
         directory in which to write file. If not specified, the current working directory is used.
+    :param add_extension:
+        whether to replace `.py` with `extension`
     :param filename:
         filename to use instead of the currently running script
     """
@@ -8514,10 +8626,10 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                         # we have to check insertions first because they affect the index
                         if offset in insertions:
                             num = insertions[offset]
-                            for i in range(num):
+                            for j in range(num):
                                 cen = origin_ + forward * (
-                                        offset + mod - num + i) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
-                                norm = normal.rotate(step_rot * (offset + mod - num + i), forward)
+                                        offset + mod - num + j) * geometry.rise_per_base_pair * NM_TO_OX_UNITS
+                                norm = normal.rotate(step_rot * (offset + mod - num + j), forward)
                                 # note oxDNA n vector points 3' to 5' opposite of scadnano forward vector
                                 forw = -forward if domain.forward else forward
                                 nuc = _OxdnaNucleotide(cen, norm, forw, seq[index])
@@ -8543,7 +8655,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for i in range(domain.length):
+                for _ in range(domain.length):
                     base = seq[i]
                     center = _OxdnaVector()
                     normal = _OxdnaVector(0, -1, 0)
