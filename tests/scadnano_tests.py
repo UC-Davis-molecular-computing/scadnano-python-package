@@ -8224,11 +8224,6 @@ class TestHelixRollRelax(unittest.TestCase):
         1 [---+<--------+<----------+       |         |         |
                                             |         |         |
         2                            <------+<--------+<--------+
-
-        angle (fraction of 360)
-             4/10.5
-                     (15-10.5)/10.5 = 4.5/10.5
-                               (27-21)/10.5 = 6/10.5
         '''
         helices = [sc.Helix(max_offset=60) for _ in range(3)]
         helices[2].grid_position = (1, 0)
@@ -8280,18 +8275,19 @@ class TestHelixRollRelax(unittest.TestCase):
         a2 = f2 * 360 % 360
         a3 = f3 * 360 % 360
 
-        ave = (a1 + a2 + a3) / 3
-        diff_from_optimal = 180 - ave
+        # rules for angles:
+        # - add 150 if on reverse strand to account of minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180) / 3
+        ave_h1 = (a1 + 150 + a2 + 150 + a3 + 150) / 3
+        exp_h0_roll = (-ave_h0) % 360
+        exp_h1_roll = (-ave_h1) % 360
 
         self.design2h.relax_helix_rolls()
-        actual_h0_roll = self.design2h.helices[0].roll % 360
-        actual_h1_roll = self.design2h.helices[1].roll % 360
-        exp_h0_roll = diff_from_optimal % 360
-        # add 180 since optimal roll of bottom helix is opposite that of top
-        # subtract minor_groove_angle since it's the reverse strand on the bottom helix
-        exp_h1_roll = (diff_from_optimal + 180 - self.design2h.geometry.minor_groove_angle) % 360
-        self.assertAlmostEqual(exp_h0_roll, actual_h0_roll)
-        self.assertAlmostEqual(exp_h1_roll, actual_h1_roll)
+
+        self.assertAlmostEqual(exp_h0_roll, self.design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, self.design2h.helices[1].roll)
 
     def test_helix_crossovers(self) -> None:
         ############################################
