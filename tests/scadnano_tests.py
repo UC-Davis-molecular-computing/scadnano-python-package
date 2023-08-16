@@ -3711,7 +3711,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
             sc.Domain(0, True, 4, 8),
             sc.Extension(5)
         ])
-        self.assertEquals(2, len(design.strands))
+        self.assertEqual(2, len(design.strands))
         self.assertIn(expected_strand1, design.strands)
         self.assertIn(expected_strand2, design.strands)
 
@@ -7714,14 +7714,19 @@ class TestOxdnaExport(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # First, write to the directory, in which case the names should be the script name
             design.write_oxdna_files(directory=tmpdir)
-            self.assertEqual(top, open(tmpdir + '/' + scriptname + '.top').read())
-            self.assertEqual(dat, open(tmpdir + '/' + scriptname + '.dat').read())
+            with open(tmpdir + '/' + scriptname + '.top') as f:
+                self.assertEqual(top, f.read())
+            with open(tmpdir + '/' + scriptname + '.dat') as f:
+                self.assertEqual(dat, f.read())
 
             # Now, write, to a specific filename without extensions
             design.write_oxdna_files(directory=tmpdir,
                                      filename_no_extension='oxdna-Export with spaces in name')
-            self.assertEqual(top, open(tmpdir + '/oxdna-Export with spaces in name.top').read())
-            self.assertEqual(dat, open(tmpdir + '/oxdna-Export with spaces in name.dat').read())
+            with open(tmpdir + '/oxdna-Export with spaces in name.top') as f:
+                self.assertEqual(top, f.read())
+
+            with open(tmpdir + '/oxdna-Export with spaces in name.dat') as f:
+                self.assertEqual(dat, f.read())
 
 
 class TestPlateMaps(unittest.TestCase):
