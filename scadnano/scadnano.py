@@ -72,6 +72,13 @@ import os.path
 from math import sqrt, sin, cos, pi
 from random import randint
 
+# we import like this so that we can use openpyxl.Workbook in the type hints, but still allow
+# someone to use the library without having openpyxl installed
+try:
+    import openpyxl
+except ImportError as e:
+    raise e
+
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
 
@@ -7199,7 +7206,7 @@ class Design(_JSONSerializable):
             workbook.save(filename_plate)
 
     @staticmethod
-    def _add_new_excel_plate_sheet(plate_name: str, workbook: Any) -> Any:
+    def _add_new_excel_plate_sheet(plate_name: str, workbook: openpyxl.Workbook) -> openpyxl.Workbook:
         worksheet = workbook.add_sheet(plate_name)
         worksheet.write(0, 0, 'Well Position')
         worksheet.write(0, 1, 'Name')
@@ -7207,7 +7214,7 @@ class Design(_JSONSerializable):
         return worksheet
 
     @staticmethod
-    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, Any]:
+    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, openpyxl.Workbook]:
         import openpyxl  # type: ignore
         plate_extension = f'xlsx'
         if filename is None:
@@ -7215,7 +7222,7 @@ class Design(_JSONSerializable):
                 directory, plate_extension, filename)
         else:
             filename_plate = _create_directory_and_set_filename(directory, filename)
-        workbook = xlwt.Workbook()
+        workbook = openpyxl.Workbook()
         return filename_plate, workbook
 
     def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],

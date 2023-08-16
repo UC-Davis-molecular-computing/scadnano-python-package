@@ -142,11 +142,13 @@ Once Python is installed (and the dataclasses backport if you have Python versio
     
 2. download
 
-    As a simple alternative (in case you run into trouble using pip), you can download and place the following files in your [PYTHONPATH](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH) (e.g., in the same directory as the scripts you are running). **Note:** If you are reading this on the PyPI website or anywhere other than GitHub, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
+    As a simple alternative (in case you run into trouble using pip), you can simply download the scadnano.py file. However, you need to first install two packages that are required by scadnano: Install [openpyxl](https://pypi.org/project/openpyxl/) and [tabulate](https://pypi.org/project/tabulate/) by typing the following at the command line: `pip install openpyxl tabulate`.
+    
+    Download and place the following files in your [PYTHONPATH](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH) (e.g., in the same directory as the scripts you are running). **Note:** If you are reading this on the PyPI website or anywhere other than GitHub, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
 
-    * *required*: [scadnano.py](scadnano/scadnano.py) 
-    * *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
-    * *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
+    - *required*: [scadnano.py](scadnano/scadnano.py) 
+    - *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
+    - *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
     
     To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
     ![](images/download_raw_screenshot.png)
