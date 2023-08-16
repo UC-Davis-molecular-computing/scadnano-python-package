@@ -53,7 +53,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.18.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.18.1"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -62,6 +62,7 @@ import json
 import enum
 import itertools
 import re
+import math
 from builtins import ValueError
 from dataclasses import dataclass, field, InitVar, replace
 from typing import Iterator, Tuple, List, Sequence, Iterable, Set, Dict, Union, Optional, Type, cast, Any, \
@@ -71,6 +72,13 @@ import sys
 import os.path
 from math import sqrt, sin, cos, pi
 from random import randint
+
+# we import like this so that we can use openpyxl.Workbook in the type hints, but still allow
+# someone to use the library without having openpyxl installed
+try:
+    import openpyxl
+except ImportError as import_error:
+    raise import_error
 
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
@@ -328,9 +336,6 @@ class Grid(str, enum.Enum):
     Represents default patterns for laying out helices in the side view.
     Each :any:`Grid` except :py:data:`Grid.none` has an interpretation of a "grid position",
     which is a 2D integer coordinate (`h`, `v`).
-    (scadnano also allows a 3rd coordinate (`h`, `v`, `b`) specifying a "base offset" at which to position
-    the start of the :any:`Helix`, which is not relevant for the side view but will eventually be
-    supported to adjust the main view.)
     """
 
     square = "square"
@@ -1195,7 +1200,7 @@ class Position3D(_JSONSerializable):
             z = json_map[position_z_key]
         return Position3D(x=x, y=y, z=z)
 
-    def __add__(self, other: 'Position3D') -> 'Position3D':
+    def __add__(self, other: Position3D) -> Position3D:
         """
         :param other:
             other position to add to this one
@@ -1204,7 +1209,7 @@ class Position3D(_JSONSerializable):
         """
         return Position3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def clone(self) -> 'Position3D':
+    def clone(self) -> Position3D:
         """
         :return:
             copy of this :any:`Position3D`
@@ -1692,6 +1697,26 @@ class Helix(_JSONSerializable):
             distance = default_major_tick_distance(grid)
             return list(range(self.major_tick_start, self.max_offset + 1, distance))
 
+    def calculate_position(self, grid: Grid, geometry: Optional[Geometry] = None) -> Position3D:
+        """
+        :param grid:
+            :any:`Grid` of this :any:`Helix` used to interpret the field :data:`Helix.grid_position`.
+            Must be None if :data:`Helix.grid_position` is None.
+        :param geometry:
+            :any:`Geometry` parameters to determine distance between helices in a grid.
+            Must be None if :data:`Helix.grid_position` is None.
+        :return:
+            Position of this :any:`Helix` in 3D space, based on its :data:`Helix.grid_position`
+            if it is not None, or its :data:`Helix.position` otherwise.
+        """
+        if self.grid_position is None:
+            assert grid == Grid.none
+            return self.position
+        else:
+            assert grid is not None
+            assert geometry is not None
+            return grid_position_to_position(self.grid_position, grid, geometry)
+
     @property
     def domains(self) -> List[Domain]:
         """
@@ -1735,7 +1760,183 @@ class Helix(_JSONSerializable):
         angle = self.roll + offset * degrees_per_base
         if not forward:
             angle += geometry.minor_groove_angle
+        angle %= 360
         return angle
+
+    def crossovers(self) -> List[Tuple[int, int, bool]]:
+        """
+        :return:
+            list of triples (`offset`, `helix_idx`, `forward`) of all crossovers incident to this
+            :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
+            :data:`Helix.idx` of the other :any:`Helix` incident to the crossover.
+        """
+        crossovers: List[Tuple[int, int, bool]] = []
+        for domain in self.domains:
+            strand = domain.strand()
+            domains = strand.bound_domains()
+            num_domains = len(domains)
+            domain_idx = domains.index(domain)
+
+            # if not first domain, then there is a crossover to the previous domain
+            if domain_idx > 0:
+                offset = domain.offset_5p()
+                other_domain = domains[domain_idx - 1]
+                other_helix_idx = other_domain.helix
+                crossovers.append((offset, other_helix_idx, domain.forward))
+
+            # if not last domain, then there is a crossover to the next domain
+            if domain_idx < num_domains - 1:
+                offset = domain.offset_3p()
+                other_domain = domains[domain_idx + 1]
+                other_helix_idx = other_domain.helix
+                crossovers.append((offset, other_helix_idx, domain.forward))
+
+        return crossovers
+
+    def relax_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> None:
+        """
+        Like :meth:`Design.relax_helix_rolls`, but only for this :any:`Helix`.
+        """
+        angle = self.compute_relaxed_roll(helices, grid, geometry)
+        self.roll = angle
+
+    def compute_relaxed_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
+        """
+        Like :meth:`Helix.relax_roll`, but just returns the new roll without altering this :any:`Helix`,
+        rather than changing the field :data:`Helix.roll`.
+        """
+        angles = []
+        for offset, helix_idx, forward in self.crossovers():
+            other_helix = helices[helix_idx]
+            angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
+            crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
+            relative_angle = (crossover_angle, angle_of_other_helix)
+            angles.append(relative_angle)
+        angle = minimum_strain_angle(angles)
+        return angle
+
+
+def angle_from_helix_to_helix(helix: Helix, other_helix: Helix,
+                              grid: Optional[Grid] = None, geometry: Optional[Geometry] = None) -> float:
+    """
+    Computes angle between `helix` and `other_helix` in degrees.
+
+    :param helix:
+        first helix
+    :param other_helix:
+        second helix
+    :param grid:
+        :any:`Grid` to use when calculating Helix positions
+    :param geometry:
+        :any:`Geometry` to use when calculating Helix positions
+    :return:
+        angle between `helix` and `other_helix` in degrees.
+    """
+    p1 = helix.calculate_position(grid, geometry)
+    p2 = other_helix.calculate_position(grid, geometry)
+
+    # negate y_diff because y increases going down in the main view
+    y_diff = -(p2.y - p1.y)
+    x_diff = p2.x - p1.x
+
+    angle = math.degrees(math.atan2(y_diff, x_diff))
+
+    # negate angle because we rotate clockwise
+    angle = -angle
+
+    # subtract 90 since we define 0 angle to be up instead of right
+    angle += 90
+
+    # normalize to be in range [0, 360)
+    angle %= 360
+
+    return angle
+
+
+def minimum_strain_angle(relative_angles: List[Tuple[float, float]]) -> float:
+    r"""
+    Computes the angle that minimizes the "strain" of all relative angles in the given list.
+
+    A "relative angle" is a pair :math:`(\theta, \mu)`. The strain is set to 0 by setting
+    :math:`\theta = \mu`; more generally the strain is :math:`(\theta-\mu)^2`, where :math:`\theta-\mu`
+    is the "angular difference" (e.g., 10-350 is 20 since 350 is also -10 mod 360).
+
+    The constraint is that in the list
+    [:math:`(\theta_1, \mu_1)`, :math:`(\theta_2, \mu_2)`, ..., :math:`(\theta_n, \mu_n)`],
+    we can rotate all angles :math:`\theta_i` by the same amount :math:`\theta`.
+    So this calculates the angle :math:`\theta` that minimizes
+    :math:`\sum_i [(\theta + \theta_i) - \mu_i]^2`
+
+    :param relative_angles:
+        List of :math:`(\theta_i, \mu_i)` pairs, where :math:`\theta_i = \mu_i` means 0 strain, and angles
+        are in units of degrees.
+    :return:
+        angle :math:`\theta` by which to rotate all angles :math:`\theta_i`
+        (but not changing any "zero angle" :math:`\mu_i`)
+        such that :math:`\sum_i [(\theta + \theta_i) - \mu_i]^2` is minimized.
+    """
+    adjusted_angles = [angle - zero_angle for angle, zero_angle in relative_angles]
+    ave_angle = average_angle(adjusted_angles)
+    min_strain_angle = -ave_angle
+    min_strain_angle %= 360
+    return min_strain_angle
+
+
+def angle_distance(x: float, y: float) -> float:
+    """
+    :param x: angle in degrees
+    :param y: angle in degrees
+    :return: signed difference between angles `x` and `y`, in degrees, in range [-180, 180]
+    """
+    a = (x - y) % 360
+    b = (y - x) % 360
+    diff = -a if a < b else b
+    return diff
+
+
+def sum_squared_angle_distances(angles: List[float], angle: float) -> float:
+    """
+    :param angles: list of angles in degrees
+    :param angle: angle in degrees
+    :return: sum of squared distances from each angle in `angles` to `angle`
+    """
+    return sum(angle_distance(angle, a) ** 2 for a in angles)
+
+
+def average_angle(angles: List[float]) -> float:
+    """
+    Calculate the "circular mean" of the angles in `angles`. Note this coincides with the arithemtic mean
+    for certain lists of angles, e.g., [0, 10, 50], in a way that the circular mean calculated via
+    interpreting angles as unit vectors (https://en.wikipedia.org/wiki/Circular_mean) does not.
+
+    This algorithm is due to Julian Panetta. (https://julianpanetta.com/)
+
+    :param angles:
+        List of angles in degrees.
+    :return:
+        average angle of the list of angles, normalized to be between 0 and 360.
+    """
+    num_angles = len(angles)
+    mean_angle = sum(angles) / num_angles
+    min_dist = float('inf')
+    optimal_angle = 0
+    for n in range(num_angles):
+        candidate_angle = mean_angle + 360.0 * n / num_angles
+        candidate_dist = sum_squared_angle_distances(angles, candidate_angle)
+        if min_dist > candidate_dist:
+            min_dist = candidate_dist
+            optimal_angle = candidate_angle
+
+    optimal_angle %= 360.0
+
+    # taking mod 360 sometimes results in 360.0 instead of 0.0. This is hacky but fixes it.
+    if abs(360.0 - optimal_angle) < 10 ** (-8):
+        optimal_angle = 0.0
+
+    # in case it's a nice round number, let's get rid of the floating-point error artifacts here
+    optimal_angle = round(optimal_angle, 9)
+
+    return optimal_angle
 
 
 def _is_close(x1: float, x2: float) -> bool:
@@ -5186,8 +5387,8 @@ class Design(_JSONSerializable):
         try:
             design = Design.from_scadnano_json_map(json_map)
             return design
-        except KeyError as e:
-            raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {e}')
+        except KeyError as error:
+            raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {error}')
 
     @staticmethod
     def _check_mutually_exclusive_fields(json_map: dict) -> None:
@@ -7192,30 +7393,33 @@ class Design(_JSONSerializable):
             for row, strand in enumerate(strands_in_plate):
                 if strand.idt is None:
                     raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
-                worksheet.write(row + 1, 0, strand.idt.well)
-                worksheet.write(row + 1, 1, strand.idt_export_name())
-                worksheet.write(row + 1, 2, strand.idt_dna_sequence())
+                worksheet.cell(row + 2, 1).value = strand.idt.well
+                worksheet.cell(row + 2, 2).value = strand.idt_export_name()
+                worksheet.cell(row + 2, 3).value = strand.idt_dna_sequence()
 
             workbook.save(filename_plate)
 
+    # TODO: fix types when openpyxl supports type hints
     @staticmethod
-    def _add_new_excel_plate_sheet(plate_name: str, workbook: Any) -> Any:
-        worksheet = workbook.add_sheet(plate_name)
-        worksheet.write(0, 0, 'Well Position')
-        worksheet.write(0, 1, 'Name')
-        worksheet.write(0, 2, 'Sequence')
+    def _add_new_excel_plate_sheet(plate_name: str,
+                                   workbook: 'openpyxl.Workbook') -> 'openpyxl.Worksheet':
+        worksheet = workbook.create_sheet(title=plate_name)
+        worksheet.cell(1, 1).value = 'Well Position'
+        worksheet.cell(1, 2).value = 'Name'
+        worksheet.cell(1, 3).value = 'Sequence'
         return worksheet
 
     @staticmethod
-    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, Any]:
-        import xlwt  # type: ignore
-        plate_extension = f'xls'
+    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, 'openpyxl.Workbook']:
+        import openpyxl  # type: ignore
+        plate_extension = f'xlsx'
         if filename is None:
             filename_plate = _get_filename_same_name_as_running_python_script(
                 directory, plate_extension, filename)
         else:
             filename_plate = _create_directory_and_set_filename(directory, filename)
-        workbook = xlwt.Workbook()
+        workbook = openpyxl.Workbook()
+        workbook.remove(workbook.active)  # removed automatically created default sheet
         return filename_plate, workbook
 
     def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
@@ -7253,9 +7457,9 @@ class Design(_JSONSerializable):
                         f"which is being ignored since we are using default plate/well addressing")
 
             well = plate_coord.well()
-            worksheet.write(excel_row, 0, well)
-            worksheet.write(excel_row, 1, strand.idt_export_name())
-            worksheet.write(excel_row, 2, strand.idt_dna_sequence())
+            worksheet.cell(excel_row + 1, 1).value = well
+            worksheet.cell(excel_row + 1, 2).value = strand.idt_export_name()
+            worksheet.cell(excel_row + 1, 3).value = strand.idt_dna_sequence()
             num_strands_remaining -= 1
 
             # IDT charges extra for a plate with < 24 strands for 96-well plate
@@ -8164,9 +8368,6 @@ class Design(_JSONSerializable):
                 return strand
         return None
 
-    def grid_of_helix(self, helix):
-        pass
-
     def add_helix(self, idx: int, helix: Helix) -> None:
         """
         Adds `helix` as a new :any:`Helix` with index `idx` to this Design.
@@ -8191,6 +8392,18 @@ class Design(_JSONSerializable):
         self._ensure_helices_distinct_objects()
         self._set_helices_grid_positions_or_positions()
         self._assign_default_helices_view_orders_to_groups()
+
+    def relax_helix_rolls(self) -> None:
+        """
+        Sets all helix rolls to "relax" them based on their crossovers.
+
+        This calculates the "strain" of each crossover c as the absolute value d_c of the distance between
+        the angle to the helix to which it is connected and the angle of that crossover given the
+        current helix roll. It minimizes sum_c d_c^2, i.e., minimize the sum of the squares of the strains.
+        """
+        for helix in self.helices.values():
+            helix_group = self.groups[helix.group]
+            helix.relax_roll(self.helices, helix_group.grid, self.geometry)
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:

@@ -8,7 +8,7 @@ import json
 import math
 from typing import Iterable, Union, Dict, Any
 
-import xlrd  # type: ignore
+import openpyxl  # type: ignore
 
 import scadnano as sc
 import scadnano.origami_rectangle as rect
@@ -1228,7 +1228,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         # add 10 strands in excess of 3 plates
         for plate_type in [sc.PlateType.wells96, sc.PlateType.wells384]:
             num_strands = 3 * plate_type.num_wells_per_plate() + 10
-            filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xls'
+            filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xlsx'
             max_offset = num_strands * strand_len
             helices = [sc.Helix(max_offset=max_offset) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
@@ -1238,11 +1238,11 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
             design.write_idt_plate_excel_file(filename=filename, plate_type=plate_type)
 
-            book = xlrd.open_workbook(filename)
-            self.assertEqual(4, book.nsheets)
+            book = openpyxl.load_workbook(filename=filename)
+            self.assertEqual(4, len(book.worksheets))
             for plate in range(4):
-                sheet = book.sheet_by_index(plate)
-                self.assertEqual(3, sheet.ncols)
+                sheet = book.worksheets[plate]
+                self.assertEqual(3, sheet.max_column)
 
                 if plate == 2:  # penultimate plate
                     expected_wells = plate_type.num_wells_per_plate() - plate_type.min_wells_per_plate() + 10
@@ -1251,7 +1251,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
                 else:
                     expected_wells = plate_type.num_wells_per_plate()
 
-                self.assertEqual(expected_wells + 1, sheet.nrows)
+                self.assertEqual(expected_wells + 1, sheet.max_row)
 
             os.remove(filename)
 
@@ -3711,7 +3711,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
             sc.Domain(0, True, 4, 8),
             sc.Extension(5)
         ])
-        self.assertEquals(2, len(design.strands))
+        self.assertEqual(2, len(design.strands))
         self.assertIn(expected_strand1, design.strands)
         self.assertIn(expected_strand2, design.strands)
 
@@ -7714,14 +7714,19 @@ class TestOxdnaExport(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             # First, write to the directory, in which case the names should be the script name
             design.write_oxdna_files(directory=tmpdir)
-            self.assertEqual(top, open(tmpdir + '/' + scriptname + '.top').read())
-            self.assertEqual(dat, open(tmpdir + '/' + scriptname + '.dat').read())
+            with open(tmpdir + '/' + scriptname + '.top') as f:
+                self.assertEqual(top, f.read())
+            with open(tmpdir + '/' + scriptname + '.dat') as f:
+                self.assertEqual(dat, f.read())
 
             # Now, write, to a specific filename without extensions
             design.write_oxdna_files(directory=tmpdir,
                                      filename_no_extension='oxdna-Export with spaces in name')
-            self.assertEqual(top, open(tmpdir + '/oxdna-Export with spaces in name.top').read())
-            self.assertEqual(dat, open(tmpdir + '/oxdna-Export with spaces in name.dat').read())
+            with open(tmpdir + '/oxdna-Export with spaces in name.top') as f:
+                self.assertEqual(top, f.read())
+
+            with open(tmpdir + '/oxdna-Export with spaces in name.dat') as f:
+                self.assertEqual(dat, f.read())
 
 
 class TestPlateMaps(unittest.TestCase):
@@ -8135,3 +8140,397 @@ class TestBasePairs(unittest.TestCase):
         self.assertIn(3, base_pairs[0])
         self.assertIn(4, base_pairs[0])
         self.assertIn(5, base_pairs[0])
+
+
+class TestHelixRollRelax(unittest.TestCase):
+
+    def setUp(self) -> None:
+        '''
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+
+              |         |           |
+        1 [---+<--------+<----------+
+
+        angle (fraction of 360)
+             4/10.5
+                     (14-10.5)/10.5 = 3.5/10.5
+                               (26-21)/10.5 = 5/10.5
+        '''
+        self.design2h = sc.Design(helices=[sc.Helix(max_offset=50) for _ in range(2)])
+        # helix 0 forward
+        self.design2h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        self.design2h.draw_strand(0, 5).move(10).cross(1).move(-10)
+        self.design2h.draw_strand(0, 15).move(12).cross(1).move(-12)
+
+        '''
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+
+              |         |           |
+        1 [---+         |<----------+
+                        |
+        2      <--------+
+        '''
+        self.design3helix3strand = sc.Design(helices=[sc.Helix(max_offset=50) for _ in range(3)])
+        # helix 0 forward
+        self.design3helix3strand.draw_strand(0, 0).move(5).cross(1).move(-5)
+        self.design3helix3strand.draw_strand(0, 5).move(10).cross(2).move(-10)
+        self.design3helix3strand.draw_strand(0, 15).move(12).cross(1).move(-12)
+
+    def test_3_helix_2_crossovers(self) -> None:
+        '''
+          0         1
+          012345678901234
+        0 [---+[------+
+              |       |
+        1 [---+       |
+                      |
+        2      <------+
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(8).cross(2).move(-8)
+        f1 = 4 / 10.5
+        f2 = 12 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account of minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
+        exp_h0_roll = (-ave_h0) % 360
+
+        ave_h1 = a1 + 150  # helix 0 at 0 degrees relative to helix 1
+        exp_h1_roll = (-ave_h1) % 360
+
+        ave_h2 = a2 + 150 - (-90)  # helix 0 at -90 degrees relative to helix 2
+        exp_h2_roll = (-ave_h2) % 360
+
+        design3h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design3h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
+        self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
+
+    def test_3_helix_6_crossover(self) -> None:
+        '''
+          0         1         2         3         4         5         6
+          012345678901234567890123456789012345678901234567890123456789
+        0 [---+[--------+[----------+[------+[--------+[--------+
+              |         |           |       |         |         |
+        1 [---+<--------+<----------+       |         |         |
+                                            |         |         |
+        2                            <------+<--------+<--------+
+
+        angle (fraction of 360)
+             4/10.5
+                     (15-10.5)/10.5 = 4.5/10.5
+                               (27-21)/10.5 = 6/10.5
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(10).cross(1).move(-10)
+        design3h.draw_strand(0, 15).move(12).cross(1).move(-12)
+        design3h.draw_strand(0, 27).move(7).cross(2).move(-7)
+        design3h.draw_strand(0, 34).move(10).cross(2).move(-10)
+        design3h.draw_strand(0, 44).move(10).cross(2).move(-10)
+
+        f1 = 4 / 10.5
+        f2 = 14 / 10.5
+        f3 = 26 / 10.5
+        f4 = 33 / 10.5
+        f5 = 43 / 10.5
+        f6 = 53 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+        a3 = f3 * 360 % 360
+        a4 = f4 * 360 % 360
+        a5 = f5 * 360 % 360
+        a6 = f6 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account of minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180 + a4 - 90 + a5 - 90 + a6 - 90) / 6
+        exp_h0_roll = (-ave_h0) % 360
+
+        ave_h1 = (a1 + 150 + a2 + 150 + a3 + 150) / 3
+        exp_h1_roll = (-ave_h1) % 360
+
+        ave_h2 = (a4 + 150 - (- 90) + a5 + 150 - (- 90) + a6 + 150 - (- 90)) / 3
+        exp_h2_roll = (-ave_h2) % 360
+
+        design3h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design3h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
+        self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
+
+    def test_2_helix_3_crossover(self) -> None:
+        f1 = 4 / 10.5
+        f2 = 14 / 10.5
+        f3 = 26 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+        a3 = f3 * 360 % 360
+
+        ave = (a1 + a2 + a3) / 3
+        diff_from_optimal = 180 - ave
+
+        self.design2h.relax_helix_rolls()
+        actual_h0_roll = self.design2h.helices[0].roll % 360
+        actual_h1_roll = self.design2h.helices[1].roll % 360
+        exp_h0_roll = diff_from_optimal % 360
+        # add 180 since optimal roll of bottom helix is opposite that of top
+        # subtract minor_groove_angle since it's the reverse strand on the bottom helix
+        exp_h1_roll = (diff_from_optimal + 180 - self.design2h.geometry.minor_groove_angle) % 360
+        self.assertAlmostEqual(exp_h0_roll, actual_h0_roll)
+        self.assertAlmostEqual(exp_h1_roll, actual_h1_roll)
+
+    def test_helix_crossovers(self) -> None:
+        ############################################
+        # 3-helix design with 3 strands
+        xs0 = self.design3helix3strand.helices[0].crossovers()
+        self.assertEqual(len(xs0), 3)
+        o0, h0, f0 = xs0[0]
+        o1, h1, f1 = xs0[1]
+        o2, h2, f2 = xs0[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 1)
+        self.assertEqual(h1, 2)
+        self.assertEqual(h2, 1)
+        self.assertEqual(f0, True)
+        self.assertEqual(f1, True)
+        self.assertEqual(f2, True)
+
+        xs1 = self.design3helix3strand.helices[1].crossovers()
+        self.assertEqual(len(xs1), 2)
+        o0, h0, f0 = xs1[0]
+        o1, h1, f1 = xs1[1]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 26)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h1, 0)
+        self.assertEqual(f0, False)
+        self.assertEqual(f1, False)
+
+        xs2 = self.design3helix3strand.helices[2].crossovers()
+        self.assertEqual(len(xs2), 1)
+        o0, h0, f0 = xs2[0]
+        self.assertEqual(o0, 14)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h0, False)
+
+        ############################################
+        # 2-helix design
+        xs0 = self.design2h.helices[0].crossovers()
+        self.assertEqual(len(xs0), 3)
+        o0, h0, f0 = xs0[0]
+        o1, h1, f1 = xs0[1]
+        o2, h2, f2 = xs0[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 1)
+        self.assertEqual(h1, 1)
+        self.assertEqual(h2, 1)
+        self.assertEqual(h0, True)
+        self.assertEqual(h1, True)
+        self.assertEqual(h2, True)
+
+        xs1 = self.design2h.helices[1].crossovers()
+        self.assertEqual(len(xs1), 3)
+        o0, h0, f0 = xs1[0]
+        o1, h1, f1 = xs1[1]
+        o2, h2, f2 = xs1[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h1, 0)
+        self.assertEqual(h2, 0)
+        self.assertEqual(f0, False)
+        self.assertEqual(f1, False)
+        self.assertEqual(f2, False)
+
+    def test_minimum_strain_angle_0_10_20_relative_to_0(self) -> None:
+        relative_angles = [
+            (0, 0),
+            (10, 0),
+            (20, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 350.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_0_10_50_relative_to_0(self) -> None:
+        relative_angles = [
+            (0, 0),
+            (10, 0),
+            (50, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 340.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_0_10_80_relative_to_0(self) -> None:
+        relative_angles = [
+            (0, 0),
+            (10, 0),
+            (80, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 330.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_350_0_10_relative_to_0(self) -> None:
+        relative_angles = [
+            (350, 0),
+            (0, 0),
+            (10, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 0.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_350_0_40_relative_to_0(self) -> None:
+        relative_angles = [
+            (350, 0),
+            (0, 0),
+            (40, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 350.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_350_10_60_relative_to_0(self) -> None:
+        relative_angles = [
+            (350, 0),
+            (10, 0),
+            (60, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 340.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_350_10_60_relative_to_0_and_20_0_310_relative_to_10(self) -> None:
+        relative_angles = [
+            (350, 0),  # -10
+            (10, 0),  # 10
+            (60, 0),  # 60
+            ############ ave to 20
+            (20, 10),  # 10
+            (0, 10),  # -10
+            (340, 10),  # -30
+            ############ ave to -10
+            ############ total average is (20-10)/2 = 5, so 355 (-5) to correct it
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 355.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_179_181_relative_to_0(self) -> None:
+        relative_angles = [
+            (179, 0),
+            (181, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 180.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_181_183_relative_to_0(self) -> None:
+        relative_angles = [
+            (181, 0),
+            (183, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 178.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_minimum_strain_angle_174_179_184_relative_to_0(self) -> None:
+        relative_angles = [
+            (174, 0),
+            (179, 0),
+            (184, 0),
+        ]
+        act_min_strain_angle = sc.minimum_strain_angle(relative_angles)
+        exp_min_strain_angle = 181.0
+        self.assertAlmostEqual(exp_min_strain_angle, act_min_strain_angle)
+
+    def test_average_angle_1_359(self) -> None:
+        angles = [1, 359]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 0.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_10_350(self) -> None:
+        angles = [10, 350]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 0.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_30_350(self) -> None:
+        angles = [30, 350]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 10.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_0_10_20(self) -> None:
+        angles = [0, 10, 20]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 10.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_0_0_90(self) -> None:
+        angles = [0, 0, 90]
+        act_ave_angle = sc.average_angle(angles)
+        # exp_ave_angle_radians = math.atan2(1, 2)
+        # exp_ave_angle = math.degrees(exp_ave_angle_radians)
+        exp_ave_angle = 30.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_0_45_90(self) -> None:
+        angles = [0, 45, 90]
+        act_ave_angle = sc.average_angle(angles)
+        # exp_ave_angle_radians = math.atan2(1, 2)
+        # exp_ave_angle = math.degrees(exp_ave_angle_radians)
+        exp_ave_angle = 45.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_0_10_50(self) -> None:
+        angles = [0, 10, 50]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 20.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_0_10_80(self) -> None:
+        angles = [0, 10, 80]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 30.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_350_0_40(self) -> None:
+        angles = [350, 0, 40]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 10.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_330_40_50(self) -> None:
+        angles = [330, 40, 50]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 20.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+    def test_average_angle_330_40_80(self) -> None:
+        angles = [330, 40, 80]
+        act_ave_angle = sc.average_angle(angles)
+        exp_ave_angle = 30.0
+        self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
