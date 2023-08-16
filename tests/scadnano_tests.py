@@ -8,7 +8,7 @@ import json
 import math
 from typing import Iterable, Union, Dict, Any
 
-import xlrd  # type: ignore
+import openpyxl  # type: ignore
 
 import scadnano as sc
 import scadnano.origami_rectangle as rect

@@ -7208,8 +7208,8 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, Any]:
-        import xlwt  # type: ignore
-        plate_extension = f'xls'
+        import openpyxl  # type: ignore
+        plate_extension = f'xlsx'
         if filename is None:
             filename_plate = _get_filename_same_name_as_running_python_script(
                 directory, plate_extension, filename)
