@@ -8,7 +8,7 @@ import json
 import math
 from typing import Iterable, Union, Dict, Any
 
-import xlrd  # type: ignore
+import openpyxl  # type: ignore
 
 import scadnano as sc
 import scadnano.origami_rectangle as rect
@@ -1228,7 +1228,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         # add 10 strands in excess of 3 plates
         for plate_type in [sc.PlateType.wells96, sc.PlateType.wells384]:
             num_strands = 3 * plate_type.num_wells_per_plate() + 10
-            filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xls'
+            filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xlsx'
             max_offset = num_strands * strand_len
             helices = [sc.Helix(max_offset=max_offset) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
@@ -1238,11 +1238,11 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
             design.write_idt_plate_excel_file(filename=filename, plate_type=plate_type)
 
-            book = xlrd.open_workbook(filename)
-            self.assertEqual(4, book.nsheets)
+            book = openpyxl.load_workbook(filename=filename)
+            self.assertEqual(4, len(book.worksheets))
             for plate in range(4):
-                sheet = book.sheet_by_index(plate)
-                self.assertEqual(3, sheet.ncols)
+                sheet = book.worksheets[plate]
+                self.assertEqual(3, sheet.max_column)
 
                 if plate == 2:  # penultimate plate
                     expected_wells = plate_type.num_wells_per_plate() - plate_type.min_wells_per_plate() + 10
@@ -1251,7 +1251,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
                 else:
                     expected_wells = plate_type.num_wells_per_plate()
 
-                self.assertEqual(expected_wells + 1, sheet.nrows)
+                self.assertEqual(expected_wells + 1, sheet.max_row)
 
             os.remove(filename)
 
