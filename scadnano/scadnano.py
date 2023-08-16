@@ -1773,21 +1773,21 @@ class Helix(_JSONSerializable):
         crossovers: List[Tuple[int, int, bool]] = []
         for domain in self.domains:
             strand = domain.strand()
-            domains = strand.bound_domains()
-            num_domains = len(domains)
-            domain_idx = domains.index(domain)
+            domains_on_strand = strand.bound_domains()
+            num_domains = len(domains_on_strand)
+            domain_idx = domains_on_strand.index(domain)
 
             # if not first domain, then there is a crossover to the previous domain
             if domain_idx > 0:
                 offset = domain.offset_5p()
-                other_domain = domains[domain_idx - 1]
+                other_domain = domains_on_strand[domain_idx - 1]
                 other_helix_idx = other_domain.helix
                 crossovers.append((offset, other_helix_idx, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
             if domain_idx < num_domains - 1:
                 offset = domain.offset_3p()
-                other_domain = domains[domain_idx + 1]
+                other_domain = domains_on_strand[domain_idx + 1]
                 other_helix_idx = other_domain.helix
                 crossovers.append((offset, other_helix_idx, domain.forward))
 
