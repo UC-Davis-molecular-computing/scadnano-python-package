@@ -3,6 +3,7 @@ import scadnano as sc
 ROWS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 COLS = list(range(1, 13))
 
+
 def create_design() -> sc.Design:
     num_strands = 208
     start = 0
@@ -11,7 +12,7 @@ def create_design() -> sc.Design:
     row_idx = 0
     col_idx = 0
 
-    for s in range(1, num_strands+1):
+    for s in range(1, num_strands + 1):
         ss_f = sc.Domain(helix=0, forward=True, start=start, end=start + 10)
         ss_r = sc.Domain(helix=1, forward=False, start=start, end=start + 10)
 
@@ -44,7 +45,7 @@ def main() -> None:
     design = create_design()
     design.write_scadnano_file(directory='output_designs')
     design.write_idt_bulk_input_file(directory='idt')
-    design.write_idt_plate_excel_file(directory='idt', use_default_plates=False)
+    design.write_idt_plate_excel_file(directory='idt', use_default_plates=False, only_strands_with_idt=True)
 
 
 if __name__ == '__main__':
