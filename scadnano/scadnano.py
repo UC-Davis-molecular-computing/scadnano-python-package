@@ -76,8 +76,8 @@ from random import randint
 # someone to use the library without having openpyxl installed
 try:
     import openpyxl
-except ImportError as e:
-    raise e
+except ImportError as import_error:
+    raise import_error
 
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
@@ -5193,8 +5193,8 @@ class Design(_JSONSerializable):
         try:
             design = Design.from_scadnano_json_map(json_map)
             return design
-        except KeyError as e:
-            raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {e}')
+        except KeyError as error:
+            raise IllegalDesignError(f'I was expecting a JSON key but did not find it: {error}')
 
     @staticmethod
     def _check_mutually_exclusive_fields(json_map: dict) -> None:
@@ -7199,22 +7199,24 @@ class Design(_JSONSerializable):
             for row, strand in enumerate(strands_in_plate):
                 if strand.idt is None:
                     raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
-                worksheet.write(row + 1, 0, strand.idt.well)
-                worksheet.write(row + 1, 1, strand.idt_export_name())
-                worksheet.write(row + 1, 2, strand.idt_dna_sequence())
+                worksheet.cell(row + 2, 1).value = strand.idt.well
+                worksheet.cell(row + 2, 2).value = strand.idt_export_name()
+                worksheet.cell(row + 2, 3).value = strand.idt_dna_sequence()
 
             workbook.save(filename_plate)
 
+    # TODO: fix types when openpyxl supports type hints
     @staticmethod
-    def _add_new_excel_plate_sheet(plate_name: str, workbook: openpyxl.Workbook) -> openpyxl.Workbook:
-        worksheet = workbook.add_sheet(plate_name)
-        worksheet.write(0, 0, 'Well Position')
-        worksheet.write(0, 1, 'Name')
-        worksheet.write(0, 2, 'Sequence')
+    def _add_new_excel_plate_sheet(plate_name: str,
+                                   workbook: 'openpyxl.Workbook') -> 'openpyxl.Worksheet':
+        worksheet = workbook.create_sheet(title=plate_name)
+        worksheet.cell(1, 1).value = 'Well Position'
+        worksheet.cell(1, 2).value = 'Name'
+        worksheet.cell(1, 3).value = 'Sequence'
         return worksheet
 
     @staticmethod
-    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, openpyxl.Workbook]:
+    def _setup_excel_file(directory: str, filename: Optional[str]) -> Tuple[str, 'openpyxl.Workbook']:
         import openpyxl  # type: ignore
         plate_extension = f'xlsx'
         if filename is None:
@@ -7223,6 +7225,7 @@ class Design(_JSONSerializable):
         else:
             filename_plate = _create_directory_and_set_filename(directory, filename)
         workbook = openpyxl.Workbook()
+        workbook.remove(workbook.active)  # removed automatically created default sheet
         return filename_plate, workbook
 
     def _write_plates_default(self, directory: str, filename: Optional[str], strands: List[Strand],
@@ -7260,9 +7263,9 @@ class Design(_JSONSerializable):
                         f"which is being ignored since we are using default plate/well addressing")
 
             well = plate_coord.well()
-            worksheet.write(excel_row, 0, well)
-            worksheet.write(excel_row, 1, strand.idt_export_name())
-            worksheet.write(excel_row, 2, strand.idt_dna_sequence())
+            worksheet.cell(excel_row + 1, 1).value = well
+            worksheet.cell(excel_row + 1, 2).value = strand.idt_export_name()
+            worksheet.cell(excel_row + 1, 3).value = strand.idt_dna_sequence()
             num_strands_remaining -= 1
 
             # IDT charges extra for a plate with < 24 strands for 96-well plate
