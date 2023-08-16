@@ -56,4 +56,7 @@ setup(name='scadnano',
           'openpyxl',
           'tabulate',
       ],
+      tests_require=[
+          'openpyxl',
+      ],
       )
