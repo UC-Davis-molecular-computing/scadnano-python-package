@@ -1797,8 +1797,8 @@ class Helix(_JSONSerializable):
         """
         Like :meth:`Design.relax_helix_rolls`, but only for this :any:`Helix`.
         """
-        angle = self.compute_relaxed_roll(helices, grid, geometry)
-        self.roll = angle
+        roll = self.compute_relaxed_roll(helices, grid, geometry)
+        self.roll = roll
 
     def compute_relaxed_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
         """
