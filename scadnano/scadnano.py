@@ -1812,7 +1812,10 @@ class Helix(_JSONSerializable):
             crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
             relative_angle = (crossover_angle, angle_of_other_helix)
             angles.append(relative_angle)
-        angle = minimum_strain_angle(angles)
+        if len(angles) == 0:
+            angle = self.roll
+        else:
+            angle = minimum_strain_angle(angles)
         return angle
 
 
@@ -1875,6 +1878,8 @@ def minimum_strain_angle(relative_angles: List[Tuple[float, float]]) -> float:
         (but not changing any "zero angle" :math:`\mu_i`)
         such that :math:`\sum_i [(\theta + \theta_i) - \mu_i]^2` is minimized.
     """
+    if len(relative_angles) == 0:
+        raise ValueError('cannot find minimum strain angle unless relative_angles is nonempty')
     adjusted_angles = [angle - zero_angle for angle, zero_angle in relative_angles]
     ave_angle = average_angle(adjusted_angles)
     min_strain_angle = -ave_angle
@@ -1917,6 +1922,8 @@ def average_angle(angles: List[float]) -> float:
         average angle of the list of angles, normalized to be between 0 and 360.
     """
     num_angles = len(angles)
+    if num_angles == 0:
+        raise ValueError('cannot take average of empty list of angles')
     mean_angle = sum(angles) / num_angles
     min_dist = float('inf')
     optimal_angle = 0

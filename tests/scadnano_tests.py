@@ -8267,6 +8267,26 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
         self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
 
+    def test_2_helix_no_crossover(self) -> None:
+        '''
+          0         1         2         3         4         5         6
+          012345678901234567890123456789012345678901234567890123456789
+        0 [--->[-------->
+
+        1 <---]<--------]
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(2)]
+        design2h = sc.Design(helices=helices, grid=sc.square)
+        design2h.draw_strand(0, 0).move(5)
+        design2h.draw_strand(0, 5).move(10)
+        design2h.draw_strand(1, 5).move(-5)
+        design2h.draw_strand(1, 15).move(-10)
+
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(0, design2h.helices[0].roll)
+        self.assertAlmostEqual(0, design2h.helices[1].roll)
+
     def test_2_helix_3_crossover(self) -> None:
         f1 = 4 / 10.5
         f2 = 14 / 10.5
