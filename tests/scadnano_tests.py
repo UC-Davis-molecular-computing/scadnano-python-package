@@ -8197,7 +8197,7 @@ class TestHelixRollRelax(unittest.TestCase):
         a2 = f2 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
@@ -8269,7 +8269,7 @@ class TestHelixRollRelax(unittest.TestCase):
         a2 = f2 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
@@ -8321,7 +8321,7 @@ class TestHelixRollRelax(unittest.TestCase):
         a6 = f6 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180 + a4 - 90 + a5 - 90 + a6 - 90) / 6
@@ -8369,7 +8369,7 @@ class TestHelixRollRelax(unittest.TestCase):
         a3 = f3 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180) / 3
@@ -8382,7 +8382,47 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertAlmostEqual(exp_h0_roll, self.design2h.helices[0].roll)
         self.assertAlmostEqual(exp_h1_roll, self.design2h.helices[1].roll)
 
-    def test_helix_crossovers(self) -> None:
+    def test_2_helix_2_crossovers(self) -> None:
+        '''
+          0         1
+          012345678901234
+        0 [---+[-----+
+              |      |
+        1 [---+<-----+
+        '''
+        helices = [sc.Helix(max_offset=11) for _ in range(2)]
+        design2h = sc.Design(helices=helices, grid=sc.square)
+        design2h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design2h.draw_strand(0, 5).move(6).cross(1).move(-6)
+        f1 = 4 / 10.5
+        f2 = 10 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account for minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        # ave_h0 = (a1 - 180 + a2 - 180) / 2
+        # exp_h0_roll = (-ave_h0) % 360
+        exp_h0_roll = 120.0
+
+        # ave_h1 = (a1 + 150 + a2 + 150) / 2
+        # exp_h1_roll = (-ave_h1) % 360
+        exp_h1_roll = 150.0
+
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design2h.helices[1].roll)
+
+        # test for bug that reset roll; if called twice in a row it should have no effect the second time
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design2h.helices[1].roll)
+
+    def test_helix_crossover_addresses(self) -> None:
         ############################################
         # 3-helix design with 3 strands
         xs0 = self.design3helix3strand.helices[0].crossover_addresses()

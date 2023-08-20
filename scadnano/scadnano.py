@@ -1806,13 +1806,13 @@ class Helix(_JSONSerializable):
         """
         Like :meth:`Design.relax_helix_rolls`, but only for this :any:`Helix`.
         """
-        roll = self.compute_relaxed_roll(helices, grid, geometry)
-        self.roll = roll
+        roll_delta = self.compute_relaxed_roll_delta(helices, grid, geometry)
+        self.roll += roll_delta
 
-    def compute_relaxed_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
+    def compute_relaxed_roll_delta(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
         """
-        Like :meth:`Helix.relax_roll`, but just returns the new roll without altering this :any:`Helix`,
-        rather than changing the field :data:`Helix.roll`.
+        Like :meth:`Helix.relax_roll`, but just returns the amount by which to rotate the current roll,
+        without actually altering the field :data:`Helix.roll`.
         """
         angles = []
         for helix_idx, offset, forward in self.crossover_addresses():
@@ -1822,7 +1822,7 @@ class Helix(_JSONSerializable):
             relative_angle = (crossover_angle, angle_of_other_helix)
             angles.append(relative_angle)
         if len(angles) == 0:
-            angle = self.roll
+            angle = 0.0
         else:
             angle = minimum_strain_angle(angles)
         return angle
@@ -2791,8 +2791,8 @@ class StrandBuilder:
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> StrandBuilder:
         """
-        Add crossover. To have any effect, must be followed by call to :py:meth:`StrandBuilder.to`
-        or :py:meth:`StrandBuilder.move`.
+        Add crossover. To have any effect, must be followed by call to :meth:`StrandBuilder.to`
+        or :meth:`StrandBuilder.move`.
 
         :param helix: :any:`Helix` to crossover to
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
@@ -2804,8 +2804,13 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if helix not in self.design.helices:
+            helix_idxs_str = ", ".join(str(idx) for idx in self.design.helices.keys())
+            raise IllegalDesignError(f'cannot cross to helix {helix} since it does not exist;\n'
+                                     f'valid helix indices: {helix_idxs_str}')
         if self._strand is None:
-            raise ValueError('no Strand created yet; make at least one domain first')
+            raise ValueError('cannot cross because no Strand created yet; make at least one domain first '
+                             'using move() or to()')
         if self._most_recently_added_substrand_is_extension():
             raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
@@ -2842,8 +2847,14 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if helix not in self.design.helices:
+            helix_idxs_str = ", ".join(str(idx) for idx in self.design.helices.keys())
+            raise IllegalDesignError(f'cannot loopout to helix {helix} since it does not exist;\n'
+                                     f'valid helix indices: {helix_idxs_str}')
+
         if self._strand is None:
-            raise ValueError('no Strand created yet; make at least one domain first')
+            raise ValueError('cannot loopout because no Strand created yet; make at least one domain first '
+                             'using move() or to()')
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
         return self
