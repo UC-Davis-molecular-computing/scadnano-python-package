@@ -485,11 +485,12 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
     means that the "5' end" of the scaffold :any:`Strand` 
     (which is a fiction since the actual circular DNA strand has no endpoint) 
-    will have the sequence starting at position 5587 starting at the displayed 5' in scadnano,
-    assigned until the displayed 3' end. 
+    will have the sequence starting at position 5587 (if another value for `rotation` is not specified) 
+    starting at the displayed 5' in scadnano, assigned until the displayed 3' end. 
     Assuming the displayed scaffold :any:`Strand` has length :math:`n < 7249`, then a loopout of length 
     :math:`7249 - n` consisting of the undisplayed bases will be present in the actual DNA structure.
-    For a more detailed discussion of why this particular rotation of M13 is chosen,
+    
+    For a more detailed discussion of why this particular rotation of M13 is chosen as the default,
     see 
     `Supplementary Note S8 <http://www.dna.caltech.edu/Papers/DNAorigami-supp1.linux.pdf>`_ 
     in
