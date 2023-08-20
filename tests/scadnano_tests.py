@@ -8382,7 +8382,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertAlmostEqual(exp_h0_roll, self.design2h.helices[0].roll)
         self.assertAlmostEqual(exp_h1_roll, self.design2h.helices[1].roll)
 
-    def test_2_helix_2_crossovers(self) -> None:
+    def test_2_helix_2_crossovers_call_relax_twice(self) -> None:
         '''
           0         1
           012345678901234
@@ -8394,21 +8394,8 @@ class TestHelixRollRelax(unittest.TestCase):
         design2h = sc.Design(helices=helices, grid=sc.square)
         design2h.draw_strand(0, 0).move(5).cross(1).move(-5)
         design2h.draw_strand(0, 5).move(6).cross(1).move(-6)
-        f1 = 4 / 10.5
-        f2 = 10 / 10.5
-        a1 = f1 * 360 % 360
-        a2 = f2 * 360 % 360
 
-        # rules for angles:
-        # - add 150 if on reverse strand to account for minor groove
-        # - subtract angle of helix crossover is connecting to
-
-        # ave_h0 = (a1 - 180 + a2 - 180) / 2
-        # exp_h0_roll = (-ave_h0) % 360
         exp_h0_roll = 120.0
-
-        # ave_h1 = (a1 + 150 + a2 + 150) / 2
-        # exp_h1_roll = (-ave_h1) % 360
         exp_h1_roll = 150.0
 
         design2h.relax_helix_rolls()
