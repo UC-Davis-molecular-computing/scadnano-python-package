@@ -8215,6 +8215,78 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
         self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
 
+    def test_3_helix_2_crossovers_1_loopout_crossovers_method(self) -> None:
+        '''
+          0         1          2
+          012345678901234567890
+        0 [---+[------+[------+
+              |       |        \
+        1 [---+       |        |
+                      |        /
+        2      <------+<------+
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(8).cross(2).move(-8)
+        design3h.draw_strand(0, 13).move(8).loopout(2, 3).move(-8)
+
+        crossover_addresses_h0 = helices[0].crossover_addresses()
+        crossover_addresses_h1 = helices[1].crossover_addresses()
+        crossover_addresses_h2 = helices[2].crossover_addresses()
+
+        self.assertEqual(2, len(crossover_addresses_h0))
+        self.assertEqual(1, len(crossover_addresses_h1))
+        self.assertEqual(1, len(crossover_addresses_h2))
+
+        self.assertEqual((1, 4, True), crossover_addresses_h0[0])
+        self.assertEqual((2, 12, True), crossover_addresses_h0[1])
+
+        self.assertEqual((0, 4, False), crossover_addresses_h1[0])
+
+        self.assertEqual((0, 12, False), crossover_addresses_h2[0])
+
+    def test_3_helix_2_crossovers_1_loopout(self) -> None:
+        '''
+          0         1          2
+          012345678901234567890
+        0 [---+[------+[------+
+              |       |        \
+        1 [---+       |        |
+                      |        /
+        2      <------+<------+
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(8).cross(2).move(-8)
+        design3h.draw_strand(0, 13).move(8).loopout(2, 3).move(-8)
+        f1 = 4 / 10.5
+        f2 = 12 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account of minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
+        exp_h0_roll = (-ave_h0) % 360
+
+        ave_h1 = a1 + 150  # helix 0 at 0 degrees relative to helix 1
+        exp_h1_roll = (-ave_h1) % 360
+
+        ave_h2 = a2 + 150 - (-90)  # helix 0 at -90 degrees relative to helix 2
+        exp_h2_roll = (-ave_h2) % 360
+
+        design3h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design3h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
+        self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
+
     def test_3_helix_6_crossover(self) -> None:
         '''
           0         1         2         3         4         5         6
@@ -8275,7 +8347,7 @@ class TestHelixRollRelax(unittest.TestCase):
 
         1 <---]<--------]
         '''
-        initial_roll = 30
+        initial_roll = 30.0
         helices = [sc.Helix(max_offset=60, roll=initial_roll) for _ in range(2)]
         design2h = sc.Design(helices=helices, grid=sc.square)
         design2h.draw_strand(0, 0).move(5)
@@ -8313,11 +8385,11 @@ class TestHelixRollRelax(unittest.TestCase):
     def test_helix_crossovers(self) -> None:
         ############################################
         # 3-helix design with 3 strands
-        xs0 = self.design3helix3strand.helices[0].crossovers()
+        xs0 = self.design3helix3strand.helices[0].crossover_addresses()
         self.assertEqual(len(xs0), 3)
-        o0, h0, f0 = xs0[0]
-        o1, h1, f1 = xs0[1]
-        o2, h2, f2 = xs0[2]
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)
@@ -8328,10 +8400,10 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f1, True)
         self.assertEqual(f2, True)
 
-        xs1 = self.design3helix3strand.helices[1].crossovers()
+        xs1 = self.design3helix3strand.helices[1].crossover_addresses()
         self.assertEqual(len(xs1), 2)
-        o0, h0, f0 = xs1[0]
-        o1, h1, f1 = xs1[1]
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 26)
         self.assertEqual(h0, 0)
@@ -8339,20 +8411,20 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f0, False)
         self.assertEqual(f1, False)
 
-        xs2 = self.design3helix3strand.helices[2].crossovers()
+        xs2 = self.design3helix3strand.helices[2].crossover_addresses()
         self.assertEqual(len(xs2), 1)
-        o0, h0, f0 = xs2[0]
+        h0, o0, f0 = xs2[0]
         self.assertEqual(o0, 14)
         self.assertEqual(h0, 0)
         self.assertEqual(h0, False)
 
         ############################################
         # 2-helix design
-        xs0 = self.design2h.helices[0].crossovers()
+        xs0 = self.design2h.helices[0].crossover_addresses()
         self.assertEqual(len(xs0), 3)
-        o0, h0, f0 = xs0[0]
-        o1, h1, f1 = xs0[1]
-        o2, h2, f2 = xs0[2]
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)
@@ -8363,11 +8435,11 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(h1, True)
         self.assertEqual(h2, True)
 
-        xs1 = self.design2h.helices[1].crossovers()
+        xs1 = self.design2h.helices[1].crossover_addresses()
         self.assertEqual(len(xs1), 3)
-        o0, h0, f0 = xs1[0]
-        o1, h1, f1 = xs1[1]
-        o2, h2, f2 = xs1[2]
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
+        h2, o2, f2 = xs1[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)

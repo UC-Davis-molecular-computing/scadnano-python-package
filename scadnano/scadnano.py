@@ -1763,35 +1763,44 @@ class Helix(_JSONSerializable):
         angle %= 360
         return angle
 
-    def crossovers(self) -> List[Tuple[int, int, bool]]:
+    def crossover_addresses(self) -> List[Tuple[int, int, bool]]:
         """
         :return:
-            list of triples (`offset`, `helix_idx`, `forward`) of all crossovers incident to this
+            list of triples (`helix_idx`, `offset`, `forward`) of all crossovers incident to this
             :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
             :data:`Helix.idx` of the other :any:`Helix` incident to the crossover.
         """
-        crossovers: List[Tuple[int, int, bool]] = []
+        addresses: List[Tuple[int, int, bool]] = []
         for domain in self.domains:
             strand = domain.strand()
             domains_on_strand = strand.bound_domains()
             num_domains = len(domains_on_strand)
             domain_idx = domains_on_strand.index(domain)
+            domain_idx_in_substrands = strand.domains.index(domain)
 
             # if not first domain, then there is a crossover to the previous domain
             if domain_idx > 0:
-                offset = domain.offset_5p()
-                other_domain = domains_on_strand[domain_idx - 1]
-                other_helix_idx = other_domain.helix
-                crossovers.append((offset, other_helix_idx, domain.forward))
+                # ... unless there's a loopout between them
+                previous_substrand = strand.domains[domain_idx_in_substrands - 1]
+                if isinstance(previous_substrand, Domain):
+                    offset = domain.offset_5p()
+                    other_domain = domains_on_strand[domain_idx - 1]
+                    assert previous_substrand == other_domain
+                    other_helix_idx = other_domain.helix
+                    addresses.append((other_helix_idx, offset, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
             if domain_idx < num_domains - 1:
-                offset = domain.offset_3p()
-                other_domain = domains_on_strand[domain_idx + 1]
-                other_helix_idx = other_domain.helix
-                crossovers.append((offset, other_helix_idx, domain.forward))
+                # ... unless there's a loopout between them
+                next_substrand = strand.domains[domain_idx_in_substrands + 1]
+                if isinstance(next_substrand, Domain):
+                    offset = domain.offset_3p()
+                    other_domain = domains_on_strand[domain_idx + 1]
+                    assert next_substrand == other_domain
+                    other_helix_idx = other_domain.helix
+                    addresses.append((other_helix_idx, offset, domain.forward))
 
-        return crossovers
+        return addresses
 
     def relax_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> None:
         """
@@ -1806,7 +1815,7 @@ class Helix(_JSONSerializable):
         rather than changing the field :data:`Helix.roll`.
         """
         angles = []
-        for offset, helix_idx, forward in self.crossovers():
+        for helix_idx, offset, forward in self.crossover_addresses():
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
             crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
