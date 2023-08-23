@@ -1764,8 +1764,10 @@ class Helix(_JSONSerializable):
         angle %= 360
         return angle
 
-    def crossover_addresses(self) -> List[Tuple[int, int, bool]]:
+    def crossover_addresses(self, disallow_intrahelix=False) -> List[Tuple[int, int, bool]]:
         """
+        :param disallow_intrahelix:
+            if ``True``, then do not return crossovers to the same :any:`Helix` as this :any:`Helix`
         :return:
             list of triples (`helix_idx`, `offset`, `forward`) of all crossovers incident to this
             :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
@@ -1788,7 +1790,8 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx - 1]
                     assert previous_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    addresses.append((other_helix_idx, offset, domain.forward))
+                    if not disallow_intrahelix or other_helix_idx != self.idx:
+                        addresses.append((other_helix_idx, offset, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
             if domain_idx < num_domains - 1:
@@ -1799,7 +1802,8 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx + 1]
                     assert next_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    addresses.append((other_helix_idx, offset, domain.forward))
+                    if not disallow_intrahelix or other_helix_idx != self.idx:
+                        addresses.append((other_helix_idx, offset, domain.forward))
 
         return addresses
 
@@ -2934,6 +2938,12 @@ class StrandBuilder:
         "relative move", whereas :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to`
         are "absolute moves".
 
+        **NOTE**: The parameter `delta` does not indicate how much we move from the current offset.
+        It indicates the total length of the domain after the move. For instance, if we are currently
+        on offset 10, and we call ``move(5)``, this will create a domain starting at offset 10 and ending
+        at offset 14, for a total length of 5, occuping 5 offsets: 10, 11, 12, 13, 14. (But if we imagine
+        moving from offset 10, we've only moved by 4 offsets to arrive at 14, not 5 offsets.)
+
         This updates the underlying :any:`Design` with a new :any:`Domain`,
         and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
         also a new :any:`Loopout`.
@@ -3542,7 +3552,7 @@ class Strand(_JSONSerializable):
         nums = json.loads(strand.label)  # nums is now the list [1, 2, 3]
     """
 
-    # not serialized; efficient way to see a list of all domains on a given helix
+    # not serialized; efficient way to see a list of all domains on a given helix on this strand
     _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
 
@@ -3567,14 +3577,14 @@ class Strand(_JSONSerializable):
         self.modifications_int = modifications_int if modifications_int is not None else dict()
         self.name = name
         self.label = label
-        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None else dict()
+        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None \
+            else defaultdict(list)
         if dna_sequence is not None:
             self.set_dna_sequence(dna_sequence)
         self.__post_init__()
 
     def __post_init__(self) -> None:
         self._ensure_domains_not_none()
-        self._helix_idx_domain_map = defaultdict(list)
 
         self.set_domains(self.domains)
 
@@ -6913,7 +6923,17 @@ class Design(_JSONSerializable):
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         if isinstance(domain, Domain):
-            self.helices[domain.helix].domains.append(domain)
+            domains_on_helix = self.helices[domain.helix].domains
+            if len(domains_on_helix) == 0:
+                domains_on_helix.append(domain)
+            else:
+                i = 0
+                while (i < len(domains_on_helix) and
+                       (domains_on_helix[i].start, domains_on_helix[i].forward) <
+                       (domain.start, domain.forward)):
+                    i += 1
+                domains_on_helix.insert(i, domain)
+            # self.helices[domain.helix].domains.append(domain)
             self._check_strands_overlap_legally(domain_to_check=domain)
 
     def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:
