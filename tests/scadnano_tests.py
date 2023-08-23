@@ -8386,7 +8386,7 @@ class TestHelixRollRelax(unittest.TestCase):
         '''
         self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
         self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
-    
+
         f1 = 4 / 10.5
         f2 = 14 / 10.5
         f3 = 26 / 10.5
@@ -8510,7 +8510,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
         self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
 
-        xs0 = self.design2h.helices[0].crossover_addresses(disallow_intrahelix=True)
+        xs0 = self.design2h.helices[0].crossover_addresses(allow_intrahelix=False)
         self.assertEqual(len(xs0), 3)
         h0, o0, f0 = xs0[0]
         h1, o1, f1 = xs0[1]
@@ -8525,7 +8525,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f1, True)
         self.assertEqual(f2, True)
 
-        xs1 = self.design2h.helices[1].crossover_addresses(disallow_intrahelix=True)
+        xs1 = self.design2h.helices[1].crossover_addresses(allow_intrahelix=False)
         self.assertEqual(len(xs1), 3)
         h0, o0, f0 = xs1[0]
         h1, o1, f1 = xs1[1]
@@ -8550,7 +8550,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
         self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
 
-        xs0 = self.design2h.helices[0].crossover_addresses(disallow_intrahelix=False)
+        xs0 = self.design2h.helices[0].crossover_addresses(allow_intrahelix=True)
         self.assertEqual(len(xs0), 5)
         h0, o0, f0 = xs0[0]
         h1, o1, f1 = xs0[1]
@@ -8573,7 +8573,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f3, True)
         self.assertEqual(f4, True)
 
-        xs1 = self.design2h.helices[1].crossover_addresses(disallow_intrahelix=False)
+        xs1 = self.design2h.helices[1].crossover_addresses(allow_intrahelix=True)
         self.assertEqual(len(xs1), 5)
         h0, o0, f0 = xs1[0]
         h1, o1, f1 = xs1[1]

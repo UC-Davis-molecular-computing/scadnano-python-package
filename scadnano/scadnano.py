@@ -1764,10 +1764,10 @@ class Helix(_JSONSerializable):
         angle %= 360
         return angle
 
-    def crossover_addresses(self, disallow_intrahelix=False) -> List[Tuple[int, int, bool]]:
+    def crossover_addresses(self, allow_intrahelix=True) -> List[Tuple[int, int, bool]]:
         """
-        :param disallow_intrahelix:
-            if ``True``, then do not return crossovers to the same :any:`Helix` as this :any:`Helix`
+        :param allow_intrahelix:
+            if ``False``, then do not return crossovers to the same :any:`Helix` as this :any:`Helix`
         :return:
             list of triples (`helix_idx`, `offset`, `forward`) of all crossovers incident to this
             :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
@@ -1790,7 +1790,7 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx - 1]
                     assert previous_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    if not disallow_intrahelix or other_helix_idx != self.idx:
+                    if allow_intrahelix or other_helix_idx != self.idx:
                         addresses.append((other_helix_idx, offset, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
@@ -1802,7 +1802,7 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx + 1]
                     assert next_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    if not disallow_intrahelix or other_helix_idx != self.idx:
+                    if allow_intrahelix or other_helix_idx != self.idx:
                         addresses.append((other_helix_idx, offset, domain.forward))
 
         return addresses
@@ -1820,7 +1820,8 @@ class Helix(_JSONSerializable):
         without actually altering the field :data:`Helix.roll`.
         """
         angles = []
-        for helix_idx, offset, forward in self.crossover_addresses(disallow_intrahelix=True):
+        addresses = self.crossover_addresses(allow_intrahelix=False)
+        for helix_idx, offset, forward in addresses:
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
             crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
