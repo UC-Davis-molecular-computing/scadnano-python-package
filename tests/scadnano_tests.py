@@ -8438,7 +8438,7 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(h0, 0)
         self.assertEqual(h0, False)
 
-    def test_helix_crossover_addresses_2_helix_2_strand(self) -> None:
+    def test_helix_crossover_addresses_2_helix_3_strand(self) -> None:
         xs0 = self.design2h.helices[0].crossover_addresses()
         self.assertEqual(len(xs0), 3)
         h0, o0, f0 = xs0[0]
