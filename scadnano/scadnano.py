@@ -1764,15 +1764,32 @@ class Helix(_JSONSerializable):
         angle %= 360
         return angle
 
-    def crossover_addresses(self, allow_intrahelix=True) -> List[Tuple[int, int, bool]]:
+    def crossover_addresses(self,
+                            helices: Dict[int, Helix],
+                            allow_intrahelix: bool = True,
+                            allow_intergroup: bool = True) -> List[Tuple[int, int, bool]]:
         """
+        :param helices:
+            The dict of helices in which this :any:`Helix` is contained, that contains other helices
+            to which it might be connected by crossovers.
         :param allow_intrahelix:
             if ``False``, then do not return crossovers to the same :any:`Helix` as this :any:`Helix`
+        :param allow_intergroup:
+            if ``False``, then do not return crossovers to a :any:`Helix` in a different helix group
+            as this :any:`Helix`
         :return:
             list of triples (`helix_idx`, `offset`, `forward`) of all crossovers incident to this
             :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
             :data:`Helix.idx` of the other :any:`Helix` incident to the crossover.
         """
+
+        def allow_crossover_to(other_helix: Helix) -> bool:
+            if not allow_intrahelix and other_helix.idx == self.idx:
+                return False
+            if not allow_intergroup and other_helix.group != self.group:
+                return False
+            return True
+
         addresses: List[Tuple[int, int, bool]] = []
         for domain in self.domains:
             strand = domain.strand()
@@ -1790,7 +1807,8 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx - 1]
                     assert previous_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    if allow_intrahelix or other_helix_idx != self.idx:
+                    other_helix = helices[other_helix_idx]
+                    if allow_crossover_to(other_helix):
                         addresses.append((other_helix_idx, offset, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
@@ -1802,7 +1820,8 @@ class Helix(_JSONSerializable):
                     other_domain = domains_on_strand[domain_idx + 1]
                     assert next_substrand == other_domain
                     other_helix_idx = other_domain.helix
-                    if allow_intrahelix or other_helix_idx != self.idx:
+                    other_helix = helices[other_helix_idx]
+                    if allow_crossover_to(other_helix):
                         addresses.append((other_helix_idx, offset, domain.forward))
 
         return addresses
@@ -1820,7 +1839,7 @@ class Helix(_JSONSerializable):
         without actually altering the field :data:`Helix.roll`.
         """
         angles = []
-        addresses = self.crossover_addresses(allow_intrahelix=False)
+        addresses = self.crossover_addresses(helices, allow_intrahelix=False)
         for helix_idx, offset, forward in addresses:
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
