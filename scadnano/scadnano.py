@@ -1820,7 +1820,7 @@ class Helix(_JSONSerializable):
         without actually altering the field :data:`Helix.roll`.
         """
         angles = []
-        for helix_idx, offset, forward in self.crossover_addresses():
+        for helix_idx, offset, forward in self.crossover_addresses(disallow_intrahelix=True):
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
             crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
