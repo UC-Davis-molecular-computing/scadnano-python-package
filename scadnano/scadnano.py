@@ -1839,7 +1839,7 @@ class Helix(_JSONSerializable):
         without actually altering the field :data:`Helix.roll`.
         """
         angles = []
-        addresses = self.crossover_addresses(helices, allow_intrahelix=False)
+        addresses = self.crossover_addresses(helices, allow_intrahelix=False, allow_intergroup=False)
         for helix_idx, offset, forward in addresses:
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
