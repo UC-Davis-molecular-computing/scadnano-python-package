@@ -1783,10 +1783,10 @@ class Helix(_JSONSerializable):
             :data:`Helix.idx` of the other :any:`Helix` incident to the crossover.
         """
 
-        def allow_crossover_to(other_helix: Helix) -> bool:
-            if not allow_intrahelix and other_helix.idx == self.idx:
+        def allow_crossover_to(helix2: Helix) -> bool:
+            if not allow_intrahelix and helix2.idx == self.idx:
                 return False
-            if not allow_intergroup and other_helix.group != self.group:
+            if not allow_intergroup and helix2.group != self.group:
                 return False
             return True
 
