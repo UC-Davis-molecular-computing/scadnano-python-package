@@ -70,7 +70,7 @@ The design should look similar to the first screenshot in the tutorial.
 ## Create empty design
 
 Now we will see how to create the design using the Python scripting package. 
-We first note that the module [origami_rectangle](../scadnano/origami_rectangle.py), included as part of the scadnano Python package, can be used to create DNA origami rectangles. However, for the purpose of this tutorial, we will see how to do it just using the scadnano Python module in [scadnano.py](../scadnano/scadnano.py).
+We first note that the module [origami_rectangle](../scadnano/origami_rectangle.py), included as part of the scadnano Python package, can be used to create DNA origami rectangles. However, for the purpose of this tutorial, we will see how to do it just using the scadnano Python module.
 
 Create an empty text file named `24_helix_rectangle.py`, and paste the following text into it:
 
@@ -582,7 +582,7 @@ def main() -> None:
     design.write_idt_plate_excel_file() ###
 ```
 
-This will write a Microsoft Excel file named `24_helix_rectangle.xls` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
+This will write a Microsoft Excel file named `24_helix_rectangle.xlsx` readable by the web interface of IDT for used when ordering strands in 96-well plates: https://www.idtdna.com/site/order/plate/index/dna/1800
 
 The Excel file should look similar to this:
 
