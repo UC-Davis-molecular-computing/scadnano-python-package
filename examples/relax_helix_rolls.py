@@ -70,7 +70,20 @@ def create_design() -> sc.Design:
 
     design3h2.relax_helix_rolls()
 
-    return design3h2
+    # return design3h2
+
+    helices = [sc.Helix(max_offset=11) for _ in range(2)]
+    design2 = sc.Design(helices=helices, grid=sc.square)
+    design2.draw_strand(0, 0).move(5).cross(1).move(-5)
+    design2.draw_strand(0, 5).move(6).cross(1).move(-6)
+
+    for helix in design2.helices.values():
+        helix.major_ticks = [0, 5, 11]
+
+    design2.relax_helix_rolls()
+    # design2.relax_helix_rolls()
+
+    return design2
 
 
 if __name__ == '__main__':

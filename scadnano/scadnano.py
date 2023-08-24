@@ -53,7 +53,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.18.1"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.18.2"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -485,11 +485,12 @@ def m13(rotation: int = 5587, variant: M13Variant = M13Variant.p7249) -> str:
     so assigning this sequence to the scaffold :any:`Strand` in a :any:`Design`
     means that the "5' end" of the scaffold :any:`Strand` 
     (which is a fiction since the actual circular DNA strand has no endpoint) 
-    will have the sequence starting at position 5587 starting at the displayed 5' in scadnano,
-    assigned until the displayed 3' end. 
+    will have the sequence starting at position 5587 (if another value for `rotation` is not specified) 
+    starting at the displayed 5' in scadnano, assigned until the displayed 3' end. 
     Assuming the displayed scaffold :any:`Strand` has length :math:`n < 7249`, then a loopout of length 
     :math:`7249 - n` consisting of the undisplayed bases will be present in the actual DNA structure.
-    For a more detailed discussion of why this particular rotation of M13 is chosen,
+    
+    For a more detailed discussion of why this particular rotation of M13 is chosen as the default,
     see 
     `Supplementary Note S8 <http://www.dna.caltech.edu/Papers/DNAorigami-supp1.linux.pdf>`_ 
     in
@@ -1763,56 +1764,92 @@ class Helix(_JSONSerializable):
         angle %= 360
         return angle
 
-    def crossovers(self) -> List[Tuple[int, int, bool]]:
+    def crossover_addresses(self,
+                            helices: Dict[int, Helix],
+                            allow_intrahelix: bool = True,
+                            allow_intergroup: bool = True) -> List[Tuple[int, int, bool]]:
         """
+        :param helices:
+            The dict of helices in which this :any:`Helix` is contained, that contains other helices
+            to which it might be connected by crossovers.
+        :param allow_intrahelix:
+            if ``False``, then do not return crossovers to the same :any:`Helix` as this :any:`Helix`
+        :param allow_intergroup:
+            if ``False``, then do not return crossovers to a :any:`Helix` in a different helix group
+            as this :any:`Helix`
         :return:
-            list of triples (`offset`, `helix_idx`, `forward`) of all crossovers incident to this
+            list of triples (`helix_idx`, `offset`, `forward`) of all crossovers incident to this
             :any:`Helix`, where `offset` is the offset of the crossover and `helix_idx` is the
             :data:`Helix.idx` of the other :any:`Helix` incident to the crossover.
         """
-        crossovers: List[Tuple[int, int, bool]] = []
+
+        def allow_crossover_to(helix2: Helix) -> bool:
+            if not allow_intrahelix and helix2.idx == self.idx:
+                return False
+            if not allow_intergroup and helix2.group != self.group:
+                return False
+            return True
+
+        addresses: List[Tuple[int, int, bool]] = []
         for domain in self.domains:
             strand = domain.strand()
-            domains = strand.bound_domains()
-            num_domains = len(domains)
-            domain_idx = domains.index(domain)
+            domains_on_strand = strand.bound_domains()
+            num_domains = len(domains_on_strand)
+            domain_idx = domains_on_strand.index(domain)
+            domain_idx_in_substrands = strand.domains.index(domain)
 
             # if not first domain, then there is a crossover to the previous domain
             if domain_idx > 0:
-                offset = domain.offset_5p()
-                other_domain = domains[domain_idx - 1]
-                other_helix_idx = other_domain.helix
-                crossovers.append((offset, other_helix_idx, domain.forward))
+                # ... unless there's a loopout between them
+                previous_substrand = strand.domains[domain_idx_in_substrands - 1]
+                if isinstance(previous_substrand, Domain):
+                    offset = domain.offset_5p()
+                    other_domain = domains_on_strand[domain_idx - 1]
+                    assert previous_substrand == other_domain
+                    other_helix_idx = other_domain.helix
+                    other_helix = helices[other_helix_idx]
+                    if allow_crossover_to(other_helix):
+                        addresses.append((other_helix_idx, offset, domain.forward))
 
             # if not last domain, then there is a crossover to the next domain
             if domain_idx < num_domains - 1:
-                offset = domain.offset_3p()
-                other_domain = domains[domain_idx + 1]
-                other_helix_idx = other_domain.helix
-                crossovers.append((offset, other_helix_idx, domain.forward))
+                # ... unless there's a loopout between them
+                next_substrand = strand.domains[domain_idx_in_substrands + 1]
+                if isinstance(next_substrand, Domain):
+                    offset = domain.offset_3p()
+                    other_domain = domains_on_strand[domain_idx + 1]
+                    assert next_substrand == other_domain
+                    other_helix_idx = other_domain.helix
+                    other_helix = helices[other_helix_idx]
+                    if allow_crossover_to(other_helix):
+                        addresses.append((other_helix_idx, offset, domain.forward))
 
-        return crossovers
+        return addresses
 
     def relax_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> None:
         """
         Like :meth:`Design.relax_helix_rolls`, but only for this :any:`Helix`.
         """
-        angle = self.compute_relaxed_roll(helices, grid, geometry)
-        self.roll = angle
+        roll_delta = self.compute_relaxed_roll_delta(helices, grid, geometry)
+        self.roll += roll_delta
 
-    def compute_relaxed_roll(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
+    def compute_relaxed_roll_delta(self, helices: Dict[int, Helix], grid: Grid, geometry: Geometry) -> float:
         """
-        Like :meth:`Helix.relax_roll`, but just returns the new roll without altering this :any:`Helix`,
-        rather than changing the field :data:`Helix.roll`.
+        Like :meth:`Helix.relax_roll`, but just returns the amount by which to rotate the current roll,
+        without actually altering the field :data:`Helix.roll`.
         """
         angles = []
-        for offset, helix_idx, forward in self.crossovers():
+        addresses = self.crossover_addresses(helices, allow_intrahelix=False, allow_intergroup=False)
+        for helix_idx, offset, forward in addresses:
             other_helix = helices[helix_idx]
             angle_of_other_helix = angle_from_helix_to_helix(self, other_helix, grid, geometry)
             crossover_angle = self.backbone_angle_at_offset(offset, forward, geometry)
             relative_angle = (crossover_angle, angle_of_other_helix)
             angles.append(relative_angle)
-        angle = minimum_strain_angle(angles)
+        if len(angles) == 0:
+            angle = 0.0
+        else:
+            angle = minimum_strain_angle(angles)
         return angle
 
 
@@ -1875,6 +1912,8 @@ def minimum_strain_angle(relative_angles: List[Tuple[float, float]]) -> float:
         (but not changing any "zero angle" :math:`\mu_i`)
         such that :math:`\sum_i [(\theta + \theta_i) - \mu_i]^2` is minimized.
     """
+    if len(relative_angles) == 0:
+        raise ValueError('cannot find minimum strain angle unless relative_angles is nonempty')
     adjusted_angles = [angle - zero_angle for angle, zero_angle in relative_angles]
     ave_angle = average_angle(adjusted_angles)
     min_strain_angle = -ave_angle
@@ -1917,6 +1956,8 @@ def average_angle(angles: List[float]) -> float:
         average angle of the list of angles, normalized to be between 0 and 360.
     """
     num_angles = len(angles)
+    if num_angles == 0:
+        raise ValueError('cannot take average of empty list of angles')
     mean_angle = sum(angles) / num_angles
     min_dist = float('inf')
     optimal_angle = 0
@@ -2775,8 +2816,8 @@ class StrandBuilder:
     def cross(self, helix: int, offset: Optional[int] = None, move: Optional[int] = None) \
             -> StrandBuilder:
         """
-        Add crossover. To have any effect, must be followed by call to :py:meth:`StrandBuilder.to`
-        or :py:meth:`StrandBuilder.move`.
+        Add crossover. To have any effect, must be followed by call to :meth:`StrandBuilder.to`
+        or :meth:`StrandBuilder.move`.
 
         :param helix: :any:`Helix` to crossover to
         :param offset: new offset on `helix`. If not specified, defaults to current offset.
@@ -2788,8 +2829,13 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if helix not in self.design.helices:
+            helix_idxs_str = ", ".join(str(idx) for idx in self.design.helices.keys())
+            raise IllegalDesignError(f'cannot cross to helix {helix} since it does not exist;\n'
+                                     f'valid helix indices: {helix_idxs_str}')
         if self._strand is None:
-            raise ValueError('no Strand created yet; make at least one domain first')
+            raise ValueError('cannot cross because no Strand created yet; make at least one domain first '
+                             'using move() or to()')
         if self._most_recently_added_substrand_is_extension():
             raise IllegalDesignError('Cannot cross after an extension.')
         if move is not None and offset is not None:
@@ -2826,8 +2872,14 @@ class StrandBuilder:
             Mutually excusive with `offset`.
         :return: self
         """
+        if helix not in self.design.helices:
+            helix_idxs_str = ", ".join(str(idx) for idx in self.design.helices.keys())
+            raise IllegalDesignError(f'cannot loopout to helix {helix} since it does not exist;\n'
+                                     f'valid helix indices: {helix_idxs_str}')
+
         if self._strand is None:
-            raise ValueError('no Strand created yet; make at least one domain first')
+            raise ValueError('cannot loopout because no Strand created yet; make at least one domain first '
+                             'using move() or to()')
         self.cross(helix, offset=offset, move=move)
         self.design.append_domain(self._strand, Loopout(length))
         return self
@@ -2905,6 +2957,12 @@ class StrandBuilder:
         plus `delta`, which adds a new :any:`Domain` to the :any:`Strand` being built. This is a
         "relative move", whereas :py:meth:`StrandBuilder.to` and :py:meth:`StrandBuilder.update_to`
         are "absolute moves".
+
+        **NOTE**: The parameter `delta` does not indicate how much we move from the current offset.
+        It indicates the total length of the domain after the move. For instance, if we are currently
+        on offset 10, and we call ``move(5)``, this will create a domain starting at offset 10 and ending
+        at offset 14, for a total length of 5, occuping 5 offsets: 10, 11, 12, 13, 14. (But if we imagine
+        moving from offset 10, we've only moved by 4 offsets to arrive at 14, not 5 offsets.)
 
         This updates the underlying :any:`Design` with a new :any:`Domain`,
         and if :py:meth:`StrandBuilder.loopout` was last called on this :any:`StrandBuilder`,
@@ -3514,7 +3572,7 @@ class Strand(_JSONSerializable):
         nums = json.loads(strand.label)  # nums is now the list [1, 2, 3]
     """
 
-    # not serialized; efficient way to see a list of all domains on a given helix
+    # not serialized; efficient way to see a list of all domains on a given helix on this strand
     _helix_idx_domain_map: Dict[int, List[Domain]] = field(
         init=False, repr=False, compare=False, default_factory=dict)
 
@@ -3539,14 +3597,14 @@ class Strand(_JSONSerializable):
         self.modifications_int = modifications_int if modifications_int is not None else dict()
         self.name = name
         self.label = label
-        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None else dict()
+        self._helix_idx_domain_map = _helix_idx_domain_map if _helix_idx_domain_map is not None \
+            else defaultdict(list)
         if dna_sequence is not None:
             self.set_dna_sequence(dna_sequence)
         self.__post_init__()
 
     def __post_init__(self) -> None:
         self._ensure_domains_not_none()
-        self._helix_idx_domain_map = defaultdict(list)
 
         self.set_domains(self.domains)
 
@@ -6885,7 +6943,17 @@ class Design(_JSONSerializable):
         self._check_strand_references_legal_helices(strand)
         self._check_loopouts_not_consecutive_or_singletons_or_zero_length()
         if isinstance(domain, Domain):
-            self.helices[domain.helix].domains.append(domain)
+            domains_on_helix = self.helices[domain.helix].domains
+            if len(domains_on_helix) == 0:
+                domains_on_helix.append(domain)
+            else:
+                i = 0
+                while (i < len(domains_on_helix) and
+                       (domains_on_helix[i].start, domains_on_helix[i].forward) <
+                       (domain.start, domain.forward)):
+                    i += 1
+                domains_on_helix.insert(i, domain)
+            # self.helices[domain.helix].domains.append(domain)
             self._check_strands_overlap_legally(domain_to_check=domain)
 
     def remove_domain(self, strand: Strand, domain: Union[Domain, Loopout]) -> None:

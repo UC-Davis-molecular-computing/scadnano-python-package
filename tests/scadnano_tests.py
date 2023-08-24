@@ -8149,12 +8149,7 @@ class TestHelixRollRelax(unittest.TestCase):
           0123456789012345678901234567890123456789
         0 [---+[--------+[----------+
               |         |           |
-        1 [---+<--------+<----------+
-
-        angle (fraction of 360)
-             4/10.5
-                     (14-10.5)/10.5 = 3.5/10.5
-                               (26-21)/10.5 = 5/10.5
+        1 <---+<--------+<----------+
         '''
         self.design2h = sc.Design(helices=[sc.Helix(max_offset=50) for _ in range(2)])
         # helix 0 forward
@@ -8166,7 +8161,7 @@ class TestHelixRollRelax(unittest.TestCase):
           0123456789012345678901234567890123456789
         0 [---+[--------+[----------+
               |         |           |
-        1 [---+         |<----------+
+        1 <---+         |<----------+
                         |
         2      <--------+
         '''
@@ -8182,7 +8177,7 @@ class TestHelixRollRelax(unittest.TestCase):
           012345678901234
         0 [---+[------+
               |       |
-        1 [---+       |
+        1 <---+       |
                       |
         2      <------+
         '''
@@ -8197,7 +8192,79 @@ class TestHelixRollRelax(unittest.TestCase):
         a2 = f2 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
+        exp_h0_roll = (-ave_h0) % 360
+
+        ave_h1 = a1 + 150  # helix 0 at 0 degrees relative to helix 1
+        exp_h1_roll = (-ave_h1) % 360
+
+        ave_h2 = a2 + 150 - (-90)  # helix 0 at -90 degrees relative to helix 2
+        exp_h2_roll = (-ave_h2) % 360
+
+        design3h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design3h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
+        self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
+
+    def test_3_helix_2_crossovers_1_loopout_crossovers_method(self) -> None:
+        '''
+          0         1          2
+          012345678901234567890
+        0 [---+[------+[------+
+              |       |        \
+        1 <---+       |        |
+                      |        /
+        2      <------+<------+
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(8).cross(2).move(-8)
+        design3h.draw_strand(0, 13).move(8).loopout(2, 3).move(-8)
+
+        crossover_addresses_h0 = helices[0].crossover_addresses(design3h.helices)
+        crossover_addresses_h1 = helices[1].crossover_addresses(design3h.helices)
+        crossover_addresses_h2 = helices[2].crossover_addresses(design3h.helices)
+
+        self.assertEqual(2, len(crossover_addresses_h0))
+        self.assertEqual(1, len(crossover_addresses_h1))
+        self.assertEqual(1, len(crossover_addresses_h2))
+
+        self.assertEqual((1, 4, True), crossover_addresses_h0[0])
+        self.assertEqual((2, 12, True), crossover_addresses_h0[1])
+
+        self.assertEqual((0, 4, False), crossover_addresses_h1[0])
+
+        self.assertEqual((0, 12, False), crossover_addresses_h2[0])
+
+    def test_3_helix_2_crossovers_1_loopout(self) -> None:
+        '''
+          0         1          2
+          012345678901234567890
+        0 [---+[------+[------+
+              |       |        \
+        1 <---+       |        |
+                      |        /
+        2      <------+<------+
+        '''
+        helices = [sc.Helix(max_offset=60) for _ in range(3)]
+        helices[2].grid_position = (1, 0)
+        design3h = sc.Design(helices=helices, grid=sc.square)
+        design3h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design3h.draw_strand(0, 5).move(8).cross(2).move(-8)
+        design3h.draw_strand(0, 13).move(8).loopout(2, 3).move(-8)
+        f1 = 4 / 10.5
+        f2 = 12 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 90) / 2  # helix 1 at 180 degrees, helix 2 at 90 degrees
@@ -8221,14 +8288,9 @@ class TestHelixRollRelax(unittest.TestCase):
           012345678901234567890123456789012345678901234567890123456789
         0 [---+[--------+[----------+[------+[--------+[--------+
               |         |           |       |         |         |
-        1 [---+<--------+<----------+       |         |         |
+        1 <---+<--------+<----------+       |         |         |
                                             |         |         |
         2                            <------+<--------+<--------+
-
-        angle (fraction of 360)
-             4/10.5
-                     (15-10.5)/10.5 = 4.5/10.5
-                               (27-21)/10.5 = 6/10.5
         '''
         helices = [sc.Helix(max_offset=60) for _ in range(3)]
         helices[2].grid_position = (1, 0)
@@ -8254,7 +8316,7 @@ class TestHelixRollRelax(unittest.TestCase):
         a6 = f6 * 360 % 360
 
         # rules for angles:
-        # - add 150 if on reverse strand to account of minor groove
+        # - add 150 if on reverse strand to account for minor groove
         # - subtract angle of helix crossover is connecting to
 
         ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180 + a4 - 90 + a5 - 90 + a6 - 90) / 6
@@ -8272,6 +8334,27 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertAlmostEqual(exp_h1_roll, design3h.helices[1].roll)
         self.assertAlmostEqual(exp_h2_roll, design3h.helices[2].roll)
 
+    def test_2_helix_no_crossover(self) -> None:
+        '''
+          0         1         2
+          012345678901234567890
+        0 [--->[-------->
+
+        1 <---]<--------]
+        '''
+        initial_roll = 30.0
+        helices = [sc.Helix(max_offset=60, roll=initial_roll) for _ in range(2)]
+        design2h = sc.Design(helices=helices, grid=sc.square)
+        design2h.draw_strand(0, 0).move(5)
+        design2h.draw_strand(0, 5).move(10)
+        design2h.draw_strand(1, 5).move(-5)
+        design2h.draw_strand(1, 15).move(-10)
+
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(initial_roll, design2h.helices[0].roll)
+        self.assertAlmostEqual(initial_roll, design2h.helices[1].roll)
+
     def test_2_helix_3_crossover(self) -> None:
         f1 = 4 / 10.5
         f2 = 14 / 10.5
@@ -8280,27 +8363,84 @@ class TestHelixRollRelax(unittest.TestCase):
         a2 = f2 * 360 % 360
         a3 = f3 * 360 % 360
 
-        ave = (a1 + a2 + a3) / 3
-        diff_from_optimal = 180 - ave
+        # rules for angles:
+        # - add 150 if on reverse strand to account for minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180) / 3
+        ave_h1 = (a1 + 150 + a2 + 150 + a3 + 150) / 3
+        exp_h0_roll = (-ave_h0) % 360
+        exp_h1_roll = (-ave_h1) % 360
 
         self.design2h.relax_helix_rolls()
-        actual_h0_roll = self.design2h.helices[0].roll % 360
-        actual_h1_roll = self.design2h.helices[1].roll % 360
-        exp_h0_roll = diff_from_optimal % 360
-        # add 180 since optimal roll of bottom helix is opposite that of top
-        # subtract minor_groove_angle since it's the reverse strand on the bottom helix
-        exp_h1_roll = (diff_from_optimal + 180 - self.design2h.geometry.minor_groove_angle) % 360
-        self.assertAlmostEqual(exp_h0_roll, actual_h0_roll)
-        self.assertAlmostEqual(exp_h1_roll, actual_h1_roll)
 
-    def test_helix_crossovers(self) -> None:
-        ############################################
-        # 3-helix design with 3 strands
-        xs0 = self.design3helix3strand.helices[0].crossovers()
+        self.assertAlmostEqual(exp_h0_roll, self.design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, self.design2h.helices[1].roll)
+
+    def test_2_helix_3_crossover_and_intrahelix_crossovers(self) -> None:
+        '''         1         2         3
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+[--+c+-->
+              |         |           |
+        1 [---+<--------+<----------+<--+c+--]
+        '''
+        self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
+        self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
+
+        f1 = 4 / 10.5
+        f2 = 14 / 10.5
+        f3 = 26 / 10.5
+        a1 = f1 * 360 % 360
+        a2 = f2 * 360 % 360
+        a3 = f3 * 360 % 360
+
+        # rules for angles:
+        # - add 150 if on reverse strand to account for minor groove
+        # - subtract angle of helix crossover is connecting to
+
+        ave_h0 = (a1 - 180 + a2 - 180 + a3 - 180) / 3
+        ave_h1 = (a1 + 150 + a2 + 150 + a3 + 150) / 3
+        exp_h0_roll = (-ave_h0) % 360
+        exp_h1_roll = (-ave_h1) % 360
+
+        self.design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, self.design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, self.design2h.helices[1].roll)
+
+    def test_2_helix_2_crossovers_call_relax_twice(self) -> None:
+        '''
+          0         1
+          012345678901234
+        0 [---+[-----+
+              |      |
+        1 [---+<-----+
+        '''
+        helices = [sc.Helix(max_offset=11) for _ in range(2)]
+        design2h = sc.Design(helices=helices, grid=sc.square)
+        design2h.draw_strand(0, 0).move(5).cross(1).move(-5)
+        design2h.draw_strand(0, 5).move(6).cross(1).move(-6)
+
+        exp_h0_roll = 120.0
+        exp_h1_roll = 150.0
+
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design2h.helices[1].roll)
+
+        # test for bug that reset roll; if called twice in a row it should have no effect the second time
+        design2h.relax_helix_rolls()
+
+        self.assertAlmostEqual(exp_h0_roll, design2h.helices[0].roll)
+        self.assertAlmostEqual(exp_h1_roll, design2h.helices[1].roll)
+
+    def test_helix_crossover_addresses_3_helix_3_strand(self) -> None:
+        xs0 = self.design3helix3strand.helices[0].crossover_addresses(self.design3helix3strand.helices)
         self.assertEqual(len(xs0), 3)
-        o0, h0, f0 = xs0[0]
-        o1, h1, f1 = xs0[1]
-        o2, h2, f2 = xs0[2]
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)
@@ -8311,10 +8451,10 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f1, True)
         self.assertEqual(f2, True)
 
-        xs1 = self.design3helix3strand.helices[1].crossovers()
+        xs1 = self.design3helix3strand.helices[1].crossover_addresses(self.design3helix3strand.helices)
         self.assertEqual(len(xs1), 2)
-        o0, h0, f0 = xs1[0]
-        o1, h1, f1 = xs1[1]
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 26)
         self.assertEqual(h0, 0)
@@ -8322,20 +8462,19 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f0, False)
         self.assertEqual(f1, False)
 
-        xs2 = self.design3helix3strand.helices[2].crossovers()
+        xs2 = self.design3helix3strand.helices[2].crossover_addresses(self.design3helix3strand.helices)
         self.assertEqual(len(xs2), 1)
-        o0, h0, f0 = xs2[0]
+        h0, o0, f0 = xs2[0]
         self.assertEqual(o0, 14)
         self.assertEqual(h0, 0)
         self.assertEqual(h0, False)
 
-        ############################################
-        # 2-helix design
-        xs0 = self.design2h.helices[0].crossovers()
+    def test_helix_crossover_addresses_2_helix_3_strand(self) -> None:
+        xs0 = self.design2h.helices[0].crossover_addresses(self.design2h.helices)
         self.assertEqual(len(xs0), 3)
-        o0, h0, f0 = xs0[0]
-        o1, h1, f1 = xs0[1]
-        o2, h2, f2 = xs0[2]
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)
@@ -8346,11 +8485,11 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(h1, True)
         self.assertEqual(h2, True)
 
-        xs1 = self.design2h.helices[1].crossovers()
+        xs1 = self.design2h.helices[1].crossover_addresses(self.design2h.helices)
         self.assertEqual(len(xs1), 3)
-        o0, h0, f0 = xs1[0]
-        o1, h1, f1 = xs1[1]
-        o2, h2, f2 = xs1[2]
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
+        h2, o2, f2 = xs1[2]
         self.assertEqual(o0, 4)
         self.assertEqual(o1, 14)
         self.assertEqual(o2, 26)
@@ -8360,6 +8499,157 @@ class TestHelixRollRelax(unittest.TestCase):
         self.assertEqual(f0, False)
         self.assertEqual(f1, False)
         self.assertEqual(f2, False)
+
+    def test_helix_crossover_addresses_2_helix_disallow_intrahelix_crossovers(self) -> None:
+        '''         1         2         3
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+[--+c+-->
+              |         |           |
+        1 <---+<--------+<----------+<--+c+--]
+        '''
+        self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
+        self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
+
+        xs0 = self.design2h.helices[0].crossover_addresses(self.design2h.helices, allow_intrahelix=False)
+        self.assertEqual(len(xs0), 3)
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 1)
+        self.assertEqual(h1, 1)
+        self.assertEqual(h2, 1)
+        self.assertEqual(f0, True)
+        self.assertEqual(f1, True)
+        self.assertEqual(f2, True)
+
+        xs1 = self.design2h.helices[1].crossover_addresses(self.design2h.helices, allow_intrahelix=False)
+        self.assertEqual(len(xs1), 3)
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
+        h2, o2, f2 = xs1[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h1, 0)
+        self.assertEqual(h2, 0)
+        self.assertEqual(f0, False)
+        self.assertEqual(f1, False)
+        self.assertEqual(f2, False)
+
+    def test_helix_crossover_addresses_2_helix_allow_intrahelix_crossovers(self) -> None:
+        '''         1         2         3
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+[--+c+-->
+              |         |           |
+        1 [---+<--------+<----------+<--+c+--]
+        '''
+        self.design2h.draw_strand(0, 27).move(4).cross(0, 32).move(4)
+        self.design2h.draw_strand(1, 36).move(-4).cross(1, 31).move(-4)
+
+        xs0 = self.design2h.helices[0].crossover_addresses(self.design2h.helices, allow_intrahelix=True)
+        self.assertEqual(len(xs0), 5)
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
+        h3, o3, f3 = xs0[3]
+        h4, o4, f4 = xs0[4]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(o3, 30)
+        self.assertEqual(o4, 32)
+        self.assertEqual(h0, 1)
+        self.assertEqual(h1, 1)
+        self.assertEqual(h2, 1)
+        self.assertEqual(h3, 0)
+        self.assertEqual(h4, 0)
+        self.assertEqual(f0, True)
+        self.assertEqual(f1, True)
+        self.assertEqual(f2, True)
+        self.assertEqual(f3, True)
+        self.assertEqual(f4, True)
+
+        xs1 = self.design2h.helices[1].crossover_addresses(self.design2h.helices, allow_intrahelix=True)
+        self.assertEqual(len(xs1), 5)
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
+        h2, o2, f2 = xs1[2]
+        h3, o3, f3 = xs1[3]
+        h4, o4, f4 = xs1[4]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(o3, 30)
+        self.assertEqual(o4, 32)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h1, 0)
+        self.assertEqual(h2, 0)
+        self.assertEqual(h3, 1)
+        self.assertEqual(h4, 1)
+        self.assertEqual(f0, False)
+        self.assertEqual(f1, False)
+        self.assertEqual(f2, False)
+        self.assertEqual(f3, False)
+        self.assertEqual(f3, False)
+
+    def test_helix_crossover_addresses_2_helix_disallow_intergroup_crossovers(self) -> None:
+        '''         1         2         3
+          0123456789012345678901234567890123456789
+        0 [---+[--------+[----------+[--+
+              |         |           |   |
+        1 <---+<--------+<----------+   |
+                                        |
+        group 2                         |
+        2                            <--+
+        '''
+        group2name = 'group 2'
+        group2 = sc.HelixGroup(position=sc.Position3D(x=0, y=-10, z=0), grid=sc.square,
+                               helices_view_order=[2])
+        self.design2h.groups[group2name] = group2
+        self.design2h.add_helix(2, sc.Helix(max_offset=50, group=group2name))
+        self.design2h.draw_strand(0, 27).move(4).cross(2).move(-4)
+
+        self.assertEqual(2, len(self.design2h.groups))
+
+        exp_group_names = list(self.design2h.groups.keys())
+        self.assertListEqual([sc.default_group_name, group2name], exp_group_names)
+
+        xs0 = self.design2h.helices[0].crossover_addresses(self.design2h.helices, allow_intergroup=False)
+        self.assertEqual(len(xs0), 3)
+        h0, o0, f0 = xs0[0]
+        h1, o1, f1 = xs0[1]
+        h2, o2, f2 = xs0[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 1)
+        self.assertEqual(h1, 1)
+        self.assertEqual(h2, 1)
+        self.assertEqual(f0, True)
+        self.assertEqual(f1, True)
+        self.assertEqual(f2, True)
+
+        xs1 = self.design2h.helices[1].crossover_addresses(self.design2h.helices, allow_intergroup=False)
+        self.assertEqual(len(xs1), 3)
+        h0, o0, f0 = xs1[0]
+        h1, o1, f1 = xs1[1]
+        h2, o2, f2 = xs1[2]
+        self.assertEqual(o0, 4)
+        self.assertEqual(o1, 14)
+        self.assertEqual(o2, 26)
+        self.assertEqual(h0, 0)
+        self.assertEqual(h1, 0)
+        self.assertEqual(h2, 0)
+        self.assertEqual(f0, False)
+        self.assertEqual(f1, False)
+        self.assertEqual(f2, False)
+
+        xs2 = self.design2h.helices[2].crossover_addresses(self.design2h.helices, allow_intergroup=False)
+        self.assertEqual(len(xs2), 0)
 
     def test_minimum_strain_angle_0_10_20_relative_to_0(self) -> None:
         relative_angles = [
