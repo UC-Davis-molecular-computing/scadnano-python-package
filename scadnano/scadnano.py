@@ -1127,7 +1127,7 @@ class ModificationInternal(Modification):
     If instead it is a list of bases, then this is an internal modification that attaches to a base,
     and this lists the allowed bases for this internal modification to be placed at. 
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
-    ``['A','C','G','T']``."""
+    ``{'A','C','G','T'}``."""
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -2128,6 +2128,43 @@ class Domain(_JSONSerializable):
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
 
+    def idt_dna_sequence(self) -> Optional[str]:
+        """
+        :return:
+            IDT DNA sequence of this :any:`Domain`, or ``None`` if no DNA sequence has been assigned.
+            The difference between this and the field :data:`Domain.dna_sequence` is that this
+            will add internal modification codes.
+        """
+        if self.dna_sequence is None:
+            return None
+
+        strand = self.strand()
+        len_dna_prior = 0
+        for domain in strand.domains:
+            if domain is self:
+                break
+            len_dna_prior += domain.dna_length()
+
+        new_seq_list = []
+        for pos, base in enumerate(self.dna_sequence):
+            new_seq_list.append(base)
+            strand_pos = pos + len_dna_prior
+            if strand_pos in strand.modifications_int:  # if internal mod attached to base, replace base
+                mod = strand.modifications_int[strand_pos]
+                if mod.idt_text is not None:
+                    idt_text_with_delim = mod.idt_text
+                    if mod.allowed_bases is not None:
+                        if base not in mod.allowed_bases:
+                            msg = (f'internal modification {mod} can only replace one of these bases: '
+                                   f'{",".join(mod.allowed_bases)}, '
+                                   f'but the base at position {strand_pos} is {base}')
+                            raise IllegalDesignError(msg)
+                        new_seq_list[-1] = idt_text_with_delim  # replace base with modified base
+                    else:
+                        new_seq_list.append(idt_text_with_delim)  # append modification between two bases
+
+        return ''.join(new_seq_list)
+
     def set_name(self, name: str) -> None:
         """Sets name of this :any:`Domain`."""
         self.name = name
@@ -3042,8 +3079,8 @@ class StrandBuilder:
 
     def update_to(self, offset: int) -> StrandBuilder:
         """
-        Like :py:meth:`StrandBuilder.to`, but changes the current offset without creating
-        a new :any:`Domain`. So unlike :py:meth:`StrandBuilder.to`, several consecutive calls to
+        Like :meth:`StrandBuilder.to`, but changes the current offset without creating
+        a new :any:`Domain`. So unlike :meth:`StrandBuilder.to`, several consecutive calls to
         :meth:`StrandBuilder.update_to` are equivalent to only making the final call.
 
         Generally there's no point in calling :meth:`StrandBuilder.update_to` in one line of code.
@@ -3146,19 +3183,19 @@ class StrandBuilder:
         self._strand.set_modification_3p(mod)
         return self
 
-    def with_modification_internal(self, idx: int, mod: ModificationInternal, warn_on_no_dna: bool) \
-            -> StrandBuilder:
+    def with_modification_internal(self, idx: int, mod: ModificationInternal,
+                                   warn_no_dna: bool = True) -> StrandBuilder:
         """
         Sets Strand being built to have given internal modification.
 
         :param idx: idx along DNA sequence of internal modification
         :param mod: internal modification
-        :param warn_on_no_dna: whether to print warning to screen if DNA has not been assigned
+        :param warn_no_dna: whether to print warning to screen if DNA has not been assigned
         :return: self
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
-        self._strand.set_modification_internal(idx, mod, warn_on_no_dna)
+        self._strand.set_modification_internal(idx, mod, warn_no_dna)
         return self
 
     def with_color(self, color: Color) -> StrandBuilder:
@@ -3469,15 +3506,15 @@ class Strand(_JSONSerializable):
     """
 
     domains: List[Union[Domain, Loopout, Extension]]
-    """:any:`Domain`'s (or :any:`Loopout`'s) composing this Strand. 
+    """:any:`Domain`'s (or :any:`Loopout`'s or :any:`Extension`'s) composing this :any:`Strand`. 
     Each :any:`Domain` is contiguous on a single :any:`Helix` 
     and could be either single-stranded or double-stranded, 
-    whereas each :any:`Loopout` is single-stranded and has no associated :any:`Helix`."""
+    whereas each :any:`Loopout` and :any:`Extension` is single-stranded and has no associated :any:`Helix`."""
 
     circular: bool = False
     """If True, this :any:`Strand` is circular and has no 5' or 3' end. Although there is still a 
     first and last :any:`Domain`, we interpret there to be a crossover from the 3' end of the last domain
-    to the 5' end of the first domain, and any circular permutation of :py:data:`Strand.domains` 
+    to the 5' end of the first domain, and any circular permutation of :data:`Strand.domains` 
     should result in a functionally equivalent :any:`Strand`. It is illegal to have a 
     :any:`Modification5Prime` or :any:`Modification3Prime` on a circular :any:`Strand`."""
 
@@ -3489,12 +3526,12 @@ class Strand(_JSONSerializable):
 
         Note that this does not include any IDT codes for :any:`Modification`'s.
         To include those call :meth:`Strand.idt_dna_sequence`."""
-        sequence = ''
+        sequence_list = []
         for domain in self.domains:
             if domain.dna_sequence is None:
                 return None
-            sequence += domain.dna_sequence
-        return sequence
+            sequence_list.append(domain.dna_sequence)
+        return ''.join(sequence_list)
 
     color: Optional[Color] = None
     """Color to show this strand in the main view. If not specified in the constructor,
@@ -4217,8 +4254,12 @@ class Strand(_JSONSerializable):
                                         f'\n{d1}'
                                         f'\n{d2}')
 
-    def idt_dna_sequence(self) -> str:
+    def idt_dna_sequence(self, domain_delimiter: str = '') -> str:
         """
+        :param domain_delimiter:
+            string to put in between DNA sequences of each domain, and between 5'/3' modifications and DNA.
+            Note that the delimiter is not put between internal modifications and the next base(s)
+            in the same domain.
         :return: DNA sequence as it needs to be typed to order from IDT, with
             :py:data:`Modification5Prime`'s,
             :py:data:`Modification3Prime`'s,
@@ -4232,27 +4273,17 @@ class Strand(_JSONSerializable):
             raise ValueError('DNA sequence has not been assigned yet')
 
         ret_list: List[str] = []
+
         if self.modification_5p is not None and self.modification_5p.idt_text is not None:
             ret_list.append(self.modification_5p.idt_text)
 
-        for offset, base in enumerate(self.dna_sequence):
-            ret_list.append(base)
-            if offset in self.modifications_int:  # if internal mod attached to base, replace base
-                mod = self.modifications_int[offset]
-                if mod.idt_text is not None:
-                    if mod.allowed_bases is not None:
-                        if base not in mod.allowed_bases:
-                            msg = f'internal modification {mod} can only replace one of these bases: ' \
-                                  f'{",".join(mod.allowed_bases)}, but the base at offset {offset} is {base}'
-                            raise IllegalDesignError(msg)
-                        ret_list[-1] = mod.idt_text  # replace base with modified base
-                    else:
-                        ret_list.append(mod.idt_text)  # append modification between two bases
+        for substrand in self.domains:
+            ret_list.append(substrand.idt_dna_sequence())
 
         if self.modification_3p is not None and self.modification_3p.idt_text is not None:
             ret_list.append(self.modification_3p.idt_text)
 
-        return ''.join(ret_list)
+        return domain_delimiter.join(ret_list)
 
     def no_modifications_version(self) -> Strand:
         """
@@ -7063,7 +7094,8 @@ class Design(_JSONSerializable):
         self._check_strands_reference_helices_legally()
 
     def assign_dna(self, strand: Strand, sequence: str, assign_complement: bool = True,
-                   domain: Union[Domain, Loopout, Extension] = None, check_length: bool = False) -> None:
+                   domain: Union[Domain, Loopout, Extension, None] = None,
+                   check_length: bool = False) -> None:
         """
         Assigns `sequence` as DNA sequence of `strand`.
 
@@ -7172,6 +7204,7 @@ class Design(_JSONSerializable):
 
     def to_idt_bulk_input_format(self,
                                  delimiter: str = ',',
+                                 domain_delimiter: str = '',
                                  key: Optional[KeyFunction[Strand]] = None,
                                  warn_duplicate_name: bool = False,
                                  only_strands_with_idt: bool = False,
@@ -7203,7 +7236,7 @@ class Design(_JSONSerializable):
                 scale = default_idt_scale
                 purification = default_idt_purification
             idt_lines.append(delimiter.join(
-                [strand.idt_export_name(), strand.idt_dna_sequence(),
+                [strand.idt_export_name(), strand.idt_dna_sequence(domain_delimiter=domain_delimiter),
                  scale, purification]
             ))
 
@@ -7293,6 +7326,7 @@ class Design(_JSONSerializable):
                                   key: Optional[KeyFunction[Strand]] = None,
                                   extension: Optional[str] = None,
                                   delimiter: str = ',',
+                                  domain_delimiter: str = '',
                                   warn_duplicate_name: bool = True,
                                   only_strands_with_idt: bool = False,
                                   export_scaffold: bool = False,
@@ -7321,7 +7355,12 @@ class Design(_JSONSerializable):
         :param extension:
             alternate filename extension to use (instead of idt)
         :param delimiter:
-            is the symbol to delimit the four IDT fields name,sequence,scale,purification.
+            symbol to delimit the four IDT fields name,sequence,scale,purification.
+        :param domain_delimiter:
+            This is placed between the DNA sequences of adjacent domains on a strand. For instance, IDT
+            (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/) ignores spaces,
+            so setting `domain_delimiter` to ``' '`` will insert a space between adjacent domains while
+            remaining readable by IDT's website.
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
             :data:`IDTFields.name` and the same :data:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
@@ -7344,6 +7383,7 @@ class Design(_JSONSerializable):
             '_nomods' appended to it.
         """
         contents = self.to_idt_bulk_input_format(delimiter=delimiter,
+                                                 domain_delimiter=domain_delimiter,
                                                  key=key,
                                                  warn_duplicate_name=warn_duplicate_name,
                                                  only_strands_with_idt=only_strands_with_idt,

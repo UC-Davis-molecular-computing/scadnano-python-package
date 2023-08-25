@@ -482,7 +482,7 @@ class TestCreateStrandChainedMethods(unittest.TestCase):
         design = self.design_6helix
         design.draw_strand(0, 0).to(10).cross(1).to(0) \
             .as_scaffold() \
-            .with_modification_internal(5, mod.cy3_int, warn_on_no_dna=False)
+            .with_modification_internal(5, mod.cy3_int, warn_no_dna=False)
         design.draw_strand(0, 10).to(0).cross(1).to(10).with_modification_5p(mod.biotin_5p)
         expected_strand0 = sc.Strand([
             sc.Domain(0, True, 0, 10),
@@ -1097,6 +1097,44 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
             names.append(name)
         names_joined = ''.join(names)
         return names_joined
+
+    def test_domain_delimiters(self) -> None:
+        helices = [sc.Helix(max_offset=100) for _ in range(6)]
+        design = sc.Design(helices=helices, strands=[], grid=sc.square)
+        strand_name = 's1'
+        (design.draw_strand(0, 0).move(5).with_domain_sequence('AAAAA')
+         .cross(1).move(-5).with_domain_sequence('CCCCC')
+         .cross(2).move(5).with_domain_sequence('GGGGG')
+         .with_name(strand_name))
+        idt_content = design.to_idt_bulk_input_format(delimiter=',', domain_delimiter=' ')
+        self.assertEqual(f'{strand_name},AAAAA CCCCC GGGGG,25nm,STD', idt_content)
+
+    def test_domain_delimiters_modifications(self) -> None:
+        strand_name = 's1'
+        mod_5 = sc.Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        mod_3 = sc.Modification3Prime(display_text='Cy3', idt_text='/3Cy3Sp/')
+        mod_i = sc.ModificationInternal(display_text='B', idt_text='/iBiodT/', allowed_bases={'T'})
+
+        helices = [sc.Helix(max_offset=100) for _ in range(6)]
+        design = sc.Design(helices=helices, strands=[], grid=sc.square)
+
+        (design.draw_strand(0, 0)
+         .move(5).with_domain_sequence('AAAAA')
+         .cross(1).move(-5).with_domain_sequence('CCCCT')
+         .cross(2).move(5).with_domain_sequence('GGGGG')
+         .with_name(strand_name)
+         .with_modification_5p(mod_5)
+         .with_modification_internal(9, mod_i)
+         .with_modification_3p(mod_3)
+         )
+
+        strand = design.strands[0]
+        strand_idt_dna_sequence = strand.idt_dna_sequence(domain_delimiter=' ')
+        self.assertEqual('/5Biosg/ AAAAA CCCC/iBiodT/ GGGGG /3Cy3Sp/', strand_idt_dna_sequence)
+
+        idt_content = design.to_idt_bulk_input_format(delimiter=';', domain_delimiter=' ')
+        self.assertEqual(f'{strand_name};/5Biosg/ AAAAA CCCC/iBiodT/ GGGGG /3Cy3Sp/;25nm;STD',
+                         idt_content)
 
     def test_to_idt_bulk_input_format__row_major_5p(self) -> None:
         key = sc.strand_order_key_function(column_major=False, strand_order=sc.StrandOrder.five_prime)
