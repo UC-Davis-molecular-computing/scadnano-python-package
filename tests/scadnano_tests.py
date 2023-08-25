@@ -1136,6 +1136,29 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         self.assertEqual(f'{strand_name};/5Biosg/ AAAAA CCCC/iBiodT/ GGGGG /3Cy3Sp/;25nm;STD',
                          idt_content)
 
+    def test_domain_delimiters_internal_nonbase_modifications(self) -> None:
+        strand_name = 's1'
+        mod_i = sc.ModificationInternal(display_text='9C', idt_text='/iSp9/')
+
+        helices = [sc.Helix(max_offset=100) for _ in range(6)]
+        design = sc.Design(helices=helices, strands=[], grid=sc.square)
+
+        (design.draw_strand(0, 0)
+         .move(5).with_domain_sequence('AAAAA')
+         .cross(1).move(-5).with_domain_sequence('CCCCT')
+         .cross(2).move(5).with_domain_sequence('GGGGG')
+         .with_name(strand_name)
+         .with_modification_internal(8, mod_i)
+         )
+
+        strand = design.strands[0]
+        strand_idt_dna_sequence = strand.idt_dna_sequence(domain_delimiter=' ')
+        self.assertEqual('AAAAA CCCC/iSp9/T GGGGG', strand_idt_dna_sequence)
+
+        idt_content = design.to_idt_bulk_input_format(delimiter=';', domain_delimiter=' ')
+        self.assertEqual(f'{strand_name};AAAAA CCCC/iSp9/T GGGGG;25nm;STD',
+                         idt_content)
+
     def test_to_idt_bulk_input_format__row_major_5p(self) -> None:
         key = sc.strand_order_key_function(column_major=False, strand_order=sc.StrandOrder.five_prime)
         names_joined = self._get_names_idt(self.design_6h, key)

@@ -1123,11 +1123,17 @@ class ModificationInternal(Modification):
     """Internal modification of DNA sequence, e.g., biotin or Cy3."""
 
     allowed_bases: Optional[AbstractSet[str]] = None
-    """If None, then this is an internal modification that goes between bases. 
+    """
+    If None, then this is an internal modification that goes between bases.
+    In this case, the key :data:`Strand.modifications_int` specifying the position of the internal
+    modification is interpreted to mean that the modification goes *after* the base at that position.
+    (For example, this is the parameter `idx` in :meth:`StrandBuilder.with_modification_internal`.) 
+    
     If instead it is a list of bases, then this is an internal modification that attaches to a base,
     and this lists the allowed bases for this internal modification to be placed at. 
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
-    ``{'A','C','G','T'}``."""
+    ``{'A','C','G','T'}``.
+    """
 
     def __post_init__(self) -> None:
         super().__post_init__()
