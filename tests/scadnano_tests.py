@@ -1132,8 +1132,8 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         strand_idt_dna_sequence = strand.idt_dna_sequence(domain_delimiter=' ')
         self.assertEqual('/5Biosg/ AAAAA CCCC /iBiodT/ GGGGG /3Cy3Sp/', strand_idt_dna_sequence)
 
-        idt_content = design.to_idt_bulk_input_format(delimiter=',', domain_delimiter=' ')
-        self.assertEqual(f'{strand_name},/5Biosg/ AAAAA CCCC /iBiodT/ GGGGG /3Cy3Sp/,25nm,STD',
+        idt_content = design.to_idt_bulk_input_format(delimiter=';', domain_delimiter=' ')
+        self.assertEqual(f'{strand_name};/5Biosg/ AAAAA CCCC /iBiodT/ GGGGG /3Cy3Sp/;25nm;STD',
                          idt_content)
 
     def test_to_idt_bulk_input_format__row_major_5p(self) -> None:
