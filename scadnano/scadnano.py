@@ -1127,7 +1127,7 @@ class ModificationInternal(Modification):
     If instead it is a list of bases, then this is an internal modification that attaches to a base,
     and this lists the allowed bases for this internal modification to be placed at. 
     For example, internal biotins for IDT must be at a T. If any base is allowed, it should be
-    ``['A','C','G','T']``."""
+    ``{'A','C','G','T'}``."""
 
     def __post_init__(self) -> None:
         super().__post_init__()
