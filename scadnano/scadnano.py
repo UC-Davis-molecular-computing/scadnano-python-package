@@ -2128,12 +2128,8 @@ class Domain(_JSONSerializable):
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
 
-    def idt_dna_sequence(self, domain_delimiter: str = '') -> Optional[str]:
+    def idt_dna_sequence(self) -> Optional[str]:
         """
-        :param domain_delimiter:
-            delimiter to put between domains (and modifications) in the IDT DNA sequence;
-            if specified then any internal modifications will be separated from the rest of the sequence
-            by this value.
         :return:
             IDT DNA sequence of this :any:`Domain`, or ``None`` if no DNA sequence has been assigned.
             The difference between this and the field :data:`Domain.dna_sequence` is that this
@@ -2156,7 +2152,7 @@ class Domain(_JSONSerializable):
             if strand_pos in strand.modifications_int:  # if internal mod attached to base, replace base
                 mod = strand.modifications_int[strand_pos]
                 if mod.idt_text is not None:
-                    idt_text_with_delim = domain_delimiter + mod.idt_text
+                    idt_text_with_delim = mod.idt_text
                     if mod.allowed_bases is not None:
                         if base not in mod.allowed_bases:
                             msg = (f'internal modification {mod} can only replace one of these bases: '
@@ -4261,7 +4257,9 @@ class Strand(_JSONSerializable):
     def idt_dna_sequence(self, domain_delimiter: str = '') -> str:
         """
         :param domain_delimiter:
-            string to put in between DNA sequences of each domain, and between modifications and DNA
+            string to put in between DNA sequences of each domain, and between 5'/3' modifications and DNA.
+            Note that the delimiter is not put between internal modifications and the next base(s)
+            in the same domain.
         :return: DNA sequence as it needs to be typed to order from IDT, with
             :py:data:`Modification5Prime`'s,
             :py:data:`Modification3Prime`'s,
@@ -4280,7 +4278,7 @@ class Strand(_JSONSerializable):
             ret_list.append(self.modification_5p.idt_text)
 
         for substrand in self.domains:
-            ret_list.append(substrand.idt_dna_sequence(domain_delimiter=domain_delimiter))
+            ret_list.append(substrand.idt_dna_sequence())
 
         if self.modification_3p is not None and self.modification_3p.idt_text is not None:
             ret_list.append(self.modification_3p.idt_text)
