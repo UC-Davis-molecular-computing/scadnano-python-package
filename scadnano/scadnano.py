@@ -78,7 +78,7 @@ from random import randint
 try:
     import openpyxl
 except ImportError as import_error:
-    raise import_error
+    pass
 
 default_scadnano_file_extension = 'sc'
 """Default filename extension when writing a scadnano file."""
