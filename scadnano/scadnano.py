@@ -437,7 +437,12 @@ def _rotate_string(string: str, rotation: int) -> str:
 
 
 class M13Variant(enum.Enum):
-    """Variants of M13mp18 viral genome. "Standard" variant is p7249. Other variants are longer."""
+    """
+    Variants of M13mp18 viral genome. "Standard" variant is p7249. Other variants are longer.
+
+    To create a string with the DNA sequence of one of these variants, call the function
+    :func:`m13`.
+    """
 
     p7249 = "p7249"
     """"Standard" variant of M13mp18; 7249 bases long, available from, for example
@@ -969,17 +974,17 @@ class ModificationType(enum.Enum):
 
 @dataclass(frozen=True, eq=True)
 class Modification(_JSONSerializable, ABC):
-    """Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
+    """
+    Abstract case class of modifications (to DNA sequences, e.g., biotin or Cy3).
     Use concrete subclasses
     :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate.
 
     If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
-    the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' "modification"
+    the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' modification
     to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
-    (this is a useful hack for putting single-stranded extensions on strands until loopouts on the end
-    of a strand are supported;
-    see https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/2),
+    (this was a useful hack for putting single-stranded extensions on strands before the :any:`Extension`
+    class was created to directly support this idea),
     then this would clash with a similar 3' modification without specifying unique IDs for them:
     ``t6_3p = Modification3Prime(display_text='6T', idt_text='TTTTTT') # ERROR``.
 
@@ -2605,7 +2610,7 @@ class Extension(_JSONSerializable):
         design = sc.Design(helices=[sc.Helix(max_offset=10)])
         design.draw_strand(0,0).extension_5p(3).move(10).extension_3p(2)
 
-    which makes this strand with an :any:`Extension` on the side of the length-10 :any:`Domain`:
+    which makes this strand with :any:`Extension`'s on each side of the length-10 :any:`Domain`:
 
     .. code-block:: none
 
@@ -2736,7 +2741,13 @@ _wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
 def wc(seq: str) -> str:
-    """Return reverse Watson-Crick complement of `seq`."""
+    """
+    Return reverse Watson-Crick complement of `seq`.
+    For example, ``wc('AACCTG')`` returns ``'CAGGTT'``.
+
+    :param seq: a DNA sequence
+    :return: reverse Watson-Crick complement of `seq`.
+    """
     return seq.translate(_wctable)[::-1]
 
 
@@ -2756,8 +2767,6 @@ class IDTFields(_JSONSerializable):
     Choices supplied by IDT at the time this was written: 
     ``"25nm"``, ``"100nm"``, ``"250nm"``, ``"1um"``, ``"5um"``, 
     ``"10um"``, ``"4nmU"``, ``"20nmU"``, ``"PU"``, ``"25nmS"``.
-    
-    Optional field.
     """
 
     purification: str = default_idt_purification
@@ -2765,8 +2774,6 @@ class IDTFields(_JSONSerializable):
     https://www.idtdna.com/site/order/oligoentry). 
     Choices supplied by IDT at the time this was written: 
     ``"STD"``, ``"PAGE"``, ``"HPLC"``, ``"IEHPLC"``, ``"RNASE"``, ``"DUALHPLC"``, ``"PAGEHPLC"``.
-    
-    Optional field.
     """
 
     plate: Optional[str] = None
