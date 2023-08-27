@@ -362,9 +362,9 @@ class Grid(str, enum.Enum):
     `v` even and `h` a multiple of 3 or
     `v` odd and `h` = 1 + a multiple of 3.  
     
-    However, we use the same convention as cadnano for encoding hex coordinates see `misc/cadnano-format-specs/v2.txt`.
+    However, we use the same convention as cadnano for encoding honeycomb coordinates;
+    see `misc/cadnano-format-specs/v2.txt`.
     That convention is different from simply excluding coordinates from the hex lattice.
-
     """
 
     none = "none"
