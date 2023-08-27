@@ -1,7 +1,8 @@
 """
 The :mod:`scadnano` Python module is a library for describing synthetic DNA nanostructures
 (e.g., DNA origami).
-Installation instructions are at the
+To install, type `pip install scadnano` at the command line;
+more detailed  installation instructions and troubleshooting tips are at the
 `GitHub repository <https://github.com/UC-Davis-molecular-computing/scadnano-python-package#installation>`_.
 
 The scadnano project is developed and maintained by the UC Davis Molecular Computing group.
