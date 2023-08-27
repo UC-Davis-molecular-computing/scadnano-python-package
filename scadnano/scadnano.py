@@ -2834,10 +2834,13 @@ class StrandBuilder:
 
         design.draw_strand(0, 0).to(10).cross(1).to(5).with_modification_5p(mod.biotin_5p).as_scaffold()
 
-    :any:`StrandBuilder` should generally not be created directly.
+    :any:`StrandBuilder` should generally not be created directly by calling its constructor,
+    but rather by calling the method :meth:`Design.draw_strand`.
+
     Although it is convenient to use chained method calls, it is also sometimes useful to assign the
-    :any:`StrandBuilder` object into a variable and then call the methods on that variable. For example,
-    this code is equivalent to the above line:
+    :any:`StrandBuilder` object into a variable and then call the methods on that variable, particularly
+    when creating a strand with many domains that are easiest to express in a Python loop (e.g., a long
+    scaffold strand for a DNA origami). For example, the following code is equivalent to the above line:
 
     .. code-block:: Python
 
@@ -3155,7 +3158,6 @@ class StrandBuilder:
             -> StrandBuilder:
         """
         Gives :any:`IDTFields` value to :any:`Strand` being built.
-        Only a name is required; other fields are given reasonable default values.
 
         :param scale:
             see :py:data:`IDTFields.scale`
@@ -3504,7 +3506,7 @@ class Strand(_JSONSerializable):
         scaffold_domains = [ ... ]
         scaffold_strand = sc.Strand(domains=scaffold_domains, is_scaffold=True)
 
-    or by calling :py:meth:`Strand.set_scaffold` on the :any:`Strand` object:
+    or by calling :meth:`Strand.set_scaffold` on the :any:`Strand` object:
 
     .. code-block:: Python
 
@@ -3514,7 +3516,18 @@ class Strand(_JSONSerializable):
         scaffold_strand = sc.Strand(domains=scaffold_domains)
         scaffold_strand.set_scaffold()
 
-    Both will give the strand the same color that
+    or by calling :meth:`StrandBuilder.as_scaffold` on the :any:`StrandBuilder` object returned by
+    :meth:`Design.strand`:
+
+    .. code-block:: Python
+
+        import scadnano as sc
+
+        design = sc.Design(helices=[sc.Helix(max_offset=100) for _ in range(2)])
+        scaffold_strand = design.strand(0, 0).move(100).cross(1).move(-100).as_scaffold()
+
+
+    By default, these will give the strand the same color that
     `cadnano <https://cadnano.org>`_
     uses for the scaffold.
     """
