@@ -173,17 +173,17 @@ class Color(_JSONSerializable):
     """
     Red component: 0-255.
     
-    Optional if :py:data:`Color.hex` is given."""
+    Optional if :data:`Color.hex_string` is given."""
 
     g: Optional[int] = None
     """Green component: 0-255.
     
-    Optional if :py:data:`Color.hex` is given."""
+    Optional if :data:`Color.hex_string` is given."""
 
     b: Optional[int] = None
     """Blue component: 0-255.
     
-    Optional if :py:data:`Color.hex` is given."""
+    Optional if :data:`Color.hex_string` is given."""
 
     hex_string: InitVar[str] = None
     """Hex color preceded by # sign, e.g., "#ff0000" is red.
