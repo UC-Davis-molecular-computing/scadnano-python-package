@@ -692,21 +692,21 @@ class TestModifications(unittest.TestCase):
 
     def test_Cy3(self) -> None:
         cy3_5 = mod.cy3_5p
-        self.assertEqual(r'/5Cy3/', cy3_5.idt_text)
+        self.assertEqual(r'/5Cy3/', cy3_5.vendor_code)
         self.assertEqual(r'/5Cy3/', cy3_5.id)
         self.assertEqual('Cy3', cy3_5.display_text)
         cy3_3 = mod.cy3_3p
-        self.assertEqual(r'/3Cy3Sp/', cy3_3.idt_text)
+        self.assertEqual(r'/3Cy3Sp/', cy3_3.vendor_code)
         self.assertEqual(r'/3Cy3Sp/', cy3_3.id)
         self.assertEqual('Cy3', cy3_3.display_text)
         # cy3_i1 = mod.Cy3(location=sc.ModLocation.internal, offset=1)
         cy3_i1 = mod.cy3_int
-        self.assertEqual(r'/iCy3/', cy3_i1.idt_text)
+        self.assertEqual(r'/iCy3/', cy3_i1.vendor_code)
         self.assertEqual(r'/iCy3/', cy3_i1.id)
         self.assertEqual('Cy3', cy3_i1.display_text)
         # cy3_i2 = mod.Cy3(location=sc.ModLocation.internal, offset=3)
         cy3_i2 = mod.cy3_int
-        self.assertEqual(r'/iCy3/', cy3_i2.idt_text)
+        self.assertEqual(r'/iCy3/', cy3_i2.vendor_code)
         self.assertEqual(r'/iCy3/', cy3_i2.id)
         self.assertEqual('Cy3', cy3_i2.display_text)
 
@@ -722,29 +722,29 @@ class TestModifications(unittest.TestCase):
                                modification_5p=cy3_5, modification_3p=cy3_3,
                                modifications_int={1: cy3_i1, 3: cy3_i2})
 
-        self.assertEqual(r'/5Cy3/ATTGC', strand5.idt_dna_sequence())
-        self.assertEqual(r'ATTGC/3Cy3Sp/', strand3.idt_dna_sequence())
-        self.assertEqual(r'/5Cy3/ATTGC/3Cy3Sp/', strand53.idt_dna_sequence())
-        self.assertEqual(r'AT/iCy3/TG/iCy3/C', strand_i.idt_dna_sequence())
-        self.assertEqual(r'/5Cy3/AT/iCy3/TG/iCy3/C/3Cy3Sp/', strand53_i.idt_dna_sequence())
+        self.assertEqual(r'/5Cy3/ATTGC', strand5.vendor_dna_sequence())
+        self.assertEqual(r'ATTGC/3Cy3Sp/', strand3.vendor_dna_sequence())
+        self.assertEqual(r'/5Cy3/ATTGC/3Cy3Sp/', strand53.vendor_dna_sequence())
+        self.assertEqual(r'AT/iCy3/TG/iCy3/C', strand_i.vendor_dna_sequence())
+        self.assertEqual(r'/5Cy3/AT/iCy3/TG/iCy3/C/3Cy3Sp/', strand53_i.vendor_dna_sequence())
 
     def test_biotin(self) -> None:
         biotin5 = mod.biotin_5p
-        self.assertEqual(r'/5Biosg/', biotin5.idt_text)
+        self.assertEqual(r'/5Biosg/', biotin5.vendor_code)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
         biotin3 = mod.biotin_3p
-        self.assertEqual(r'/3Bio/', biotin3.idt_text)
+        self.assertEqual(r'/3Bio/', biotin3.vendor_code)
         self.assertEqual(r'/3Bio/', biotin3.id)
         self.assertEqual('B', biotin3.display_text)
         # biotin_i_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
         biotin_i_1 = mod.biotin_int
-        self.assertEqual(r'/iBiodT/', biotin_i_1.idt_text)
+        self.assertEqual(r'/iBiodT/', biotin_i_1.vendor_code)
         self.assertEqual(r'/iBiodT/', biotin_i_1.id)
         self.assertEqual('B', biotin_i_1.display_text)
         # biotin_i_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
         biotin_i_2 = mod.biotin_int
-        self.assertEqual(r'/iBiodT/', biotin_i_2.idt_text)
+        self.assertEqual(r'/iBiodT/', biotin_i_2.vendor_code)
         self.assertEqual(r'/iBiodT/', biotin_i_2.id)
         self.assertEqual('B', biotin_i_2.display_text)
 
@@ -759,31 +759,31 @@ class TestModifications(unittest.TestCase):
         strand53i = sc.Strand(domains=[sc.Domain(4, True, 0, 5)], dna_sequence='ATTGC',
                               modification_5p=biotin5, modification_3p=biotin3,
                               modifications_int={1: biotin_i_1, 2: biotin_i_2})
-        self.assertEqual(r'/5Biosg/ATTGC', strand5.idt_dna_sequence())
-        self.assertEqual(r'ATTGC/3Bio/', strand3.idt_dna_sequence())
-        self.assertEqual(r'A/iBiodT//iBiodT/GC', strand_i.idt_dna_sequence())
-        self.assertEqual(r'/5Biosg/ATTGC/3Bio/', strand53.idt_dna_sequence())
-        self.assertEqual(r'/5Biosg/A/iBiodT//iBiodT/GC/3Bio/', strand53i.idt_dna_sequence())
+        self.assertEqual(r'/5Biosg/ATTGC', strand5.vendor_dna_sequence())
+        self.assertEqual(r'ATTGC/3Bio/', strand3.vendor_dna_sequence())
+        self.assertEqual(r'A/iBiodT//iBiodT/GC', strand_i.vendor_dna_sequence())
+        self.assertEqual(r'/5Biosg/ATTGC/3Bio/', strand53.vendor_dna_sequence())
+        self.assertEqual(r'/5Biosg/A/iBiodT//iBiodT/GC/3Bio/', strand53i.vendor_dna_sequence())
 
     def test_to_json_serializable(self) -> None:
         biotin5 = mod.biotin_5p
         biotin5 = dataclasses.replace(biotin5, connector_length=6)
-        self.assertEqual(r'/5Biosg/', biotin5.idt_text)
+        self.assertEqual(r'/5Biosg/', biotin5.vendor_code)
         self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
         self.assertEqual(6, biotin5.connector_length)
         biotin3 = mod.biotin_3p
-        self.assertEqual(r'/3Bio/', biotin3.idt_text)
+        self.assertEqual(r'/3Bio/', biotin3.vendor_code)
         self.assertEqual(r'/3Bio/', biotin3.id)
         self.assertEqual('B', biotin3.display_text)
         # biotin_i_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
         biotin_i_1 = mod.biotin_int
-        self.assertEqual(r'/iBiodT/', biotin_i_1.idt_text)
+        self.assertEqual(r'/iBiodT/', biotin_i_1.vendor_code)
         self.assertEqual(r'/iBiodT/', biotin_i_1.id)
         self.assertEqual('B', biotin_i_1.display_text)
         # biotin_i_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
         biotin_i_2 = mod.biotin_int
-        self.assertEqual(r'/iBiodT/', biotin_i_2.idt_text)
+        self.assertEqual(r'/iBiodT/', biotin_i_2.vendor_code)
         self.assertEqual(r'/iBiodT/', biotin_i_2.id)
         self.assertEqual('B', biotin_i_2.display_text)
 
@@ -812,12 +812,12 @@ class TestModifications(unittest.TestCase):
         self.assertTrue(r'/iBiodT/' in mods_dict)
 
         biotin5_json = mods_dict[r'/5Biosg/']
-        self.assertEqual('/5Biosg/', biotin5_json[sc.mod_idt_text_key])
+        self.assertEqual('/5Biosg/', biotin5_json[sc.mod_vendor_code_key])
         self.assertEqual('B', biotin5_json[sc.mod_display_text_key])
         self.assertEqual(6, biotin5_json[sc.mod_connector_length_key])
 
         biotin3_json = mods_dict[r'/3Bio/']
-        self.assertEqual('/3Bio/', biotin3_json[sc.mod_idt_text_key])
+        self.assertEqual('/3Bio/', biotin3_json[sc.mod_vendor_code_key])
         self.assertEqual('B', biotin3_json[sc.mod_display_text_key])
         self.assertNotIn(sc.mod_connector_length_key, biotin3_json)
 
@@ -1111,9 +1111,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
     def test_domain_delimiters_modifications(self) -> None:
         strand_name = 's1'
-        mod_5 = sc.Modification5Prime(display_text='B', idt_text='/5Biosg/')
-        mod_3 = sc.Modification3Prime(display_text='Cy3', idt_text='/3Cy3Sp/')
-        mod_i = sc.ModificationInternal(display_text='B', idt_text='/iBiodT/', allowed_bases={'T'})
+        mod_5 = sc.Modification5Prime(display_text='B', vendor_code='/5Biosg/')
+        mod_3 = sc.Modification3Prime(display_text='Cy3', vendor_code='/3Cy3Sp/')
+        mod_i = sc.ModificationInternal(display_text='B', vendor_code='/iBiodT/', allowed_bases={'T'})
 
         helices = [sc.Helix(max_offset=100) for _ in range(6)]
         design = sc.Design(helices=helices, strands=[], grid=sc.square)
@@ -1129,7 +1129,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
          )
 
         strand = design.strands[0]
-        strand_idt_dna_sequence = strand.idt_dna_sequence(domain_delimiter=' ')
+        strand_idt_dna_sequence = strand.vendor_dna_sequence(domain_delimiter=' ')
         self.assertEqual('/5Biosg/ AAAAA CCCC/iBiodT/ GGGGG /3Cy3Sp/', strand_idt_dna_sequence)
 
         idt_content = design.to_idt_bulk_input_format(delimiter=';', domain_delimiter=' ')
@@ -1138,7 +1138,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
     def test_domain_delimiters_internal_nonbase_modifications(self) -> None:
         strand_name = 's1'
-        mod_i = sc.ModificationInternal(display_text='9C', idt_text='/iSp9/')
+        mod_i = sc.ModificationInternal(display_text='9C', vendor_code='/iSp9/')
 
         helices = [sc.Helix(max_offset=100) for _ in range(6)]
         design = sc.Design(helices=helices, strands=[], grid=sc.square)
@@ -1152,7 +1152,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
          )
 
         strand = design.strands[0]
-        strand_idt_dna_sequence = strand.idt_dna_sequence(domain_delimiter=' ')
+        strand_idt_dna_sequence = strand.vendor_dna_sequence(domain_delimiter=' ')
         self.assertEqual('AAAAA CCCC/iSp9/T GGGGG', strand_idt_dna_sequence)
 
         idt_content = design.to_idt_bulk_input_format(delimiter=';', domain_delimiter=' ')
@@ -1207,9 +1207,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(), name='s1_r')
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(), name='s1_r')
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
+        s1_r = sc.Strand([ss1_r], vendor_fields=sc.VendorFields(), name='s1_r')
+        s2_r = sc.Strand([ss2_r], vendor_fields=sc.VendorFields(), name='s1_r')
+        s_l = sc.Strand([ss_l], vendor_fields=sc.VendorFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -1226,9 +1226,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(), name='s1_r')
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(), name='s1_r')
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
+        s1_r = sc.Strand([ss1_r], vendor_fields=sc.VendorFields(), name='s1_r')
+        s2_r = sc.Strand([ss2_r], vendor_fields=sc.VendorFields(), name='s1_r')
+        s_l = sc.Strand([ss_l], vendor_fields=sc.VendorFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -1245,9 +1245,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(scale='25nm'), name='s1_r')
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(scale='100nm'), name='s1_r')
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
+        s1_r = sc.Strand([ss1_r], vendor_fields=sc.VendorFields(scale='25nm'), name='s1_r')
+        s2_r = sc.Strand([ss2_r], vendor_fields=sc.VendorFields(scale='100nm'), name='s1_r')
+        s_l = sc.Strand([ss_l], vendor_fields=sc.VendorFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -1266,9 +1266,9 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         ss2_r = sc.Domain(0, True, 4, 8)
         ss_l = sc.Domain(0, False, 0, 4)
 
-        s1_r = sc.Strand([ss1_r], idt=sc.IDTFields(purification='STD'), name='s1_r')
-        s2_r = sc.Strand([ss2_r], idt=sc.IDTFields(purification='HPLC'), name='s1_r')
-        s_l = sc.Strand([ss_l], idt=sc.IDTFields(), name='s_l')
+        s1_r = sc.Strand([ss1_r], vendor_fields=sc.VendorFields(purification='STD'), name='s1_r')
+        s2_r = sc.Strand([ss2_r], vendor_fields=sc.VendorFields(purification='HPLC'), name='s1_r')
+        s_l = sc.Strand([ss_l], vendor_fields=sc.VendorFields(), name='s_l')
 
         strands = [s1_r, s2_r, s_l]
 
@@ -4327,10 +4327,10 @@ class TestJSON(unittest.TestCase):
         self.assertEqual(1, len(design.strands))
         strand = design.strands[0]
         self.assertEqual('staple1', strand.name)
-        self.assertEqual('100nm', strand.idt.scale)
-        self.assertEqual('HPLC', strand.idt.purification)
-        self.assertEqual('plate1', strand.idt.plate)
-        self.assertEqual('A1', strand.idt.well)
+        self.assertEqual('100nm', strand.vendor_fields.scale)
+        self.assertEqual('HPLC', strand.vendor_fields.purification)
+        self.assertEqual('plate1', strand.vendor_fields.plate)
+        self.assertEqual('A1', strand.vendor_fields.well)
 
     def test_legacy_idt_name_import__strand_name_exists(self) -> None:
         # tests proper importing of old format when name was a subfield of idt;
@@ -4484,19 +4484,19 @@ class TestJSON(unittest.TestCase):
 
     def test_strand_idt(self) -> None:
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
-        idt = sc.IDTFields(scale='25nm', purification='HPLC', plate='plate1', well='A2')
-        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], name='strand1', idt=idt)
+        idt = sc.VendorFields(scale='25nm', purification='HPLC', plate='plate1', well='A2')
+        strand0_expected = sc.Strand([sc.Domain(0, True, 0, 10)], name='strand1', vendor_fields=idt)
         strands = [strand0_expected]
         design = sc.Design(helices=helices, strands=strands, grid=sc.square)
         json_str = design.to_json()
         design_from_json = sc.Design.from_scadnano_json_str(json_str)
         strand0 = design_from_json.strands[0]
-        self.assertEqual(strand0_expected.idt, strand0.idt)
-        self.assertEqual('strand1', strand0.idt_export_name())
-        self.assertEqual('25nm', strand0.idt.scale)
-        self.assertEqual('HPLC', strand0.idt.purification)
-        self.assertEqual('plate1', strand0.idt.plate)
-        self.assertEqual('A2', strand0.idt.well)
+        self.assertEqual(strand0_expected.vendor_fields, strand0.vendor_fields)
+        self.assertEqual('strand1', strand0.vendor_export_name())
+        self.assertEqual('25nm', strand0.vendor_fields.scale)
+        self.assertEqual('HPLC', strand0.vendor_fields.purification)
+        self.assertEqual('plate1', strand0.vendor_fields.plate)
+        self.assertEqual('A2', strand0.vendor_fields.well)
 
     def test_domain_labels(self) -> None:
         helices = [sc.Helix(max_offset=100), sc.Helix(max_offset=100)]
@@ -7795,11 +7795,16 @@ class TestPlateMaps(unittest.TestCase):
     def setUp(self) -> None:
         helices = [sc.Helix(max_offset=100)]
         self.design = sc.Design(helices=helices, strands=[], grid=sc.square)
-        self.design.draw_strand(0, 0).move(10).with_name('strand 0').with_idt(plate='plate 1', well='A1')
-        self.design.draw_strand(0, 10).move(10).with_name('strand 1').with_idt(plate='plate 1', well='A2')
-        self.design.draw_strand(0, 20).move(10).with_name('strand 2').with_idt(plate='plate 1', well='B2')
-        self.design.draw_strand(0, 30).move(10).with_name('strand 3').with_idt(plate='plate 1', well='B3')
-        self.design.draw_strand(0, 40).move(10).with_name('strand 4').with_idt(plate='plate 1', well='D7')
+        self.design.draw_strand(0, 0).move(10).with_name('strand 0').with_vendor_fields(plate='plate 1',
+                                                                                        well='A1')
+        self.design.draw_strand(0, 10).move(10).with_name('strand 1').with_vendor_fields(plate='plate 1',
+                                                                                         well='A2')
+        self.design.draw_strand(0, 20).move(10).with_name('strand 2').with_vendor_fields(plate='plate 1',
+                                                                                         well='B2')
+        self.design.draw_strand(0, 30).move(10).with_name('strand 3').with_vendor_fields(plate='plate 1',
+                                                                                         well='B3')
+        self.design.draw_strand(0, 40).move(10).with_name('strand 4').with_vendor_fields(plate='plate 1',
+                                                                                         well='D7')
 
     def test_plate_map_markdown(self) -> None:
         plate_maps = self.design.plate_maps()

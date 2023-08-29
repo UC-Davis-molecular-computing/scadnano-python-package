@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.18.4"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.0"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -379,8 +379,8 @@ honeycomb = Grid.honeycomb
 ##########################################################################
 # constants
 
-default_idt_scale = "25nm"
-default_idt_purification = "STD"
+default_vendor_scale = "25nm"
+default_vendor_purification = "STD"
 
 
 def default_major_tick_distance(grid: Grid) -> int:
@@ -899,7 +899,8 @@ dna_sequence_key = 'sequence'
 legacy_dna_sequence_keys = ['dna_sequence']  # support legacy names for these ideas
 domains_key = 'domains'
 legacy_domains_keys = ['substrands']  # support legacy names for these ideas
-idt_key = 'idt'
+vendor_key = 'vendor'
+legacy_vendor_keys = ['idt']
 is_scaffold_key = 'is_scaffold'
 modification_5p_key = '5prime_modification'
 modification_3p_key = '3prime_modification'
@@ -929,20 +930,21 @@ display_angle_key = 'display_angle'
 mod_location_key = 'location'
 mod_display_text_key = 'display_text'
 mod_id_key = 'id'
-mod_idt_text_key = 'idt_text'
+mod_vendor_code_key = 'vendor_code'
+legacy_mod_vendor_code_keys = ['idt_text']
 mod_font_size_key = 'font_size'
 mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 mod_connector_length_key = 'connector_length'
 
-# IDT keys
-idt_scale_key = 'scale'
-idt_purification_key = 'purification'
-idt_plate_key = 'plate'
-idt_well_key = 'well'
-# legacy; not written anymore as part of idt, but may be read from older versions of the JSON if
-# the Strand has no name but the IDT field does have a name
-idt_name_key = 'name'
+# vendor keys
+vendor_scale_key = 'scale'
+vendor_purification_key = 'purification'
+vendor_plate_key = 'plate'
+vendor_well_key = 'well'
+# legacy; not written anymore as part of vendor fields, but may be read from older versions of the JSON if
+# the Strand has no name but the VendorField does have a name
+vendor_name_key = 'name'
 
 # end keys
 ##################
@@ -980,13 +982,13 @@ class Modification(_JSONSerializable, ABC):
     :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate.
 
-    If :data:`Modification.id` is not specified, then :data:`Modification.idt_text` is used as
+    If :data:`Modification.id` is not specified, then :data:`Modification.vendor_code` is used as
     the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' modification
-    to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', idt_text='TTTTTT')``
+    to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', vendor_code='TTTTTT')``
     (this was a useful hack for putting single-stranded extensions on strands before the :any:`Extension`
     class was created to directly support this idea),
     then this would clash with a similar 3' modification without specifying unique IDs for them:
-    ``t6_3p = Modification3Prime(display_text='6T', idt_text='TTTTTT') # ERROR``.
+    ``t6_3p = Modification3Prime(display_text='6T', vendor_code='TTTTTT') # ERROR``.
 
     In general it is recommended to create a single :any:`Modification` object for each *type* of
     modification in the design. For example, if many strands have a 5' biotin, then it is recommended to
@@ -994,7 +996,7 @@ class Modification(_JSONSerializable, ABC):
 
     .. code-block:: python
 
-        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        biotin_5p = Modification5Prime(display_text='B', vendor_code='/5Biosg/')
         design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
         design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
     """
@@ -1007,11 +1009,12 @@ class Modification(_JSONSerializable, ABC):
     """
     Representation as a string; used to write in :any:`Strand` json representation,
     while the full description of the modification is written under a global key in the :any:`Design`.
-    If not specified, but :py:data:`Modification.idt_text` is specified, then it will be set equal to that.
+    If not specified, but :data:`Modification.vendor_code` is specified, then it will be set equal to that.
     """
 
-    idt_text: Optional[str] = None
-    """IDT text string specifying this modification (e.g., '/5Biosg/' for 5' biotin). optional"""
+    vendor_code: Optional[str] = None
+    """Text string specifying this modification used by a vendor (a DNA synthesis company such as IDT).
+    For example, for IDT DNA (https://www.idtdna.com/), use '/5Biosg/' for 5' biotin."""
 
     connector_length: int = default_connector_length
     """Length of "connector" displayed in web interface. 
@@ -1021,13 +1024,13 @@ class Modification(_JSONSerializable, ABC):
     text does not overlap."""
 
     def __post_init__(self) -> None:
-        if self.id == _default_modification_id and self.idt_text is not None:
-            object.__setattr__(self, 'id', self.idt_text)
+        if self.id == _default_modification_id and self.vendor_code is not None:
+            object.__setattr__(self, 'id', self.vendor_code)
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
         ret = {mod_display_text_key: self.display_text}
-        if self.idt_text is not None:
-            ret[mod_idt_text_key] = self.idt_text
+        if self.vendor_code is not None:
+            ret[mod_vendor_code_key] = self.vendor_code
             ret[mod_display_connector_key] = False  # type: ignore
         if self.connector_length != default_connector_length:
             ret[mod_connector_length_key] = self.connector_length
@@ -1063,7 +1066,7 @@ class Modification5Prime(Modification):
 
     .. code-block:: python
 
-        biotin_5p = Modification5Prime(display_text='B', idt_text='/5Biosg/')
+        biotin_5p = Modification5Prime(display_text='B', vendor_code='/5Biosg/')
         design.draw_strand(0, 0).move(8).with_modification_5p(biotin_5p)
         design.draw_strand(1, 0).move(8).with_modification_5p(biotin_5p)
     """
@@ -1078,9 +1081,10 @@ class Modification5Prime(Modification):
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "5'"
-        idt_text = json_map.get(mod_idt_text_key)
+        vendor_code = mandatory_field(Modification5Prime, json_map, mod_vendor_code_key,
+                                      legacy_keys=legacy_mod_vendor_code_keys)
         connector_length = json_map.get(mod_connector_length_key, default_connector_length)
-        return Modification5Prime(display_text=display_text, idt_text=idt_text,
+        return Modification5Prime(display_text=display_text, vendor_code=vendor_code,
                                   connector_length=connector_length)
 
     @staticmethod
@@ -1099,7 +1103,7 @@ class Modification3Prime(Modification):
 
     .. code-block:: python
 
-        biotin_3p = Modification3Prime(display_text='B', idt_text='/3Bio/')
+        biotin_3p = Modification3Prime(display_text='B', vendor_code='/3Bio/')
         design.draw_strand(0, 0).move(8).with_modification_3p(biotin_3p)
         design.draw_strand(1, 0).move(8).with_modification_3p(biotin_3p)
     """
@@ -1114,9 +1118,10 @@ class Modification3Prime(Modification):
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "3'"
-        idt_text = json_map.get(mod_idt_text_key)
+        vendor_code = mandatory_field(Modification3Prime, json_map, mod_vendor_code_key,
+                                      legacy_keys=legacy_mod_vendor_code_keys)
         connector_length = json_map.get(mod_connector_length_key, default_connector_length)
-        return Modification3Prime(display_text=display_text, idt_text=idt_text,
+        return Modification3Prime(display_text=display_text, vendor_code=vendor_code,
                                   connector_length=connector_length)
 
     @staticmethod
@@ -1159,11 +1164,13 @@ class ModificationInternal(Modification):
         display_text = json_map[mod_display_text_key]
         location = json_map[mod_location_key]
         assert location == "internal"
-        idt_text = json_map.get(mod_idt_text_key)
+        vendor_code = mandatory_field(Modification5Prime, json_map, mod_vendor_code_key,
+                                      legacy_keys=legacy_mod_vendor_code_keys)
         allowed_bases_list = json_map.get(mod_allowed_bases_key)
         allowed_bases = frozenset(allowed_bases_list) if allowed_bases_list is not None else None
         connector_length = json_map.get(mod_connector_length_key, default_connector_length)
-        return ModificationInternal(display_text=display_text, idt_text=idt_text, allowed_bases=allowed_bases,
+        return ModificationInternal(display_text=display_text, vendor_code=vendor_code,
+                                    allowed_bases=allowed_bases,
                                     connector_length=connector_length)
 
     @staticmethod
@@ -2163,17 +2170,17 @@ class Domain(_JSONSerializable):
             strand_pos = pos + len_dna_prior
             if strand_pos in strand.modifications_int:  # if internal mod attached to base, replace base
                 mod = strand.modifications_int[strand_pos]
-                if mod.idt_text is not None:
-                    idt_text_with_delim = mod.idt_text
+                if mod.vendor_code is not None:
+                    vendor_code_with_delim = mod.vendor_code
                     if mod.allowed_bases is not None:
                         if base not in mod.allowed_bases:
                             msg = (f'internal modification {mod} can only replace one of these bases: '
                                    f'{",".join(mod.allowed_bases)}, '
                                    f'but the base at position {strand_pos} is {base}')
                             raise IllegalDesignError(msg)
-                        new_seq_list[-1] = idt_text_with_delim  # replace base with modified base
+                        new_seq_list[-1] = vendor_code_with_delim  # replace base with modified base
                     else:
-                        new_seq_list.append(idt_text_with_delim)  # append modification between two bases
+                        new_seq_list.append(vendor_code_with_delim)  # append modification between two bases
 
         return ''.join(new_seq_list)
 
@@ -2752,51 +2759,63 @@ def wc(seq: str) -> str:
 
 
 @dataclass
-class IDTFields(_JSONSerializable):
-    """Data required when ordering DNA strands from the synthesis company
-    `IDT (Integrated DNA Technologies) <https://www.idtdna.com/>`_.
-    This data is used when automatically generating files used to order DNA from IDT.
+class VendorFields(_JSONSerializable):
+    """
+    Data required when ordering DNA strands from a synthesis company.
+    These fields were originally designed for `IDT (Integrated DNA Technologies) <https://www.idtdna.com/>`_
+    and the default values for :data:`VendorFields.scale` and :data:`VendorFields.purification` reflect that.
+    However, most vendors have the same concepts of scale, purification, a code to specify the modification
+    (the field :data:`VendorFields.vendor_code`),
+    etc., so we use this generic class for any of them. Currently only IDT is supported by methods to
+    automatically export DNA sequences in the format IDT recognizes, but one should be able to write custom
+    code to export other formats that reads the fields in this object.
 
     When exporting to IDT files via :py:meth:`Design.write_idt_plate_excel_file`
-    or :py:meth:`Design.write_idt_bulk_input_file`, the field :py:data:`Strand.name` is used for the
-    name if it exists, otherwise a reasonable default is chosen."""
+    or :meth:`Design.write_idt_bulk_input_file`, the field :data:`Strand.name` is used for the
+    name if it exists, otherwise a reasonable default is chosen.
+    """
 
-    scale: str = default_idt_scale
-    """Synthesis scale at which to synthesize the strand (third field in IDT bulk input:
+    scale: str = default_vendor_scale
+    """
+    Synthesis scale at which to synthesize the strand (third field in IDT bulk input:
     https://www.idtdna.com/site/order/oligoentry).
     Choices supplied by IDT at the time this was written: 
     ``"25nm"``, ``"100nm"``, ``"250nm"``, ``"1um"``, ``"5um"``, 
     ``"10um"``, ``"4nmU"``, ``"20nmU"``, ``"PU"``, ``"25nmS"``.
     """
 
-    purification: str = default_idt_purification
-    """Purification options (fourth field in IDT bulk input:
+    purification: str = default_vendor_purification
+    """
+    Purification options (fourth field in IDT bulk input:
     https://www.idtdna.com/site/order/oligoentry). 
     Choices supplied by IDT at the time this was written: 
     ``"STD"``, ``"PAGE"``, ``"HPLC"``, ``"IEHPLC"``, ``"RNASE"``, ``"DUALHPLC"``, ``"PAGEHPLC"``.
     """
 
     plate: Optional[str] = None
-    """Name of plate in case this strand will be ordered on a 96-well or 384-well plate.
+    """
+    Name of plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTFields.well` is not ``None``.
+    Optional field, but non-optional if :data:`VendorFields.well` is not ``None``.
     """
 
     well: Optional[str] = None
-    """Well position on plate in case this strand will be ordered on a 96-well or 384-well plate.
+    """
+    Well position on plate in case this strand will be ordered on a 96-well or 384-well plate.
+    Well position on plate in case this strand will be ordered on a 96-well or 384-well plate.
     
-    Optional field, but non-optional if :py:data:`IDTFields.plate` is not ``None``.
+    Optional field, but non-optional if :data:`VendorFields.plate` is not ``None``.
     """
 
     def __post_init__(self) -> None:
-        _check_idt_string_not_none_or_empty(self.scale, 'scale')
-        _check_idt_string_not_none_or_empty(self.purification, 'purification')
+        _check_vendor_string_not_none_or_empty(self.scale, 'scale')
+        _check_vendor_string_not_none_or_empty(self.purification, 'purification')
         if self.plate is None and self.well is not None:
-            raise IllegalDesignError(f'IDTFields.plate cannot be None if IDTFields.well is not None\n'
-                                     f'IDTFields.well = {self.well}')
+            raise IllegalDesignError(f'VendorFields.plate cannot be None if VendorFields.well is not None\n'
+                                     f'VendorFields.well = {self.well}')
         if self.plate is not None and self.well is None:
-            raise IllegalDesignError(f'IDTFields.well cannot be None if IDTFields.plate is not None\n'
-                                     f'IDTFields.plate = {self.plate}')
+            raise IllegalDesignError(f'VendorFields.well cannot be None if VendorFields.plate is not None\n'
+                                     f'VendorFields.plate = {self.plate}')
 
     def to_json_serializable(self, suppress_indent: bool = True,
                              **kwargs: Any) -> Union[NoIndent, Dict[str, Any]]:
@@ -2808,19 +2827,19 @@ class IDTFields(_JSONSerializable):
         return NoIndent(dct) if suppress_indent else dct
 
     @staticmethod
-    def from_json(json_map: Dict[str, Any]) -> 'IDTFields':
-        scale = mandatory_field(IDTFields, json_map, idt_scale_key)
-        purification = mandatory_field(IDTFields, json_map, idt_purification_key)
-        plate = json_map.get(idt_plate_key)
-        well = json_map.get(idt_well_key)
-        return IDTFields(scale=scale, purification=purification, plate=plate, well=well)
+    def from_json(json_map: Dict[str, Any]) -> VendorFields:
+        scale = mandatory_field(VendorFields, json_map, vendor_scale_key)
+        purification = mandatory_field(VendorFields, json_map, vendor_purification_key)
+        plate = json_map.get(vendor_plate_key)
+        well = json_map.get(vendor_well_key)
+        return VendorFields(scale=scale, purification=purification, plate=plate, well=well)
 
 
-def _check_idt_string_not_none_or_empty(value: str, field_name: str) -> None:
+def _check_vendor_string_not_none_or_empty(value: str, field_name: str) -> None:
     if value is None:
-        raise IllegalDesignError(f'field {field_name} in IDTFields cannot be None')
+        raise IllegalDesignError(f'field {field_name} in VendorFields cannot be None')
     if len(value) == 0:
-        raise IllegalDesignError(f'field {field_name} in IDTFields cannot be empty')
+        raise IllegalDesignError(f'field {field_name} in VendorFields cannot be empty')
 
 
 class StrandBuilder:
@@ -3152,27 +3171,27 @@ class StrandBuilder:
         self._strand.set_scaffold(True)
         return self
 
-    def with_idt(self, scale: str = default_idt_scale,
-                 purification: str = default_idt_purification,
-                 plate: Optional[str] = None, well: Optional[str] = None) \
+    def with_vendor_fields(self, scale: str = default_vendor_scale,
+                           purification: str = default_vendor_purification,
+                           plate: Optional[str] = None, well: Optional[str] = None) \
             -> StrandBuilder:
         """
-        Gives :any:`IDTFields` value to :any:`Strand` being built.
+        Gives :any:`VendorFields` value to :any:`Strand` being built.
 
         :param scale:
-            see :py:data:`IDTFields.scale`
+            see :py:data:`VendorFields.scale`
         :param purification:
-            see :py:data:`IDTFields.purification`
+            see :py:data:`VendorFields.purification`
         :param plate:
-            see :py:data:`IDTFields.plate`
+            see :py:data:`VendorFields.plate`
         :param well:
-            see :py:data:`IDTFields.well`
+            see :py:data:`VendorFields.well`
         :return: self
         """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
-        self._strand.idt = IDTFields(scale=scale, purification=purification,
-                                     plate=plate, well=well)
+        self._strand.vendor_fields = VendorFields(scale=scale, purification=purification,
+                                                  plate=plate, well=well)
         return self
 
     def with_modification_5p(self, mod: Modification5Prime) -> StrandBuilder:
@@ -3551,8 +3570,8 @@ class Strand(_JSONSerializable):
         (for complementarity checking) or :any:`Strand.set_dna_sequence` 
         (without complementarity checking, to allow mismatches).
 
-        Note that this does not include any IDT codes for :any:`Modification`'s.
-        To include those call :meth:`Strand.idt_dna_sequence`."""
+        Note that this does not include any vendor codes for :any:`Modification`'s.
+        To include those call :meth:`Strand.vendor_dna_sequence`."""
         sequence_list = []
         for domain in self.domains:
             if domain.dna_sequence is None:
@@ -3565,16 +3584,23 @@ class Strand(_JSONSerializable):
     a color is assigned by cycling through a list of defaults given by 
     :meth:`ColorCycler.colors`"""
 
-    idt: Optional[IDTFields] = None
-    """Fields used when ordering strands from the synthesis company IDT 
+    vendor_fields: Optional[VendorFields] = None
+    """
+    Fields used when ordering strands from the a DNA synthesis company such as IDT 
     (Integrated DNA Technologies, Coralville, IA). If present (i.e., not equal to :const:`None`)
-    then the method :py:meth:`Design.write_idt_bulk_input_file` can be called to automatically
+    then the method :meth:`Design.write_idt_bulk_input_file` can be called to automatically
     generate an text file for ordering strands in test tubes: 
     https://www.idtdna.com/site/order/oligoentry,
     as can the method :py:meth:`Design.write_idt_plate_excel_file` for writing a Microsoft Excel 
     file that can be uploaded to IDT's website for describing DNA sequences to be ordered in 96-well
     or 384-well plates:
-    https://www.idtdna.com/site/order/plate/index/dna/1800"""
+    https://www.idtdna.com/site/order/plate/index/dna/1800
+    
+    Currently no other vendors are supported via export methods in the package, 
+    but one could write custom export code based on these fields since most DNA synthesis companies 
+    support the same concepts of scale, purification, and a code for modifications 
+    (such as ``"/5Biosg/"`` for 5' biotin from IDT).
+    """
 
     is_scaffold: bool = False
     """Indicates whether this :any:`Strand` is a scaffold for a DNA origami. If any :any:`Strand` in a
@@ -3643,7 +3669,7 @@ class Strand(_JSONSerializable):
     def __init__(self,
                  domains: List[Union[Domain, Loopout, Extension]],
                  circular: bool = False, color: Optional[Color] = None,
-                 idt: Optional[IDTFields] = None,
+                 vendor_fields: Optional[VendorFields] = None,
                  is_scaffold: bool = False, modification_5p: Optional[Modification5Prime] = None,
                  modification_3p: Optional[Modification3Prime] = None,
                  modifications_int: Optional[Dict[int, ModificationInternal]] = None,
@@ -3654,7 +3680,7 @@ class Strand(_JSONSerializable):
         self.domains = domains
         self.circular = circular
         self.color = color
-        self.idt = idt
+        self.vendor_fields = vendor_fields
         self.is_scaffold = is_scaffold
         self.modification_5p = modification_5p
         self.modification_3p = modification_3p
@@ -3685,8 +3711,8 @@ class Strand(_JSONSerializable):
             dct[color_key] = self.color.to_json_serializable(suppress_indent)
         if self.dna_sequence is not None:
             dct[dna_sequence_key] = self.dna_sequence
-        if self.idt is not None:
-            dct[idt_key] = self.idt.to_json_serializable(suppress_indent)
+        if self.vendor_fields is not None:
+            dct[vendor_key] = self.vendor_fields.to_json_serializable(suppress_indent)
         dct[domains_key] = [domain.to_json_serializable(suppress_indent) for domain in self.domains]
         if hasattr(self, is_scaffold_key) and self.is_scaffold:
             dct[is_scaffold_key] = self.is_scaffold
@@ -3747,19 +3773,21 @@ class Strand(_JSONSerializable):
 
         name = json_map.get(strand_name_key)
 
-        idt_dict: Optional[dict] = json_map.get(idt_key)
-        idt = None if idt_dict is None else IDTFields.from_json(idt_dict)
+        vendor_dict: Optional[dict] = optional_field(None, json_map, vendor_key,
+                                                     legacy_keys=legacy_vendor_keys)
+        vendor_fields = None if vendor_dict is None else VendorFields.from_json(vendor_dict)
         # legacy:
-        # if no name is specified, but there's a name field in idt, then use that as the Strand's name
-        if name is None and idt_dict is not None and idt_name_key in idt_dict:
-            name = idt_dict[idt_name_key]
+        # if no name is specified, but there's a name field in vendor fields,
+        # then use that as the Strand's name
+        if name is None and vendor_dict is not None and vendor_name_key in vendor_dict:
+            name = vendor_dict[vendor_name_key]
 
         return Strand(
             domains=substrands,
             dna_sequence=dna_sequence,
             circular=circular,
             color=color,
-            idt=idt,
+            vendor_fields=vendor_fields,
             is_scaffold=is_scaffold,
             name=name,
             label=label,
@@ -3881,7 +3909,7 @@ class Strand(_JSONSerializable):
         if isinstance(self.domains[-1], Loopout):
             raise StrandError(self, 'strand cannot end with a loopout')
 
-    def idt_export_name(self, unique_names: bool = False) -> str:
+    def vendor_export_name(self, unique_names: bool = False) -> str:
         """
         :param unique_names:
             If True and default name is used,
@@ -4281,18 +4309,18 @@ class Strand(_JSONSerializable):
                                         f'\n{d1}'
                                         f'\n{d2}')
 
-    def idt_dna_sequence(self, domain_delimiter: str = '') -> str:
+    def vendor_dna_sequence(self, domain_delimiter: str = '') -> str:
         """
         :param domain_delimiter:
             string to put in between DNA sequences of each domain, and between 5'/3' modifications and DNA.
             Note that the delimiter is not put between internal modifications and the next base(s)
             in the same domain.
-        :return: DNA sequence as it needs to be typed to order from IDT, with
+        :return: DNA sequence as it needs to be typed to order from a DNA synthesis vendor, with
             :py:data:`Modification5Prime`'s,
             :py:data:`Modification3Prime`'s,
             and
-            :py:data:`ModificationInternal`'s represented with text codes, e.g., "/5Biosg/ACGT" for sequence
-            ACGT with a 5' biotin modification.
+            :py:data:`ModificationInternal`'s represented with text codes, e.g., for IDT DNA, using
+            "/5Biosg/ACGT" for sequence ACGT with a 5' biotin modification.
         """
         self._ensure_modifications_legal(check_offsets_legal=True)
 
@@ -4301,14 +4329,14 @@ class Strand(_JSONSerializable):
 
         ret_list: List[str] = []
 
-        if self.modification_5p is not None and self.modification_5p.idt_text is not None:
-            ret_list.append(self.modification_5p.idt_text)
+        if self.modification_5p is not None and self.modification_5p.vendor_code is not None:
+            ret_list.append(self.modification_5p.vendor_code)
 
         for substrand in self.domains:
             ret_list.append(substrand.idt_dna_sequence())
 
-        if self.modification_3p is not None and self.modification_3p.idt_text is not None:
-            ret_list.append(self.modification_3p.idt_text)
+        if self.modification_3p is not None and self.modification_3p.vendor_code is not None:
+            ret_list.append(self.modification_3p.vendor_code)
 
         return domain_delimiter.join(ret_list)
 
@@ -5010,11 +5038,11 @@ def _plate_map(plate_name: str, strands_in_plate: List[Strand], plate_type: Plat
     """
     well_to_strand = {}
     for strand in strands_in_plate:
-        if strand.idt is None:
+        if strand.vendor_fields is None:
             raise ValueError(f'strand {strand} has no idt field, so cannot be included in the plate map')
-        elif strand.idt.well is None:
+        elif strand.vendor_fields.well is None:
             raise ValueError(f'strand {strand} has no idt.well field, so cannot be included in the plate map')
-        well_to_strand[strand.idt.well] = strand
+        well_to_strand[strand.vendor_fields.well] = strand
 
     plate_map = PlateMap(
         plate_name=plate_name,
@@ -6233,24 +6261,25 @@ class Design(_JSONSerializable):
         strand_names_to_plate_and_well = {}
         plate_names_to_strands = defaultdict(list)
         for strand in strands:
-            if strand.idt is not None and strand.idt.plate is not None:
-                plate_names_to_strands[strand.idt.plate].append(strand)
+            if strand.vendor_fields is not None and strand.vendor_fields.plate is not None:
+                plate_names_to_strands[strand.vendor_fields.plate].append(strand)
                 if strand.name is not None and strand.name in strand_names_to_plate_and_well:
                     if warn_duplicate_strand_names:
                         print(f'WARNING: found duplicate instance of strand with name {strand.name}')
                     plate, well = strand_names_to_plate_and_well[strand.name]
-                    if strand.idt.plate != plate:
+                    if strand.vendor_fields.plate != plate:
                         raise ValueError(f'two strands with name {strand.name} exist but have different '
-                                         f'IDT plates "{plate}" and "{strand.idt.plate}"'
+                                         f'IDT plates "{plate}" and "{strand.vendor_fields.plate}"'
                                          'duplicate strands with the same name are allowed, '
                                          'but they must have the same IDT plate and well')
-                    if strand.idt.well != well:
+                    if strand.vendor_fields.well != well:
                         raise ValueError(f'two strands with name {strand.name} exist but have different '
-                                         f'IDT wells "{well}" and "{strand.idt.well}"'
+                                         f'IDT wells "{well}" and "{strand.vendor_fields.well}"'
                                          'duplicate strands with the same name are allowed, '
                                          'but they must have the same IDT plate and well')
                 else:
-                    strand_names_to_plate_and_well[strand.name] = (strand.idt.plate, strand.idt.well)
+                    strand_names_to_plate_and_well[strand.name] = (
+                        strand.vendor_fields.plate, strand.vendor_fields.well)
 
         plate_maps = [_plate_map(name, strands_in_plate, plate_type)
                       for name, strands_in_plate in plate_names_to_strands.items()]
@@ -7252,18 +7281,18 @@ class Design(_JSONSerializable):
 
         idt_lines: List[str] = []
         for strand in strands_to_export:
-            if strand.idt is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_idt:
                 raise AssertionError(f'cannot export strand {strand} to IDT because it has no IDT field; '
                                      f'since only_strands_with_idt is True, '
                                      f'this strand should have been filtered out by _idt_strands_to_export')
-            if strand.idt is not None:
-                scale = strand.idt.scale
-                purification = strand.idt.purification
+            if strand.vendor_fields is not None:
+                scale = strand.vendor_fields.scale
+                purification = strand.vendor_fields.purification
             else:
-                scale = default_idt_scale
-                purification = default_idt_purification
+                scale = default_vendor_scale
+                purification = default_vendor_purification
             idt_lines.append(delimiter.join(
-                [strand.idt_export_name(), strand.idt_dna_sequence(domain_delimiter=domain_delimiter),
+                [strand.vendor_export_name(), strand.vendor_dna_sequence(domain_delimiter=domain_delimiter),
                  scale, purification]
             ))
 
@@ -7284,11 +7313,11 @@ class Design(_JSONSerializable):
                 continue
 
             # skip strands with no IDT field unless requested to export
-            if strand.idt is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_idt:
                 continue
 
             # figure out what name to export
-            name = strand.idt_export_name()
+            name = strand.vendor_export_name()
 
             if name in added_strands:
                 existing_strand = added_strands[name]
@@ -7330,24 +7359,24 @@ class Design(_JSONSerializable):
                 f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
                 f'{existing_domain.offset_5p()}, '
                 f'sequence: {existing_strand.dna_sequence}\n')
-        elif strand.idt is not None \
-                and existing_strand.idt is not None:
-            if strand.idt.scale != existing_strand.idt.scale:
+        elif strand.vendor_fields is not None \
+                and existing_strand.vendor_fields is not None:
+            if strand.vendor_fields.scale != existing_strand.vendor_fields.scale:
                 raise IllegalDesignError(
                     f'two strands with same name {name} but different IDT scales:\n'
                     f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
-                    f'scale: {strand.idt.scale}\n'
+                    f'scale: {strand.vendor_fields.scale}\n'
                     f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
                     f'{existing_domain.offset_5p()}, '
-                    f'scale: {existing_strand.idt.scale}\n')
-            elif strand.idt.purification != existing_strand.idt.purification:
+                    f'scale: {existing_strand.vendor_fields.scale}\n')
+            elif strand.vendor_fields.purification != existing_strand.vendor_fields.purification:
                 raise IllegalDesignError(
                     f'two strands with same name {name} but different purifications:\n'
                     f'  strand 1: helix {domain.helix}, 5\' end at offset {domain.offset_5p()}, '
-                    f'purification: {strand.idt.purification}\n'
+                    f'purification: {strand.vendor_fields.purification}\n'
                     f'  strand 2: helix {existing_domain.helix}, 5\' end at offset '
                     f'{existing_domain.offset_5p()}, '
-                    f'purification: {existing_strand.idt.purification}\n')
+                    f'purification: {existing_strand.vendor_fields.purification}\n')
 
     def write_idt_bulk_input_file(self, *, directory: str = '.', filename: str = None,
                                   key: Optional[KeyFunction[Strand]] = None,
@@ -7390,7 +7419,7 @@ class Design(_JSONSerializable):
             remaining readable by IDT's website.
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :data:`IDTFields.name` and the same :data:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :data:`VendorFields.name` and the same :data:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
@@ -7455,7 +7484,7 @@ class Design(_JSONSerializable):
             :py:meth:`strand_order_key_function`
         :param warn_duplicate_name:
             if ``True`` prints a warning when two different :any:`Strand`'s have the same
-            :py:attr:`IDTFields.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
+            :data:`Strand.name` and the same :any:`Strand.dna_sequence`. An :any:`IllegalDesignError` is
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
@@ -7476,7 +7505,7 @@ class Design(_JSONSerializable):
             the parameter `only_strands_with_idt` must be True.
         :param warn_using_default_plates:
             specifies whether, if `use_default_plates` is True, to print a warning for strands whose
-            :py:data:`Strand.idt` has the fields :py:data:`IDTFields.plate` and :py:data:`IDTFields.well`,
+            :py:data:`Strand.idt` has the fields :data:`VendorFields.plate` and :data:`VendorFields.well`,
             since `use_default_plates` directs these fields to be ignored.
         :param plate_type:
             a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate
@@ -7507,8 +7536,9 @@ class Design(_JSONSerializable):
 
     def _write_plates_assuming_explicit_plates_in_each_strand(self, directory: str, filename: Optional[str],
                                                               strands_to_export: List[Strand]) -> None:
-        plates = list({strand.idt.plate for strand in strands_to_export if strand.idt is not None if
-                       strand.idt.plate is not None})
+        plates = list(
+            {strand.vendor_fields.plate for strand in strands_to_export if strand.vendor_fields is not None if
+             strand.vendor_fields.plate is not None})
         if len(plates) == 0:
             raise ValueError('Cannot write a a plate file since no plate data exists in any Strands '
                              'in the design.\n'
@@ -7521,23 +7551,24 @@ class Design(_JSONSerializable):
             worksheet = self._add_new_excel_plate_sheet(plate, workbook)
 
             strands_in_plate = [strand for strand in strands_to_export if
-                                strand.idt is not None and strand.idt.plate == plate]
+                                strand.vendor_fields is not None and strand.vendor_fields.plate == plate]
 
-            strands_in_plate.sort(key=lambda s: (int(s.idt.well[1:]), s.idt.well[0]))  # type: ignore
+            strands_in_plate.sort(
+                key=lambda s: (int(s.vendor_fields.well[1:]), s.vendor_fields.well[0]))  # type: ignore
 
             for row, strand in enumerate(strands_in_plate):
-                if strand.idt is None:
+                if strand.vendor_fields is None:
                     raise ValueError(f'cannot export strand {strand} to IDT because it has no idt field')
-                worksheet.cell(row + 2, 1).value = strand.idt.well
-                worksheet.cell(row + 2, 2).value = strand.idt_export_name()
-                worksheet.cell(row + 2, 3).value = strand.idt_dna_sequence()
+                worksheet.cell(row + 2, 1).value = strand.vendor_fields.well
+                worksheet.cell(row + 2, 2).value = strand.vendor_export_name()
+                worksheet.cell(row + 2, 3).value = strand.vendor_dna_sequence()
 
             workbook.save(filename_plate)
 
     # TODO: fix types when openpyxl supports type hints
     @staticmethod
     def _add_new_excel_plate_sheet(plate_name: str,
-                                   workbook: 'openpyxl.Workbook') -> 'openpyxl.Worksheet':
+                                   workbook: 'openpyxl.Workbook') -> Any:
         worksheet = workbook.create_sheet(title=plate_name)
         worksheet.cell(1, 1).value = 'Well Position'
         worksheet.cell(1, 2).value = 'Name'
@@ -7581,20 +7612,20 @@ class Design(_JSONSerializable):
         on_final_plate = num_plates_needed == 1
 
         for strand in strands:
-            if strand.idt is not None:
-                if warn_using_default_plates and strand.idt.plate is not None:
+            if strand.vendor_fields is not None:
+                if warn_using_default_plates and strand.vendor_fields.plate is not None:
                     print(
-                        f"WARNING: strand {strand} has plate entry {strand.idt.plate}, "
+                        f"WARNING: strand {strand} has plate entry {strand.vendor_fields.plate}, "
                         f"which is being ignored since we are using default plate/well addressing")
-                if warn_using_default_plates and strand.idt.well is not None:
+                if warn_using_default_plates and strand.vendor_fields.well is not None:
                     print(
-                        f"WARNING: strand {strand} has well entry {strand.idt.well}, "
+                        f"WARNING: strand {strand} has well entry {strand.vendor_fields.well}, "
                         f"which is being ignored since we are using default plate/well addressing")
 
             well = plate_coord.well()
             worksheet.cell(excel_row + 1, 1).value = well
-            worksheet.cell(excel_row + 1, 2).value = strand.idt_export_name()
-            worksheet.cell(excel_row + 1, 3).value = strand.idt_dna_sequence()
+            worksheet.cell(excel_row + 1, 2).value = strand.vendor_export_name()
+            worksheet.cell(excel_row + 1, 3).value = strand.vendor_dna_sequence()
             num_strands_remaining -= 1
 
             # IDT charges extra for a plate with < 24 strands for 96-well plate
@@ -7996,12 +8027,12 @@ class Design(_JSONSerializable):
             # if strand is not circular, we delete it and create two new strands
             self.strands.remove(strand)
 
-            idt_present = strand.idt is not None
+            idt_present = strand.vendor_fields is not None
             strand_before: Strand = Strand(
                 domains=domains_before,
                 dna_sequence=seq_before_whole,
                 color=strand.color,
-                idt=strand.idt if idt_present else None,
+                vendor_fields=strand.vendor_fields if idt_present else None,
             )
 
             color_after = next(self.color_cycler) if new_color else strand.color
@@ -8252,7 +8283,7 @@ class Design(_JSONSerializable):
                 'cannot add crossover between two strands if one has a DNA sequence '
                 'and the other does not')
         new_strand: Strand = Strand(domains=new_domains, color=strand_first.color,
-                                    dna_sequence=new_dna, idt=strand_first.idt,
+                                    dna_sequence=new_dna, vendor_fields=strand_first.vendor_fields,
                                     is_scaffold=strand1.is_scaffold or strand2.is_scaffold)
 
         # put new strand in place where strand_first was
