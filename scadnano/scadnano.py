@@ -2147,10 +2147,10 @@ class Domain(_JSONSerializable):
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
 
-    def idt_dna_sequence(self) -> Optional[str]:
+    def vendor_dna_sequence(self) -> Optional[str]:
         """
         :return:
-            IDT DNA sequence of this :any:`Domain`, or ``None`` if no DNA sequence has been assigned.
+            vendor DNA sequence of this :any:`Domain`, or ``None`` if no DNA sequence has been assigned.
             The difference between this and the field :data:`Domain.dna_sequence` is that this
             will add internal modification codes.
         """
@@ -3918,7 +3918,7 @@ class Strand(_JSONSerializable):
             If False (the default), uses cadnano's exact naming convention, which allows two strands
             to have the same default name, if they begin and end at the same (helix,offset) pair (but
             point in opposite directions at each).
-            Has no effect if :py:data:`Strand.idt` or :py:data:`Strand.name` are defined;
+            Has no effect if :data:`Strand.vendor_fields` or :py:data:`Strand.name` are defined;
             if those are used, they must be explicitly set to be unique.
         :return:
             If :py:data:`Strand.name` is not None, return :py:data:`Strand.name`,
@@ -4333,7 +4333,7 @@ class Strand(_JSONSerializable):
             ret_list.append(self.modification_5p.vendor_code)
 
         for substrand in self.domains:
-            ret_list.append(substrand.idt_dna_sequence())
+            ret_list.append(substrand.vendor_dna_sequence())
 
         if self.modification_3p is not None and self.modification_3p.vendor_code is not None:
             ret_list.append(self.modification_3p.vendor_code)
@@ -7459,7 +7459,7 @@ class Design(_JSONSerializable):
                                    export_non_modified_strand_version: bool = False) -> None:
         """
         Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
-        :py:data:`Strand.idt`, suitable for uploading to IDT
+        :data:`Strand.vendor_fields`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
         to describe a 96-well or 384-well plate
         (https://www.idtdna.com/site/order/plate/index/dna/),
@@ -7490,7 +7490,7 @@ class Design(_JSONSerializable):
             purifications.
         :param only_strands_with_idt:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
-            chosen if the field :py:data:`Strand.idt` is missing.
+            chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :any:`Strand.idt` will not be exported.
             If False, then `use_default_plates` must be True.
@@ -7501,11 +7501,11 @@ class Design(_JSONSerializable):
             `only_strands_with_idt` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
-            If False, each Strand to export must have the field :py:data:`Strand.idt`, so in particular
+            If False, each Strand to export must have the field :data:`Strand.vendor_fields`, so in particular
             the parameter `only_strands_with_idt` must be True.
         :param warn_using_default_plates:
             specifies whether, if `use_default_plates` is True, to print a warning for strands whose
-            :py:data:`Strand.idt` has the fields :data:`VendorFields.plate` and :data:`VendorFields.well`,
+            :data:`Strand.vendor_fields` has the fields :data:`VendorFields.plate` and :data:`VendorFields.well`,
             since `use_default_plates` directs these fields to be ignored.
         :param plate_type:
             a :any:`PlateType` specifying whether to use a 96-well plate or a 384-well plate

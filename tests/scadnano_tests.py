@@ -670,25 +670,25 @@ class TestModifications(unittest.TestCase):
         # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotin_i_small])
-        #     seq = strand.idt_dna_sequence()
+        #     seq = strand.vendor_dna_sequence()
         #
         # biotin_i_large = mod.Biotin(location=sc.ModLocation.internal, offset=10)
         # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotin_i_small])
-        #     seq = strand.idt_dna_sequence()
+        #     seq = strand.vendor_dna_sequence()
         #
         # biotin_i_offset_not_T = mod.Biotin(location=sc.ModLocation.internal, offset=0)
         # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[biotin_i_offset_not_T])
-        #     seq = strand.idt_dna_sequence()
+        #     seq = strand.vendor_dna_sequence()
         #
         # cy3I_offset_off_end = mod.Cy3(location=sc.ModLocation.internal, offset=4)
         # with self.assertRaises(sc.IllegalDesignError):
         #     strand = sc.Strand(domains=[sc.Substrand(0, True, 0, 5)], dna_sequence='AATGC',
         #                        modifications=[cy3I_offset_off_end])
-        #     seq = strand.idt_dna_sequence()
+        #     seq = strand.vendor_dna_sequence()
 
     def test_Cy3(self) -> None:
         cy3_5 = mod.cy3_5p
