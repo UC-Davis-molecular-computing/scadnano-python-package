@@ -30,7 +30,7 @@ def set_helix_major_ticks(design: sc.Design) -> None:
     for helix in design.helices.values():
         helix.major_ticks = list(major_ticks)
 
-    for _,helix in zip([0,1,2], design.helices.values()):
+    for _, helix in zip([0, 1, 2], design.helices.values()):
         ticks = [11, 22, 32, 40, 48]
         tick = 58
         offset = 11
@@ -73,8 +73,9 @@ def add_adapters(design: sc.Design) -> None:
                            start=left_outside_seed, end=left_inside_seed)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=left_outside_seed, end=left_inside_seed)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[ss_bot, ss_top], name=f'adap-left-{top_helix}-{bot_helix}', idt=idt)
+        idt = sc.VendorFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[ss_bot, ss_top], name=f'adap-left-{top_helix}-{bot_helix}',
+                            vendor_fields=idt)
         design.add_strand(adapter)
 
     # right adapters
@@ -86,8 +87,9 @@ def add_adapters(design: sc.Design) -> None:
                            start=right_inside_seed, end=right_outside_seed)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=right_inside_seed, end=right_outside_seed)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[ss_top, ss_bot], name=f'adap-right-{top_helix}-{bot_helix}', idt=idt)
+        idt = sc.VendorFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[ss_top, ss_bot], name=f'adap-right-{top_helix}-{bot_helix}',
+                            vendor_fields=idt)
         design.add_strand(adapter)
 
 

@@ -19,9 +19,9 @@ def create_design() -> sc.Design:
         row = ROWS[row_idx]
         col = COLS[col_idx]
         well = f'{row}{col}'
-        idt = sc.IDTFields(plate=f'plate{plate}', well=well)
+        idt = sc.VendorFields(plate=f'plate{plate}', well=well)
 
-        strand = sc.Strand(domains=[ss_f, ss_r], idt=idt, name=f'staple{s}')
+        strand = sc.Strand(domains=[ss_f, ss_r], vendor_fields=idt, name=f'staple{s}')
         strands.append(strand)
         row_idx += 1
         if row_idx == len(ROWS):

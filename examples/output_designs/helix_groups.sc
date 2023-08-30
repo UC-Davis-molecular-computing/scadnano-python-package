@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.19.0",
   "groups": {
     "north": {
       "position": {"x": 0, "y": -10, "z": 0},

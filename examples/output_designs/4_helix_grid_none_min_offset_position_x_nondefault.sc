@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.19.0",
   "grid": "none",
   "helices": [
     {"position": {"x": 0, "y": 0, "z": 0}, "major_tick_distance": 4},

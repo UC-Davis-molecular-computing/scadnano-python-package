@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.19.0",
   "grid": "square",
   "helices": [
     {"max_offset": 48, "grid_position": [0, 0]},
@@ -8,7 +8,7 @@
   "modifications_in_design": {
     "/5Biosg/": {
       "display_text": "B",
-      "idt_text": "/5Biosg/",
+      "vendor_code": "/5Biosg/",
       "display_connector": false,
       "location": "5'"
     }

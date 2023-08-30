@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.19.0",
   "grid": "square",
   "geometry": {
     "rise_per_base_pair": 0.2,

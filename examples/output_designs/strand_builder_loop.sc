@@ -1,5 +1,5 @@
 {
-  "version": "0.17.3",
+  "version": "0.19.0",
   "grid": "square",
   "helices": [
     {"grid_position": [0, 0]},

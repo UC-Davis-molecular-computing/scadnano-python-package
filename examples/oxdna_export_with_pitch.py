@@ -1,7 +1,7 @@
 import scadnano as sc
 
 
-def create_design(pitch: float) -> sc.Design:
+def create_design(pitch: float = 0) -> sc.Design:
     helices = [sc.Helix(max_offset=100) for _ in range(2)]
     design = sc.Design(helices=helices, grid=sc.square)
 
