@@ -1,5 +1,5 @@
 {
-  "version": "0.17.5",
+  "version": "0.19.0",
   "grid": "square",
   "helices": [
     {"max_offset": 32, "grid_position": [0, 0]},
@@ -9,13 +9,13 @@
   "modifications_in_design": {
     "/3Cy3Sp/": {
       "display_text": "Cy3",
-      "idt_text": "/3Cy3Sp/",
+      "vendor_code": "/3Cy3Sp/",
       "display_connector": false,
       "location": "3'"
     },
     "/5Cy5/": {
       "display_text": "Cy5",
-      "idt_text": "/5Cy5/",
+      "vendor_code": "/5Cy5/",
       "display_connector": false,
       "location": "5'"
     }
@@ -26,7 +26,7 @@
       "color": "#f74308",
       "sequence": "TATTTGGGGGGGGCCCCCCCCTTTGGGGGGGGATAAAAA",
       "domains": [
-        {"extension_num_bases": 5, "display_length": 2.5, "name": "ext_5p 1"},
+        {"extension_num_bases": 5, "display_length": 2.5, "display_angle": 45, "name": "ext_5p 1"},
         {"name": "domain 1", "helix": 0, "forward": true, "start": 0, "end": 8},
         {"helix": 1, "forward": false, "start": 0, "end": 8},
         {"loopout": 3, "name": "loopout 1"},

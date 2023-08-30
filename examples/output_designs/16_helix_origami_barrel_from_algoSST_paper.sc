@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.19.0",
   "grid": "square",
   "helices": [
     {
@@ -2028,7 +2028,7 @@
       "name": "adap-left-17-2",
       "color": "#f74308",
       "sequence": "GTAAAATACGTAATGCTTGTCAACAAAACAAATCCACCCTAAAGGGAGCCCC",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 2, "forward": false, "start": 22, "end": 48},
         {"helix": 17, "forward": true, "start": 22, "end": 48}
@@ -2038,7 +2038,7 @@
       "name": "adap-left-3-4",
       "color": "#57bb00",
       "sequence": "TGAGATGGTTTAATTTTTCCTCCTATCTCTAGACAACACTACGAAGGCACCA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 4, "forward": false, "start": 22, "end": 48},
         {"helix": 3, "forward": true, "start": 22, "end": 48}
@@ -2048,7 +2048,7 @@
       "name": "adap-left-5-6",
       "color": "#888888",
       "sequence": "AAAACGAGAATGACCATACCAGATTCCTACTTCCTTCAACTTTAATCATTGT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 6, "forward": false, "start": 22, "end": 48},
         {"helix": 5, "forward": true, "start": 22, "end": 48}
@@ -2058,7 +2058,7 @@
       "name": "adap-left-7-8",
       "color": "#32b86c",
       "sequence": "CATTTGGGGCGCGAGCTCTGATCTCTCGACTATTCTTAAATCAAAAATCAGG",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 8, "forward": false, "start": 22, "end": 48},
         {"helix": 7, "forward": true, "start": 22, "end": 48}
@@ -2068,7 +2068,7 @@
       "name": "adap-left-9-10",
       "color": "#333333",
       "sequence": "AAACAAGAGAATCGATTATCCTTAGCCCTATCCATTTGAAAAGGTGGCATCA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 10, "forward": false, "start": 22, "end": 48},
         {"helix": 9, "forward": true, "start": 22, "end": 48}
@@ -2078,7 +2078,7 @@
       "name": "adap-left-11-12",
       "color": "#320096",
       "sequence": "GCTTTCCGGCACCGCTTTCCTGATACGATCATCACTGAACGGTAATCGTAAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 12, "forward": false, "start": 22, "end": 48},
         {"helix": 11, "forward": true, "start": 22, "end": 48}
@@ -2088,7 +2088,7 @@
       "name": "adap-left-13-14",
       "color": "#03b6a2",
       "sequence": "TCCAGTCGGGAAACCTATCGTCTCATTTTTAACGCATCTGGTGCCGGAAACC",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 14, "forward": false, "start": 22, "end": 48},
         {"helix": 13, "forward": true, "start": 22, "end": 48}
@@ -2098,7 +2098,7 @@
       "name": "adap-left-15-16",
       "color": "#7300de",
       "sequence": "AAGCACTAAATCGGAATTGACCAATTCTCTCTGAATGTCGTGCCAGCTGCAT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 16, "forward": false, "start": 22, "end": 48},
         {"helix": 15, "forward": true, "start": 22, "end": 48}
@@ -2108,7 +2108,7 @@
       "name": "adap-right-17-2",
       "color": "#aaaa00",
       "sequence": "TAGTCTTTAATGCGCGATCTTTCCGTACCAAGAACTTCGTCTTTCCAGACGT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 17, "forward": true, "start": 464, "end": 490},
         {"helix": 2, "forward": false, "start": 464, "end": 490}
@@ -2118,7 +2118,7 @@
       "name": "adap-right-3-4",
       "color": "#b8056c",
       "sequence": "ACGATCTAAAGTTTTGAACATCCCAATTATCCACGTAGTAAGCGTCATACAT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 3, "forward": true, "start": 464, "end": 490},
         {"helix": 4, "forward": false, "start": 464, "end": 490}
@@ -2128,7 +2128,7 @@
       "name": "adap-right-5-6",
       "color": "#007200",
       "sequence": "CTGAATTTACCGTTCCACCTTTCGAAAACCTCGAATTAAAGGTGAATTATCA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 5, "forward": true, "start": 464, "end": 490},
         {"helix": 6, "forward": false, "start": 464, "end": 490}
@@ -2138,7 +2138,7 @@
       "name": "adap-right-7-8",
       "color": "#cc0000",
       "sequence": "GACGGAAATTATTCATACACTGACAAATCTGCTCATATAAAAACAGGGAAGC",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 7, "forward": true, "start": 464, "end": 490},
         {"helix": 8, "forward": false, "start": 464, "end": 490}
@@ -2148,7 +2148,7 @@
       "name": "adap-right-9-10",
       "color": "#f7931e",
       "sequence": "TTACAGAGAGAATAACAAAGACACCTTCAAGTTCCATAGATAAGTCCTGAAC",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 9, "forward": true, "start": 464, "end": 490},
         {"helix": 10, "forward": false, "start": 464, "end": 490}
@@ -2158,7 +2158,7 @@
       "name": "adap-right-11-12",
       "color": "#f74308",
       "sequence": "GCCTGTTTATCAACAAACAGCCTAAAACCCATTCATATCATAGGTCTGAGAG",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 11, "forward": true, "start": 464, "end": 490},
         {"helix": 12, "forward": false, "start": 464, "end": 490}
@@ -2168,7 +2168,7 @@
       "name": "adap-right-13-14",
       "color": "#57bb00",
       "sequence": "TAGTGAATTTATCAAAATACGCATCTAACCTTCACATATAATCCTGATTGTT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 13, "forward": true, "start": 464, "end": 490},
         {"helix": 14, "forward": false, "start": 464, "end": 490}
@@ -2178,7 +2178,7 @@
       "name": "adap-right-15-16",
       "color": "#888888",
       "sequence": "GATGGCAATTCATCAATATCATGCCATACCATGCTTAACTGATAGCCCTAAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 15, "forward": true, "start": 464, "end": 490},
         {"helix": 16, "forward": false, "start": 464, "end": 490}
@@ -2188,7 +2188,7 @@
       "name": "tile-left-2-3",
       "color": "#000000",
       "sequence": "TTGTCTAGAGTTTGGGATGTTAGTTCTTGGTATTGTTGACAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 3, "forward": false, "start": 11, "end": 32},
         {"helix": 2, "forward": true, "start": 11, "end": 32}
@@ -2198,7 +2198,7 @@
       "name": "tile-left-4-5",
       "color": "#000000",
       "sequence": "AAGGAAGTAGATTCGAAAGGTACGTGGATAAAATAGGAGGAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 5, "forward": false, "start": 11, "end": 32},
         {"helix": 4, "forward": true, "start": 11, "end": 32}
@@ -2208,7 +2208,7 @@
       "name": "tile-left-6-7",
       "color": "#000000",
       "sequence": "AGAATAGTCGTTTGTCAGTGTATTCGAGGTTAGAATCTGGTA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 7, "forward": false, "start": 11, "end": 32},
         {"helix": 6, "forward": true, "start": 11, "end": 32}
@@ -2218,7 +2218,7 @@
       "name": "tile-left-8-9",
       "color": "#000000",
       "sequence": "AATGGATAGGTAGGTGTCTTTATGAGCAGATAAGAGATCAGA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 9, "forward": false, "start": 11, "end": 32},
         {"helix": 8, "forward": true, "start": 11, "end": 32}
@@ -2228,7 +2228,7 @@
       "name": "tile-left-10-11",
       "color": "#000000",
       "sequence": "AGTGATGATCTTTTAGGCTGTTGGAACTTGATGCTAAGGATA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 11, "forward": false, "start": 11, "end": 32},
         {"helix": 10, "forward": true, "start": 11, "end": 32}
@@ -2238,7 +2238,7 @@
       "name": "tile-left-12-13",
       "color": "#000000",
       "sequence": "TGCGTTAAAATAGATGCGTATATGAATGGGTAGTATCAGGAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 13, "forward": false, "start": 11, "end": 32},
         {"helix": 12, "forward": true, "start": 11, "end": 32}
@@ -2248,7 +2248,7 @@
       "name": "tile-left-14-15",
       "color": "#000000",
       "sequence": "ATTCAGAGAGTTGGCATGATATGTGAAGGTTTATGAGACGAT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 15, "forward": false, "start": 11, "end": 32},
         {"helix": 14, "forward": true, "start": 11, "end": 32}
@@ -2258,7 +2258,7 @@
       "name": "tile-left-16-17",
       "color": "#000000",
       "sequence": "TGGATTTGTTTACGGAAAGATAAGCATGGTAAAATTGGTCAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 17, "forward": false, "start": 11, "end": 32},
         {"helix": 16, "forward": true, "start": 11, "end": 32}
@@ -2268,7 +2268,7 @@
       "name": "tile-right-2-3",
       "color": "#000000",
       "sequence": "TTGTCTAGAGTTTGGGATGTTAGTTCTTGGTATTGTTGACAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 3, "forward": false, "start": 480, "end": 501},
         {"helix": 2, "forward": true, "start": 480, "end": 501}
@@ -2278,7 +2278,7 @@
       "name": "tile-right-4-5",
       "color": "#000000",
       "sequence": "AAGGAAGTAGATTCGAAAGGTACGTGGATAAAATAGGAGGAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 5, "forward": false, "start": 480, "end": 501},
         {"helix": 4, "forward": true, "start": 480, "end": 501}
@@ -2288,7 +2288,7 @@
       "name": "tile-right-6-7",
       "color": "#000000",
       "sequence": "AGAATAGTCGTTTGTCAGTGTATTCGAGGTTAGAATCTGGTA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 7, "forward": false, "start": 480, "end": 501},
         {"helix": 6, "forward": true, "start": 480, "end": 501}
@@ -2298,7 +2298,7 @@
       "name": "tile-right-8-9",
       "color": "#000000",
       "sequence": "AATGGATAGGTAGGTGTCTTTATGAGCAGATAAGAGATCAGA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 9, "forward": false, "start": 480, "end": 501},
         {"helix": 8, "forward": true, "start": 480, "end": 501}
@@ -2308,7 +2308,7 @@
       "name": "tile-right-10-11",
       "color": "#000000",
       "sequence": "AGTGATGATCTTTTAGGCTGTTGGAACTTGATGCTAAGGATA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 11, "forward": false, "start": 480, "end": 501},
         {"helix": 10, "forward": true, "start": 480, "end": 501}
@@ -2318,7 +2318,7 @@
       "name": "tile-right-12-13",
       "color": "#000000",
       "sequence": "TGCGTTAAAATAGATGCGTATATGAATGGGTAGTATCAGGAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 13, "forward": false, "start": 480, "end": 501},
         {"helix": 12, "forward": true, "start": 480, "end": 501}
@@ -2328,7 +2328,7 @@
       "name": "tile-right-14-15",
       "color": "#000000",
       "sequence": "ATTCAGAGAGTTGGCATGATATGTGAAGGTTTATGAGACGAT",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 15, "forward": false, "start": 480, "end": 501},
         {"helix": 14, "forward": true, "start": 480, "end": 501}
@@ -2338,7 +2338,7 @@
       "name": "tile-right-16-17",
       "color": "#000000",
       "sequence": "TGGATTTGTTTACGGAAAGATAAGCATGGTAAAATTGGTCAA",
-      "idt": {"scale": "25nm", "purification": "STD"},
+      "vendor": {"scale": "25nm", "purification": "STD"},
       "domains": [
         {"helix": 17, "forward": false, "start": 480, "end": 501},
         {"helix": 16, "forward": true, "start": 480, "end": 501}

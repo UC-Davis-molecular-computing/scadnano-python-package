@@ -1,5 +1,5 @@
 {
-  "version": "0.16.0",
+  "version": "0.19.0",
   "groups": {
     "pitch90": {
       "position": {"x": 0, "y": 0, "z": 0},

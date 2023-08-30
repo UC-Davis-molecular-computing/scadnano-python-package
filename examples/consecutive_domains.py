@@ -1,5 +1,6 @@
 import scadnano as sc
 
+
 def create_design() -> sc.Design:
     # shows how to make consecutive domains on a helix, separated by a crossover that appears horizontal
     # this is useful when doing single-stranded tile designs, for instance, or any other design
@@ -19,9 +20,10 @@ def create_design() -> sc.Design:
     # 0 [------------>
     #
     # 1 <------------]
-    design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+    # design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
 
     return design
+
 
 if __name__ == '__main__':
     d = create_design()
