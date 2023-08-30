@@ -3950,7 +3950,7 @@ class Strand(_JSONSerializable):
             default name to export
             (used, for example, by idt DNA export methods :py:meth:`Design.write_idt_plate_excel_file`
             and :py:meth:`Design.write_idt_bulk_input_file`
-            if :py:data:`Strand.name` and :py:data:`Strand.idt.name` are both not set)
+            if :py:data:`Strand.name` and :data:`Strand.vendor_fields.name` are both not set)
         """
         start_helix = self.first_bound_domain().helix
         end_helix = self.last_bound_domain().helix
@@ -4543,8 +4543,8 @@ class StrandError(IllegalDesignError):
 # def _plates(idt_strands) -> List[str]:
 #     plates: Set[str] = set()
 #     for strand in idt_strands:
-#         if strand.idt is not None and strand.idt.plate is not None:
-#             plates.add(strand.idt.plate)
+#         if strand.vendor_fields is not None and strand.vendor_fields.plate is not None:
+#             plates.add(strand.vendor_fields.plate)
 #     return list(plates)
 
 
@@ -5030,11 +5030,11 @@ def _plate_map(plate_name: str, strands_in_plate: List[Strand], plate_type: Plat
     """
     Generates plate map from this :any:`Design` for plate with name `plate_name`.
 
-    All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
-    with value `plate_name` are exported.
+    All :any:`Strand`'s in the design that have a field :data:`Strand.vendor_fields` with
+    :data:`Strand.vendor_fields.plate` with value `plate_name` are exported.
 
     :return:
-        plate map for :any:`Strand`'s with :data:`Strand.idt.plate` equal to`plate_name`
+        plate map for :any:`Strand`'s with :data:`Strand.vendor_fields.plate` equal to`plate_name`
     """
     well_to_strand = {}
     for strand in strands_in_plate:
@@ -6236,10 +6236,10 @@ class Design(_JSONSerializable):
         See the documentation for :meth:`PlateMap.to_table` for more information on configuring the
         returned string format.
 
-        All :any:`Strand`'s in the design that have a field :data:`Strand.idt` with :data:`Strand.idt.plate`
-        specified are included in some returned :any:`PlateMap`. The number of :any:`PlateMap`'s in the
-        returned list is equal to the number of different plate names specified across all
-        :any:`Strand`'s in the design.
+        All :any:`Strand`'s in the design that have a field :data:`Strand.vendor_fields` with
+        :data:`Strand.vendor_fields.plate` specified are included in some returned :any:`PlateMap`.
+        The number of :any:`PlateMap`'s in the returned list is equal to the number of different plate names
+        specified across all :any:`Strand`'s in the design.
 
         If parameter `strands` is given, then a subset of strands is included. This is useful for
         specifying a mix of strands for a particular experiment, which come from a plate but does not
@@ -7388,7 +7388,7 @@ class Design(_JSONSerializable):
                                   export_scaffold: bool = False,
                                   export_non_modified_strand_version: bool = False) -> None:
         """Write ``.idt`` text file encoding the strands of this :any:`Design` with the field
-        :any:`Strand.idt`, suitable for pasting into the "Bulk Input" field of IDT
+        :data:`Strand.vendor_fields`, suitable for pasting into the "Bulk Input" field of IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/),
         with the output file having the same name as the running script but with ``.py`` changed to ``.idt``,
         unless `filename` is explicitly specified.
@@ -7425,13 +7425,13 @@ class Design(_JSONSerializable):
             purifications.
         :param only_strands_with_idt:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
-            chosen if the field :data:`Strand.idt` is missing.
+            chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
-            If True, then strands lacking the field :data:`Strand.idt` will not be exported.
+            If True, then strands lacking the field :data:`Strand.vendor_fields` will not be exported.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
             If True, scaffold sequences on strands output according to `only_strands_with_idt`
-            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.idt` and
+            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
             `only_strands_with_idt` is True).
         :param export_non_modified_strand_version:
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
@@ -7492,12 +7492,12 @@ class Design(_JSONSerializable):
             If False (the default), all non-scaffold sequences are output, with reasonable default values
             chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
-            If True, then strands lacking the field :any:`Strand.idt` will not be exported.
+            If True, then strands lacking the field :data:`Strand.vendor_fields` will not be exported.
             If False, then `use_default_plates` must be True.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
             If True, scaffold sequences on strands output according to `only_strands_with_idt`
-            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.idt` and
+            (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
             `only_strands_with_idt` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
