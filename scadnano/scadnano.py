@@ -7458,15 +7458,15 @@ class Design(_JSONSerializable):
                                    plate_type: PlateType = PlateType.wells96,
                                    export_non_modified_strand_version: bool = False) -> None:
         """
-        Write ``.xls`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
+        Write ``.xlsx`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
         :data:`Strand.vendor_fields`, suitable for uploading to IDT
         (Integrated DNA Technologies, Coralville, IA, https://www.idtdna.com/)
         to describe a 96-well or 384-well plate
         (https://www.idtdna.com/site/order/plate/index/dna/),
-        with the output file having the same name as the running script but with ``.py`` changed to ``.xls``,
-        unless `filename` is explicitly specified.
+        with the output file having the same name as the running script but with ``.py`` changed to
+        ``.xlsx``, unless `filename` is explicitly specified.
         For instance, if the script is named ``my_origami.py``,
-        then the sequences will be written to ``my_origami.xls``.
+        then the sequences will be written to ``my_origami.xlsx``.
 
         If the last plate as fewer than 24 strands for a 96-well plate, or fewer than 96 strands for a
         384-well plate, then the last two plates are rebalanced to ensure that each plate has at least
