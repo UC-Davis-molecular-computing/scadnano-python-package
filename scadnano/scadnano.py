@@ -1236,13 +1236,6 @@ class Position3D(_JSONSerializable):
         """
         return Position3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def clone(self) -> Position3D:
-        """
-        :return:
-            copy of this :any:`Position3D`
-        """
-        return Position3D(self.x, self.y, self.z)
-
 
 origin: Position3D = Position3D(x=0, y=0, z=0)
 
@@ -8883,7 +8876,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     position = Position3D()
     if grid == Grid.none:
         if helix.position is not None:
-            position = helix.position.clone()
+            position = helix.position
     else:
         if helix.grid_position is None:
             raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
