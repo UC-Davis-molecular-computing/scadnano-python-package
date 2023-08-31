@@ -981,8 +981,14 @@ class Modification(_JSONSerializable, ABC):
     :any:`Modification3Prime`, :any:`Modification5Prime`, or :any:`ModificationInternal`
     to instantiate.
 
-    If :data:`Modification.id` is not specified, then :data:`Modification.vendor_code` is used as
-    the unique ID. Each :data:`Modification.id` must be unique. For example if you create a 5' modification
+    :data:`Modification.vendor_code` is used as a unique ID.
+    Each :data:`Modification.vendor_code` must be unique.
+    This can cause problems with some vendors such as Eurofins
+    (https://eurofinsgenomics.com/en/products/dnarna-synthesis/mods/) that reuse the same vendor code
+    such as [BIOTEG].
+    See issue https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/283.
+
+    For example if you create a 5' modification
     to represent 6 T bases: ``t6_5p = Modification5Prime(display_text='6T', vendor_code='TTTTTT')``
     (this was a useful hack for putting single-stranded extensions on strands before the :any:`Extension`
     class was created to directly support this idea),
@@ -1004,6 +1010,8 @@ class Modification(_JSONSerializable, ABC):
     """
     Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3.
+    Note that this can be arbitrary Unicode, for example, to represent a fluorophore as a star,
+    one can use ``\u2728``, and to represent a quencher as a black circle, one can use ``\u2B24``. 
     """
 
     vendor_code: str
