@@ -8873,7 +8873,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     forward = roll_axis
     normal = -yaw_axis
 
-    position = Position3D()
+    position = origin
     if grid == Grid.none:
         if helix.position is not None:
             position = helix.position
