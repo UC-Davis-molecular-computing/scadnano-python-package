@@ -1010,7 +1010,7 @@ class Modification(_JSONSerializable, ABC):
     """
     Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3.
-    Note that this can be arbitrary Unicode, for example, to represent a fluorophore as a star,
+    Note that this can be arbitrary Unicode, for example, to represent a fluorophore as a glowing star,
     one can use ``\u2728``, and to represent a quencher as a black circle, one can use ``\u2B24``. 
     """
 
