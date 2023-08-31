@@ -1011,7 +1011,7 @@ class Modification(_JSONSerializable, ABC):
     Short text to display in the web interface as an "icon"
     visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3.
     This can be arbitrary Unicode; for example, to represent a fluorophore,
-    one can use the "glowing star" symbol \u2728, 
+    one can use the "glowing star" symbol \U0001F31F, 
     or to represent a quencher, one can use the "large black circle" symbol \u2B24. 
     """
 
