@@ -77,6 +77,7 @@ from random import randint
 # we import like this so that we can use openpyxl.Workbook in the type hints, but still allow
 # someone to use the library without having openpyxl installed
 try:
+    # noinspection PyUnresolvedReferences
     import openpyxl
 except ImportError as import_error:
     pass
@@ -933,7 +934,6 @@ mod_id_key = 'id'
 mod_vendor_code_key = 'vendor_code'
 legacy_mod_vendor_code_keys = ['idt_text']
 mod_font_size_key = 'font_size'
-mod_display_connector_key = 'display_connector'
 mod_allowed_bases_key = 'allowed_bases'
 mod_connector_length_key = 'connector_length'
 
@@ -956,7 +956,6 @@ vendor_name_key = 'name'
 ##########################################################################
 # modification classes
 
-_default_modification_id = "WARNING: no id assigned to modification"
 default_connector_length = 4
 
 
@@ -1002,36 +1001,36 @@ class Modification(_JSONSerializable, ABC):
     """
 
     display_text: str
-    """Short text to display in the web interface as an "icon"
-    visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3."""
-
-    id: str = _default_modification_id
     """
-    Representation as a string; used to write in :any:`Strand` json representation,
-    while the full description of the modification is written under a global key in the :any:`Design`.
-    If not specified, but :data:`Modification.vendor_code` is specified, then it will be set equal to that.
+    Short text to display in the web interface as an "icon"
+    visually representing the modification, e.g., ``'B'`` for biotin or ``'Cy3'`` for Cy3.
     """
 
-    vendor_code: Optional[str] = None
-    """Text string specifying this modification used by a vendor (a DNA synthesis company such as IDT).
-    For example, for IDT DNA (https://www.idtdna.com/), use '/5Biosg/' for 5' biotin."""
+    vendor_code: str
+    """
+    Text string specifying this modification used by a vendor (a DNA synthesis company such as IDT).
+    For example, for IDT DNA (https://www.idtdna.com/), use '/5Biosg/' for 5' biotin.
+    
+    This field must be unique to the :any:`Modification`; undefined behavior could result if two different 
+    :any:`Modification` objects have the same :data:`Modification.vendor_code`.
+    """
 
     connector_length: int = default_connector_length
-    """Length of "connector" displayed in web interface. 
+    """
+    Length of "connector" displayed in web interface. 
     
     Drawn like a carbon chain to offset the display of the modification vertically from the DNA strand.
     This field is useful for putting two nearby modifications at different heights so that their 
-    text does not overlap."""
-
-    def __post_init__(self) -> None:
-        if self.id == _default_modification_id and self.vendor_code is not None:
-            object.__setattr__(self, 'id', self.vendor_code)
+    text does not overlap.
+    
+    Set the length to 0 to not draw a connector.
+    """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> Dict[str, Any]:
-        ret = {mod_display_text_key: self.display_text}
-        if self.vendor_code is not None:
-            ret[mod_vendor_code_key] = self.vendor_code
-            ret[mod_display_connector_key] = False  # type: ignore
+        ret = {
+            mod_display_text_key: self.display_text,
+            mod_vendor_code_key: self.vendor_code,
+        }
         if self.connector_length != default_connector_length:
             ret[mod_connector_length_key] = self.connector_length
         return ret
@@ -1147,7 +1146,6 @@ class ModificationInternal(Modification):
     """
 
     def __post_init__(self) -> None:
-        super().__post_init__()
         if self.allowed_bases is not None and not isinstance(self.allowed_bases, frozenset):
             object.__setattr__(self, 'allowed_bases', frozenset(self.allowed_bases))
 
@@ -3718,13 +3716,13 @@ class Strand(_JSONSerializable):
             dct[is_scaffold_key] = self.is_scaffold
 
         if self.modification_5p is not None:
-            dct[modification_5p_key] = self.modification_5p.id
+            dct[modification_5p_key] = self.modification_5p.vendor_code
         if self.modification_3p is not None:
-            dct[modification_3p_key] = self.modification_3p.id
+            dct[modification_3p_key] = self.modification_3p.vendor_code
         if len(self.modifications_int) > 0:
             mods_dict = {}
             for offset, mod in self.modifications_int.items():
-                mods_dict[f"{offset}"] = mod.id
+                mods_dict[f"{offset}"] = mod.vendor_code
             dct[modifications_int_key] = NoIndent(mods_dict) if suppress_indent else mods_dict
 
         if self.label is not None:
@@ -5769,7 +5767,11 @@ class Design(_JSONSerializable):
             all_mods = {}
             for mod_key, mod_json in all_mods_json.items():
                 mod = Modification.from_json(mod_json)
-                mod = dataclasses.replace(mod, id=mod_key)
+                if mod_key != mod.vendor_code:
+                    print(f'WARNING: key {mod_key} does not match vendor_code field {mod.vendor_code}'
+                          f'for modification {mod}\n'
+                          f'replacing with key = {mod.vendor_code}')
+                mod = dataclasses.replace(mod, vendor_code=mod_key)
                 all_mods[mod_key] = mod
             Design.assign_modifications_to_strands(strands, strand_jsons, all_mods)
 
@@ -5831,8 +5833,14 @@ class Design(_JSONSerializable):
         if len(mods) > 0:
             mods_dict = {}
             for mod in mods:
-                if mod.id not in mods_dict:
-                    mods_dict[mod.id] = mod.to_json_serializable(suppress_indent)
+                if mod.vendor_code not in mods_dict:
+                    mods_dict[mod.vendor_code] = mod.to_json_serializable(suppress_indent)
+                else:
+                    if mod != mods_dict[mod.vendor_code]:
+                        raise IllegalDesignError(f"Modifications must have unique vendor codes, but I found"
+                                                 f"two different Modifications that share vendor code "
+                                                 f"{mod.vendor_code}:\n{mod}\nand\n"
+                                                 f"{mods_dict[mod.vendor_code]}")
             dct[design_modifications_key] = mods_dict
 
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
@@ -6319,19 +6327,20 @@ class Design(_JSONSerializable):
         else:
             raise AssertionError('should be unreachable')
 
-        self._ensure_mods_unique_names(all_mods)
+        self._ensure_mods_have_unique_vendor_codes(all_mods)
 
         return all_mods
 
     @staticmethod
-    def _ensure_mods_unique_names(all_mods: Set[Modification]) -> None:
+    def _ensure_mods_have_unique_vendor_codes(all_mods: Set[Modification]) -> None:
         mods_dict = {}
         for mod in all_mods:
-            if mod.id not in mods_dict:
-                mods_dict[mod.id] = mod
+            if mod.vendor_code not in mods_dict:
+                mods_dict[mod.vendor_code] = mod
             else:
-                other_mod = mods_dict[mod.id]
-                raise IllegalDesignError(f'two different modifications share the id {mod.id}; '
+                other_mod = mods_dict[mod.vendor_code]
+                raise IllegalDesignError(f'two different modifications share the vendor code '
+                                         f'{mod.vendor_code}; '
                                          f'one is\n  {mod}\nand the other is\n  {other_mod}')
 
     def draw_strand(self, helix: int, offset: int) -> StrandBuilder:

@@ -632,9 +632,9 @@ class TestModifications(unittest.TestCase):
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
         design.draw_strand(0, 0).move(5).with_modification_5p(
-            sc.Modification5Prime(display_text=name, id=name))
+            sc.Modification5Prime(display_text=name, vendor_code=name))
         design.draw_strand(0, 5).move(5).with_modification_3p(
-            sc.Modification3Prime(display_text=name, id=name + '3'))
+            sc.Modification3Prime(display_text=name, vendor_code=name + '3'))
         design.to_json(True)
 
     def test_to_json__names_not_unique_for_modifications_raises_error(self) -> None:
@@ -642,9 +642,9 @@ class TestModifications(unittest.TestCase):
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
         name = 'mod_name'
         design.draw_strand(0, 0).move(5).with_modification_5p(
-            sc.Modification5Prime(display_text=name, id=name))
+            sc.Modification5Prime(display_text=name, vendor_code=name))
         design.draw_strand(0, 5).move(5).with_modification_3p(
-            sc.Modification3Prime(display_text=name, id=name))
+            sc.Modification3Prime(display_text=name, vendor_code=name))
         with self.assertRaises(sc.IllegalDesignError):
             design.to_json(True)
 
@@ -693,21 +693,17 @@ class TestModifications(unittest.TestCase):
     def test_Cy3(self) -> None:
         cy3_5 = mod.cy3_5p
         self.assertEqual(r'/5Cy3/', cy3_5.vendor_code)
-        self.assertEqual(r'/5Cy3/', cy3_5.id)
         self.assertEqual('Cy3', cy3_5.display_text)
         cy3_3 = mod.cy3_3p
         self.assertEqual(r'/3Cy3Sp/', cy3_3.vendor_code)
-        self.assertEqual(r'/3Cy3Sp/', cy3_3.id)
         self.assertEqual('Cy3', cy3_3.display_text)
         # cy3_i1 = mod.Cy3(location=sc.ModLocation.internal, offset=1)
         cy3_i1 = mod.cy3_int
         self.assertEqual(r'/iCy3/', cy3_i1.vendor_code)
-        self.assertEqual(r'/iCy3/', cy3_i1.id)
         self.assertEqual('Cy3', cy3_i1.display_text)
         # cy3_i2 = mod.Cy3(location=sc.ModLocation.internal, offset=3)
         cy3_i2 = mod.cy3_int
         self.assertEqual(r'/iCy3/', cy3_i2.vendor_code)
-        self.assertEqual(r'/iCy3/', cy3_i2.id)
         self.assertEqual('Cy3', cy3_i2.display_text)
 
         strand5 = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='ATTGC',
@@ -731,21 +727,17 @@ class TestModifications(unittest.TestCase):
     def test_biotin(self) -> None:
         biotin5 = mod.biotin_5p
         self.assertEqual(r'/5Biosg/', biotin5.vendor_code)
-        self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
         biotin3 = mod.biotin_3p
         self.assertEqual(r'/3Bio/', biotin3.vendor_code)
-        self.assertEqual(r'/3Bio/', biotin3.id)
         self.assertEqual('B', biotin3.display_text)
         # biotin_i_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
         biotin_i_1 = mod.biotin_int
         self.assertEqual(r'/iBiodT/', biotin_i_1.vendor_code)
-        self.assertEqual(r'/iBiodT/', biotin_i_1.id)
         self.assertEqual('B', biotin_i_1.display_text)
         # biotin_i_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
         biotin_i_2 = mod.biotin_int
         self.assertEqual(r'/iBiodT/', biotin_i_2.vendor_code)
-        self.assertEqual(r'/iBiodT/', biotin_i_2.id)
         self.assertEqual('B', biotin_i_2.display_text)
 
         strand5 = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='ATTGC',
@@ -769,22 +761,18 @@ class TestModifications(unittest.TestCase):
         biotin5 = mod.biotin_5p
         biotin5 = dataclasses.replace(biotin5, connector_length=6)
         self.assertEqual(r'/5Biosg/', biotin5.vendor_code)
-        self.assertEqual(r'/5Biosg/', biotin5.id)
         self.assertEqual('B', biotin5.display_text)
         self.assertEqual(6, biotin5.connector_length)
         biotin3 = mod.biotin_3p
         self.assertEqual(r'/3Bio/', biotin3.vendor_code)
-        self.assertEqual(r'/3Bio/', biotin3.id)
         self.assertEqual('B', biotin3.display_text)
         # biotin_i_1 = mod.Biotin(location=sc.ModLocation.internal, offset=1)
         biotin_i_1 = mod.biotin_int
         self.assertEqual(r'/iBiodT/', biotin_i_1.vendor_code)
-        self.assertEqual(r'/iBiodT/', biotin_i_1.id)
         self.assertEqual('B', biotin_i_1.display_text)
         # biotin_i_2 = mod.Biotin(location=sc.ModLocation.internal, offset=2)
         biotin_i_2 = mod.biotin_int
         self.assertEqual(r'/iBiodT/', biotin_i_2.vendor_code)
-        self.assertEqual(r'/iBiodT/', biotin_i_2.id)
         self.assertEqual('B', biotin_i_2.display_text)
 
         strand5 = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='ATTGC',
