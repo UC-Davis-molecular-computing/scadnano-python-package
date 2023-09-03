@@ -5872,7 +5872,6 @@ class Design(_JSONSerializable):
                          ModificationType.three_prime,
                          ModificationType.internal]:
             mods = self.modifications(mod_type)
-            mod_key = mod_type.key()
             if len(mods) > 0:
                 mods_dict = {}
                 for mod in mods:
@@ -5886,7 +5885,7 @@ class Design(_JSONSerializable):
                                 f"that share vendor code "
                                 f"{mod.vendor_code}:\n{mod}\nand\n"
                                 f"{mods_dict[mod.vendor_code]}")
-                dct[mod_key] = mods_dict
+                dct[mod_type.key()] = mods_dict
 
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
