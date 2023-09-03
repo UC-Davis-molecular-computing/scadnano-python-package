@@ -637,16 +637,17 @@ class TestModifications(unittest.TestCase):
             sc.Modification3Prime(display_text=name, vendor_code=name + '3'))
         design.to_json(True)
 
-    def test_to_json__names_not_unique_for_modifications_raises_error(self) -> None:
+    def test_to_json__names_not_unique_for_modifications_5p_raises_error(self) -> None:
         helices = [sc.Helix(max_offset=100)]
         design: sc.Design = sc.Design(helices=helices, strands=[], grid=sc.square)
-        name = 'mod_name'
+        code1 = 'mod_code1'
+        code2 = 'mod_code2'
         design.draw_strand(0, 0).move(5).with_modification_5p(
-            sc.Modification5Prime(display_text=name, vendor_code=name))
-        design.draw_strand(0, 5).move(5).with_modification_3p(
-            sc.Modification3Prime(display_text=name, vendor_code=name))
+            sc.Modification5Prime(display_text=code1, vendor_code=code1))
+        design.draw_strand(0, 5).move(5).with_modification_5p(
+            sc.Modification5Prime(display_text=code2, vendor_code=code1))
         with self.assertRaises(sc.IllegalDesignError):
-            design.to_json(True)
+            design.to_json(False)
 
     def test_mod_illegal_exceptions_raised(self) -> None:
         strand = sc.Strand(domains=[sc.Domain(0, True, 0, 5)], dna_sequence='AATGC')
@@ -793,18 +794,22 @@ class TestModifications(unittest.TestCase):
         # print(design.to_json())
 
         json_dict = design.to_json_serializable(suppress_indent=False)
-        self.assertTrue(sc.design_modifications_key in json_dict)
-        mods_dict = json_dict[sc.design_modifications_key]
-        self.assertTrue(r'/5Biosg/' in mods_dict)
-        self.assertTrue(r'/3Bio/' in mods_dict)
-        self.assertTrue(r'/iBiodT/' in mods_dict)
+        self.assertTrue(sc.design_modifications_5p_key in json_dict)
+        self.assertTrue(sc.design_modifications_3p_key in json_dict)
+        self.assertTrue(sc.design_modifications_int_key in json_dict)
+        mods_5p_dict = json_dict[sc.design_modifications_5p_key]
+        self.assertTrue(r'/5Biosg/' in mods_5p_dict)
+        mods_3p_dict = json_dict[sc.design_modifications_3p_key]
+        self.assertTrue(r'/3Bio/' in mods_3p_dict)
+        mods_int_dict = json_dict[sc.design_modifications_int_key]
+        self.assertTrue(r'/iBiodT/' in mods_int_dict)
 
-        biotin5_json = mods_dict[r'/5Biosg/']
+        biotin5_json = mods_5p_dict[r'/5Biosg/']
         self.assertEqual('/5Biosg/', biotin5_json[sc.mod_vendor_code_key])
         self.assertEqual('B', biotin5_json[sc.mod_display_text_key])
         self.assertEqual(6, biotin5_json[sc.mod_connector_length_key])
 
-        biotin3_json = mods_dict[r'/3Bio/']
+        biotin3_json = mods_3p_dict[r'/3Bio/']
         self.assertEqual('/3Bio/', biotin3_json[sc.mod_vendor_code_key])
         self.assertEqual('B', biotin3_json[sc.mod_display_text_key])
         self.assertNotIn(sc.mod_connector_length_key, biotin3_json)

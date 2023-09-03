@@ -858,7 +858,10 @@ strands_key = 'strands'
 scaffold_key = 'scaffold'
 helices_view_order_key = 'helices_view_order'
 is_origami_key = 'is_origami'
-design_modifications_key = 'modifications_in_design'
+design_modifications_key = 'modifications_in_design'  # legacy key for when we stored all mods in one dict
+design_modifications_5p_key = 'modifications_5p_in_design'
+design_modifications_3p_key = 'modifications_3p_in_design'
+design_modifications_int_key = 'modifications_int_in_design'
 geometry_key = 'geometry'
 groups_key = 'groups'
 
@@ -966,11 +969,21 @@ class ModificationType(enum.Enum):
     five_prime = "5'"
     """5' modification type"""
 
-    three_prime = "5'"
+    three_prime = "3'"
     """3' modification type"""
 
     internal = "internal"
     """internal modification type"""
+
+    def key(self) -> str:
+        if self == ModificationType.five_prime:
+            return design_modifications_5p_key
+        elif self == ModificationType.three_prime:
+            return design_modifications_3p_key
+        elif self == ModificationType.internal:
+            return design_modifications_int_key
+        else:
+            raise AssertionError(f'unknown ModificationType {self}')
 
 
 @dataclass(frozen=True, eq=True)
@@ -3962,16 +3975,20 @@ class Strand(_JSONSerializable):
         name = f'{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
         return f'SCAF{name}' if self.is_scaffold else f'ST{name}'
 
-    def set_modification_5p(self, mod: Modification5Prime = None) -> None:
-        """Sets 5' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
-        if self.circular and mod is not None:
+    def set_modification_5p(self, mod: Modification5Prime) -> None:
+        """Sets 5' modification to be `mod`. :any:`Strand.circular` must be False."""
+        if self.circular:
             raise StrandError(self, "cannot have a 5' modification on a circular strand")
+        if not isinstance(mod, Modification5Prime):
+            raise TypeError(f'mod must be a Modification5Prime but it is type {type(mod)}: {mod}')
         self.modification_5p = mod
 
-    def set_modification_3p(self, mod: Modification3Prime = None) -> None:
-        """Sets 3' modification to be `mod`. `mod` cannot be non-None if :any:`Strand.circular` is True."""
+    def set_modification_3p(self, mod: Modification3Prime) -> None:
+        """Sets 3' modification to be `mod`. :any:`Strand.circular` must be False."""
         if self.circular and mod is not None:
             raise StrandError(self, "cannot have a 3' modification on a circular strand")
+        if not isinstance(mod, Modification3Prime):
+            raise TypeError(f'mod must be a Modification3Prime but it is type {type(mod)}: {mod}')
         self.modification_3p = mod
 
     def remove_modification_5p(self) -> None:
@@ -3999,6 +4016,8 @@ class Strand(_JSONSerializable):
         elif warn_on_no_dna:
             print('WARNING: no DNA sequence has been assigned, so certain error checks on the internal '
                   'modification were not done. To be safe, first assign DNA, then add the modifications.')
+        if not isinstance(mod, ModificationInternal):
+            raise TypeError(f'mod must be a ModificationInternal but it is type {type(mod)}: {mod}')
         self.modifications_int[idx] = mod
 
     def remove_modification_internal(self, idx: int) -> None:
@@ -5763,10 +5782,27 @@ class Design(_JSONSerializable):
             strand = Strand.from_json(strand_json)
             strands.append(strand)
 
-        # modifications in whole design
+        mods_5p: Dict[str, Modification5Prime] = {}
+        mods_3p: Dict[str, Modification3Prime] = {}
+        mods_int: Dict[str, ModificationInternal] = {}
+        for all_mods_key, mods in zip([design_modifications_5p_key,
+                                       design_modifications_3p_key,
+                                       design_modifications_int_key], [mods_5p, mods_3p, mods_int]):
+            if all_mods_key in json_map:
+                all_mods_json = json_map[all_mods_key]
+                for mod_key, mod_json in all_mods_json.items():
+                    mod = Modification.from_json(mod_json)
+                    if mod_key != mod.vendor_code:
+                        print(f'WARNING: key {mod_key} does not match vendor_code field {mod.vendor_code}'
+                              f'for modification {mod}\n'
+                              f'replacing with key = {mod.vendor_code}')
+                    mod = dataclasses.replace(mod, vendor_code=mod_key)
+                    mods[mod_key] = mod
+
+        # legacy code; now we stored modifications in 3 separate dicts depending on 5', 3', internal
+        all_mods: Dict[str, Modification] = {}
         if design_modifications_key in json_map:
             all_mods_json = json_map[design_modifications_key]
-            all_mods = {}
             for mod_key, mod_json in all_mods_json.items():
                 mod = Modification.from_json(mod_json)
                 if mod_key != mod.vendor_code:
@@ -5775,7 +5811,8 @@ class Design(_JSONSerializable):
                           f'replacing with key = {mod.vendor_code}')
                 mod = dataclasses.replace(mod, vendor_code=mod_key)
                 all_mods[mod_key] = mod
-            Design.assign_modifications_to_strands(strands, strand_jsons, all_mods)
+
+        Design.assign_modifications_to_strands(strands, strand_jsons, mods_5p, mods_3p, mods_int, all_mods)
 
         geometry = None
         if geometry_key in json_map:
@@ -5831,19 +5868,25 @@ class Design(_JSONSerializable):
                     self.helices_view_order) if suppress_indent else self.helices_view_order
 
         # modifications
-        mods = self.modifications()
-        if len(mods) > 0:
-            mods_dict = {}
-            for mod in mods:
-                if mod.vendor_code not in mods_dict:
-                    mods_dict[mod.vendor_code] = mod.to_json_serializable(suppress_indent)
-                else:
-                    if mod != mods_dict[mod.vendor_code]:
-                        raise IllegalDesignError(f"Modifications must have unique vendor codes, but I found"
-                                                 f"two different Modifications that share vendor code "
-                                                 f"{mod.vendor_code}:\n{mod}\nand\n"
-                                                 f"{mods_dict[mod.vendor_code]}")
-            dct[design_modifications_key] = mods_dict
+        for mod_type in [ModificationType.five_prime,
+                         ModificationType.three_prime,
+                         ModificationType.internal]:
+            mods = self.modifications(mod_type)
+            mod_key = mod_type.key()
+            if len(mods) > 0:
+                mods_dict = {}
+                for mod in mods:
+                    if mod.vendor_code not in mods_dict:
+                        mods_dict[mod.vendor_code] = mod.to_json_serializable(suppress_indent)
+                    else:
+                        if mod != mods_dict[mod.vendor_code]:
+                            raise IllegalDesignError(
+                                f"Modifications of type {mod_type} must have unique vendor codes, "
+                                f"but I foundtwo different Modifications of that type "
+                                f"that share vendor code "
+                                f"{mod.vendor_code}:\n{mod}\nand\n"
+                                f"{mods_dict[mod.vendor_code]}")
+                dct[mod_key] = mods_dict
 
         dct[strands_key] = [strand.to_json_serializable(suppress_indent) for strand in self.strands]
 
@@ -5940,19 +5983,34 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def assign_modifications_to_strands(strands: List[Strand], strand_jsons: List[dict],
+                                        mods_5p: Dict[str, Modification5Prime],
+                                        mods_3p: Dict[str, Modification3Prime],
+                                        mods_int: Dict[str, ModificationInternal],
                                         all_mods: Dict[str, Modification]) -> None:
+        if len(all_mods) > 0:  # legacy code for when modifications were stored in a single dict
+            assert len(mods_5p) == 0 and len(mods_3p) == 0 and len(mods_int) == 0
+            legacy = True
+        elif len(mods_5p) > 0 or len(mods_3p) > 0 or len(mods_int) > 0:
+            assert len(all_mods) == 0
+            legacy = False
+        else:  # no modifications
+            return
+
         for strand, strand_json in zip(strands, strand_jsons):
             if modification_5p_key in strand_json:
-                mod_name = strand_json[modification_5p_key]
-                strand.modification_5p = cast(Modification5Prime, all_mods[mod_name])
+                mod_code = strand_json[modification_5p_key]
+                strand.modification_5p = cast(Modification5Prime, all_mods[mod_code]) \
+                    if legacy else mods_5p[mod_code]
             if modification_3p_key in strand_json:
-                mod_name = strand_json[modification_3p_key]
-                strand.modification_3p = cast(Modification3Prime, all_mods[mod_name])
+                mod_code = strand_json[modification_3p_key]
+                strand.modification_3p = cast(Modification3Prime, all_mods[mod_code]) \
+                    if legacy else mods_3p[mod_code]
             if modifications_int_key in strand_json:
                 mod_names_by_offset = strand_json[modifications_int_key]
-                for offset_str, mod_name in mod_names_by_offset.items():
+                for offset_str, mod_code in mod_names_by_offset.items():
                     offset = int(offset_str)
-                    strand.modifications_int[offset] = cast(ModificationInternal, all_mods[mod_name])
+                    strand.modifications_int[offset] = cast(ModificationInternal, all_mods[mod_code]) \
+                        if legacy else mods_int[mod_code]
 
     @staticmethod
     def _cadnano_v2_import_find_5_end(vstrands: VStrands, strand_type: str, helix_num: int, base_id: int,
@@ -6079,7 +6137,7 @@ class Design(_JSONSerializable):
     @staticmethod
     def _cadnano_v2_import_circular_strands_merge_first_last_domains(domains: List[Domain]) -> None:
         """ When we create domains for circular strands in the cadnano import routine, we may end up
-            with a fake crossover if first and last domain are on same helix, we have to merge them 
+            with a fake crossover if first and last domain are on same helix, we have to merge them
             if it is the case.
         """
         if domains[0].helix != domains[-1].helix:
@@ -6210,9 +6268,9 @@ class Design(_JSONSerializable):
         # TS: Dave, I have thorougly checked the code of Design constructor and the order of the helices
         # IS lost even if the helices were give as a list.
         # Indeed, you very early call `_normalize_helices_as_dict` in the constructor the order is lost.
-        # Later in the code, if no view order was given the code will choose the identity 
+        # Later in the code, if no view order was given the code will choose the identity
         # in function `_check_helices_view_order_and_return`.
-        # Conclusion: do not assume that your constructor code deals with the ordering, even if 
+        # Conclusion: do not assume that your constructor code deals with the ordering, even if
         # input helices is a list. I am un commenting the below:
         design.set_helices_view_order([num for num in helices])
 
@@ -7641,7 +7699,7 @@ class Design(_JSONSerializable):
 
             # IDT charges extra for a plate with < 24 strands for 96-well plate
             # or < 96 strands for 384-well plate.
-            # So if we would have fewer than that many on the last plate, 
+            # So if we would have fewer than that many on the last plate,
             # shift some from the penultimate plate.
             if not on_final_plate and \
                     final_plate_less_than_min_required and \
@@ -7670,7 +7728,7 @@ class Design(_JSONSerializable):
             have duplicate names. (default: True)
         :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
-            of the strand.        
+            of the strand.
         """
         import datetime
         self._check_legal_design(warn_duplicate_strand_names)
@@ -8184,7 +8242,8 @@ class Design(_JSONSerializable):
             strand_3p.domains.append(dom_new)
             strand_3p.domains.extend(strand_5p.domains[1:])
             strand_3p.is_scaffold = strand_left.is_scaffold or strand_right.is_scaffold
-            strand_3p.set_modification_3p(strand_5p.modification_3p)
+            if strand_5p.modification_3p is not None:
+                strand_3p.set_modification_3p(strand_5p.modification_3p)
             for idx, mod in strand_5p.modifications_int.items():
                 new_idx = idx + strand_3p.dna_length()
                 strand_3p.set_modification_internal(new_idx, mod)
