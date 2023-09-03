@@ -5746,8 +5746,7 @@ class Design(_JSONSerializable):
         return helices, groups, grid
 
     @staticmethod
-    def from_scadnano_json_map(
-            json_map: dict) -> Design:
+    def from_scadnano_json_map(json_map: dict) -> Design:
         """
         Loads a :any:`Design` from the given JSON object (i.e., Python object obtained by calling
         json.loads(json_str) from a string representing contents of a JSON file.
@@ -5809,7 +5808,7 @@ class Design(_JSONSerializable):
                     print(f'WARNING: key {mod_key} does not match vendor_code field {mod.vendor_code}'
                           f'for modification {mod}\n'
                           f'replacing with key = {mod.vendor_code}')
-                mod = dataclasses.replace(mod, vendor_code=mod_key)
+                mod_key = mod.vendor_code
                 all_mods[mod_key] = mod
 
         Design.assign_modifications_to_strands(strands, strand_jsons, mods_5p, mods_3p, mods_int, all_mods)
