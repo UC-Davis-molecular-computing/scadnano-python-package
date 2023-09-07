@@ -110,8 +110,9 @@ def add_adapters(design: sc.Design) -> None:
                             start=left_outside_seed, end=left_inside_seed)
         dom_bot = sc.Domain(helix=bot_helix, forward=False,
                             start=left_outside_seed, end=left_inside_seed)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[dom_bot, dom_top], name=f'adap-left-{top_helix}-{bot_helix}', idt=idt)
+        idt = sc.VendorFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[dom_bot, dom_top], name=f'adap-left-{top_helix}-{bot_helix}',
+                            vendor_fields=idt)
         design.add_strand(adapter)
 
     # right adapters
@@ -123,8 +124,9 @@ def add_adapters(design: sc.Design) -> None:
                             start=right_inside_seed, end=right_outside_seed)
         dom_bot = sc.Domain(helix=bot_helix, forward=False,
                             start=right_inside_seed, end=right_outside_seed)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
-        adapter = sc.Strand(domains=[dom_top, dom_bot], name=f'adap-right-{top_helix}-{bot_helix}', idt=idt)
+        idt = sc.VendorFields(scale='25nm', purification='STD')
+        adapter = sc.Strand(domains=[dom_top, dom_bot], name=f'adap-right-{top_helix}-{bot_helix}',
+                            vendor_fields=idt)
         design.add_strand(adapter)
 
 
@@ -161,9 +163,9 @@ def add_tiles_and_assign_dna(design: sc.Design) -> None:
                            start=left_left, end=left_right)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=left_left, end=left_right)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
+        idt = sc.VendorFields(scale='25nm', purification='STD')
         tile = sc.Strand(domains=[ss_bot, ss_top], name=f'tile-left-{top_helix}-{bot_helix}',
-                         color=sc.Color(0, 0, 0), idt=idt)
+                         color=sc.Color(0, 0, 0), vendor_fields=idt)
         design.add_strand(tile)
         design.assign_dna(tile, seq)
 
@@ -176,9 +178,9 @@ def add_tiles_and_assign_dna(design: sc.Design) -> None:
                            start=right_left, end=right_right)
         ss_bot = sc.Domain(helix=bot_helix, forward=False,
                            start=right_left, end=right_right)
-        idt = sc.IDTFields(scale='25nm', purification='STD')
+        idt = sc.VendorFields(scale='25nm', purification='STD')
         tile = sc.Strand(domains=[ss_bot, ss_top], name=f'tile-right-{top_helix}-{bot_helix}',
-                         color=sc.Color(0, 0, 0), idt=idt)
+                         color=sc.Color(0, 0, 0), vendor_fields=idt)
         design.add_strand(tile)
         design.assign_dna(tile, seq)
 

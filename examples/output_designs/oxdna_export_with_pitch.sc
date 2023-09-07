@@ -1,12 +1,6 @@
 {
-  "version": "0.17.8",
-  "groups": {
-    "default_group": {
-      "position": {"x": 0, "y": 0, "z": 0},
-      "pitch": 45,
-      "grid": "square"
-    }
-  },
+  "version": "0.19.0",
+  "grid": "square",
   "helices": [
     {"max_offset": 100, "grid_position": [0, 0]},
     {"max_offset": 100, "grid_position": [0, 1]}

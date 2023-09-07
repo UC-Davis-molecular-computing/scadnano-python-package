@@ -65,7 +65,7 @@ pip install scadnano
 Read below for troubleshooting suggestions if that didn't work.
 
 ### Getting Python
-The scadnano Python package requires Python version 3.7 or later (with a workaround available for version 3.6, but not for any lower version). 
+The scadnano Python package requires Python version 3.7 or later.
 
 To check your current version of Python, open a command line and type
 
@@ -79,17 +79,13 @@ If it is version 2.7 or below, type
 python3 --version
 ```
 
-If that fails, or reports Python version 3.5 or below, you will have to install a later version of Python (recommended at least 3.7). Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
-
-If you are using Python 3.6 and do not wish to upgrade, you can install a package providing the required features: the [dataclasses backport](https://pypi.org/project/dataclasses/); see `pip` instructions below to see how to install it.
-Python 3.7 provides the
-[dataclasses module](https://docs.python.org/3/library/dataclasses.html) automatically.
+If that fails, or reports Python version 3.6 or below, you will have to install a later version of Python. Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
 
 
 
 ### Installing the scadnano Python package
 
-Once Python is installed (and the dataclasses backport if you have Python version 3.6), there are two ways you can install the scadnano Python package:
+Once Python is installed, there are two ways you can install the scadnano Python package:
 
 1. pip (recommended)
 
