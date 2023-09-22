@@ -2617,8 +2617,8 @@ class Extension(_JSONSerializable):
         import scadnano as sc
 
         domain = sc.Domain(helix=0, forward=True, start=0, end=10)
-        left_toehold = sc.Extension(num_bases=6)
-        right_toehold = sc.Extension(num_bases=5)
+        left_toehold = sc.Extension(num_bases=3)
+        right_toehold = sc.Extension(num_bases=2)
         strand = sc.Strand([left_toehold, domain, right_toehold])
 
     It can also be created with chained method calls
