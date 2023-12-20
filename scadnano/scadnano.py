@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.19.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.1"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -2016,6 +2016,40 @@ def _is_close(x1: float, x2: float) -> bool:
     return abs(x1 - x2) < _floating_point_tolerance
 
 
+def _vendor_dna_sequence_substrand(substrand: Union[Domain, Loopout, Extension]) -> Optional[str]:
+    # used to share code between Domain, Loopout Extension
+    # for adding modification codes to exported DNA sequence
+    if substrand.dna_sequence is None:
+        return None
+
+    strand = substrand.strand()
+    len_dna_prior = 0
+    for other_substrand in strand.domains:
+        if other_substrand is substrand:
+            break
+        len_dna_prior += other_substrand.dna_length()
+
+    new_seq_list = []
+    for pos, base in enumerate(substrand.dna_sequence):
+        new_seq_list.append(base)
+        strand_pos = pos + len_dna_prior
+        if strand_pos in strand.modifications_int:  # if internal mod attached to base, replace base
+            mod = strand.modifications_int[strand_pos]
+            if mod.vendor_code is not None:
+                vendor_code_with_delim = mod.vendor_code
+                if mod.allowed_bases is not None:
+                    if base not in mod.allowed_bases:
+                        msg = (f'internal modification {mod} can only replace one of these bases: '
+                               f'{",".join(mod.allowed_bases)}, '
+                               f'but the base at position {strand_pos} is {base}')
+                        raise IllegalDesignError(msg)
+                    new_seq_list[-1] = vendor_code_with_delim  # replace base with modified base
+                else:
+                    new_seq_list.append(vendor_code_with_delim)  # append modification between two bases
+
+    return ''.join(new_seq_list)
+
+
 @dataclass
 class Domain(_JSONSerializable):
     """
@@ -2167,35 +2201,7 @@ class Domain(_JSONSerializable):
             The difference between this and the field :data:`Domain.dna_sequence` is that this
             will add internal modification codes.
         """
-        if self.dna_sequence is None:
-            return None
-
-        strand = self.strand()
-        len_dna_prior = 0
-        for domain in strand.domains:
-            if domain is self:
-                break
-            len_dna_prior += domain.dna_length()
-
-        new_seq_list = []
-        for pos, base in enumerate(self.dna_sequence):
-            new_seq_list.append(base)
-            strand_pos = pos + len_dna_prior
-            if strand_pos in strand.modifications_int:  # if internal mod attached to base, replace base
-                mod = strand.modifications_int[strand_pos]
-                if mod.vendor_code is not None:
-                    vendor_code_with_delim = mod.vendor_code
-                    if mod.allowed_bases is not None:
-                        if base not in mod.allowed_bases:
-                            msg = (f'internal modification {mod} can only replace one of these bases: '
-                                   f'{",".join(mod.allowed_bases)}, '
-                                   f'but the base at position {strand_pos} is {base}')
-                            raise IllegalDesignError(msg)
-                        new_seq_list[-1] = vendor_code_with_delim  # replace base with modified base
-                    else:
-                        new_seq_list.append(vendor_code_with_delim)  # append modification between two bases
-
-        return ''.join(new_seq_list)
+        return _vendor_dna_sequence_substrand(self)
 
     def set_name(self, name: str) -> None:
         """Sets name of this :any:`Domain`."""
@@ -2565,6 +2571,15 @@ class Loopout(_JSONSerializable):
     def __str__(self) -> str:
         return repr(self) if self.name is None else self.name
 
+    def vendor_dna_sequence(self) -> Optional[str]:
+        """
+        :return:
+            vendor DNA sequence of this :any:`Loopout`, or ``None`` if no DNA sequence has been assigned.
+            The difference between this and the field :data:`Loopout.dna_sequence` is that this
+            will add internal modification codes.
+        """
+        return _vendor_dna_sequence_substrand(self)
+
     def set_name(self, name: str) -> None:
         """Sets name of this :any:`Loopout`."""
         self.name = name
@@ -2617,8 +2632,8 @@ class Extension(_JSONSerializable):
         import scadnano as sc
 
         domain = sc.Domain(helix=0, forward=True, start=0, end=10)
-        left_toehold = sc.Extension(num_bases=6)
-        right_toehold = sc.Extension(num_bases=5)
+        left_toehold = sc.Extension(num_bases=3)
+        right_toehold = sc.Extension(num_bases=2)
         strand = sc.Strand([left_toehold, domain, right_toehold])
 
     It can also be created with chained method calls
@@ -2700,6 +2715,23 @@ class Extension(_JSONSerializable):
     def dna_length(self) -> int:
         """Length of this :any:`Extension`; same as field :data:`Extension.num_bases`."""
         return self.num_bases
+
+    def strand(self) -> Strand:
+        """
+        :return: The :any:`Strand` that contains this :any:`Extension`.
+        """
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not yet been set')
+        return self._parent_strand
+
+    def vendor_dna_sequence(self) -> Optional[str]:
+        """
+        :return:
+            vendor DNA sequence of this :any:`Extension`, or ``None`` if no DNA sequence has been assigned.
+            The difference between this and the field :data:`Extension.dna_sequence` is that this
+            will add internal modification codes.
+        """
+        return _vendor_dna_sequence_substrand(self)
 
     def set_label(self, label: Optional[str]) -> None:
         """Sets label of this :any:`Extension`."""
@@ -3709,7 +3741,7 @@ class Strand(_JSONSerializable):
     def __post_init__(self) -> None:
         self._ensure_domains_not_none()
 
-        self.set_domains(self.domains)
+        self.set_domains(self.domains)  # some error-checking code is in this method
 
         self._ensure_modifications_legal()
         self._ensure_domains_nonoverlapping()
@@ -3886,15 +3918,18 @@ class Strand(_JSONSerializable):
 
     def set_domains(self, domains: Iterable[Union[Domain, Loopout]]) -> None:
         """
-        Sets the :any:`Domain`'s/:any:`Loopout`'s of this :any:`Strand` to be `domains`,
-        which can contain a mix of :any:`Domain`'s and :any:`Loopout`'s,
+        Sets the :any:`Domain`'s/:any:`Loopout`'s/:any:`Extension`'s of this :any:`Strand` to be `domains`,
+        which can contain a mix of :any:`Domain`'s, :any:`Loopout`'s, and :any:`Extension`'s,
         just like the field :py:data:`Strand.domains`.
 
         :param domains:
-            The new sequence of :any:`Domain`'s/:any:`Loopout`'s to use for this :any:`Strand`.
+            The new sequence of :any:`Domain`'s/:any:`Loopout`'s/:any:`Extension`'s to use for this
+            :any:`Strand`.
         :raises StrandError:
-            if domains has two consecutive :any:`Loopout`'s, consists of just a single :any:`Loopout`'s,
-            or starts or ends with a :any:`Loopout`
+            if domains has two consecutive :any:`Loopout`'s, consists of just a single :any:`Loopout`'s
+            or a single :any:`Extension`, or starts or ends with a :any:`Loopout`,
+            or has an :any:`Extension` on a circular :any:`Strand`,
+            or has an :any:`Extension` not as the first or last element of `domains`.
         """
         self.domains = domains if isinstance(domains, list) else list(domains)
 
@@ -3911,6 +3946,10 @@ class Strand(_JSONSerializable):
 
         if len(self.domains) == 0:
             raise StrandError(self, 'domains cannot be empty')
+
+        for domain in self.domains[1:-1]:
+            if isinstance(domain, Extension):
+                raise StrandError(self, 'cannot have an Extension in the middle of domains')
 
         for domain1, domain2 in _pairwise(self.domains):
             if isinstance(domain1, Loopout) and isinstance(domain2, Loopout):

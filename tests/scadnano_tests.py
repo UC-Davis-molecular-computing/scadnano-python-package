@@ -1309,6 +1309,37 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
             os.remove(filename)
 
+    def test_export_dna_sequences_extension_5p(self) -> None:
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0) \
+            .extension_5p(3) \
+            .move(5) \
+            .with_sequence('TTT' + 'AAAAA') \
+            .with_name('strand')
+        contents = design.to_idt_bulk_input_format()
+        self.assertEqual('strand,TTTAAAAA,25nm,STD', contents)
+
+    def test_export_dna_sequences_extension_3p(self) -> None:
+        design = sc.Design(helices=[sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0) \
+            .move(5) \
+            .extension_3p(3) \
+            .with_sequence('AAAAA' + 'TTT') \
+            .with_name('strand')
+        contents = design.to_idt_bulk_input_format()
+        self.assertEqual('strand,AAAAATTT,25nm,STD', contents)
+
+    def test_export_dna_sequences_loopout(self) -> None:
+        design = sc.Design(helices=[sc.Helix(max_offset=100), sc.Helix(max_offset=100)])
+        design.draw_strand(0, 0) \
+            .move(5) \
+            .loopout(1, 3) \
+            .move(-5) \
+            .with_sequence('AAAAA' + 'TTT' + 'AAAAA') \
+            .with_name('strand')
+        contents = design.to_idt_bulk_input_format()
+        self.assertEqual('strand,AAAAATTTAAAAA,25nm,STD', contents)
+
 
 class TestExportCadnanoV2(unittest.TestCase):
     """
