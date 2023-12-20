@@ -3916,7 +3916,7 @@ class Strand(_JSONSerializable):
         """
         self.set_circular(False)
 
-    def set_domains(self, domains: Iterable[Union[Domain, Loopout]]) -> None:
+    def set_domains(self, domains: Iterable[Union[Domain, Loopout, Extension]]) -> None:
         """
         Sets the :any:`Domain`'s/:any:`Loopout`'s/:any:`Extension`'s of this :any:`Strand` to be `domains`,
         which can contain a mix of :any:`Domain`'s, :any:`Loopout`'s, and :any:`Extension`'s,
