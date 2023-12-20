@@ -2716,6 +2716,14 @@ class Extension(_JSONSerializable):
         """Length of this :any:`Extension`; same as field :data:`Extension.num_bases`."""
         return self.num_bases
 
+    def strand(self) -> Strand:
+        """
+        :return: The :any:`Strand` that contains this :any:`Extension`.
+        """
+        if self._parent_strand is None:
+            raise ValueError('_parent_strand has not yet been set')
+        return self._parent_strand
+
     def vendor_dna_sequence(self) -> Optional[str]:
         """
         :return:
