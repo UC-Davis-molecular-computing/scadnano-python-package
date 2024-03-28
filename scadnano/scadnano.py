@@ -9141,8 +9141,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for _ in range(domain.length):
-                    base = seq[i]
+                for base in seq:
                     center = _OxdnaVector()
                     normal = _OxdnaVector(0, -1, 0)
                     forward = _OxdnaVector(0, 0, 1)
