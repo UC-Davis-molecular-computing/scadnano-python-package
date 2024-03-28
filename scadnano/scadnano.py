@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.19.3"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.4"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -7755,10 +7755,29 @@ class Design(_JSONSerializable):
 
         workbook.save(filename_plate)
 
-    def to_oxview_format(self, warn_duplicate_strand_names: bool = True,
-                         use_strand_colors: bool = True) -> dict:
+    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None,
+                          warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
+        """Writes an oxView file rerpesenting this design.
+
+        :param directory:
+            directy in which to write the file (default: current working directory)
+        :param filename:
+            name of the file to write (default: name of the running script with .oxview extension)
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_colors:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.
         """
-        Exports to oxView format.
+        text = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names,
+                                     use_strand_colors=use_strand_colors)
+        write_file_same_name_as_running_python_script(text, 'oxview', directory, filename)
+
+    def to_oxview_format(self, warn_duplicate_strand_names: bool = True,
+                         use_strand_colors: bool = True) -> str:
+        """
+        Exports to oxView format: https://github.com/sulcgroup/oxdna-viewer/blob/master/file-format.md
 
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
@@ -7766,6 +7785,27 @@ class Design(_JSONSerializable):
         :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.
+        :return:
+            string in oxView text format
+        """
+        oxvsystem = self.to_oxview_json(warn_duplicate_strand_names=warn_duplicate_strand_names,
+                                        use_strand_colors=use_strand_colors)
+        text = json.dumps(oxvsystem)
+        return text
+
+    def to_oxview_json(self, warn_duplicate_strand_names: bool = True,
+                       use_strand_colors: bool = True) -> dict:
+        """
+        Exports to oxView format: https://github.com/sulcgroup/oxdna-viewer/blob/master/file-format.md
+
+        :param warn_duplicate_strand_names:
+            if True, prints a warning to the screen indicating when strands are found to
+            have duplicate names. (default: True)
+        :param use_strand_colors:
+            if True (default), sets the color of each nucleotide in a strand in oxView to the color
+            of the strand.
+        :return:
+            Python dict
         """
         import datetime
         self._check_legal_design(warn_duplicate_strand_names)
@@ -7858,25 +7898,6 @@ class Design(_JSONSerializable):
                      'forces': [], 'selections': []}
 
         return oxvsystem
-
-    def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None,
-                          warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
-        """Writes an oxView file rerpesenting this design.
-
-        :param directory:
-            directy in which to write the file (default: current working directory)
-        :param filename:
-            name of the file to write (default: name of the running script with .oxview extension)
-        :param warn_duplicate_strand_names:
-            if True, prints a warning to the screen indicating when strands are found to
-            have duplicate names. (default: True)
-        :param use_strand_colors:
-            if True (default), sets the color of each nucleotide in a strand in oxView to the color
-            of the strand.
-        """
-        oxvsystem = self.to_oxview_format(warn_duplicate_strand_names=warn_duplicate_strand_names,
-                                          use_strand_colors=use_strand_colors)
-        write_file_same_name_as_running_python_script(json.dumps(oxvsystem), 'oxview', directory, filename)
 
     def to_oxdna_format(self, warn_duplicate_strand_names: bool = True) -> Tuple[str, str]:
         """Exports to oxdna format.
