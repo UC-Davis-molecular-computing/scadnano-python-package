@@ -7756,9 +7756,9 @@ class Design(_JSONSerializable):
         workbook.save(filename_plate)
 
     def to_oxview_format(self, warn_duplicate_strand_names: bool = True,
-                         use_strand_colors: bool = True) -> dict:
+                         use_strand_colors: bool = True) -> str:
         """
-        Exports to oxView format.
+        Exports to oxView format: https://github.com/sulcgroup/oxdna-viewer/blob/master/file-format.md
 
         :param warn_duplicate_strand_names:
             if True, prints a warning to the screen indicating when strands are found to
@@ -7766,6 +7766,8 @@ class Design(_JSONSerializable):
         :param use_strand_colors:
             if True (default), sets the color of each nucleotide in a strand in oxView to the color
             of the strand.
+        :return:
+            string in oxView text format
         """
         import datetime
         self._check_legal_design(warn_duplicate_strand_names)
@@ -7857,7 +7859,8 @@ class Design(_JSONSerializable):
                      'systems': [{'id': 0, 'strands': oxview_strands}],
                      'forces': [], 'selections': []}
 
-        return oxvsystem
+        text = json.dumps(oxvsystem)
+        return text
 
     def write_oxview_file(self, directory: str = '.', filename: Optional[str] = None,
                           warn_duplicate_strand_names: bool = True, use_strand_colors: bool = True) -> None:
