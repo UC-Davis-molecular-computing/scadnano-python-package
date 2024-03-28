@@ -7840,8 +7840,8 @@ class Design(_JSONSerializable):
                         for d1, d2 in zip(d1range, d2range):
                             if ((sc_strand1.dna_sequence is not None) and
                                     (sc_strand2.dna_sequence is not None) and
-                                    (sc_strand1.dna_sequence[d1] != "?") and
-                                    (sc_strand2.dna_sequence[d2] != "?") and
+                                    (sc_strand1.dna_sequence[d1] != DNA_base_wildcard) and
+                                    (sc_strand2.dna_sequence[d2] != DNA_base_wildcard) and
                                     (wc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
                                 continue
 
