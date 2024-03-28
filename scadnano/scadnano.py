@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.19.2"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.3"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -3916,7 +3916,7 @@ class Strand(_JSONSerializable):
         """
         self.set_circular(False)
 
-    def set_domains(self, domains: Iterable[Union[Domain, Loopout]]) -> None:
+    def set_domains(self, domains: Iterable[Union[Domain, Loopout, Extension]]) -> None:
         """
         Sets the :any:`Domain`'s/:any:`Loopout`'s/:any:`Extension`'s of this :any:`Strand` to be `domains`,
         which can contain a mix of :any:`Domain`'s, :any:`Loopout`'s, and :any:`Extension`'s,
@@ -7840,8 +7840,8 @@ class Design(_JSONSerializable):
                         for d1, d2 in zip(d1range, d2range):
                             if ((sc_strand1.dna_sequence is not None) and
                                     (sc_strand2.dna_sequence is not None) and
-                                    (sc_strand1.dna_sequence[d1] != "?") and
-                                    (sc_strand2.dna_sequence[d2] != "?") and
+                                    (sc_strand1.dna_sequence[d1] != DNA_base_wildcard) and
+                                    (sc_strand2.dna_sequence[d2] != DNA_base_wildcard) and
                                     (wc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
                                 continue
 
@@ -9141,8 +9141,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             elif isinstance(domain, Loopout):
                 # we place the loopout nucleotides at temporary nonsense positions and orientations
                 # these will be updated later, for now we just need the base
-                for _ in range(domain.length):
-                    base = seq[i]
+                for base in seq:
                     center = _OxdnaVector()
                     normal = _OxdnaVector(0, -1, 0)
                     forward = _OxdnaVector(0, 0, 1)
