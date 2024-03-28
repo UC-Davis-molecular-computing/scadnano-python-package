@@ -6987,8 +6987,8 @@ class TestOxviewExport(unittest.TestCase):
 
         oxdna_system = _convert_design_to_oxdna_system(design)
 
-        oxv = design.to_oxview_format(use_strand_colors=True)
-        oxv_no_color = design.to_oxview_format(use_strand_colors=False)
+        oxv = design.to_oxview_json(use_strand_colors=True)
+        oxv_no_color = design.to_oxview_json(use_strand_colors=False)
 
         # Is the box correct?
         self.assertEqual(list(oxdna_system.compute_bounding_box()), oxv['box'])
@@ -7038,7 +7038,7 @@ class TestOxviewExport(unittest.TestCase):
         des.draw_strand(2, 20).extension_5p(8).to(12).extension_3p(8).with_sequence(
             'ATACTGGAACTACGCGCGTGAATT', assign_complement=False)
 
-        oxv = des.to_oxview_format()
+        oxv = des.to_oxview_json()
 
         strands = oxv['systems'][0]['strands']
 
@@ -7092,7 +7092,7 @@ class TestOxviewExport(unittest.TestCase):
             sc.Color(254, 123, 222))
         design.draw_strand(0, 7).move(-7).cross(1).move(7)
 
-        oxv = design.to_oxview_format(use_strand_colors=True)
+        oxv = design.to_oxview_json(use_strand_colors=True)
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             design.write_oxview_file(filename=f.name)
