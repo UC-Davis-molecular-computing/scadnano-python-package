@@ -7369,7 +7369,7 @@ class Design(_JSONSerializable):
                                  domain_delimiter: str = '',
                                  key: Optional[KeyFunction[Strand]] = None,
                                  warn_duplicate_name: bool = False,
-                                 only_strands_with_idt: bool = False,
+                                 only_strands_with_vendor_fields: bool = False,
                                  export_scaffold: bool = False,
                                  export_non_modified_strand_version: bool = False) -> str:
         """Called by :py:meth:`Design.write_idt_bulk_input_file` to determine what string to write to
@@ -7381,15 +7381,15 @@ class Design(_JSONSerializable):
             string that is written to the file in the method :py:meth:`Design.write_idt_bulk_input_file`.
         """
         strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
-                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
 
         idt_lines: List[str] = []
         for strand in strands_to_export:
-            if strand.vendor_fields is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_vendor_fields:
                 raise AssertionError(f'cannot export strand {strand} to IDT because it has no IDT field; '
-                                     f'since only_strands_with_idt is True, '
+                                     f'since only_strands_with_vendor_fields is True, '
                                      f'this strand should have been filtered out by _idt_strands_to_export')
             if strand.vendor_fields is not None:
                 scale = strand.vendor_fields.scale
@@ -7408,7 +7408,7 @@ class Design(_JSONSerializable):
     def _idt_strands_to_export(self, *,
                                key: Optional[KeyFunction[Strand]] = None,  # for sorting strands
                                warn_duplicate_name: bool,
-                               only_strands_with_idt: bool = False,
+                               only_strands_with_vendor_fields: bool = False,
                                export_scaffold: bool = False,
                                export_non_modified_strand_version: bool = False) -> List[Strand]:
         # gets list of strands to export for IDT export functions
@@ -7419,7 +7419,7 @@ class Design(_JSONSerializable):
                 continue
 
             # skip strands with no IDT field unless requested to export
-            if strand.vendor_fields is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_vendor_fields:
                 continue
 
             # figure out what name to export
@@ -7427,8 +7427,8 @@ class Design(_JSONSerializable):
 
             if name in added_strands:
                 existing_strand = added_strands[name]
-                self._check_strands_with_same_name_agree_on_other_idt_fields(strand, existing_strand, name,
-                                                                             warn_duplicate_name)
+                self._check_strands_with_same_name_agree_on_other_vendor_fields(strand, existing_strand, name,
+                                                                                warn_duplicate_name)
 
             added_strands[name] = strand
             if export_non_modified_strand_version:
@@ -7440,12 +7440,16 @@ class Design(_JSONSerializable):
         return strands
 
     @staticmethod
-    def _check_strands_with_same_name_agree_on_other_idt_fields(strand: Strand, existing_strand: Strand,
-                                                                name: str, warn_duplicate_name: bool) -> None:
+    def _check_strands_with_same_name_agree_on_other_vendor_fields(
+            strand: Strand,
+            existing_strand: Strand,
+            name: str,
+            warn_duplicate_name: bool,
+    ) -> None:
         # Handle the case that two strands being exported, strand and existing_strand
         # (the latter was encountered first) have the same name
         # This is allowed in case one wants to draw multiple copies of the same strand
-        # in scadnano without having to worry about setting their idt fields differently.
+        # in scadnano without having to worry about setting their vendor fields differently.
         # But then we need to check that they agree on everything being exported.
         if existing_strand.name is not None:
             assert existing_strand.name == name
@@ -7490,7 +7494,7 @@ class Design(_JSONSerializable):
                                   delimiter: str = ',',
                                   domain_delimiter: str = '',
                                   warn_duplicate_name: bool = True,
-                                  only_strands_with_idt: bool = False,
+                                  only_strands_with_vendor_fields: bool = False,
                                   export_scaffold: bool = False,
                                   export_non_modified_strand_version: bool = False) -> None:
         """Write ``.idt`` text file encoding the strands of this :any:`Design` with the field
@@ -7529,16 +7533,16 @@ class Design(_JSONSerializable):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param only_strands_with_idt:
+        :param only_strands_with_vendor_fields:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
             chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :data:`Strand.vendor_fields` will not be exported.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
-            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            If True, scaffold sequences on strands output according to `only_strands_with_vendor_fields`
             (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
-            `only_strands_with_idt` is True).
+            `only_strands_with_vendor_fields` is True).
         :param export_non_modified_strand_version:
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
             without any modifications. The name for this :any:`Strand` is the original name with
@@ -7548,7 +7552,7 @@ class Design(_JSONSerializable):
                                                  domain_delimiter=domain_delimiter,
                                                  key=key,
                                                  warn_duplicate_name=warn_duplicate_name,
-                                                 only_strands_with_idt=only_strands_with_idt,
+                                                 only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                  export_scaffold=export_scaffold,
                                                  export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
@@ -7558,7 +7562,7 @@ class Design(_JSONSerializable):
     def write_idt_plate_excel_file(self, *, directory: str = '.', filename: Optional[str] = None,
                                    key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False,
-                                   only_strands_with_idt: bool = False,
+                                   only_strands_with_vendor_fields: bool = False,
                                    export_scaffold: bool = False,
                                    use_default_plates: bool = True, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
@@ -7594,7 +7598,7 @@ class Design(_JSONSerializable):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param only_strands_with_idt:
+        :param only_strands_with_vendor_fields:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
             chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
@@ -7602,13 +7606,13 @@ class Design(_JSONSerializable):
             If False, then `use_default_plates` must be True.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
-            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            If True, scaffold sequences on strands output according to `only_strands_with_vendor_fields`
             (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
-            `only_strands_with_idt` is True).
+            `only_strands_with_vendor_fields` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
             If False, each Strand to export must have the field :data:`Strand.vendor_fields`, so in particular
-            the parameter `only_strands_with_idt` must be True.
+            the parameter `only_strands_with_vendor_fields` must be True.
         :param warn_using_default_plates:
             specifies whether, if `use_default_plates` is True, to print a warning for strands whose
             :data:`Strand.vendor_fields` has the fields :data:`VendorFields.plate` and :data:`VendorFields.well`,
@@ -7625,13 +7629,13 @@ class Design(_JSONSerializable):
         """
 
         strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
-                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
-            if not only_strands_with_idt:
-                raise ValueError('parameters use_default_plates and only_strands_with_idt '
+            if not only_strands_with_vendor_fields:
+                raise ValueError('parameters use_default_plates and only_strands_with_vendor_fields '
                                  'cannot both be False')
             self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
