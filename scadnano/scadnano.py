@@ -4102,7 +4102,7 @@ class Strand(_JSONSerializable):
 
         `sequence`, after all whitespace is removed, must be exactly the same length as
         :py:meth:`Strand.dna_length`.
-        Wildcard symbols (:py:const:`DNA_case_wildcard`) are allowed to leave part of the DNA unassigned.
+        Wildcard symbols (:py:const:`DNA_base_wildcard`) are allowed to leave part of the DNA unassigned.
         """
         trimmed_seq = _remove_whitespace_and_uppercase(sequence)
         if len(trimmed_seq) != self.dna_length():
