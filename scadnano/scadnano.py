@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.19.4"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.5"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -1315,6 +1315,14 @@ class HelixGroup(_JSONSerializable):
     grid: Grid = Grid.none
     """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
 
+    geometry: Optional[Geometry] = None
+    """
+    Optional custom :any:`Geometry` to specify for this :any:`HelixGroup`. If specified then
+    it is assumed to override the field :data:`Design.geometry`. This will affect, for instance,
+    where nucleotides and phosphate groups are placed when exporting to oxDNA or oxView via
+    :meth:`Design.to_oxview_format` or :meth:`Design.to_oxdna_format`.
+    """
+
     def has_default_position_and_orientation(self):
         # we don't bother checking grid or helices_view_order because those are written to top-level
         # fields of Design if the group is otherwise default
@@ -1340,6 +1348,9 @@ class HelixGroup(_JSONSerializable):
         default_helices_view_order = sorted(helix_idxs)
         if self.helices_view_order != default_helices_view_order:
             dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+
+        if self.geometry is not None:
+            dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
 
         return dct
 
@@ -1372,12 +1383,19 @@ class HelixGroup(_JSONSerializable):
         roll = json_map.get(roll_key, default_roll)
         yaw = json_map.get(yaw_key, default_yaw)
 
-        return HelixGroup(position=position,
-                          pitch=pitch,
-                          yaw=yaw,
-                          roll=roll,
-                          helices_view_order=helices_view_order,
-                          grid=grid)
+        geometry = None
+        if geometry_key in json_map:
+            geometry = Geometry.from_json(json_map[geometry_key])
+
+        return HelixGroup(
+            position=position,
+            pitch=pitch,
+            yaw=yaw,
+            roll=roll,
+            helices_view_order=helices_view_order,
+            grid=grid,
+            geometry=geometry,
+        )
 
     def helices_view_order_inverse(self, idx: int) -> int:
         """

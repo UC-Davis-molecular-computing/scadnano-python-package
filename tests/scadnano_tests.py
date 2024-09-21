@@ -1282,7 +1282,7 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         # add 10 strands in excess of 3 plates
         for plate_type in [sc.PlateType.wells96, sc.PlateType.wells384]:
             num_strands = 3 * plate_type.num_wells_per_plate() + 10
-            filename = f'test_excel_export_{plate_type.num_wells_per_plate()}.xlsx'
+            filename = f'tests/test_excel_export_{plate_type.num_wells_per_plate()}.xlsx'
             max_offset = num_strands * strand_len
             helices = [sc.Helix(max_offset=max_offset) for _ in range(1)]
             design = sc.Design(helices=helices, strands=[], grid=sc.square)
@@ -1307,7 +1307,10 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
 
                 self.assertEqual(expected_wells + 1, sheet.max_row)
 
-            os.remove(filename)
+            try:
+                os.remove(filename)
+            except PermissionError as e:
+                print(f'could not remove file "{filename}" due to permission error')
 
     def test_export_dna_sequences_extension_5p(self) -> None:
         design = sc.Design(helices=[sc.Helix(max_offset=100)])
