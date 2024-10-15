@@ -9001,7 +9001,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     """
     group = design.groups[helix.group]
     grid = group.grid
-    geometry = design.geometry
+    geometry = design.geometry if group.geometry is None else group.geometry
 
     # principal axes for computing rotation
     # see https://en.wikipedia.org/wiki/Aircraft_principal_axes
