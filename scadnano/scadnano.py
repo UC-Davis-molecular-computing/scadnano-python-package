@@ -2742,6 +2742,21 @@ class Extension(_JSONSerializable):
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
 
+    def adjacent_domain(self) -> Domain:
+        """
+        :return: The :any:`Domain` adjacent to this :any:`Extension` on the same :any:`Strand`.
+                 Raises ValueError if no parent strand has been set
+        """
+        strand = self.strand()
+        if self is strand.domains[0]:
+            first = True
+        elif self is strand.domains[-1]:
+            first = False
+        else:
+            raise ValueError(f'Extension {self} is on its parent Strand {strand}')
+        return strand.domains[1] if first else strand.domains[-2]
+
+
     def vendor_dna_sequence(self) -> Optional[str]:
         """
         :return:
@@ -9084,8 +9099,6 @@ def get_normal_vector_to(vec: _OxdnaVector) -> _OxdnaVector:
 
 def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
-    geometry = design.geometry
-    step_rot = -360 / geometry.bases_per_turn
 
     # each entry is the number of insertions - deletions since the start of a given helix
     mod_map = {}
@@ -9128,8 +9141,11 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin_, forward, normal = helix_vectors[helix.idx]
+                group = design.groups[helix.group]
+                geometry = design.geometry if group.geometry is None else group.geometry
+                step_rot = -360 / geometry.bases_per_turn
 
+                origin_, forward, normal = helix_vectors[helix.idx]
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
                     seq = seq[::-1]  # reverse DNA sequence
@@ -9143,7 +9159,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 deletions = set(domain.deletions)
                 insertions = dict(domain.insertions)
 
-                # use Design.geometry field to figure out various distances
+                # use Design.geometry or HelixGroup.geometry field to figure out various distances
                 # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/state/geometry.dart
 
                 # index is used for finding the base in our sequence
@@ -9193,9 +9209,12 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 strand_domains.append((ox_strand, True))
             elif isinstance(domain, Extension):
                 is_5p = i == 0
-                nucleotides = _compute_extension_nucleotides(design=design, strand=strand, is_5p=is_5p,
-                                                             helix_vectors=helix_vectors,
-                                                             mod_map=mod_map)
+                helix = design.helices[domain.adjacent_domain().helix]
+                group = design.groups[helix.group]
+                geometry = design.geometry if group.geometry is None else group.geometry
+                nucleotides = _compute_extension_nucleotides(
+                    design=design, strand=strand, is_5p=is_5p, helix_vectors=helix_vectors, mod_map=mod_map,
+                    geometry = geometry)
                 ox_strand.nucleotides.extend(nucleotides)
                 strand_domains.append((ox_strand, False))
             else:
@@ -9227,15 +9246,15 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     return system
 
 
-# FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
+# FIXME: this is hacky and has some magic lines that I got by experimentation instead of understanding
 def _compute_extension_nucleotides(
         design: Design,
         strand: Strand,
         is_5p: bool,
         helix_vectors: Dict[int, Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]],
-        mod_map: Dict[int, List[int]]) \
-        -> List[_OxdnaNucleotide]:
-    geometry = design.geometry
+        mod_map: Dict[int, List[int]],
+        geometry: Geometry
+) -> List[_OxdnaNucleotide]:
     step_rot = -360 / geometry.bases_per_turn
 
     adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
