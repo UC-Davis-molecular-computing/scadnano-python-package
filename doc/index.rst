@@ -31,10 +31,11 @@ Scadnano provides function to convert design to and from cadnano v2:
 **Important**
 
 All ``cadnanov2`` designs can be imported to scadnano. However **not all scadnano designs can be imported 
-to cadnanov2**, to be importable to ``cadnanov2`` a scadnano design need to comply with the following points:
+to cadnanov2**, to be exportable to ``cadnanov2`` a scadnano design need to comply with the following points:
 
 * The design cannot feature any :py:class:`Loopout` as it is not a concept that exists in ``cadnanov2``.
 * Following ``cadnanov2`` conventions, helices with **even** number must have their scaffold going **forward** and helices with **odd** number **backward**.
+* If you use paranemic crossovers (i.e. crossovers where the domains before and after the crossover are in the same direction), the helices' row number (i.e. not the helices' indexes but their y coordinate) of the domains must have the same parity e.g. rows 0 and 2, or 1 and 3, but not 0 and 1.
 
 Also note that maximum helices offsets can be altered in a ``scadnano`` to ``cadnanov2`` conversion as ``cadnanov2`` needs max offsets to be a multiple of 21 in the hex grid and 32 in the rectangular grid.
 The conversion algorithm will choose the lowest multiple of 21 or 32 which fits the entire design.
