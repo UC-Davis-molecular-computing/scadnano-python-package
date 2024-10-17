@@ -1629,6 +1629,19 @@ class TestExportCadnanoV2(unittest.TestCase):
         output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
         self.assertEqual(4, len(output_design.helices))
 
+    def test_paranemic_crossover_other_direction(self) -> None:
+        design = sc.Design.from_scadnano_file(
+            os.path.join(self.input_path, f'test_paranemic_crossover_other_direction.{self.ext}'))
+        # To help with debugging, uncomment these lines to write out the
+        # scadnano and/or cadnano file
+        #
+        # design.write_cadnano_v2_file(directory=self.output_path,
+        #                          filename='test_paranemic_crossover.json')
+        output_json = design.to_cadnano_v2_json()
+
+        output_design = sc.Design.from_cadnano_v2(json_dict=json.loads(output_json))
+        self.assertEqual(4, len(output_design.helices))
+
     def test_parity_issue(self) -> None:
         """ We do not design where the parity of the helix
         does not correspond to the direction.
