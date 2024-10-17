@@ -26,3 +26,4 @@ tests_outputs/
 .vscode/
 dist/
 .mypy_cache/
+test_paranemic.py

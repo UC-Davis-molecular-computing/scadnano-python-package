@@ -6609,10 +6609,15 @@ class Design(_JSONSerializable):
             helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
         elif forward_from and forward_to:
             helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, start_to]
-            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+            helix_to_dct[strand_type][end_to-1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"]%2 != helix_to_dct["row"]%2:
+                raise ValueError("Paranemic crossovers are only allowed between helices that have the same parity of row number, here helix num "+str(helix_from_dct['num'])+ " and helix num " + str(helix_to_dct['num']) + " have different parity of row number: respectively "+str(helix_from_dct["row"])+" and "+str( helix_to_dct["row"]))
+
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
-            helix_to_dct[strand_type][start_to][:2] = [helix_from, end_from - 1]
+            helix_to_dct[strand_type][end_to-1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"]%2 != helix_to_dct["row"]%2:
+                raise ValueError("Paranemic crossovers are only allowed between helices that have the same parity of row number, here helix num "+str(helix_from_dct['num'])+ " and helix num " + str(helix_to_dct['num']) + " have different parity of row number: respectively "+str(helix_from_dct["row"])+" and "+str( helix_to_dct["row"]))
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
@@ -6650,6 +6655,9 @@ class Design(_JSONSerializable):
                 next_helix = dct['vstrands'][next_helix_id]
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
+            
+        
+        
 
         # if the strand is circular, we need to close the loop
         if strand.circular:
@@ -6784,13 +6792,13 @@ class Design(_JSONSerializable):
                 if isinstance(domain, Loopout):
                     raise ValueError(
                         'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                right_direction: bool
+                cadnano_expected_direction: bool
                 if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                    right_direction = (domain.helix % 2 == int(not domain.forward))
+                    cadnano_expected_direction = (domain.helix % 2 == int(not domain.forward))
                 else:
-                    right_direction = not (domain.helix % 2 == int(not domain.forward))
+                    cadnano_expected_direction = not (domain.helix % 2 == int(not domain.forward))
 
-                if not right_direction:
+                if not cadnano_expected_direction:
                     raise ValueError('We can only convert designs where even helices have the scaffold'
                                      'going forward and odd helices have the scaffold going backward see '
                                      f'the spec v2.txt Note 4. {domain}')
@@ -6803,6 +6811,7 @@ class Design(_JSONSerializable):
 
         for strand in self.strands:
             self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
+            
 
         return dct
 
