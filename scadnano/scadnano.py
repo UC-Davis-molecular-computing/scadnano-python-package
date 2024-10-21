@@ -9020,25 +9020,33 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     roll_axis = roll_axis.rotate(design.pitch_of_helix(helix), pitch_axis)
 
     # then the roll rotation
-    yaw_axis = yaw_axis.rotate(-design.roll_of_helix(helix), roll_axis)
+    # note only the group's roll is used here helix rolls are accounted for below
+    yaw_axis = yaw_axis.rotate(-group.roll, roll_axis)
+    pitch_axis = pitch_axis.rotate(-group.roll, roll_axis)
 
     # by chosen convension, forward is the same as the roll axis
     # and normal is the negated yaw axis
     forward = roll_axis
     normal = -yaw_axis
+    normal = normal.rotate(-helix.roll, roll_axis) # account for helix roll separately
 
-    position = origin
+    # get the position of the helix within the group
+    position_in_helix_group = origin
     if grid == Grid.none:
         if helix.position is not None:
-            position = helix.position
+            position_in_helix_group = helix.position
     else:
         if helix.grid_position is None:
             raise AssertionError('helix.grid_position should be assigned if grid is not Grid.none')
-        position = grid_position_to_position(helix.grid_position, grid, geometry)
+        position_in_helix_group = grid_position_to_position(helix.grid_position, grid, geometry)
 
-    position = position + group.position
+    # helix's position in it's group rotated so that it exists in the global rotation
+    position_in_helix_group_rotated = (pitch_axis * position_in_helix_group.x) + (yaw_axis   * position_in_helix_group.y) + (roll_axis  * position_in_helix_group.z)
 
-    origin_ = _OxdnaVector(position.x, position.y, position.z) * NM_TO_OX_UNITS
+    # offset of helix group origin with respect to global coordinates
+    helix_group_offset = _OxdnaVector(group.position.x, group.position.y, group.position.z)
+
+    origin_ = (position_in_helix_group_rotated + helix_group_offset) * NM_TO_OX_UNITS
     return origin_, forward, normal
 
 
