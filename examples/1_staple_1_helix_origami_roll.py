@@ -1,5 +1,3 @@
-import math
-
 import scadnano as sc
 
 def create_design() -> sc.Design:
