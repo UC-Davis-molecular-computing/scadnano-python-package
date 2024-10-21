@@ -9041,7 +9041,9 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
         position_in_helix_group = grid_position_to_position(helix.grid_position, grid, geometry)
 
     # helix's position in it's group rotated so that it exists in the global rotation
-    position_in_helix_group_rotated = (pitch_axis * position_in_helix_group.x) + (yaw_axis   * position_in_helix_group.y) + (roll_axis  * position_in_helix_group.z)
+    position_in_helix_group_rotated = ((pitch_axis * position_in_helix_group.x) +
+                                       (yaw_axis * position_in_helix_group.y) +
+                                       (roll_axis  * position_in_helix_group.z))
 
     # offset of helix group origin with respect to global coordinates
     helix_group_offset = _OxdnaVector(group.position.x, group.position.y, group.position.z)
