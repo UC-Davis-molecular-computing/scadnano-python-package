@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.19.4"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.19.5"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -1315,6 +1315,14 @@ class HelixGroup(_JSONSerializable):
     grid: Grid = Grid.none
     """:any:`Grid` of this :any:`HelixGroup` used to interpret the field :data:`Helix.grid_position`."""
 
+    geometry: Optional[Geometry] = None
+    """
+    Optional custom :any:`Geometry` to specify for this :any:`HelixGroup`. If specified then
+    it is assumed to override the field :data:`Design.geometry`. This will affect, for instance,
+    where nucleotides and phosphate groups are placed when exporting to oxDNA or oxView via
+    :meth:`Design.to_oxview_format` or :meth:`Design.to_oxdna_format`.
+    """
+
     def has_default_position_and_orientation(self):
         # we don't bother checking grid or helices_view_order because those are written to top-level
         # fields of Design if the group is otherwise default
@@ -1340,6 +1348,9 @@ class HelixGroup(_JSONSerializable):
         default_helices_view_order = sorted(helix_idxs)
         if self.helices_view_order != default_helices_view_order:
             dct[helices_view_order_key] = NoIndent(self.helices_view_order)
+
+        if self.geometry is not None:
+            dct[geometry_key] = self.geometry.to_json_serializable(suppress_indent)
 
         return dct
 
@@ -1372,12 +1383,19 @@ class HelixGroup(_JSONSerializable):
         roll = json_map.get(roll_key, default_roll)
         yaw = json_map.get(yaw_key, default_yaw)
 
-        return HelixGroup(position=position,
-                          pitch=pitch,
-                          yaw=yaw,
-                          roll=roll,
-                          helices_view_order=helices_view_order,
-                          grid=grid)
+        geometry = None
+        if geometry_key in json_map:
+            geometry = Geometry.from_json(json_map[geometry_key])
+
+        return HelixGroup(
+            position=position,
+            pitch=pitch,
+            yaw=yaw,
+            roll=roll,
+            helices_view_order=helices_view_order,
+            grid=grid,
+            geometry=geometry,
+        )
 
     def helices_view_order_inverse(self, idx: int) -> int:
         """
@@ -2723,6 +2741,21 @@ class Extension(_JSONSerializable):
         if self._parent_strand is None:
             raise ValueError('_parent_strand has not yet been set')
         return self._parent_strand
+
+    def adjacent_domain(self) -> Domain:
+        """
+        :return: The :any:`Domain` adjacent to this :any:`Extension` on the same :any:`Strand`.
+                 Raises ValueError if no parent strand has been set
+        """
+        strand = self.strand()
+        if self is strand.domains[0]:
+            first = True
+        elif self is strand.domains[-1]:
+            first = False
+        else:
+            raise ValueError(f'Extension {self} is on its parent Strand {strand}')
+        return strand.domains[1] if first else strand.domains[-2]
+
 
     def vendor_dna_sequence(self) -> Optional[str]:
         """
@@ -4102,7 +4135,7 @@ class Strand(_JSONSerializable):
 
         `sequence`, after all whitespace is removed, must be exactly the same length as
         :py:meth:`Strand.dna_length`.
-        Wildcard symbols (:py:const:`DNA_case_wildcard`) are allowed to leave part of the DNA unassigned.
+        Wildcard symbols (:py:const:`DNA_base_wildcard`) are allowed to leave part of the DNA unassigned.
         """
         trimmed_seq = _remove_whitespace_and_uppercase(sequence)
         if len(trimmed_seq) != self.dna_length():
@@ -7369,7 +7402,7 @@ class Design(_JSONSerializable):
                                  domain_delimiter: str = '',
                                  key: Optional[KeyFunction[Strand]] = None,
                                  warn_duplicate_name: bool = False,
-                                 only_strands_with_idt: bool = False,
+                                 only_strands_with_vendor_fields: bool = False,
                                  export_scaffold: bool = False,
                                  export_non_modified_strand_version: bool = False) -> str:
         """Called by :py:meth:`Design.write_idt_bulk_input_file` to determine what string to write to
@@ -7381,15 +7414,15 @@ class Design(_JSONSerializable):
             string that is written to the file in the method :py:meth:`Design.write_idt_bulk_input_file`.
         """
         strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
-                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
 
         idt_lines: List[str] = []
         for strand in strands_to_export:
-            if strand.vendor_fields is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_vendor_fields:
                 raise AssertionError(f'cannot export strand {strand} to IDT because it has no IDT field; '
-                                     f'since only_strands_with_idt is True, '
+                                     f'since only_strands_with_vendor_fields is True, '
                                      f'this strand should have been filtered out by _idt_strands_to_export')
             if strand.vendor_fields is not None:
                 scale = strand.vendor_fields.scale
@@ -7408,7 +7441,7 @@ class Design(_JSONSerializable):
     def _idt_strands_to_export(self, *,
                                key: Optional[KeyFunction[Strand]] = None,  # for sorting strands
                                warn_duplicate_name: bool,
-                               only_strands_with_idt: bool = False,
+                               only_strands_with_vendor_fields: bool = False,
                                export_scaffold: bool = False,
                                export_non_modified_strand_version: bool = False) -> List[Strand]:
         # gets list of strands to export for IDT export functions
@@ -7419,7 +7452,7 @@ class Design(_JSONSerializable):
                 continue
 
             # skip strands with no IDT field unless requested to export
-            if strand.vendor_fields is None and only_strands_with_idt:
+            if strand.vendor_fields is None and only_strands_with_vendor_fields:
                 continue
 
             # figure out what name to export
@@ -7427,8 +7460,8 @@ class Design(_JSONSerializable):
 
             if name in added_strands:
                 existing_strand = added_strands[name]
-                self._check_strands_with_same_name_agree_on_other_idt_fields(strand, existing_strand, name,
-                                                                             warn_duplicate_name)
+                self._check_strands_with_same_name_agree_on_other_vendor_fields(strand, existing_strand, name,
+                                                                                warn_duplicate_name)
 
             added_strands[name] = strand
             if export_non_modified_strand_version:
@@ -7440,12 +7473,16 @@ class Design(_JSONSerializable):
         return strands
 
     @staticmethod
-    def _check_strands_with_same_name_agree_on_other_idt_fields(strand: Strand, existing_strand: Strand,
-                                                                name: str, warn_duplicate_name: bool) -> None:
+    def _check_strands_with_same_name_agree_on_other_vendor_fields(
+            strand: Strand,
+            existing_strand: Strand,
+            name: str,
+            warn_duplicate_name: bool,
+    ) -> None:
         # Handle the case that two strands being exported, strand and existing_strand
         # (the latter was encountered first) have the same name
         # This is allowed in case one wants to draw multiple copies of the same strand
-        # in scadnano without having to worry about setting their idt fields differently.
+        # in scadnano without having to worry about setting their vendor fields differently.
         # But then we need to check that they agree on everything being exported.
         if existing_strand.name is not None:
             assert existing_strand.name == name
@@ -7490,7 +7527,7 @@ class Design(_JSONSerializable):
                                   delimiter: str = ',',
                                   domain_delimiter: str = '',
                                   warn_duplicate_name: bool = True,
-                                  only_strands_with_idt: bool = False,
+                                  only_strands_with_vendor_fields: bool = False,
                                   export_scaffold: bool = False,
                                   export_non_modified_strand_version: bool = False) -> None:
         """Write ``.idt`` text file encoding the strands of this :any:`Design` with the field
@@ -7529,16 +7566,16 @@ class Design(_JSONSerializable):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param only_strands_with_idt:
+        :param only_strands_with_vendor_fields:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
             chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
             If True, then strands lacking the field :data:`Strand.vendor_fields` will not be exported.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
-            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            If True, scaffold sequences on strands output according to `only_strands_with_vendor_fields`
             (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
-            `only_strands_with_idt` is True).
+            `only_strands_with_vendor_fields` is True).
         :param export_non_modified_strand_version:
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
             without any modifications. The name for this :any:`Strand` is the original name with
@@ -7548,7 +7585,7 @@ class Design(_JSONSerializable):
                                                  domain_delimiter=domain_delimiter,
                                                  key=key,
                                                  warn_duplicate_name=warn_duplicate_name,
-                                                 only_strands_with_idt=only_strands_with_idt,
+                                                 only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                  export_scaffold=export_scaffold,
                                                  export_non_modified_strand_version=export_non_modified_strand_version)
         if extension is None:
@@ -7558,7 +7595,7 @@ class Design(_JSONSerializable):
     def write_idt_plate_excel_file(self, *, directory: str = '.', filename: Optional[str] = None,
                                    key: Optional[KeyFunction[Strand]] = None,
                                    warn_duplicate_name: bool = False,
-                                   only_strands_with_idt: bool = False,
+                                   only_strands_with_vendor_fields: bool = False,
                                    export_scaffold: bool = False,
                                    use_default_plates: bool = True, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
@@ -7594,7 +7631,7 @@ class Design(_JSONSerializable):
             raised (regardless of the value of this parameter)
             if two different :any:`Strand`'s have the same name but different sequences, IDT scales, or IDT
             purifications.
-        :param only_strands_with_idt:
+        :param only_strands_with_vendor_fields:
             If False (the default), all non-scaffold sequences are output, with reasonable default values
             chosen if the field :data:`Strand.vendor_fields` is missing.
             (though scaffold is included if `export_scaffold` is True).
@@ -7602,13 +7639,13 @@ class Design(_JSONSerializable):
             If False, then `use_default_plates` must be True.
         :param export_scaffold:
             If False (the default), scaffold sequences are not exported.
-            If True, scaffold sequences on strands output according to `only_strands_with_idt`
+            If True, scaffold sequences on strands output according to `only_strands_with_vendor_fields`
             (i.e., scaffolds will be exported, unless they lack the field :any:`Strand.vendor_fields` and
-            `only_strands_with_idt` is True).
+            `only_strands_with_vendor_fields` is True).
         :param use_default_plates:
             Use default values for plate and well (ignoring those in idt fields, which may be None).
             If False, each Strand to export must have the field :data:`Strand.vendor_fields`, so in particular
-            the parameter `only_strands_with_idt` must be True.
+            the parameter `only_strands_with_vendor_fields` must be True.
         :param warn_using_default_plates:
             specifies whether, if `use_default_plates` is True, to print a warning for strands whose
             :data:`Strand.vendor_fields` has the fields :data:`VendorFields.plate` and :data:`VendorFields.well`,
@@ -7625,13 +7662,13 @@ class Design(_JSONSerializable):
         """
 
         strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
-                                                        only_strands_with_idt=only_strands_with_idt,
+                                                        only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                         export_scaffold=export_scaffold,
                                                         export_non_modified_strand_version=export_non_modified_strand_version)
 
         if not use_default_plates:
-            if not only_strands_with_idt:
-                raise ValueError('parameters use_default_plates and only_strands_with_idt '
+            if not only_strands_with_vendor_fields:
+                raise ValueError('parameters use_default_plates and only_strands_with_vendor_fields '
                                  'cannot both be False')
             self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
         else:
@@ -8964,7 +9001,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     """
     group = design.groups[helix.group]
     grid = group.grid
-    geometry = design.geometry
+    geometry = design.geometry if group.geometry is None else group.geometry
 
     # principal axes for computing rotation
     # see https://en.wikipedia.org/wiki/Aircraft_principal_axes
@@ -9069,8 +9106,6 @@ def get_normal_vector_to(vec: _OxdnaVector) -> _OxdnaVector:
 
 def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     system = _OxdnaSystem()
-    geometry = design.geometry
-    step_rot = -360 / geometry.bases_per_turn
 
     # each entry is the number of insertions - deletions since the start of a given helix
     mod_map = {}
@@ -9113,8 +9148,11 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
             # handle normal domains
             if isinstance(domain, Domain):
                 helix = design.helices[domain.helix]
-                origin_, forward, normal = helix_vectors[helix.idx]
+                group = design.groups[helix.group]
+                geometry = design.geometry if group.geometry is None else group.geometry
+                step_rot = -360 / geometry.bases_per_turn
 
+                origin_, forward, normal = helix_vectors[helix.idx]
                 if not domain.forward:
                     normal = normal.rotate(-geometry.minor_groove_angle, forward)
                     seq = seq[::-1]  # reverse DNA sequence
@@ -9128,7 +9166,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 deletions = set(domain.deletions)
                 insertions = dict(domain.insertions)
 
-                # use Design.geometry field to figure out various distances
+                # use Design.geometry or HelixGroup.geometry field to figure out various distances
                 # https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/lib/src/state/geometry.dart
 
                 # index is used for finding the base in our sequence
@@ -9178,9 +9216,12 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 strand_domains.append((ox_strand, True))
             elif isinstance(domain, Extension):
                 is_5p = i == 0
-                nucleotides = _compute_extension_nucleotides(design=design, strand=strand, is_5p=is_5p,
-                                                             helix_vectors=helix_vectors,
-                                                             mod_map=mod_map)
+                helix = design.helices[domain.adjacent_domain().helix]
+                group = design.groups[helix.group]
+                geometry = design.geometry if group.geometry is None else group.geometry
+                nucleotides = _compute_extension_nucleotides(
+                    design=design, strand=strand, is_5p=is_5p, helix_vectors=helix_vectors, mod_map=mod_map,
+                    geometry = geometry)
                 ox_strand.nucleotides.extend(nucleotides)
                 strand_domains.append((ox_strand, False))
             else:
@@ -9212,15 +9253,15 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
     return system
 
 
-# FIXME: this is hacky and has some magic lines that I got my experimentation instead of understanding
+# FIXME: this is hacky and has some magic lines that I got by experimentation instead of understanding
 def _compute_extension_nucleotides(
         design: Design,
         strand: Strand,
         is_5p: bool,
         helix_vectors: Dict[int, Tuple[_OxdnaVector, _OxdnaVector, _OxdnaVector]],
-        mod_map: Dict[int, List[int]]) \
-        -> List[_OxdnaNucleotide]:
-    geometry = design.geometry
+        mod_map: Dict[int, List[int]],
+        geometry: Geometry
+) -> List[_OxdnaNucleotide]:
     step_rot = -360 / geometry.bases_per_turn
 
     adj_dom = strand.domains[1] if is_5p else strand.domains[-2]
