@@ -6575,6 +6575,127 @@ class Design(_JSONSerializable):
             raise AssertionError('we counted; there is exactly one scaffold')
         self.assign_dna(scaffold, m13(rotation, variant))
 
+
+    def to_cadnano_v2_json(self, name: str = '', whitespace: bool = True) -> str:
+        """Converts the design to the cadnano v2 format.
+
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
+
+        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
+        the optional parameter `whitespace` must be set to False.
+
+        :param name:
+            Name of the design.
+        :param whitespace:
+            Whether to include whitespace in the exported file. Set to False to use this with CanDo
+            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
+            contains whitespace.
+        :return:
+            a string in the cadnano v2 format representing this :any:`Design`
+        """
+        content_serializable = self.to_cadnano_v2_serializable(name)
+
+        encoder = _SuppressableIndentEncoder
+        content = json.dumps(content_serializable, cls=encoder, indent=2)
+        if not whitespace:
+            # remove whitespace
+            content = ''.join(content.split())
+        return content
+    
+    def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
+        """Converts the design to a JSON-serializable Python object (a dict) representing
+        the cadnano v2 format. Calling json.dumps on this object will result in a string representing
+        the cadnano c2 format; this is essentially what is done in
+        :meth:`Design.to_cadnano_v2_json`.
+
+        Please see the spec
+        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
+        for more info on that format.
+
+
+        :param name:
+            Name of the design.
+        :return:
+            a Python dict representing the cadnano v2 format for this :any:`Design`
+        """
+        dct: Dict[str, Any] = OrderedDict()
+        if name != '':
+            dct['name'] = name
+
+        dct['vstrands'] = []
+
+        '''Check if helix group are used or if only one grid is used'''
+        if self._has_default_groups():
+            design_grid = self.grid
+        else:
+            grid_used = {}
+            assert len(self.groups) > 0
+            grid_type = Grid.none
+            for group_name in self.groups:
+                grid_used[self.groups[group_name].grid] = True
+                grid_type = self.groups[group_name].grid
+            if len(grid_used) > 1:
+                raise ValueError('Designs using helix groups can be exported to cadnano v2 \
+                    only if all groups share the same grid type.')
+            else:
+                design_grid = grid_type
+
+        '''Figuring out the type of grid.
+        In cadnano v2, all helices have the same max offset 
+        called `num_bases` and the type of grid is determined as follows:
+            if num_bases % 32 == 0: then we are on grid square
+            if num_bases % 21 == 0: then we are on grid honey
+        '''
+        num_bases = 0
+        for helix in self.helices.values():
+            if helix.max_offset is None:
+                raise ValueError('must have helix.max_offset set')
+            num_bases = max(num_bases, helix.max_offset)
+
+        if design_grid == Grid.square:
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
+        elif design_grid == Grid.honeycomb:
+            num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
+        else:
+            raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
+
+        '''Figuring out if helices numbers have good parity.
+        In cadnano v2, only even helices have the scaffold go forward, only odd helices
+        have the scaffold go backward.
+
+        '''
+        for strand in self.strands:
+            for domain in strand.domains:
+                if isinstance(domain, Extension):
+                    raise ValueError(
+                        'We cannot handle designs with Extensions as it is not a cadnano v2 concept')
+                if isinstance(domain, Loopout):
+                    raise ValueError(
+                        'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
+                cadnano_expected_direction: bool
+                if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
+                    cadnano_expected_direction = (domain.helix % 2 == int(not domain.forward))
+                else:
+                    cadnano_expected_direction = not (domain.helix % 2 == int(not domain.forward))
+
+                if not cadnano_expected_direction:
+                    raise ValueError('We can only convert designs where even helices have the scaffold'
+                                     'going forward and odd helices have the scaffold going backward see '
+                                     f'the spec v2.txt Note 4. {domain}')
+
+        '''Filling the helices with blank.
+        '''
+        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases, design_grid)
+        '''Putting the scaffold in place.
+        '''
+
+        for strand in self.strands:
+            self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
+
+        return dct
+
     @staticmethod
     def _get_multiple_of_x_sup_closest_to_y(x: int, y: int) -> int:
         return y if y % x == 0 else y + (x - y % x)
@@ -6643,9 +6764,20 @@ class Design(_JSONSerializable):
         elif forward_from and forward_to:
             helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, start_to]
             helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
+                raise ValueError(f"""\
+Paranemic crossovers are only allowed between helices that have the same parity of 
+row number, here helix num {helix_from_dct['num']} and helix num {helix_to_dct['num']} 
+have different parity of row number: respectively {helix_from_dct['row']} and {helix_to_dct['row']}""")
+
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
-            helix_to_dct[strand_type][start_to][:2] = [helix_from, end_from - 1]
+            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
+                raise ValueError(f"""\
+Paranemic crossovers are only allowed between helices that have the same parity of 
+row number, here helix num {helix_from_dct['num']} and helix num {helix_to_dct['num']} 
+have different parity of row number: respectively {helix_from_dct['row']} and {helix_to_dct['row']}""")
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
@@ -6746,126 +6878,6 @@ class Design(_JSONSerializable):
             dct['vstrands'].append(helix_dct)
             i += 1
         return helices_ids_reverse
-
-    def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
-        """Converts the design to a JSON-serializable Python object (a dict) representing
-        the cadnano v2 format. Calling json.dumps on this object will result in a string representing
-        the cadnano c2 format; this is essentially what is done in
-        :meth:`Design.to_cadnano_v2_json`.
-
-        Please see the spec
-        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
-        for more info on that format.
-
-
-        :param name:
-            Name of the design.
-        :return:
-            a Python dict representing the cadnano v2 format for this :any:`Design`
-        """
-        dct: Dict[str, Any] = OrderedDict()
-        if name != '':
-            dct['name'] = name
-
-        dct['vstrands'] = []
-
-        '''Check if helix group are used or if only one grid is used'''
-        if self._has_default_groups():
-            design_grid = self.grid
-        else:
-            grid_used = {}
-            assert len(self.groups) > 0
-            grid_type = Grid.none
-            for group_name in self.groups:
-                grid_used[self.groups[group_name].grid] = True
-                grid_type = self.groups[group_name].grid
-            if len(grid_used) > 1:
-                raise ValueError('Designs using helix groups can be exported to cadnano v2 \
-                    only if all groups share the same grid type.')
-            else:
-                design_grid = grid_type
-
-        '''Figuring out the type of grid.
-        In cadnano v2, all helices have the same max offset 
-        called `num_bases` and the type of grid is determined as follows:
-            if num_bases % 32 == 0: then we are on grid square
-            if num_bases % 21 == 0: then we are on grid honey
-        '''
-        num_bases = 0
-        for helix in self.helices.values():
-            if helix.max_offset is None:
-                raise ValueError('must have helix.max_offset set')
-            num_bases = max(num_bases, helix.max_offset)
-
-        if design_grid == Grid.square:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(32, num_bases)
-        elif design_grid == Grid.honeycomb:
-            num_bases = self._get_multiple_of_x_sup_closest_to_y(21, num_bases)
-        else:
-            raise NotImplementedError('We can export to cadnano v2 `square` and `honeycomb` grids only.')
-
-        '''Figuring out if helices numbers have good parity.
-        In cadnano v2, only even helices have the scaffold go forward, only odd helices
-        have the scaffold go backward.
-
-        '''
-        for strand in self.strands:
-            for domain in strand.domains:
-                if isinstance(domain, Extension):
-                    raise ValueError(
-                        'We cannot handle designs with Extensions as it is not a cadnano v2 concept')
-                if isinstance(domain, Loopout):
-                    raise ValueError(
-                        'We cannot handle designs with Loopouts as it is not a cadnano v2 concept')
-                right_direction: bool
-                if hasattr(strand, is_scaffold_key) and strand.is_scaffold:
-                    right_direction = (domain.helix % 2 == int(not domain.forward))
-                else:
-                    right_direction = not (domain.helix % 2 == int(not domain.forward))
-
-                if not right_direction:
-                    raise ValueError('We can only convert designs where even helices have the scaffold'
-                                     'going forward and odd helices have the scaffold going backward see '
-                                     f'the spec v2.txt Note 4. {domain}')
-
-        '''Filling the helices with blank.
-        '''
-        helices_ids_reverse = self._cadnano_v2_fill_blank(dct, num_bases, design_grid)
-        '''Putting the scaffold in place.
-        '''
-
-        for strand in self.strands:
-            self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
-
-        return dct
-
-    def to_cadnano_v2_json(self, name: str = '', whitespace: bool = True) -> str:
-        """Converts the design to the cadnano v2 format.
-
-        Please see the spec
-        https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/misc/cadnano-format-specs/v2.txt
-        for more info on that format.
-
-        If the cadnano file is intended to be used with CanDo (https://cando-dna-origami.org/),
-        the optional parameter `whitespace` must be set to False.
-
-        :param name:
-            Name of the design.
-        :param whitespace:
-            Whether to include whitespace in the exported file. Set to False to use this with CanDo
-            (https://cando-dna-origami.org/), since that tool generates an error if the cadnano file
-            contains whitespace.
-        :return:
-            a string in the cadnano v2 format representing this :any:`Design`
-        """
-        content_serializable = self.to_cadnano_v2_serializable(name)
-
-        encoder = _SuppressableIndentEncoder
-        content = json.dumps(content_serializable, cls=encoder, indent=2)
-        if not whitespace:
-            # remove whitespace
-            content = ''.join(content.split())
-        return content
 
     def set_helices_view_order(self, helices_view_order: List[int]) -> None:
         """
