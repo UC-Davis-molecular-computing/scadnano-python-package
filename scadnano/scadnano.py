@@ -6613,8 +6613,8 @@ class Design(_JSONSerializable):
             if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
                 raise ValueError(f"""\
 Paranemic crossovers are only allowed between helices that have the same parity of 
-indices (both even or both odd), but here helix indices {helix_from_dct['num']} and {helix_to_dct['num']} 
-have different parity: respectively {helix_from_dct['row']}  and {helix_to_dct['row']}""")
+row number, here helix num {helix_from_dct['num']} and helix num {helix_to_dct['num']} 
+have different parity of row number: respectively {helix_from_dct['row']} and {helix_to_dct['row']}""")
 
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
@@ -6622,8 +6622,8 @@ have different parity: respectively {helix_from_dct['row']}  and {helix_to_dct['
             if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
                 raise ValueError(f"""\
 Paranemic crossovers are only allowed between helices that have the same parity of 
-indices (both even or both odd), but here helix indices {helix_from_dct['num']} and {helix_to_dct['num']} 
-have different parity: respectively {helix_from_dct['row']}  and {helix_to_dct['row']}""")
+row number, here helix num {helix_from_dct['num']} and helix num {helix_to_dct['num']} 
+have different parity of row number: respectively {helix_from_dct['row']} and {helix_to_dct['row']}""")
 
     @staticmethod
     def _cadnano_v2_color_of_stap(color: Color, domain: Domain) -> List[int]:
