@@ -31,14 +31,18 @@ Scadnano provides function to convert design to and from cadnano v2:
 **Important**
 
 All ``cadnanov2`` designs can be imported to scadnano. However **not all scadnano designs can be imported 
-to cadnanov2**; to be exportable to ``cadnanov2`` a scadnano design need to comply with the following constraints:
+to cadnanov2**; to be exportable to ``cadnanov2`` a scadnano design need to comply with the following constraints.
+First, the scadnano field :data:`Helix.idx` is the same as the cadnano notion og helix `num`. We define the
+"row number" of a helix to be the order in which it appears in the dict :data:`Design.helices`. A :class:`Helix`
+could have a different index from row, for example if one created a design with two helices with indices 0 and 2,
+then helix 2 (if appearing last) would have index 1 but row number 2.
 
 * The design cannot feature any :class:`Loopout` or :class:`Extension`, since these are not concepts that exist in
   ``cadnanov2``.
 * Following ``cadnanov2`` conventions, helices with **even** number must have their scaffold going **forward** and
   helices with **odd** number **backward**.
 * If you use paranemic crossovers (i.e. crossovers where the domains before and after the crossover are in the same
-  direction), the helices' row number (i.e. not the helices' indexes but their y coordinate) of the domains must have
+  direction), the helices' row number of the two domains being connected by the crossover must have
   the same parity, meaning both even or both odd, for example rows 0 and 2, or 1 and 3, but not 0 and 1.
 
 Also note that maximum helices offsets can be altered in a ``scadnano`` to ``cadnanov2`` conversion as ``cadnanov2``
