@@ -6570,7 +6570,7 @@ class Design(_JSONSerializable):
             # remove whitespace
             content = ''.join(content.split())
         return content
-    
+
     def to_cadnano_v2_serializable(self, name: str = '') -> Dict[str, Any]:
         """Converts the design to a JSON-serializable Python object (a dict) representing
         the cadnano v2 format. Calling json.dumps on this object will result in a string representing
