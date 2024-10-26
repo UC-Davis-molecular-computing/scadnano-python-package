@@ -6609,8 +6609,8 @@ class Design(_JSONSerializable):
             helix_to_dct[strand_type][start_to][:2] = [helix_from, start_from]
         elif forward_from and forward_to:
             helix_from_dct[strand_type][end_from - 1][2:] = [helix_to, start_to]
-            helix_to_dct[strand_type][end_to-1][:2] = [helix_from, start_from]
-            if helix_from_dct["row"]%2 != helix_to_dct["row"]%2:
+            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
                 raise ValueError("Paranemic crossovers are only allowed between helices that have the same parity of "
                                  f"row number, here helix num {helix_from_dct['num']} and helix num "
                                  f"{helix_to_dct['num']} have different parity of row number: respectively "
@@ -6618,8 +6618,8 @@ class Design(_JSONSerializable):
 
         elif not forward_from and not forward_to:
             helix_from_dct[strand_type][start_from][2:] = [helix_to, end_to - 1]
-            helix_to_dct[strand_type][end_to-1][:2] = [helix_from, start_from]
-            if helix_from_dct["row"]%2 != helix_to_dct["row"]%2:
+            helix_to_dct[strand_type][end_to - 1][:2] = [helix_from, start_from]
+            if helix_from_dct["row"] % 2 != helix_to_dct["row"] % 2:
                 raise ValueError("Paranemic crossovers are only allowed between helices that have the same parity of "
                                  f"row number, here helix num {helix_from_dct['num']} and helix num "
                                  f"{helix_to_dct['num']} have different parity of row number: respectively "
@@ -6661,9 +6661,6 @@ class Design(_JSONSerializable):
                 next_helix = dct['vstrands'][next_helix_id]
                 self._cadnano_v2_place_crossover(which_helix, next_helix,
                                                  domain, next_domain, strand_type)
-            
-        
-        
 
         # if the strand is circular, we need to close the loop
         if strand.circular:
@@ -6817,7 +6814,6 @@ class Design(_JSONSerializable):
 
         for strand in self.strands:
             self._cadnano_v2_place_strand(strand, dct, helices_ids_reverse)
-            
 
         return dct
 
