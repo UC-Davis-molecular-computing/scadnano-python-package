@@ -5389,7 +5389,7 @@ class Design(_JSONSerializable):
     
     Required field."""
 
-    helices: Dict[int, Helix] = None  # type: ignore
+    helices: Dict[int, Helix]
     """All of the :any:`Helix`'s in this :any:`Design`. 
     This is a dictionary mapping index to the :any:`Helix` with that index; if helices have indices 
     0, 1, ..., num_helices-1, then this can be used as a list of Helices. 
@@ -5399,7 +5399,7 @@ class Design(_JSONSerializable):
     stored in any :any:`Domain` 
     in :py:data:`Design.strands`."""
 
-    groups: Dict[str, HelixGroup] = None  # type: ignore
+    groups: Dict[str, HelixGroup]
     """:any:`HelixGroup`'s in this :any:`Design`."""
 
     geometry: Geometry = field(default_factory=lambda: Geometry())
