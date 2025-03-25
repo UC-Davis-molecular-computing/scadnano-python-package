@@ -2756,7 +2756,6 @@ class Extension(_JSONSerializable):
             raise ValueError(f'Extension {self} is on its parent Strand {strand}')
         return strand.domains[1] if first else strand.domains[-2]
 
-
     def vendor_dna_sequence(self) -> Optional[str]:
         """
         :return:
@@ -2920,6 +2919,7 @@ def _check_vendor_string_not_none_or_empty(value: str, field_name: str) -> None:
         raise IllegalDesignError(f'field {field_name} in VendorFields cannot be empty')
 
 
+@dataclass
 class StrandBuilder:
     """
     Represents a :any:`Strand` that is being built in an existing :any:`Design`.
@@ -2941,25 +2941,65 @@ class StrandBuilder:
 
     .. code-block:: Python
 
-        strand_builder = design.draw_strand(0, 0)
-        strand_builder.to(10)
-        strand_builder.cross(1)
-        strand_builder.to(5)
-        strand_builder.with_modification_5p(mod.biotin_5p)
-        strand_builder.as_scaffold()
+        sb = design.draw_strand(0, 0)
+        sb.to(10)
+        sb.cross(1)
+        sb.to(5)
+        sb.with_modification_5p(mod.biotin_5p)
+        sb.as_scaffold()
+
+    This is also useful if you create strands in a loop and want to call some of the methods conditionally.
+    For example to create many strands where only the first has a particular modification:
+    
+    .. code-block:: Python
+
+        for i in range(n):
+            sb = design.draw_strand(0, 10*).move(10).with_name(f'strand {i}')
+            if i == 0:
+                sb.with_modification_5p(mod.biotin_5p)
+    """
+
+    design: Design
+    """
+    The :any:`Design` in which this :any:`StrandBuilder` is building a :any:`Strand`.
+    """
+
+    current_helix: int
+    """
+    The current :any:`Helix` on which the next domain will be placed.
+    """
+
+    current_offset: int
+    """
+    The current offset on the current :any:`Helix` at which the next domain will be placed.
+    If the next domain is drawn as reverse (e.g., by calling :meth:`StrandBuilder.move` with a negative
+    relative offset), then :data:`current_offset` will be the :data:`Domain.end` offset of the next domain,
+    otherwise it will be the :data:`Domain.start` offset of the next domain.
+    """
+
+    _strand: Optional[Strand] = None
+
+    last_domain: Optional[Domain] = None
+    """
+    The last :any:`Domain` that was added to the :any:`Strand` being built by this :any:`StrandBuilder`.
+    
+    Is None if no domains have been added yet.
     """
 
     def __init__(self, design: Design, helix: int, offset: int):
-        self.design: Design = design
-        self.current_helix: int = helix
-        self.current_offset: int = offset
-        # self.loopout_length: Optional[int] = None
-        self._strand: Optional[Strand] = None
-        self.just_moved_to_helix: bool = True
-        self.last_domain: Optional[Domain] = None
+        self.design = design
+        self.current_helix = helix
+        self.current_offset = offset
 
     @property
     def strand(self) -> Strand:
+        """
+        The :any:`Strand` that is being built by this :any:`StrandBuilder`.
+
+        The :any:`Strand` is created when the first domain is added to the :any:`StrandBuilder` by calling
+        either :meth:`StrandBuilder.to` or :meth:`StrandBuilder.move`; prior to that, calling this method
+        will raise an exception.
+        """
         if self._strand is None:
             raise ValueError('no Strand created yet; make at least one domain first')
         return self._strand
@@ -9028,7 +9068,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     # and normal is the negated yaw axis
     forward = roll_axis
     normal = -yaw_axis
-    normal = normal.rotate(-helix.roll, roll_axis) # account for helix roll separately
+    normal = normal.rotate(-helix.roll, roll_axis)  # account for helix roll separately
 
     # get the position of the helix within the group
     position_in_helix_group = origin
@@ -9043,7 +9083,7 @@ def _oxdna_get_helix_vectors(design: Design, helix: Helix) -> Tuple[_OxdnaVector
     # helix's position in it's group rotated so that it exists in the global rotation
     position_in_helix_group_rotated = ((pitch_axis * position_in_helix_group.x) +
                                        (yaw_axis * position_in_helix_group.y) +
-                                       (roll_axis  * position_in_helix_group.z))
+                                       (roll_axis * position_in_helix_group.z))
 
     # offset of helix group origin with respect to global coordinates
     helix_group_offset = _OxdnaVector(group.position.x, group.position.y, group.position.z)
@@ -9224,7 +9264,7 @@ def _convert_design_to_oxdna_system(design: Design) -> _OxdnaSystem:
                 geometry = design.geometry if group.geometry is None else group.geometry
                 nucleotides = _compute_extension_nucleotides(
                     design=design, strand=strand, is_5p=is_5p, helix_vectors=helix_vectors, mod_map=mod_map,
-                    geometry = geometry)
+                    geometry=geometry)
                 ox_strand.nucleotides.extend(nucleotides)
                 strand_domains.append((ox_strand, False))
             else:
