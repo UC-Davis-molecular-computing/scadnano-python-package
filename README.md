@@ -65,7 +65,7 @@ pip install scadnano
 Read below for troubleshooting suggestions if that didn't work.
 
 ### Getting Python
-The scadnano Python package requires Python version 3.7 or later.
+The scadnano Python package requires Python version 3.9 or later.
 
 To check your current version of Python, open a command line and type
 
@@ -79,7 +79,7 @@ If it is version 2.7 or below, type
 python3 --version
 ```
 
-If that fails, or reports Python version 3.6 or below, you will have to install a later version of Python. Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
+If that fails, or reports Python version 3.8 or below, you will have to install a later version of Python. Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
 
 
 
@@ -123,17 +123,11 @@ Once Python is installed, there are two ways you can install the scadnano Python
     ```
     pip 19.3.1 from ...lib\site-packages\pip (python 3.8)
     ```
-    If the version of Python at the end is Python 3.7 or higher, you are good. If it is version 2.7 or lower, type
+    If the version of Python at the end is Python 3.9 or higher, you are good. If it is version 2.7 or lower, type
     ```
     pip3 --version
     ```
-    If that works and shows Python 3.7 or higher, you are good, but you should type `pip3` in the subsequent instructions instead of `pip`.
-    
-    If it shows Python 3.6, install the [dataclasses backport module](https://pypi.org/project/dataclasses/) via
-    ```
-    pip install dataclasses
-    ```
-    If it shows Python 3.5 or lower, then you will need to upgrade your Python version (recommended Python 3.7 or higher).
+    If that works and shows Python 3.9 or higher, you are good, but you should type `pip3` in the subsequent instructions instead of `pip`.
 
     
 2. download
