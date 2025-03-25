@@ -3,8 +3,7 @@ name: scadnano-test
 channels:
   - defaults
 dependencies:
-  - python=3.7
-  - xlwt=1.3.0=py37_0
+  - python=3.9
   - pip
   - pip:
     - sphinx

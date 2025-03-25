@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9, "3.10", "3.11" ]
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
 
     steps:
       - uses: actions/checkout@v2
@@ -21,8 +21,8 @@ jobs:
         with:
           activate-conda: true
       - name: Install openpyxl,tabulate with conda
-        run: conda install openpyxl=3.0.10 tabulate=0.8.10
+        run: conda install openpyxl=3.1 tabulate=0.9
       - name: Install docutils with conda
-        run: conda install docutils=0.16
+        run: conda install docutils=0.18
       - name: Test with unittest
         run: python -m unittest -v tests/scadnano_tests.py
