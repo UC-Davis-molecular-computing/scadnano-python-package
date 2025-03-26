@@ -2954,7 +2954,7 @@ class StrandBuilder:
     .. code-block:: Python
 
         for i in range(n):
-            sb = design.draw_strand(0, 10*).move(10).with_name(f'strand {i}')
+            sb = design.draw_strand(0, 10).move(10).with_name(f'strand {i}')
             if i == 0:
                 sb.with_modification_5p(mod.biotin_5p)
     """
