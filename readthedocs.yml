@@ -14,7 +14,7 @@ formats: all
 build:
   os: "ubuntu-22.04"
   tools:
-    python: "miniconda3-4.7.12"  # Using miniconda instead of mambaforge
+    python: "miniconda3-4.7"
 
 conda:
   environment: environment.yml
