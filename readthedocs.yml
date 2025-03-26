@@ -1,4 +1,7 @@
 # .readthedocs.yml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
 version: 2
 
 sphinx:
@@ -8,10 +11,10 @@ sphinx:
 
 formats: all
 
-conda:
-  environment: environment.yml
-
 build:
   os: "ubuntu-22.04"
   tools:
-    python: "3.9"
+    python: "miniconda3-4.7.12"  # Using miniconda instead of mambaforge
+
+conda:
+  environment: environment.yml
