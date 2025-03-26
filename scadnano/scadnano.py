@@ -2821,18 +2821,18 @@ class Extension(_JSONSerializable):
 # Default Extension object to allow for access to default extension values. num_bases is a dummy.
 _default_extension: Extension = Extension(num_bases=5)
 
-_wctable = str.maketrans('ACGTacgt', 'TGCAtgca')
+_rctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
-def wc(seq: str) -> str:
+def rc(seq: str) -> str:
     """
-    Return reverse Watson-Crick complement of `seq`.
+    Return reverse complement of `seq`.
     For example, ``wc('AACCTG')`` returns ``'CAGGTT'``.
 
     :param seq: a DNA sequence
-    :return: reverse Watson-Crick complement of `seq`.
+    :return: reverse complement of `seq`.
     """
-    return seq.translate(_wctable)[::-1]
+    return seq.translate(_rctable)[::-1]
 
 
 @dataclass
@@ -4279,7 +4279,7 @@ class Strand(_JSONSerializable):
                     other_seq = domain_other.dna_sequence_in(overlap_left, overlap_right - 1)
                     if other_seq is None:
                         raise ValueError(f'no DNA sequence has been assigned to strand {other}')
-                    overlap_complement = wc(other_seq)
+                    overlap_complement = rc(other_seq)
                     domain_complement_builder.append(wildcards)
                     domain_complement_builder.append(overlap_complement)
                     start_idx = overlap_right
@@ -7959,7 +7959,7 @@ class Design(_JSONSerializable):
                                     (sc_strand2.dna_sequence is not None) and
                                     (sc_strand1.dna_sequence[d1] != DNA_base_wildcard) and
                                     (sc_strand2.dna_sequence[d2] != DNA_base_wildcard) and
-                                    (wc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
+                                    (rc(sc_strand1.dna_sequence[d1]) != sc_strand2.dna_sequence[d2])):
                                 continue
 
                             oxv_strand1['monomers'][d1]['bp'] = s2_nuc_idx + d2
