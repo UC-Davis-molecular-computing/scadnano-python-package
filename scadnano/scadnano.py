@@ -4352,8 +4352,10 @@ class Strand(_JSONSerializable):
         """
         Returns index in DNA sequence of domain, e.g., if there are five domains
 
-        012 3 45 678 9
-        AAA-C-GG-TTT-ACGT
+        .. code-block:: none
+
+            012 3 45 678 9
+            AAA-C-GG-TTT-ACGT
 
         Then their indices, respectively in order, are 0, 3, 4, 6, 9.
 
