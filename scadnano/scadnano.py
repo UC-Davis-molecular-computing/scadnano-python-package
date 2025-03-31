@@ -4200,7 +4200,7 @@ class Strand(_JSONSerializable):
         return acc
 
     def bound_domains(self) -> List[Domain]:
-        """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
+        """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s or :any:`Extension`'s."""
         return [domain for domain in self.domains if isinstance(domain, Domain)]
 
     def offset_5p(self) -> int:
