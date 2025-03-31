@@ -4193,7 +4193,9 @@ class Strand(_JSONSerializable):
             start_idx_ss = end_idx_ss
 
     def dna_length(self) -> int:
-        """Return sum of DNA length of :any:`Domain`'s and :any:`Loopout`'s of this :any:`Strand`."""
+        """
+        :return: sum of DNA length of :any:`Domain`'s, :any:`Loopout`'s, and :any:`Extension`'s of this :any:`Strand`.
+        """
         acc = 0
         for domain in self.domains:
             acc += domain.dna_length()
