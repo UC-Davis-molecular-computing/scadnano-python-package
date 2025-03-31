@@ -1,0 +1,55 @@
+/* Remove page margins and use full width */
+div.document {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Fix for the whitespace at the top of the page */
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+div.documentwrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+div.body {
+    margin: 0 !important;
+    padding: 20px !important;
+    max-width: none !important;
+    min-width: auto !important;
+}
+
+/* Configure sidebar to be fixed with its own scrollbar */
+div.sphinxsidebar {
+    max-height: 100vh;  /* Use viewport height */
+    position: fixed;    /* Make it stick when scrolling */
+    top: 0;             /* Stick to top */
+    overflow-y: auto;   /* Enable vertical scrolling */
+    width: 300px !important;  /* Set sidebar width */
+    box-sizing: border-box;   /* Include padding in width calculation */
+    padding: 20px 10px;       /* Add padding */
+    margin: 0 !important;     /* Remove margin */
+}
+
+/* Make sure content properly adjusts to sidebar */
+div.bodywrapper {
+    margin-left: 300px !important;  /* Should match sidebar width */
+    padding: 0 !important;
+}
+
+/* Add proper mobile responsiveness */
+@media screen and (max-width: 768px) {
+    div.sphinxsidebar {
+        position: relative;
+        width: 100% !important;
+        max-height: none;
+    }
+
+    div.bodywrapper {
+        margin-left: 0 !important;
+    }
+}

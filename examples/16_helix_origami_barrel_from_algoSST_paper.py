@@ -234,7 +234,7 @@ TCCCTATA
 # above is in order from right to left on helix 1, followed by left to right on helix 18
 
 def assign_dna_to_unzipper_toeholds(design: sc.Design) -> None:
-    uz_toes = [sc.wc(seq) for seq in uz_toes_wc]
+    uz_toes = [sc.rc(seq) for seq in uz_toes_wc]
 
     strands_h1 = design.strands_starting_on_helix(1)
     strands_h1.sort(key=lambda _strand: _strand.first_domain().offset_5p())
