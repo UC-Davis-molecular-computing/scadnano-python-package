@@ -9,6 +9,10 @@ jobs:
   release:
     name: "Release"
     runs-on: "ubuntu-latest"
+    permissions:
+      # Required for trusted publishing to PyPI
+      id-token: write
+      contents: write
 
     steps:
       # ...
@@ -24,19 +28,17 @@ jobs:
           files: |
             LICENSE.txt
 
-      # Publish to PyPI
-      - uses: actions/checkout@v2
+      # Publish to PyPI using Trusted Publishers
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: '3.x'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build twine
+          pip install build
       - name: Build package
         run: python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
