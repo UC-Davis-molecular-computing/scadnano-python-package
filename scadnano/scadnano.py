@@ -3629,9 +3629,10 @@ class Strand(_JSONSerializable):
     Crossovers from one :any:`Helix` to another are implicitly from the 3' end of one of this
     Strand's :any:`Domain`'s to the 5' end of the next :any:`Domain`.
 
-    A portion of the :any:`Strand` not associated to any :any:`Helix` is represented by a :any:`Loopout`.
+    A portion of the :any:`Strand` not associated to any :any:`Helix` is represented either by a :any:`Loopout`
+    (if in between two :any:`Domain`'s) or an :any:`Extension` (if on the 5' or 3' end of the :any:`Strand`).
     Two :any:`Loopout`'s cannot occur consecutively on a :any:`Strand`, nor can a :any:`Strand`
-    contain only a :any:`Loopout` but no :any:`Domain`.
+    contain only a :any:`Loopout`, or only an :any:`Extension`, but no :any:`Domain`.
 
 
     One can set the strand to be a scaffold in the constructor:
