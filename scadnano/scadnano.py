@@ -2827,7 +2827,7 @@ _rctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 def rc(seq: str) -> str:
     """
     Return reverse complement of `seq`.
-    For example, ``wc('AACCTG')`` returns ``'CAGGTT'``.
+    For example, ``rc('AACCTG')`` returns ``'CAGGTT'``.
 
     :param seq: a DNA sequence
     :return: reverse complement of `seq`.
@@ -4270,7 +4270,7 @@ class Strand(_JSONSerializable):
 
                 domain_complement_builder = []
                 start_idx = domain_self.start
-                # repeatedly insert wildcards into gaps, then reverse WC complement
+                # repeatedly insert wildcards into gaps, then reverse complement
                 for ((overlap_left, overlap_right), domain_other) in overlaps:
                     # wildcards = DNA_base_wildcard * (overlap_left - start_idx)
                     num_wildcard_bases = domain_self.dna_length_in(start_idx, overlap_left - 1)
@@ -4291,7 +4291,7 @@ class Strand(_JSONSerializable):
 
                 domain_complement_builder.append(last_wildcards)
 
-                # If pointing left, each individual overlap sequence was reverse orientation in wc(),
+                # If pointing left, each individual overlap sequence was reverse orientation in rc(),
                 # but not the list of all of them put together until now.
                 if not domain_self.forward:
                     domain_complement_builder.reverse()
