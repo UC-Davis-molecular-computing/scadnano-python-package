@@ -1434,7 +1434,7 @@ class Geometry(_JSONSerializable):
     The default value of 1.0 nm is approximately the average distance, as measured by atomic force
     microscopy (AFM) images, for 2D DNA origami using the :data:`Grid.square` grid,
     with 32 base pairs in between consecutive crossovers between two helices. Such a structure with `n` 
-    parallel helices generally is measured to be about 3`n` nm high on AFM images. Since each DNA helix
+    parallel helices generally is measured to be about `3n` nm high on AFM images. Since each DNA helix
     is 2 nm diameter, this implies an average inter-helix gap of 1.0 nm, though of course it is just an 
     average, and the actual gap varies depending on distance to the nearest crossover: at a crossover 
     the distance is close to 0 and halfway between two crossovers, the distance is greater than 1 nm. 
