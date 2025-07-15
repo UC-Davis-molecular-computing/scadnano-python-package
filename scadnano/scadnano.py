@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.20.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.20.1"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -2833,6 +2833,20 @@ def rc(seq: str) -> str:
     :return: reverse complement of `seq`.
     """
     return seq.translate(_rctable)[::-1]
+
+
+
+def wc(seq: str) -> str:
+    """
+    Alias for :func:`rc`.
+
+    .. deprecated:: 0.20.0
+        Use :func:`rc` instead.
+
+    :param seq: a DNA sequence
+    :return: reverse complement of `seq`.
+    """
+    return rc(seq)
 
 
 @dataclass
