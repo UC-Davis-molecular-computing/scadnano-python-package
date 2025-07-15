@@ -62,7 +62,7 @@ release = __version__
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
-    # 'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',
 ]
 
 # next line puts type of each function parameter next to description of parameter

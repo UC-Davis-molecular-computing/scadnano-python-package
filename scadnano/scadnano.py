@@ -54,7 +54,7 @@ so the user must take care not to set them.
 # needed to use forward annotations: https://docs.python.org/3/whatsnew/3.7.html#whatsnew37-pep563
 from __future__ import annotations
 
-__version__ = "0.20.0"  # version line; WARNING: do not remove or change this line or comment
+__version__ = "0.20.1"  # version line; WARNING: do not remove or change this line or comment
 
 import collections
 import dataclasses
@@ -1434,7 +1434,7 @@ class Geometry(_JSONSerializable):
     The default value of 1.0 nm is approximately the average distance, as measured by atomic force
     microscopy (AFM) images, for 2D DNA origami using the :data:`Grid.square` grid,
     with 32 base pairs in between consecutive crossovers between two helices. Such a structure with `n` 
-    parallel helices generally is measured to be about 3`n` nm high on AFM images. Since each DNA helix
+    parallel helices generally is measured to be about `3n` nm high on AFM images. Since each DNA helix
     is 2 nm diameter, this implies an average inter-helix gap of 1.0 nm, though of course it is just an 
     average, and the actual gap varies depending on distance to the nearest crossover: at a crossover 
     the distance is close to 0 and halfway between two crossovers, the distance is greater than 1 nm. 
@@ -2827,12 +2827,26 @@ _rctable = str.maketrans('ACGTacgt', 'TGCAtgca')
 def rc(seq: str) -> str:
     """
     Return reverse complement of `seq`.
-    For example, ``wc('AACCTG')`` returns ``'CAGGTT'``.
+    For example, ``rc('AACCTG')`` returns ``'CAGGTT'``.
 
     :param seq: a DNA sequence
     :return: reverse complement of `seq`.
     """
     return seq.translate(_rctable)[::-1]
+
+
+
+def wc(seq: str) -> str:
+    """
+    Alias for :func:`rc`.
+
+    .. deprecated:: 0.20.0
+        Use :func:`rc` instead.
+
+    :param seq: a DNA sequence
+    :return: reverse complement of `seq`.
+    """
+    return rc(seq)
 
 
 @dataclass
@@ -3629,9 +3643,10 @@ class Strand(_JSONSerializable):
     Crossovers from one :any:`Helix` to another are implicitly from the 3' end of one of this
     Strand's :any:`Domain`'s to the 5' end of the next :any:`Domain`.
 
-    A portion of the :any:`Strand` not associated to any :any:`Helix` is represented by a :any:`Loopout`.
+    A portion of the :any:`Strand` not associated to any :any:`Helix` is represented either by a :any:`Loopout`
+    (if in between two :any:`Domain`'s) or an :any:`Extension` (if on the 5' or 3' end of the :any:`Strand`).
     Two :any:`Loopout`'s cannot occur consecutively on a :any:`Strand`, nor can a :any:`Strand`
-    contain only a :any:`Loopout` but no :any:`Domain`.
+    contain only a :any:`Loopout`, or only an :any:`Extension`, but no :any:`Domain`.
 
 
     One can set the strand to be a scaffold in the constructor:
@@ -4192,14 +4207,16 @@ class Strand(_JSONSerializable):
             start_idx_ss = end_idx_ss
 
     def dna_length(self) -> int:
-        """Return sum of DNA length of :any:`Domain`'s and :any:`Loopout`'s of this :any:`Strand`."""
+        """
+        :return: sum of DNA length of :any:`Domain`'s, :any:`Loopout`'s, and :any:`Extension`'s of this :any:`Strand`.
+        """
         acc = 0
         for domain in self.domains:
             acc += domain.dna_length()
         return acc
 
     def bound_domains(self) -> List[Domain]:
-        """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s."""
+        """:any:`Domain`'s of this :any:`Strand` that are not :any:`Loopout`'s or :any:`Extension`'s."""
         return [domain for domain in self.domains if isinstance(domain, Domain)]
 
     def offset_5p(self) -> int:
@@ -4270,7 +4287,7 @@ class Strand(_JSONSerializable):
 
                 domain_complement_builder = []
                 start_idx = domain_self.start
-                # repeatedly insert wildcards into gaps, then reverse WC complement
+                # repeatedly insert wildcards into gaps, then reverse complement
                 for ((overlap_left, overlap_right), domain_other) in overlaps:
                     # wildcards = DNA_base_wildcard * (overlap_left - start_idx)
                     num_wildcard_bases = domain_self.dna_length_in(start_idx, overlap_left - 1)
@@ -4291,7 +4308,7 @@ class Strand(_JSONSerializable):
 
                 domain_complement_builder.append(last_wildcards)
 
-                # If pointing left, each individual overlap sequence was reverse orientation in wc(),
+                # If pointing left, each individual overlap sequence was reverse orientation in rc(),
                 # but not the list of all of them put together until now.
                 if not domain_self.forward:
                     domain_complement_builder.reverse()
@@ -4351,8 +4368,10 @@ class Strand(_JSONSerializable):
         """
         Returns index in DNA sequence of domain, e.g., if there are five domains
 
-        012 3 45 678 9
-        AAA-C-GG-TTT-ACGT
+        .. code-block:: none
+
+            012 3 45 678 9
+            AAA-C-GG-TTT-ACGT
 
         Then their indices, respectively in order, are 0, 3, 4, 6, 9.
 
