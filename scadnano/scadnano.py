@@ -7502,10 +7502,14 @@ class Design(_JSONSerializable):
                                warn_duplicate_name: bool,
                                only_strands_with_vendor_fields: bool = False,
                                export_scaffold: bool = False,
-                               export_non_modified_strand_version: bool = False) -> List[Strand]:
+                               export_non_modified_strand_version: bool = False,
+                               only_strands_with_label: Optional[str] = None) -> List[Strand]:
         # gets list of strands to export for IDT export functions
         added_strands: Dict[str, Strand] = {}  # dict: name -> strand
         for strand in self.strands:
+            if only_strands_with_label is not None:
+                if strand.label != only_strands_with_label:
+                    continue
             # skip scaffold unless requested to export
             if strand.is_scaffold and not export_scaffold:
                 continue
@@ -7658,7 +7662,9 @@ class Design(_JSONSerializable):
                                    export_scaffold: bool = False,
                                    use_default_plates: bool = True, warn_using_default_plates: bool = True,
                                    plate_type: PlateType = PlateType.wells96,
-                                   export_non_modified_strand_version: bool = False) -> None:
+                                   export_non_modified_strand_version: bool = False,
+                                   only_strands_with_label: Optional[str] = None,
+                                   ) -> None:
         """
         Write ``.xlsx`` (Microsoft Excel) file encoding the strands of this :any:`Design` with the field
         :data:`Strand.vendor_fields`, suitable for uploading to IDT
@@ -7718,12 +7724,15 @@ class Design(_JSONSerializable):
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
             without any modifications. The name for this :any:`Strand` is the original name with
             '_nomods' appended to it.
+        :param only_strands_with_label:
+            If specified, only strands with label equal to `only_strands_with_label` are exported
         """
 
         strands_to_export = self._idt_strands_to_export(key=key, warn_duplicate_name=warn_duplicate_name,
                                                         only_strands_with_vendor_fields=only_strands_with_vendor_fields,
                                                         export_scaffold=export_scaffold,
-                                                        export_non_modified_strand_version=export_non_modified_strand_version)
+                                                        export_non_modified_strand_version=export_non_modified_strand_version,
+                                                        only_strands_with_label=only_strands_with_label)
 
         if not use_default_plates:
             if not only_strands_with_vendor_fields:
