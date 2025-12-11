@@ -8795,6 +8795,509 @@ class Design(_JSONSerializable):
             helix_group = self.groups[helix.group]
             helix.relax_roll(self.helices, helix_group.grid, self.geometry)
 
+    def _getVirtualHelixNeighbors(self, virtualHelix):
+        neighbors = []
+        helix_idx = virtualHelix.idx
+
+        # Simple sequential neighbor assumption
+        # Adjust this based on your actual helix layout
+        # TODO: Not sure why i need to hard code "None" for indices 0 and 2 for square parts, and index 1 for honeycomb.
+        # TODO: need to figure out how cadnano2 is deciding the virtual helix at the specific coord.
+        # TODO: This does not currently work for the honeycomb part, probably for the issues reasoned above.
+        if helix_idx % 2 == 0:  # Even parity
+            # squarepart.py in cadnano2 (getVirtualHelixNeighbors)
+            if self.grid == Grid.square:
+                neighbors = [
+                    None,
+                    helix_idx + 1 if helix_idx + 1 in self.helices else None,
+                    None,
+                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
+                ]
+            # honeycombpart.py in cadnano2 (getVirtualHelixNeighbors)
+            elif self.grid == Grid.honeycomb:
+                neighbors = [
+                    helix_idx + 1 if helix_idx + 1 in self.helices else 0,
+                    None,
+                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1]
+                ]
+            else:
+                return ValueError(f"Invalid grid type: {self.grid}")
+        else:  # Odd parity
+            if self.grid == Grid.square:
+                neighbors = [
+                    None,
+                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
+                    None,
+                    helix_idx + 1 if helix_idx + 1 in self.helices else None,
+                ]
+            elif self.grid == Grid.honeycomb:
+                neighbors = [
+                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1],
+                    None,
+                    helix_idx + 1 if helix_idx + 1 in self.helices else 0
+                ]
+            else:
+                return ValueError(f"Invalid grid type: {self.grid}")
+
+        return neighbors
+
+    def _findOverlappingRanges(self, domains: List[Domain], qStrand: Domain):
+        """
+        a binary search for the strands in self._strandList overlapping with
+        a query strands, or qstrands, indices.
+
+        Useful for operations on complementary strands such as applying a
+        sequence
+
+        This is an generator for now
+
+        Strategy:
+        1.
+            search the _strandList for a strand the first strand that has a
+            highIndex >= lowIndex of the query strand.
+            save that strandSet index as sSetIndexLow.
+            if No strand satisfies this condition, return an empty list
+
+            Unless it matches the query strand's lowIndex exactly,
+            Step 1 is O(log N) where N in length of self._strandList to the max,
+            that is it needs to exhaust the search
+
+            conversely you could search for first strand that has a
+            lowIndex LESS than or equal to the lowIndex of the query strand.
+
+        2.
+            starting at self._strandList[sSetIndexLow] test each strand to see if
+            it's indexLow is LESS than or equal to qstrand.indexHigh.  If it is
+            yield/return that strand.  If it's GREATER than the indexHigh, or
+            you run out of strands to check, the generator terminates
+        """
+        domainList = domains
+        lenDomains = len(domainList)
+        if lenDomains == 0:
+            return
+
+        low = 0
+        high = lenDomains
+
+        # Dummyforward and DummyBackward should ahve the same start and end.
+        qLow = qStrand.start
+        qHigh = qStrand.end - 1 # inclusive on cadnano2, exclusive scadnano
+
+        # Step 1: get rangeIndexLow with a binary search
+        sSetIndexLow = -1
+        while low < high:
+            mid = (low + high) // 2
+            midDomain = domainList[mid]
+
+            # pre get indices from the currently tested strand
+            mLow = midDomain.start
+            mHigh = midDomain.end - 1
+
+            if mHigh == qLow:
+                # match, break out of while loop
+                sSetIndexLow = mid
+                break
+            elif mHigh > qLow:
+                # store the candidate index
+                sSetIndexLow = mid
+                # adjust the high index to find a better candidate if
+                # it exists
+                high = mid
+            # end elif
+            else:  # mHigh < qLow
+                # If a strand exists it must be a higher rangeIndex
+                # leave the high the same
+                low = mid + 1
+            #end elif
+        # end while
+
+        # Step 2: create a generator on matches
+        # match on whether the tempStrand's lowIndex is
+        # within the range of the qStrand
+        if sSetIndexLow > -1:
+            tempDomains = iter(domainList[sSetIndexLow:])
+            tempDomain = next(tempDomains)
+            qHigh += 1  # bump it up for a more efficient comparison
+            i = 0  # use this to
+            while tempDomain and tempDomain.start < qHigh:
+                yield tempDomain
+                # use a next and a default to cause a break condition
+                tempDomain = next(tempDomains, None)
+                i += 1
+            # end while
+
+            # cache the last index we left of at
+            i = sSetIndexLow + i
+            """
+            if
+            1. we ran out of strands to test adjust
+                OR
+            2. the end condition tempStrands highIndex is still inside the
+            qstrand but not equal to the end point
+                adjust i down 1
+            otherwise
+            """
+            if not tempDomain or tempDomain.end < qHigh - 1:
+                i -= 1
+            # assign cache but double check it's a valid index
+            # self._lastStrandSetIndex = i if -1 < i < lenStrands else None
+            return
+        else:
+            # no strand was found
+            # go ahead and clear the cache
+            # self._lastStrandSetIndex = None if len(self._strandList) > 0 else 0
+            # TODO: For scadnano, I did not implement caching.
+            return
+
+    def _hasXoverAt(self, domain: Domain, idx):
+        """
+        An xover is necessarily at an enpoint of a strand
+        """
+        # TODO:
+        # In strand.py of cadnano2, it has the stuff commented out below.
+        # I'm not entirely sure how to test if the connection is high or low in scadnano.
+        # Setting them to True regardless works for now (at least with GRID, honeycomb not tested)
+        if idx == domain.end:
+            return True
+            # return True if self.connectionHigh() != None else False
+        elif idx == domain.start:
+            return True
+            # return True if self.connectionLow() != None else False
+        else:
+            return False
+
+    def _hasNoStrandAtOrNoXover(self, domains: List[Domain], idx):
+        qStrand = Domain(domains[0].helix, forward=True, start=idx, end=idx+1)
+
+        domainList = [d for d in self._findOverlappingRanges(domains, qStrand)]
+
+        if len(domainList) > 0:
+            return False if self._hasXoverAt(domainList[0], idx) else True
+        else:
+            return True
+
+    def _getCrossoverPoints(self):
+        """
+        Referenced from cadnano2's "Crossover" class within squarepart.py and honeycombpart.py
+
+        :returns: A tuple containing the list of crossover points for the specific grid type.
+        """
+        match self.grid:
+            case Grid.square:
+                scafL = [[4, 26, 15], [18, 28, 7], [10, 20, 31], [2, 12, 23]]
+                scafH = [[5, 27, 16], [19, 29, 8], [11, 21, 0], [3, 13, 24]]
+                stapL = [[31], [23], [15], [7]]
+                stapH = [[0], [24], [16], [8]]
+            case Grid.honeycomb:
+                scafL = [[1, 11], [8, 18], [4, 15]]
+                scafH = [[2, 12], [9, 19], [5, 16]]
+                stapL = [[6], [13], [20]]
+                stapH = [[7], [14], [0]]
+            case _:
+                raise ValueError(f"Unsupported grid type: {self.grid}")
+
+        return scafL, scafH, stapL, stapH
+
+
+    def _potentialCrossoverList(self, virtualHelix, idx=None):
+        """
+        Returns a list of tuples
+            (neighborVirtualHelix, index, strandType, isLowIdx)
+
+        where:
+
+        neighborVirtualHelix is a virtualHelix neighbor of the arg virtualHelix
+        index is the index where a potential Xover might occur
+        strandType is from the enum (StrandType.Scaffold, StrandType.Staple)
+        isLowIdx is whether or not it's the at the low index (left in the Path
+        view) of a potential Xover site
+        """
+        _scafL, _scafH, _stapL, _stapH = self._getCrossoverPoints()
+
+        vh = virtualHelix
+        ret = [] # LUT = Look Up Table
+        part = self
+        lutsNeighbor = list(
+                            zip(
+                                _scafL,
+                                _scafH,
+                                _stapL,
+                                _stapH
+                                )
+                            )
+
+        sTs = ("scaffold", "staple")
+        numBases = vh.max_offset - 1 # cadnano is inclusive, scadnano exclusive, so we subtract 1
+
+        # create a range for the helical length dimension of the Part,
+        # incrementing by the lattice step size.
+        _step = 32 if self.grid == Grid.square else 21 # 32 in square, 21 in honeycomb
+        baseRange = list(range(0, numBases, _step))
+
+        if idx != None:
+            baseRange = [x for x in baseRange if x >= idx - 3 * _step and \
+                                        x <= idx + 2 * _step]
+
+        if vh is None:
+            return
+
+        fromStapSS, fromScafSS = self._getStrandSets(vh.idx, vh.domains)
+        fromStrandSets = [fromScafSS, fromStapSS]
+        neighbors = self._getVirtualHelixNeighbors(vh)
+
+        for neighborIdx, lut in zip(neighbors, lutsNeighbor):
+            if neighborIdx is None:
+                continue
+
+            # Get neighbor as vh.
+            neighbor = self.helices[neighborIdx]
+
+            if not neighbor:
+                continue
+
+            # now arrange again for iteration
+            # (_scafL[i], _scafH[i]), (_stapL[i], _stapH[i]) )
+            # so we can pair by StrandType
+            lutScaf = lut[0:2]
+            lutStap = lut[2:4]
+            lut = (lutScaf, lutStap)
+
+            toStapSS, toScafSS = self._getStrandSets(neighborIdx, neighbor.domains)
+            toStrandSets = [toScafSS, toStapSS]
+
+            for fromSS, toSS, pts, st in zip(fromStrandSets, toStrandSets, lut, sTs):
+                # test each period of each lattice for each StrandType
+                for pt, isLowIdx in zip(pts, (True, False)):
+                    for i, j in itertools.product(baseRange, pt):
+                        index = i + j
+                        if index < numBases:
+                            if self._hasNoStrandAtOrNoXover(fromSS, index) and self._hasNoStrandAtOrNoXover(toSS, index):
+                                ret.append((neighbor, index, st, isLowIdx))
+                            # end if
+                        # end if
+                    # end for
+                # end for
+            # end for
+        # end for
+
+        return ret
+
+    def _getDomainAt(self, domains: List[Domain], idx):
+        for domain in domains:
+            if domain.start <= idx < domain.end:
+                return domain
+
+        return None
+
+    def _assignDNASequence(self, strand: Strand, strandIsFoward, helixIdx):
+        helix = self.helices[helixIdx]
+
+        sequence = ""
+
+        for domain in helix.domains:
+            if strandIsFoward and domain.forward:
+                continue
+            if not strandIsFoward and not domain.forward:
+                continue
+
+            sequence += domain.dna_sequence
+
+        self.assign_dna(strand, sequence, False, None, False)
+
+
+    def _getStrandSets(self, helixIdx: int, domains: List[Domain]) -> tuple[List[Domain], List[Domain]]:
+        """
+        Separates the domain into two arrays of [staple strands, scaffold strands].
+
+        :param helixIdx: The index of the helix the domains are on.
+        :param domains: The domains you want to separate.
+        :return: A tuple containing the [stapSS, scafSS].
+        """
+
+        # On idx even, staple strands will go backwards.
+        # On idx even, scaffold strands will go forward.
+        stapSS = [domain for domain in domains if
+                  (helixIdx % 2 == 0 and not domain.forward) or (helixIdx % 2 == 1 and domain.forward)]
+        scafSS = [domain for domain in domains if
+                  (helixIdx % 2 == 0 and domain.forward) or (helixIdx % 2 == 1 and not domain.forward)]
+
+        return stapSS, scafSS
+
+    def _is5to3(self, domain: Domain) -> bool:
+        isScaf = domain.strand().is_scaffold
+        isEven = domain.helix % 2 == 0
+        return isEven == isScaf
+
+
+    def autostaple(self) -> None:
+        # helix + offset for deletions
+        # We want to keep track of the original deletions
+        deletions = {}
+        for vhidx, vh in self.helices.items():
+            for domain in vh.domains:
+
+                deletions.setdefault(domain.helix, []).extend(domain.deletions)
+
+        epDict = {} # keyed on StrandSet
+
+        # 1) Remove existing staple strands.
+        for s in list(self.strands):
+            if not s.is_scaffold:
+                self.remove_strand(s)
+
+        # 2) Create temporary strands.
+        for vhidx, vh in self.helices.items():
+            # Since we removed the staple strands, at this point all of the helices should only have "scaffold" domains.
+            segments = []
+            scafSS = vh.domains
+            for strand in scafSS:
+                # in cadnano, start, end may be 16,95 (inclusive, inclusive) but in scadnano, it is 16,96 (inclusive, exclusive)
+                lo = strand.start
+                hi = strand.end - 1 # exclusive end
+                if len(segments) == 0:
+                    segments.append([lo, hi]) # insert 1st staple
+                elif segments[-1][1] == lo -1 :
+                    segments[-1][1] = hi # extend
+                else:
+                    segments.append([lo, hi]) # insert another strand
+
+            # At this point, we need to imagine each helix has a staple strand set.
+            epDict[vhidx] = []
+            for i in range(len(segments)):
+                lo, hi = segments[i]
+                epDict[vhidx].extend(segments[i])
+
+                is_forward = vhidx % 2 == 1
+                new_domain = Domain(helix=vhidx, forward=is_forward, start=lo, end=hi+1)
+                new_strand = Strand(domains=[new_domain], is_scaffold=False)
+                self.add_strand(new_strand)
+
+        # 3) Determine where crossovers should be installed
+        for vhidx, vh in self.helices.items():
+            # Need the staple strands for THIS specific helix.
+            # Need the scaffold strands for THIS specific helix.
+            # Need a bool on whether or not the staple strand is forward (5 to 3)
+            # Need list of potential crossovers for THIS specific helix.
+
+            stapSS, scafSS = self._getStrandSets(vhidx, vh.domains)
+            is5to3 = self._is5to3(stapSS[0])
+
+            potentialXovers = self._potentialCrossoverList(vh)
+            for neighborVh, idx, strandType, isLowIdx in potentialXovers:
+                if strandType != "staple":
+                    continue
+
+                if isLowIdx and is5to3:
+                    domain = self._getDomainAt(stapSS, idx)
+
+                    # Neighbor staple strand set
+                    neighborSS, _ = self._getStrandSets(neighborVh.idx, neighborVh.domains)
+
+                    # neighborSS = [domain for domain in neighborVh.domains if (neighborVh.idx % 2 == 0 and not domain.forward) or (neighborVh.idx % 2 == 1 and domain.forward)]
+                    nDomain = self._getDomainAt(neighborSS, idx)
+                    if domain == None or nDomain == None:
+                        continue
+
+                    # check for bases on both strands at [idx-1:idx+3]
+                    if not (domain.start < idx and domain.end - 1 > idx + 1):
+                        continue
+                    if not (nDomain.start < idx and nDomain.end - 1 > idx + 1):
+                        continue
+
+                    # cehck for nearby scaffold xovers
+                    scafStrandL = self._getDomainAt(scafSS, idx-4)
+                    scafStrandH = self._getDomainAt(scafSS, idx+5)
+                    if scafStrandL:
+                        if self._hasXoverAt(scafStrandL, idx-4):
+                            continue
+                    if scafStrandH:
+                        if self._hasXoverAt(scafStrandH, idx+5):
+                            continue
+
+                    # disable edge xovers
+                    scafStrandL1 = self._getDomainAt(scafSS, idx-1)
+                    scafStrandM = self._getDomainAt(scafSS, idx)
+                    scafStrandH1 = self._getDomainAt(scafSS, idx+1)
+
+                    if scafStrandL1:
+                        if self._hasXoverAt(scafStrandL1, idx-1) and not self._getDomainAt(vh.domains, idx-2):
+                            continue
+                        if self._hasXoverAt(scafStrandL1, idx-2) and not self._getDomainAt(vh.domains, idx-3):
+                            continue
+                    if scafStrandM:
+                        if self._hasXoverAt(scafStrandM, idx-1) and not self._getDomainAt(vh.domains, idx-2):
+                            continue
+                        if self._hasXoverAt(scafStrandM, idx+1) and not self._getDomainAt(vh.domains, idx+2):
+                            continue
+                    if scafStrandH1:
+                        if self._hasXoverAt(scafStrandH1, idx+1) and not self._getDomainAt(vh.domains, idx+2):
+                            continue
+                        if self._hasXoverAt(scafStrandH1, idx+2) and not self._getDomainAt(vh.domains, idx+3):
+                            continue
+
+                    epDict[vhidx].extend([idx, idx+1])
+                    epDict[neighborVh.idx].extend([idx, idx+1])
+
+        # 4) Clear temporary staple strands
+        for s in list(self.strands):
+            if not s.is_scaffold:
+                self.remove_strand(s)
+
+        # 5) AutoStaple
+        for vhidx, epList in epDict.items():
+            assert (len(epList) % 2 == 0)
+            epList = sorted(epList)
+            ssIdx = 0
+            domains = []
+            is_forward = vhidx % 2 == 1  # since these are staple strands, we want them going opposite.
+            for i in range(0, len(epList),2):
+                lo, hi = epList[i:i+2]
+
+                domain = Domain(vhidx, forward=is_forward, start=lo, end=hi+1)
+                domains.append(domain)
+
+                if is_forward:
+                    strand = Strand(domains=[domain], is_scaffold=False)
+                else:
+                    domains.reverse()
+                    strand = Strand(domains=[domain], is_scaffold=False)
+
+                self.add_strand(strand)
+                self._assignDNASequence(strand, is_forward, vhidx)
+                ssIdx += 1
+
+        # 6) Create crossovers wherever possible.
+        for vhidx, vh in self.helices.items():
+            stapSS, _ = self._getStrandSets(vhidx, vh.domains)
+            is5to3 = self._is5to3(stapSS[0])
+            potentialXovers = self._potentialCrossoverList(vh)
+
+            for neighborVh, idx, strandType, isLowIdx in potentialXovers:
+                if strandType != "staple":
+                    continue
+
+                if (isLowIdx and is5to3) or (not isLowIdx and not is5to3):
+                    domain = self._getDomainAt(stapSS, idx)
+
+                    neighborSS = [domain for domain in neighborVh.domains if
+                              (neighborVh.idx % 2 == 0 and not domain.forward) or (neighborVh.idx % 2 == 1 and domain.forward)]
+
+                    nDomain = self._getDomainAt(neighborSS, idx)
+                    if domain is None or nDomain is None:
+                        continue
+
+                    if idx in [domain.start, domain.end-1] and idx in [nDomain.start, nDomain.end-1]:
+                        # only install xovers on pre-split strands
+                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx, forward=vhidx%2==1, offset2=idx, forward2=vhidx%2==0)
+                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx+1, forward=vhidx%2==1, offset2=idx+1, forward2=vhidx%2==0)
+
+        # Re-Add Original Deletions
+        for vhidx, deletionIndices in deletions.items():
+            for deletionIdx in deletionIndices:
+                self.add_deletion(vhidx, deletionIdx)
+
+
+
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
     # return pair of indices representing same object in elts, or None if they do not exist
