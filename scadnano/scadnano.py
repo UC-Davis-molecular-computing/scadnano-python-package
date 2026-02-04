@@ -4102,6 +4102,14 @@ class Strand(_JSONSerializable):
         name = f'{start_helix}[{start_offset}]{forward_str}{end_helix}[{end_offset}]'
         return f'SCAF{name}' if self.is_scaffold else f'ST{name}'
 
+    def has_multiple_bound_domains(self) -> bool:
+        num_bound_domains = 0
+        for domain in self.domains:
+            if isinstance(domain, Domain):
+                num_bound_domains += 1
+
+        return num_bound_domains > 1
+
     def set_modification_5p(self, mod: Modification5Prime) -> None:
         """Sets 5' modification to be `mod`. :any:`Strand.circular` must be False."""
         if self.circular:
@@ -8795,47 +8803,76 @@ class Design(_JSONSerializable):
             helix_group = self.groups[helix.group]
             helix.relax_roll(self.helices, helix_group.grid, self.geometry)
 
-    def _getVirtualHelixNeighbors(self, virtualHelix):
+    def isEvenParity(self, row, column):
+        return (row % 2) == (column % 2)
+    # end def
+
+    def isOddParity(self, row, column):
+        return (row % 2) ^ (column % 2)
+    # end def
+
+    def _getVirtualHelixNeighbors(self, virtualHelix) -> List[Helix]:
         neighbors = []
         helix_idx = virtualHelix.idx
+
+        (c, r) = virtualHelix.grid_position
+        helices_by_coords = {}
+
+        for helix in self.helices.values():
+            (temp_col, temp_row) = helix.grid_position
+            helices_by_coords[(temp_row, temp_col)] = helix
 
         # Simple sequential neighbor assumption
         # Adjust this based on your actual helix layout
         # TODO: Not sure why i need to hard code "None" for indices 0 and 2 for square parts, and index 1 for honeycomb.
         # TODO: need to figure out how cadnano2 is deciding the virtual helix at the specific coord.
         # TODO: This does not currently work for the honeycomb part, probably for the issues reasoned above.
-        if helix_idx % 2 == 0:  # Even parity
+        if self.isEvenParity(r, c):  # Even parity
             # squarepart.py in cadnano2 (getVirtualHelixNeighbors)
             if self.grid == Grid.square:
-                neighbors = [
-                    None,
-                    helix_idx + 1 if helix_idx + 1 in self.helices else None,
-                    None,
-                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
-                ]
+                neighbors.append(helices_by_coords.get((r, c + 1)))
+                neighbors.append(helices_by_coords.get((r + 1, c)))
+                neighbors.append(helices_by_coords.get((r, c - 1)))
+                neighbors.append(helices_by_coords.get((r - 1, c)))
+                # neighbors = [
+                    # None,
+                    # helix_idx + 1 if helix_idx + 1 in self.helices else None,
+                    # None,
+                    # helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
+                # ]
             # honeycombpart.py in cadnano2 (getVirtualHelixNeighbors)
             elif self.grid == Grid.honeycomb:
-                neighbors = [
-                    helix_idx + 1 if helix_idx + 1 in self.helices else 0,
-                    None,
-                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1]
-                ]
+                neighbors.append(helices_by_coords.get((r, c + 1)))
+                neighbors.append(helices_by_coords.get((r - 1, c)))
+                neighbors.append(helices_by_coords.get((r, c - 1)))
+                # neighbors = [
+                    # helix_idx + 1 if helix_idx + 1 in self.helices else 0,
+                    # None,
+                    # helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1]
+                # ]
             else:
                 return ValueError(f"Invalid grid type: {self.grid}")
         else:  # Odd parity
             if self.grid == Grid.square:
-                neighbors = [
-                    None,
-                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
-                    None,
-                    helix_idx + 1 if helix_idx + 1 in self.helices else None,
-                ]
+                neighbors.append(helices_by_coords.get((r, c - 1)))
+                neighbors.append(helices_by_coords.get((r - 1, c)))
+                neighbors.append(helices_by_coords.get((r, c + 1)))
+                neighbors.append(helices_by_coords.get((r + 1, c)))
+                # neighbors = [
+                    # None,
+                    # helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else None,
+                    # None,
+                    # helix_idx + 1 if helix_idx + 1 in self.helices else None,
+                # ]
             elif self.grid == Grid.honeycomb:
-                neighbors = [
-                    helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1],
-                    None,
-                    helix_idx + 1 if helix_idx + 1 in self.helices else 0
-                ]
+                neighbors.append(helices_by_coords.get((r, c - 1)))
+                neighbors.append(helices_by_coords.get((r + 1, c)))
+                neighbors.append(helices_by_coords.get((r, c + 1)))
+                # neighbors = [
+                    # helix_idx - 1 if helix_idx - 1 in self.helices and helix_idx - 1 >= 0 else list(self.helices)[-1],
+                    # None,
+                    # helix_idx + 1 if helix_idx + 1 in self.helices else 0
+                # ]
             else:
                 return ValueError(f"Invalid grid type: {self.grid}")
 
@@ -8956,15 +8993,35 @@ class Design(_JSONSerializable):
         # TODO:
         # In strand.py of cadnano2, it has the stuff commented out below.
         # I'm not entirely sure how to test if the connection is high or low in scadnano.
-        # Setting them to True regardless works for now (at least with GRID, honeycomb not tested)
-        if idx == domain.end:
+        # Setting them to True regardless works for now (at least with GRID, honeycomb not tested.
+        # TODO: Raise an exception if any strand anywhere has a loopout or extension.
+        # Check every strand, every donain, and if isinstance domain is true, that it is not an extension or loopout
+
+        if domain.start == idx or domain.end == idx:
             return True
-            # return True if self.connectionHigh() != None else False
-        elif idx == domain.start:
-            return True
-            # return True if self.connectionLow() != None else False
-        else:
-            return False
+
+        # TODO: ENABLE
+        if domain.is_5p_domain():
+            return domain.offset_3p() == idx and domain.strand().has_multiple_bound_domains()
+            # will have xover if idx is 3prime end
+            # cadnano represents xovers as some kind of object.
+            # This is true as long as there is some domain on the same strand
+        # if domain.is_3p_domain():
+        return domain.offset_5p() == idx and domain.strand().has_multiple_bound_domains()
+        #
+        # # We know its not 5p or 3p. It is a domain in the middle, so there must be other domains.
+        # return idx in [domain.start, domain.end]
+        # TODO: END ENABLE
+
+        # # is5PrimeDomain
+        # if idx == domain.end:
+        #     return True
+        #     # return True if self.connectionHigh() != None else False
+        # elif idx == domain.start:
+        #     return True
+        #     # return True if self.connectionLow() != None else False
+        # else:
+        #     return False
 
     def _hasNoStrandAtOrNoXover(self, domains: List[Domain], idx):
         qStrand = Domain(domains[0].helix, forward=True, start=idx, end=idx+1)
@@ -9045,12 +9102,12 @@ class Design(_JSONSerializable):
         fromStrandSets = [fromScafSS, fromStapSS]
         neighbors = self._getVirtualHelixNeighbors(vh)
 
-        for neighborIdx, lut in zip(neighbors, lutsNeighbor):
-            if neighborIdx is None:
-                continue
-
+        for neighbor, lut in zip(neighbors, lutsNeighbor):
+            # if neighborIdx is None:
+            #     continue
+            #
             # Get neighbor as vh.
-            neighbor = self.helices[neighborIdx]
+            # neighbor = self.helices[neighborIdx]
 
             if not neighbor:
                 continue
@@ -9062,7 +9119,7 @@ class Design(_JSONSerializable):
             lutStap = lut[2:4]
             lut = (lutScaf, lutStap)
 
-            toStapSS, toScafSS = self._getStrandSets(neighborIdx, neighbor.domains)
+            toStapSS, toScafSS = self._getStrandSets(neighbor.idx, neighbor.domains)
             toStrandSets = [toScafSS, toStapSS]
 
             for fromSS, toSS, pts, st in zip(fromStrandSets, toStrandSets, lut, sTs):
@@ -9156,7 +9213,7 @@ class Design(_JSONSerializable):
                 hi = strand.end - 1 # exclusive end
                 if len(segments) == 0:
                     segments.append([lo, hi]) # insert 1st staple
-                elif segments[-1][1] == lo -1 :
+                elif segments[-1][1] == lo - 1:
                     segments[-1][1] = hi # extend
                 else:
                     segments.append([lo, hi]) # insert another strand
@@ -9242,8 +9299,8 @@ class Design(_JSONSerializable):
         for s in list(self.strands):
             if not s.is_scaffold:
                 self.remove_strand(s)
-
-        # 5) AutoStaple
+        #
+        # # 5) AutoStaple pt.1 (Breaking the strands)
         for vhidx, epList in epDict.items():
             assert (len(epList) % 2 == 0)
             epList = sorted(epList)
@@ -9256,11 +9313,12 @@ class Design(_JSONSerializable):
                 domain = Domain(vhidx, forward=is_forward, start=lo, end=hi+1)
                 domains.append(domain)
 
-                if is_forward:
-                    strand = Strand(domains=[domain], is_scaffold=False)
-                else:
-                    domains.reverse()
-                    strand = Strand(domains=[domain], is_scaffold=False)
+                # if is_forward:
+                #     strand = Strand(domains=[domain], is_scaffold=False)
+                # else:
+                #     domains.reverse()
+                #     strand = Strand(domains=[domain], is_scaffold=False)
+                strand = Strand(domains=[domain], is_scaffold=False)
 
                 self.add_strand(strand)
                 self._assignDNASequence(strand, is_forward, vhidx)
@@ -9276,11 +9334,13 @@ class Design(_JSONSerializable):
                 if strandType != "staple":
                     continue
 
+                # if (isLowIdx and is5to3):
                 if (isLowIdx and is5to3) or (not isLowIdx and not is5to3):
                     domain = self._getDomainAt(stapSS, idx)
 
-                    neighborSS = [domain for domain in neighborVh.domains if
-                              (neighborVh.idx % 2 == 0 and not domain.forward) or (neighborVh.idx % 2 == 1 and domain.forward)]
+                    neighborSS, _ = self._getStrandSets(neighborVh.idx, neighborVh.domains)
+                    # neighborSS = [domain for domain in neighborVh.domains if
+                    #           (neighborVh.idx % 2 == 0 and not domain.forward) or (neighborVh.idx % 2 == 1 and domain.forward)]
 
                     nDomain = self._getDomainAt(neighborSS, idx)
                     if domain is None or nDomain is None:
@@ -9288,8 +9348,8 @@ class Design(_JSONSerializable):
 
                     if idx in [domain.start, domain.end-1] and idx in [nDomain.start, nDomain.end-1]:
                         # only install xovers on pre-split strands
-                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx, forward=vhidx%2==1, offset2=idx, forward2=vhidx%2==0)
-                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx+1, forward=vhidx%2==1, offset2=idx+1, forward2=vhidx%2==0)
+                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx, forward=not self._helixIsEvenParity(vhidx), offset2=idx, forward2=self._helixIsEvenParity(vhidx))
+                        self.add_half_crossover(vhidx, neighborVh.idx, offset=idx+1, forward=not self._helixIsEvenParity(vhidx), offset2=idx+1, forward2=self._helixIsEvenParity(vhidx))
 
         # Re-Add Original Deletions
         for vhidx, deletionIndices in deletions.items():
@@ -9297,6 +9357,18 @@ class Design(_JSONSerializable):
                 self.add_deletion(vhidx, deletionIdx)
 
 
+    def _helixIsEvenParity(self, helix_or_idx) -> bool:
+        """Get parity from grid position, not helix index"""
+        if isinstance(helix_or_idx, int):
+            helix = self.helices[helix_or_idx]
+        else:
+            helix = helix_or_idx
+
+        if helix.grid_position is None:
+            return helix.idx % 2 == 0
+
+        (c, r) = helix.grid_position
+        return self.isEvenParity(r, c)
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
