@@ -2451,8 +2451,7 @@ class Domain(_JSONSerializable):
         This is an generator for now
 
         Strategy:
-        1.
-            search the _strandList for a strand the first strand that has a
+        1.  search the _strandList for a strand the first strand that has a
             highIndex >= lowIndex of the query strand.
             save that strandSet index as sSetIndexLow.
             if No strand satisfies this condition, return an empty list
@@ -2464,8 +2463,7 @@ class Domain(_JSONSerializable):
             conversely you could search for first strand that has a
             lowIndex LESS than or equal to the lowIndex of the query strand.
 
-        2.
-            starting at self._strandList[sSetIndexLow] test each strand to see if
+        2.  starting at self._strandList[sSetIndexLow] test each strand to see if
             it's indexLow is LESS than or equal to qstrand.indexHigh.  If it is
             yield/return that strand.  If it's GREATER than the indexHigh, or
             you run out of strands to check, the generator terminates
