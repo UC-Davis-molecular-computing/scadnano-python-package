@@ -8,18 +8,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
+        python-version: [ 3.10", "3.11", "3.12", "3.13" ]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup conda
-        uses: s-weigand/setup-conda@v1
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-conda: true
+          auto-activate: true
+          python-version: ${{ matrix.python-version }}
       - name: Install openpyxl,tabulate with conda
         run: conda install openpyxl=3.1 tabulate=0.9
       - name: Install docutils with conda
