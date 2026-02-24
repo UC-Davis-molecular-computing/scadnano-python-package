@@ -6,24 +6,25 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0} # Use conda shell
     strategy:
       matrix:
         python-version: [ "3.10", "3.11", "3.12", "3.13" ]
 
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Setup conda
+      - name: Setup conda and python
         uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate: true
           python-version: ${{ matrix.python-version }}
-      - name: Install openpyxl,tabulate with conda
-        run: conda install openpyxl=3.1 tabulate=0.9
-      - name: Install docutils with conda
-        run: conda install docutils=0.18
+      - name: Install openpyxl,tabulate,docutils with conda
+#        shell: bash -el {0}
+        run: conda install openpyxl=3.1 tabulate=0.9 docutils=0.18
+#      - name: Install docutils with conda
+#        run: conda install docutils=0.18
       - name: Test with unittest
+#        shell: bash -el {0}
         run: python -m unittest -v tests/scadnano_tests.py
