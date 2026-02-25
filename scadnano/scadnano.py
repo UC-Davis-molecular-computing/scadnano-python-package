@@ -8579,7 +8579,7 @@ class Design(_JSONSerializable):
         helix_domains.remove(dom_right)
 
     def add_half_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
-                           offset2: int = None, forward2: bool = None) -> None:
+                           offset2: int | None = None, forward2: bool | None = None) -> None:
         """
         Add a half crossover from helix `helix` at offset `offset` to `helix2`, on the strand
         with :py:data:`Strand.forward` = `forward`.
@@ -8680,7 +8680,7 @@ class Design(_JSONSerializable):
         self.strands.remove(strand_last)
 
     def add_full_crossover(self, helix: int, helix2: int, offset: int, forward: bool,
-                           offset2: int = None, forward2: bool = None) -> None:
+                           offset2: int | None = None, forward2: bool | None = None) -> None:
         """
         Adds two half-crossovers, one at `offset` and another at `offset`-1.
         Other arguments have the same meaning as in :py:meth:`Design.add_half_crossover`.
