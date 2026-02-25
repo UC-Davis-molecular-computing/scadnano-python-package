@@ -8341,6 +8341,7 @@ class Design(_JSONSerializable):
             If True, one :any:`Strand` keeps the same color as the original and the other
             is assigned a new color.
         """
+        # check that a domain exists at the proper address
         for domain_to_remove in self.domains_at(helix, offset):
             if domain_to_remove.forward == forward:
                 break
