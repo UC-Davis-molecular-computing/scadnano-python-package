@@ -1883,6 +1883,7 @@ class Helix(_JSONSerializable):
         :return: A tuple containing the [stapSS, scafSS].
 
         NOTE: This is a modified version of cadnano2's getStrandSets (virtualhelix.py)
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/virtualhelix.py#L128C1-L131C14
         """
 
         # On idx even, staple strands will go backwards.
@@ -2469,6 +2470,7 @@ class Domain(_JSONSerializable):
             you run out of strands to check, the generator terminates
 
         NOTE: This function was translated from cadnano2's _findOverlappingRanges (strandset.py).
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/strandset.py#L495C2-L603C14
         """
         domainList = domains
         lenDomains = len(domainList)
@@ -2548,22 +2550,13 @@ class Domain(_JSONSerializable):
             # TODO: For scadnano, I did not implement caching.
             return
 
-    def has_crossover_at(self, idx: int):
+    def has_crossover_at(self, idx: int) -> bool:
         """
         An xover is necessarily at an enpoint of a strand
 
         NOTE: This is translated from cadnano2's hasXoverAt (strand.py)
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/strand.py#L472C1-L482C14
         """
-
-        # Check if any strand anywhere has a loopout or extension
-        strand = self.strand()
-        for domain in strand.domains:
-            if isinstance(domain, Loopout):
-                raise ValueError("Cannot check for crossover: strand contains a Loopout. "
-                                 "The has_crossover_at method does not support strands with loopouts.")
-            if isinstance(domain, Extension):
-                raise ValueError("Cannot check for crossover: strand contains an Extension. "
-                                 "The has_crossover_at method does not support strands with extensions.")
 
         # In strand.py of cadnano2, it has the stuff commented out below.
         # Check every strand, every domain, and if isinstance domain is true, that it is not an extension or loopout
@@ -8966,13 +8959,14 @@ class Design(_JSONSerializable):
             helix_group = self.groups[helix.group]
             helix.relax_roll(self.helices, helix_group.grid, self.geometry)
 
-    def isEvenParity(self, row, column):
+    # Copied from cadnano2
+    # honeycomb - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/honeycombpart.py#L44C1-L50C14
+    # square - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/squarepart.py#L37C1-L43C14
+    def is_even_parity(self, row: int, column: int) -> bool:
         return (row % 2) == (column % 2)
-    # end def
 
-    def isOddParity(self, row, column):
-        return (row % 2) ^ (column % 2)
-    # end def
+    def is_odd_parity(self, row: int, column: int) -> bool:
+        return bool((row % 2) ^ (column % 2))
 
     def get_helix_neighbors(self, helix: Helix) -> List[Helix]:
         """
@@ -8982,6 +8976,8 @@ class Design(_JSONSerializable):
         If a potential neighbor doesn't exist, None is returned in it's place
 
         NOTE: This function was translated from cadnano2's getVirtualHelixNeighbors (honeycombpart.py and part.py)
+        honeycomb - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/honeycombpart.py#L52C1-L79C14
+        square - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/squarepart.py#L45C1-L74C14
         """
         neighbors = []
 
@@ -8994,7 +8990,7 @@ class Design(_JSONSerializable):
 
         # Simple sequential neighbor assumption
         # Adjust this based on your actual helix layout
-        if self.isEvenParity(r, c):  # Even parity
+        if self.is_even_parity(r, c):  # Even parity
             # squarepart.py in cadnano2 (getVirtualHelixNeighbors)
             if self.grid == Grid.square:
                 neighbors.append(helices_by_coords.get((r, c + 1)))
@@ -9023,9 +9019,11 @@ class Design(_JSONSerializable):
 
         return neighbors
 
-    def _hasNoStrandAtOrNoXover(self, domains: List[Domain], idx) -> bool:
+    def _hasNoStrandAtOrNoXover(self, domains: List[Domain], idx: int) -> bool:
         """
         NOTE: Translated from cadnano2's hasStrandAtAndNoXover (strandset.py)
+
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/strandset.py#L355C1-L366C14
         """
         qStrand = Domain(domains[0].helix, forward=True, start=idx, end=idx+1)
 
@@ -9042,6 +9040,10 @@ class Design(_JSONSerializable):
 
         :returns: A tuple containing the list of crossover points for the specific grid type.
         """
+
+        # These numbers are directly referenced in cadnano2
+        # honeycomb - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/honeycombpart.py#L9C1-L13C41
+        # square - https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/squarepart.py#L6C1-L10C44
         match self.grid:
             case Grid.square:
                 scafL = [[4, 26, 15], [18, 28, 7], [10, 20, 31], [2, 12, 23]]
@@ -9073,6 +9075,7 @@ class Design(_JSONSerializable):
         view) of a potential Xover site
 
         NOTE: Translated from cadnano2's potentialCrossoverList (part.py)
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/part.py#L1083C1-L1158C14
         """
         _scafL, _scafH, _stapL, _stapH = self.get_crossover_points()
 
@@ -9156,7 +9159,7 @@ class Design(_JSONSerializable):
 
         return None
 
-    def assign_dna_sequence(self, strand: Strand, forward: bool, helix_idx: int):
+    def assign_dna_sequence(self, strand: Strand, forward: bool, helix_idx: int) -> None:
         """
         Assigns the DNA sequence based on strand direction.
         """
@@ -9185,7 +9188,18 @@ class Design(_JSONSerializable):
         4. Delete temporary strands and create new strands.
 
         NOTE: Translated from cadnano2's autostaple (part.py)
+        https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/parts/part.py#L257C1-L407C14
         """
+
+        # Check if any strand anywhere has a loopout or extension
+        for strand in self.strands:
+            for domain in strand.domains:
+                if isinstance(domain, Loopout):
+                    raise ValueError("Cannot check for crossover: strand contains a Loopout. "
+                                     "The has_crossover_at method does not support strands with loopouts.")
+                if isinstance(domain, Extension):
+                    raise ValueError("Cannot check for crossover: strand contains an Extension. "
+                                     "The has_crossover_at method does not support strands with extensions.")
         # helix + offset for deletions
         # We want to keep track of the original deletions
         deletions = {}
@@ -9362,7 +9376,7 @@ class Design(_JSONSerializable):
             return helix.idx % 2 == 0
 
         (c, r) = helix.grid_position
-        return self.isEvenParity(r, c)
+        return self.is_even_parity(r, c)
 
 
 def _find_index_pair_same_object(elts: Union[List, Dict]) -> Optional[Tuple]:
