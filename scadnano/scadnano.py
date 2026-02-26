@@ -8351,6 +8351,7 @@ class Design(_JSONSerializable):
         strand = domain_to_remove.strand()
         domains = strand.domains
         order = domains.index(domain_to_remove)
+        #TODO: what if these are extensions or loopouts?
         domains_before = domains[:order]
         domains_after = domains[order + 1:]
         domain_left: Domain = Domain(helix, forward, domain_to_remove.start, offset)
@@ -8415,12 +8416,11 @@ class Design(_JSONSerializable):
             # if strand is not circular, we delete it and create two new strands
             self.strands.remove(strand)
 
-            idt_present = strand.vendor_fields is not None
             strand_before: Strand = Strand(
                 domains=domains_before,
                 dna_sequence=seq_before_whole,
                 color=strand.color,
-                vendor_fields=strand.vendor_fields if idt_present else None,
+                vendor_fields=strand.vendor_fields,
             )
 
             color_after = next(self.color_cycler) if new_color else strand.color
@@ -8430,8 +8430,10 @@ class Design(_JSONSerializable):
                 color=color_after,
             )
 
+            # TODO: put in same position as original strand
             self.strands.extend([strand_before, strand_after])
 
+        # update helix field that maintains list of all domains on it
         helix_domains = self.helices[helix].domains
         idx_domain_to_remove = helix_domains.index(domain_to_remove)
         helix_domains[idx_domain_to_remove] = domain_left
@@ -8728,7 +8730,7 @@ class Design(_JSONSerializable):
         if domain_left == domain_right:
             self.add_nick(helix, offset, forward)
         else:
-            # there's already a nick here, unless either has a crossover
+            # there's already a nick here (unless either has a crossover; see error check below)
             assert domain_left.end == domain_right.start
 
             # disallowed situations:
