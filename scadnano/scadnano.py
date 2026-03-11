@@ -2447,31 +2447,31 @@ class Domain(_JSONSerializable):
         a query strands, or qstrands, indices.
 
         Useful for operations on complementary strands such as applying a
-        sequence
+        sequence.
 
-        This is an generator for now
-
-        Strategy:
-        1.  search the _strandList for a strand the first strand that has a
-            highIndex >= lowIndex of the query strand.
-            save that strandSet index as sSetIndexLow.
-            if No strand satisfies this condition, return an empty list
-
-            Unless it matches the query strand's lowIndex exactly,
-            Step 1 is O(log N) where N in length of self._strandList to the max,
-            that is it needs to exhaust the search
-
-            conversely you could search for first strand that has a
-            lowIndex LESS than or equal to the lowIndex of the query strand.
-
-        2.  starting at self._strandList[sSetIndexLow] test each strand to see if
-            it's indexLow is LESS than or equal to qstrand.indexHigh.  If it is
-            yield/return that strand.  If it's GREATER than the indexHigh, or
-            you run out of strands to check, the generator terminates
+        This is a generator for now.
 
         NOTE: This function was translated from cadnano2's _findOverlappingRanges (strandset.py).
         https://github.com/douglaslab/cadnano2/blob/239ecc851407b64b44a8a4bdecdd5eb4848868f5/cadnano2/model/strandset.py#L495C2-L603C14
         """
+
+        # Strategy:
+        # 1.  search the _strandList for a strand the first strand that has a
+        # highIndex >= lowIndex of the query strand.
+        # save that strandSet index as sSetIndexLow.
+        # if No strand satisfies this condition, return an empty list
+        #
+        # Unless it matches the query strand's lowIndex exactly,
+        # Step 1 is O(log N) where N in length of self._strandList to the max,
+        # that is it needs to exhaust the search
+        #
+        # conversely you could search for first strand that has a
+        # lowIndex LESS than or equal to the lowIndex of the query strand.
+        #
+        # 2.  starting at self._strandList[sSetIndexLow] test each strand to see if
+        # it's indexLow is LESS than or equal to qstrand.indexHigh.  If it is
+        # yield/return that strand.  If it's GREATER than the indexHigh, or
+        # you run out of strands to check, the generator terminates
         domainList = domains
         lenDomains = len(domainList)
         if lenDomains == 0:

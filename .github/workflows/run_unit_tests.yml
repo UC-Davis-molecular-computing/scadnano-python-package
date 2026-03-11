@@ -21,10 +21,6 @@ jobs:
           auto-activate: true
           python-version: ${{ matrix.python-version }}
       - name: Install openpyxl,tabulate,docutils with conda
-#        shell: bash -el {0}
         run: conda install openpyxl=3.1 tabulate=0.9 docutils=0.18
-#      - name: Install docutils with conda
-#        run: conda install docutils=0.18
       - name: Test with unittest
-#        shell: bash -el {0}
         run: python -m unittest -v tests/scadnano_tests.py
