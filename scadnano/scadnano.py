@@ -197,12 +197,12 @@ class Color(_JSONSerializable):
     
     Optional if :data:`Color.hex_string` is given."""
 
-    hex_string: InitVar[str] = None
+    hex_string: InitVar[str | None] = None
     """Hex color preceded by # sign, e.g., "#ff0000" is red.
     
     Optional if :py:data:`Color.r`, :py:data:`Color.g`, :py:data:`Color.b` are all given."""
 
-    def __post_init__(self, hex_string: str) -> None:
+    def __post_init__(self, hex_string: str | None) -> None:
         if hex_string is None:
             assert self.r is not None and self.g is not None and self.b is not None
         else:
