@@ -1965,18 +1965,8 @@ class TestDesignFromJson(unittest.TestCase):
                 sc.Domain(5, False, 4, 8),
             ]
         )
-        self.design_pre_json = sc.Design(helices=helices, strands=[s1, s2], grid=sc.square)
-
-        json_str = self.design_pre_json.to_json()
-
-        json_map = json.loads(json_str)
-        design = sc.Design.from_scadnano_json_map(json_map)
-
-        self.assertEqual(3, len(design.helices))
-
-        self.assertEqual(2, design.helices[2].idx)
-        self.assertEqual(1, design.helices[1].idx)
-        self.assertEqual(5, design.helices[5].idx)
+        # expect error
+        self.assertRaises(sc.IllegalDesignError, lambda: sc.Design(helices=helices, strands=[s1, s2], grid=sc.square))
 
     def test_from_json__helices_non_default_error_if_some_have_idx_not_others(self) -> None:
         h2 = sc.Helix(idx=2)
@@ -2987,7 +2977,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------+^+------>
         1   <------+^+------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8).move(8)
         design.draw_strand(1, 16).move(-8).move(-8)
 
@@ -3004,7 +2994,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------+^+------>
         1   <------] <------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8).move(8)
         design.draw_strand(1, 16).move(-8)
         design.draw_strand(1, 8).move(-8)
@@ -3022,7 +3012,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------> [------>
         1   <------+^+------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8)
         design.draw_strand(0, 8).move(8)
         design.draw_strand(1, 16).move(-8).move(-8)
@@ -3040,7 +3030,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------+^+------>
         1   <------+^+------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8).move(8)
         design.draw_strand(1, 16).move(-8).move(-8)
 
@@ -3058,7 +3048,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------+^+------>
         1   <------] <------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8).move(8)
         design.draw_strand(1, 16).move(-8)
         design.draw_strand(1, 8).move(-8)
@@ -3076,7 +3066,7 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         0   [------> [------>
         1   <------+^+------]
         """
-        design = sc.Design(helices=[sc.Helix(16) for _ in range(2)])
+        design = sc.Design(helices=[sc.Helix(max_offset=16) for _ in range(2)])
         design.draw_strand(0, 0).move(8)
         design.draw_strand(0, 8).move(8)
         design.draw_strand(1, 16).move(-8).move(-8)
@@ -9121,3 +9111,7 @@ class TestHelixRollRelax(unittest.TestCase):
         act_ave_angle = sc.average_angle(angles)
         exp_ave_angle = 30.0
         self.assertAlmostEqual(exp_ave_angle, act_ave_angle)
+
+
+if __name__ == "__main__":
+    unittest.main()

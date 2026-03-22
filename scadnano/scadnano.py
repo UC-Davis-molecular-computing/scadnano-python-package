@@ -1579,6 +1579,33 @@ class Helix(_JSONSerializable):
     associated to the :any:`Helix` via the field :any:`Domain.helix`.
     """
 
+    idx: int = -1
+    """Index of this :any:`Helix`.
+    
+    Optional if no other :any:`Helix` specifies a value for *idx*.
+    Default is the order of the :any:`Helix` is listed in constructor for :any:`Design`."""
+
+    grid_position: tuple[int, int] | None = None  # type: ignore
+    """`(h,v)` position of this helix in the side view grid,
+    if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
+    in the :any:`Design` containing this helix.
+    `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
+    and incrementing `v` moves down one helix in the grid. 
+    In the case of the hexagonal lattice, 
+    The convention is that incrementing `v` moves down and to the right if h is even, 
+    and moves down and to the left if `h` is odd.
+    This is the "odd-q" coordinate system here: 
+    https://www.redblobgames.com/grids/hexagons/)
+    However, the default y position in the main view for helices does not otherwise depend on grid_position.
+    The default is to list the y-coordinates in order by helix idx.
+    
+    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`Design.helices`.
+    
+    In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates,
+    see `misc/cadnano-format-specs/v2.txt`.
+    That convention is different from simply excluding coordinates from the hex lattice.
+    """
+
     max_offset: int | None = None  # type: ignore
     """Maximum offset (exclusive) of :any:`Domain` that can be drawn on this :any:`Helix`. 
     
@@ -1634,27 +1661,6 @@ class Helix(_JSONSerializable):
     """If not ``None``, overrides :any:`Helix.major_tick_distance`
     to specify a list of offsets at which to put major ticks."""
 
-    grid_position: tuple[int, int] | None = None  # type: ignore
-    """`(h,v)` position of this helix in the side view grid,
-    if :const:`Grid.square`, :const:`Grid.hex` , or :const:`Grid.honeycomb` is used
-    in the :any:`Design` containing this helix.
-    `h` and `v` are in units of "helices": incrementing `h` moves right one helix in the grid
-    and incrementing `v` moves down one helix in the grid. 
-    In the case of the hexagonal lattice, 
-    The convention is that incrementing `v` moves down and to the right if h is even, 
-    and moves down and to the left if `h` is odd.
-    This is the "odd-q" coordinate system here: 
-    https://www.redblobgames.com/grids/hexagons/)
-    However, the default y position in the main view for helices does not otherwise depend on grid_position.
-    The default is to list the y-coordinates in order by helix idx.
-    
-    Default is `h` = 0, `v` = index of :any:`Helix` in :py:data:`Design.helices`.
-    
-    In the case of the honeycomb lattice, we use the same convention as cadnano for encoding hex coordinates,
-    see `misc/cadnano-format-specs/v2.txt`.
-    That convention is different from simply excluding coordinates from the hex lattice.
-    """
-
     position: Position3D | None = None  # type: ignore
     """Position (x,y,z) of this :any:`Helix` in 3D space.
     
@@ -1665,12 +1671,6 @@ class Helix(_JSONSerializable):
     
     Rotation is clockwise in the side view; the same convention as :data:`HelixGroup.roll`.
     Units are degrees."""
-
-    idx: int = -1
-    """Index of this :any:`Helix`.
-    
-    Optional if no other :any:`Helix` specifies a value for *idx*.
-    Default is the order of the :any:`Helix` is listed in constructor for :any:`Design`."""
 
     group: str = default_group_name  # type: ignore
     """Name of the :any:`HelixGroup` to which this :any:`Helix` belongs."""
@@ -1696,6 +1696,8 @@ class Helix(_JSONSerializable):
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> dict[str, Any] | NoIndent:
         dct: dict[str, Any] = dict()
+
+        dct[idx_on_helix_key] = self.idx
 
         grid: Grid = kwargs["grid"]
 
@@ -1745,8 +1747,6 @@ class Helix(_JSONSerializable):
                 NoIndent(self.major_ticks) if suppress_indent and not use_no_indent_helix else self.major_ticks
             )
 
-        dct[idx_on_helix_key] = self.idx
-
         return NoIndent(dct) if suppress_indent and use_no_indent_helix else dct
 
     @staticmethod
@@ -1768,7 +1768,7 @@ class Helix(_JSONSerializable):
         major_tick_periodic_distances = json_map.get(major_tick_periodic_distances_key)
         min_offset = optional_field(0, json_map, min_offset_key)
         max_offset = json_map.get(max_offset_key)
-        idx = json_map.get(idx_on_helix_key, 0)
+        idx = json_map.get(idx_on_helix_key, -1)
 
         position_map = optional_field(None, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map) if position_map is not None else None
@@ -6374,15 +6374,15 @@ class Design(_JSONSerializable):
             helix_pos_no_idx = None
             helix_pos_with_idx = None
             for idx, helix in enumerate(helices):
-                if helix.idx >= 0 and helix_pos_no_idx is None:
+                if helix.idx >= 0 and helix_pos_with_idx is None:
                     helix_pos_with_idx = idx
-                elif helix.idx < 0 and helix_pos_with_idx is None:
+                elif helix.idx < 0 and helix_pos_no_idx is None:
                     helix_pos_no_idx = idx
                 if helix_pos_no_idx is not None and helix_pos_with_idx is not None:
                     raise IllegalDesignError(
                         "When specifying helices as a list, either all helices must have idx < 0 "
                         "or all helices must have idx >= 0, but I found helix "
-                        f"{helices[helix_pos_no_idx]} has idx < 0 and "
+                        f"{helices[helix_pos_no_idx]} has idx < 0 (indicating no explicitly assigned helix idx) and "
                         f"helix {helices[helix_pos_with_idx]} has idx >= 0"
                     )
 
