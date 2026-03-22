@@ -178,5 +178,5 @@ So the steps for committing to the main branch are:
 
 Follow the [Python style guide](https://www.python.org/dev/peps/pep-0008/), which should come along in most IDEs in the form of plugins and extensions. 
 
-The line length should be configured to 110, as the style guide limit of 79 is a bit too restrictive.
+The line length should be configured to 120, as the style guide limit of 79 is a bit too restrictive.
 
