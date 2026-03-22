@@ -1828,7 +1828,7 @@ class Helix(_JSONSerializable):
             distance = default_major_tick_distance(grid)
             return list(range(self.major_tick_start, self.max_offset + 1, distance))
 
-    def calculate_position(self, grid: Grid, geometry: Geometry | None = None) -> Position3D:
+    def calculate_position(self, grid: Grid | None, geometry: Geometry | None = None) -> Position3D:
         """
         :param grid:
             :any:`Grid` of this :any:`Helix` used to interpret the field :data:`Helix.grid_position`.
@@ -1842,6 +1842,7 @@ class Helix(_JSONSerializable):
         """
         if self.grid_position is None:
             assert grid == Grid.none
+            assert self.position is not None
             return self.position
         else:
             assert grid is not None
@@ -2997,7 +2998,9 @@ class Extension(_JSONSerializable):
             first = False
         else:
             raise ValueError(f"Extension {self} is on its parent Strand {strand}")
-        return strand.domains[1] if first else strand.domains[-2]
+        domain = strand.domains[1] if first else strand.domains[-2]
+        assert isinstance(domain, Domain)
+        return domain
 
     def vendor_dna_sequence(self) -> str | None:
         """
@@ -3306,6 +3309,7 @@ class StrandBuilder:
         return self
 
     def _most_recently_added_substrand_is_instance_of_class(self, cls: Type) -> bool:
+        assert self._strand is not None
         return isinstance(self._strand.domains[-1], cls)
 
     def _most_recently_added_substrand_is_extension(self):
@@ -3373,6 +3377,7 @@ class StrandBuilder:
         self._verify_strand_is_not_circular()
 
     def _verify_strand_is_not_circular(self):
+        assert self._strand is not None
         if self._strand.circular:
             raise IllegalDesignError("Cannot add an extension to a circular strand.")
 
@@ -3878,12 +3883,12 @@ class StrandBuilder:
         if not hasattr(insertions, "__iter__"):
             raise ValueError(type_msg)
         if isinstance(insertions, tuple) and len(insertions) > 0 and isinstance(insertions[0], int):
-            last_domain.insertions = [insertions]
+            last_domain.insertions = [insertions]  # type: ignore
         else:
             for ins in insertions:
                 if not (isinstance(ins, tuple) and len(ins) > 0 and isinstance(ins[0], int)):
                     raise ValueError(type_msg)
-            last_domain.insertions = list(insertions)
+            last_domain.insertions = list(insertions)  # type: ignore
 
         for insertion in last_domain.insertions:
             insertion_offset, _ = insertion
@@ -4073,7 +4078,7 @@ class Strand(_JSONSerializable):
         modifications_int: dict[int, ModificationInternal] | None = None,
         name: str | None = None,
         label: str | None = None,
-        _helix_idx_domain_map: dict[int, list[Domain]] = None,
+        _helix_idx_domain_map: dict[int, list[Domain]] | None = None,
         dna_sequence: str | None = None,
     ):
         self.domains = domains
@@ -4430,17 +4435,17 @@ class Strand(_JSONSerializable):
 
     def first_domain(self) -> Domain:
         """First domain on this :any:`Strand`."""
-        domain = self.domains[0]
-        if isinstance(domain, Loopout):
-            raise StrandError(self, "cannot have loopout as first domain on strand")
-        return domain
+        for domain in self.domains:
+            if isinstance(domain, Domain):
+                return domain
+        raise StrandError(self, "strand has no domains")
 
     def last_domain(self) -> Domain:
         """Last domain on this :any:`Strand`."""
-        domain = self.domains[-1]
-        if isinstance(domain, Loopout):
-            raise StrandError(self, "cannot have loopout as last domain on strand")
-        return domain
+        for domain in reversed(self.domains):
+            if isinstance(domain, Domain):
+                return domain
+        raise StrandError(self, "strand has no domains")
 
     def dna_sequence_delimited(self, delimiter: str) -> str:
         """
@@ -4450,8 +4455,13 @@ class Strand(_JSONSerializable):
             DNA sequence of this :any:`Strand`, with `delimiter` in between DNA sequences of each
             :any:`Domain` or :any:`Loopout`.
         """
+        for domain in self.domains:
+            if domain.dna_sequence is None:
+                raise StrandError(
+                    self, "cannot get DNA sequence of strand because at least one domain has no DNA sequence assigned"
+                )
         result = [substrand.dna_sequence for substrand in self.domains]
-        return delimiter.join(result)
+        return delimiter.join(result)  # type: ignore
 
     def set_dna_sequence(self, sequence: str) -> None:
         """Set this :any:`Strand`'s DNA sequence to `seq`
@@ -4766,7 +4776,12 @@ class Strand(_JSONSerializable):
             ret_list.append(self.modification_5p.vendor_code)
 
         for substrand in self.domains:
-            ret_list.append(substrand.vendor_dna_sequence())
+            seq = substrand.vendor_dna_sequence()
+            if seq is None:
+                raise ValueError(
+                    f"cannot get vendor DNA sequence of strand because at least domain {substrand} has no DNA sequence"
+                )
+            ret_list.append(seq)
 
         if self.modification_3p is not None and self.modification_3p.vendor_code is not None:
             ret_list.append(self.modification_3p.vendor_code)
@@ -5271,7 +5286,7 @@ class PlateMap:
         missingval: str = "",
         showindex: str = "default",
         disable_numparse: bool = False,
-        colalign: bool = None,
+        colalign: Iterable[str | None] | None = None,
     ) -> str:
         """
         Exports this plate map to string format, with a header indicating information such as the
@@ -5804,7 +5819,7 @@ class Design(_JSONSerializable):
         if grid != Grid.none and using_groups:
             raise IllegalDesignError("Design.grid and Design.groups are mutually exclusive. Set at most one of them.")
 
-        self.strands = [] if strands is None else strands
+        self.strands = [] if strands is None else list(strands)
         self.color_cycler = ColorCycler()
         self.geometry = Geometry() if geometry is None else geometry
 
@@ -6129,6 +6144,7 @@ class Design(_JSONSerializable):
 
         # Add individual helix pitch and yaw
         if multiple_groups_used:
+            assert groups is not None
             for group_name, (pitch, yaw, _) in group_to_pitch_yaw.items():
                 groups[group_name].pitch += pitch
                 groups[group_name].yaw += yaw
@@ -6136,7 +6152,7 @@ class Design(_JSONSerializable):
         # Add new helix groups if individual helix pitch and yaw set
         if single_group_used:
             # New groups to add
-            new_groups = {}
+            new_groups: dict[str, HelixGroup] = {}
             # The only group (take into account case when default helix group is used)
             group = list(groups.values())[0] if groups is not None else HelixGroup()
 
