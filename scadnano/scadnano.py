@@ -1098,7 +1098,7 @@ class Modification(_JSONSerializable, ABC):
     """
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> dict[str, Any]:
-        ret = {
+        ret: dict[str, Any] = {
             mod_display_text_key: self.display_text,
             mod_vendor_code_key: self.vendor_code,
         }
@@ -1666,7 +1666,7 @@ class Helix(_JSONSerializable):
     Rotation is clockwise in the side view; the same convention as :data:`HelixGroup.roll`.
     Units are degrees."""
 
-    idx: int = 0
+    idx: int = -1
     """Index of this :any:`Helix`.
     
     Optional if no other :any:`Helix` specifies a value for *idx*.
@@ -1694,8 +1694,8 @@ class Helix(_JSONSerializable):
                         f"{self.max_offset}"
                     )
 
-    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> dict[str, Any]:
-        dct: Any = dict()
+    def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> dict[str, Any] | NoIndent:
+        dct: dict[str, Any] = dict()
 
         grid: Grid = kwargs["grid"]
 
@@ -1768,7 +1768,7 @@ class Helix(_JSONSerializable):
         major_tick_periodic_distances = json_map.get(major_tick_periodic_distances_key)
         min_offset = optional_field(0, json_map, min_offset_key)
         max_offset = json_map.get(max_offset_key)
-        idx = json_map.get(idx_on_helix_key)
+        idx = json_map.get(idx_on_helix_key, 0)
 
         position_map = optional_field(None, json_map, position_key, legacy_keys=legacy_position_keys)
         position = Position3D.from_json(position_map) if position_map is not None else None
@@ -1792,8 +1792,11 @@ class Helix(_JSONSerializable):
         )
 
     def default_grid_position(self) -> tuple[int, int]:
-        if self.idx is None:
-            raise AssertionError("cannot call default_grid_position when idx is None")
+        if self.idx < 0:
+            raise IllegalDesignError(
+                "Helix idx must be non-negative to have a default grid position; "
+                "helices have default idx -1; be sure to set it explicitly"
+            )
         return 0, self.idx
 
     def calculate_major_ticks(self, grid: Grid) -> list[int]:
@@ -6266,7 +6269,7 @@ class Design(_JSONSerializable):
         )
 
     def to_json_serializable(self, suppress_indent: bool = True, **kwargs: Any) -> dict[str, Any]:
-        dct: Any = OrderedDict()
+        dct: dict[str, Any] = OrderedDict()
         dct[version_key] = __version__
 
         if self._has_default_groups():
@@ -6351,21 +6354,48 @@ class Design(_JSONSerializable):
 
     @staticmethod
     def _normalize_helices_as_dict(helices: list[Helix] | dict[int, Helix]) -> dict[int, Helix]:
-        def idx_of(helix: Helix, order: int) -> int:
-            return order if helix.idx is None else helix.idx
-
         if isinstance(helices, list):
-            indices = [idx_of(helix, idx) for idx, helix in enumerate(helices)]
+            helix_pos_no_idx = None
+            helix_pos_with_idx = None
+            for idx, helix in enumerate(helices):
+                if helix.idx >= 0 and helix_pos_no_idx is None:
+                    helix_pos_with_idx = idx
+                elif helix.idx < 0 and helix_pos_with_idx is None:
+                    helix_pos_no_idx = idx
+                if helix_pos_no_idx is not None and helix_pos_with_idx is not None:
+                    raise IllegalDesignError(
+                        "When specifying helices as a list, either all helices must have idx < 0 "
+                        "or all helices must have idx >= 0, but I found helix "
+                        f"{helices[helix_pos_no_idx]} has idx < 0 and "
+                        f"helix {helices[helix_pos_with_idx]} has idx >= 0"
+                    )
+
+            # if helices do not have idx's set; set them base on their position in the list
+            if helix_pos_no_idx is not None:
+                for idx, helix in enumerate(helices):
+                    if helix.idx < 0:
+                        helix.idx = idx
+
+            indices = [helix.idx for helix in helices]
             if len(set(indices)) < len(indices):
                 duplicates = [index for index, count in Counter(indices).items() if count > 1]
                 raise IllegalDesignError(
                     "No two helices can share an index, but these indices appear on "
                     f"multiple helices: {', '.join(map(str, duplicates))}"
                 )
-            helices = {idx_of(helix, idx): helix for idx, helix in enumerate(helices)}
+            helices = {helix.idx: helix for helix in helices}
 
-        for idx, helix in helices.items():
-            helix.idx = idx
+        else:
+            for idx, helix in helices.items():
+                if helix.idx >= 0:
+                    if helix.idx != idx:
+                        raise IllegalDesignError(
+                            "When specifying helices as a dict, each helix's idx field must match its key in the dict,"
+                            "or must be unspecified (-1), "
+                            f"but I found helix {helix} has idx {helix.idx} but is at key {idx}"
+                        )
+                else:
+                    helix.idx = idx
 
         return helices
 
