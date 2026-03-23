@@ -4950,11 +4950,7 @@ class IllegalDesignError(ValueError):
     """Indicates that some aspect of the :any:`Design` object is illegal."""
 
     def __init__(self, the_cause: str) -> None:
-        self.cause = the_cause
-
-    # __str__ is to print() the value
-    def __str__(self) -> str:
-        return repr(self.cause)
+        super().__init__(the_cause)
 
 
 class StrandError(IllegalDesignError):
