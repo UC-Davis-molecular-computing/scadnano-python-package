@@ -4481,11 +4481,12 @@ class Strand(_JSONSerializable):
         trimmed_seq = _remove_whitespace_and_uppercase(sequence)
         if len(trimmed_seq) != self.dna_length():
             domain = self.first_domain()
+            strand_name = f' "{self.name}"' if self.name is not None else ""
             raise StrandError(
                 self,
-                f"strand starting at helix {domain.helix} offset {domain.offset_5p()} "
-                f"has length {self.dna_length()}, but you attempted to assign a "
-                f"DNA sequence of length {len(trimmed_seq)}: {sequence}",
+                f"\nstrand{strand_name} starting at helix {domain.helix} offset {domain.offset_5p()} "
+                f"has length {self.dna_length()},\nbut you attempted to assign a "
+                f"DNA sequence of length {len(trimmed_seq)}:\n{sequence}",
             )
 
         start_idx_ss = 0
@@ -4973,7 +4974,7 @@ class StrandError(IllegalDesignError):
 
         msg = f"""{the_cause}
     strand length        =  {strand.dna_length()}
-    DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A"}
+    DNA length           =  {len(strand.dna_sequence) if strand.dna_sequence else "N/A, no DNA sequence assigned"}
     DNA sequence         =  {strand.dna_sequence}
     strand 5' helix      =  {first_domain.helix if first_domain is not None else "N/A"}
     strand 5' end offset =  {first_domain.offset_5p() if first_domain is not None else "N/A"}
