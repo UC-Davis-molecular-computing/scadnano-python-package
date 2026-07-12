@@ -3,73 +3,20 @@ name: Run Unit Tests
 on: pull_request
 
 jobs:
-  python-versions:
-    # Work out which Python versions to test, rather than hardcoding them, so that the list cannot go
-    # stale: a newly released Python joins the matrix on its own (and the tests fail loudly if scadnano
-    # is not ready for it), and a Python that reaches end-of-life drops off on its own.
-    #
-    # Note this is NOT what python-version: '3.x' does. That is a single-version specifier meaning
-    # "the newest 3.x", so using it here would test one version, not all of them.
-    name: "Determine supported Python versions"
-    runs-on: ubuntu-latest
-    outputs:
-      versions: ${{ steps.compute.outputs.versions }}
-    steps:
-      - name: Compute version matrix
-        id: compute
-        shell: python
-        run: |
-          import datetime
-          import json
-          import os
-          import urllib.request
-
-          today = datetime.date.today().isoformat()
-
-          # Python releases that are supported upstream: already released, and not yet end-of-life.
-          with urllib.request.urlopen("https://endoflife.date/api/python.json", timeout=30) as response:
-              cycles = json.load(response)
-          supported = {
-              cycle["cycle"]
-              for cycle in cycles
-              if cycle.get("eol")
-              and cycle["eol"] > today
-              and cycle.get("releaseDate")
-              and cycle["releaseDate"] <= today
-          }
-
-          # ...intersected with the versions actions/setup-python can actually install. Without this,
-          # a Python that upstream has released but the runners do not offer yet would fail the matrix
-          # with "version not found", which is infrastructure noise rather than a real test failure.
-          url = "https://raw.githubusercontent.com/actions/python-versions/main/versions-manifest.json"
-          with urllib.request.urlopen(url, timeout=30) as response:
-              manifest = json.load(response)
-          installable = {
-              ".".join(entry["version"].split(".")[:2]) for entry in manifest if entry.get("stable")
-          }
-
-          versions = sorted(supported & installable, key=lambda v: [int(part) for part in v.split(".")])
-          if not versions:
-              raise SystemExit("computed an empty Python version matrix")
-
-          print(f"testing Python {', '.join(versions)}")
-          with open(os.environ["GITHUB_OUTPUT"], "a") as out:
-              out.write(f"versions={json.dumps(versions)}\n")
-
   build:
-    needs: python-versions
-    name: "Python ${{ matrix.python-version }}"
+
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ${{ fromJSON(needs.python-versions.outputs.versions) }}
+        # "3.x" means the newest released Python, so the latest version is always tested even if this
+        # list is not kept up to date. setup.py requires >= 3.10.
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.x" ]
 
     steps:
       - uses: actions/checkout@v7
       # the runner image ships only one Python on PATH; this is what actually selects the version
-      # named by the matrix (the supported versions are all in the runner's tool cache, so it is a
-      # fast lookup rather than a download)
+      # named by the matrix
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
         with:
