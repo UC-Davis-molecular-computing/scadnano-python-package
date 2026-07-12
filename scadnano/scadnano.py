@@ -8679,8 +8679,26 @@ class Design(_JSONSerializable):
         # TODO: what if these are extensions or loopouts?
         domains_before = domains[:order]
         domains_after = domains[order + 1 :]
-        domain_left: Domain = Domain(helix, forward, domain_to_remove.start, offset)
-        domain_right: Domain = Domain(helix, forward, offset, domain_to_remove.end)
+        # deletions and insertions are keyed by offset, so each goes to whichever of the two new domains
+        # covers its offset. They must be carried over: they change Domain.dna_length(), so dropping them
+        # would misalign the DNA sequence and the internal modification indices with the bases they
+        # describe. (ligate likewise unions them back together.)
+        domain_left: Domain = Domain(
+            helix,
+            forward,
+            domain_to_remove.start,
+            offset,
+            deletions=[deletion for deletion in domain_to_remove.deletions if deletion < offset],
+            insertions=[insertion for insertion in domain_to_remove.insertions if insertion[0] < offset],
+        )
+        domain_right: Domain = Domain(
+            helix,
+            forward,
+            offset,
+            domain_to_remove.end,
+            deletions=[deletion for deletion in domain_to_remove.deletions if deletion >= offset],
+            insertions=[insertion for insertion in domain_to_remove.insertions if insertion[0] >= offset],
+        )
 
         # "before" and "after" mean in the 5' --> 3' direction, i.e., if a reverse domain:
         # <--------]
@@ -8727,27 +8745,54 @@ class Design(_JSONSerializable):
         domains_before = domains_before + cast(list[Domain | Loopout | Extension], [domain_to_add_before])  # noqa
         domains_after = cast(list[Domain | Loopout | Extension], [domain_to_add_after]) + domains_after  # noqa
 
+        # number of bases 5' of the nick; internal modifications are indexed into the strand's DNA
+        # sequence, so this is where their indices get split (linear case) or rotated (circular case)
+        num_bases_before = sum(domain.dna_length() for domain in domains_before)
+
         if strand.circular:
             # if strand is circular, we modify its domains in place
             domains = domains_after + domains_before
             strand.set_domains(domains)
 
-            # DNA sequence was rotated, so re-assign it
+            # The strand's 5' end moved from the start of the old first domain to just 3' of the nick,
+            # i.e., the base that was at index num_bases_before is now at index 0. Rotate the DNA
+            # sequence and the internal modification indices to follow.
             if seq_before_whole is not None and seq_after_whole is not None:
-                seq = seq_before_whole + seq_after_whole
+                seq = seq_after_whole + seq_before_whole
                 strand.set_dna_sequence(seq)
+
+            dna_length = strand.dna_length()
+            strand.modifications_int = {
+                (idx - num_bases_before) % dna_length: mod for idx, mod in strand.modifications_int.items()
+            }
 
             strand.set_linear()
 
         else:
             # if strand is not circular, we delete it and create two new strands
-            self.strands.remove(strand)
 
+            # 5' modification stays with the strand keeping the 5' end, 3' modification with the other,
+            # and each internal modification goes to whichever side of the nick its base is on
+            mods_int_before = {
+                idx: mod for idx, mod in strand.modifications_int.items() if idx < num_bases_before
+            }
+            mods_int_after = {
+                idx - num_bases_before: mod
+                for idx, mod in strand.modifications_int.items()
+                if idx >= num_bases_before
+            }
+
+            # a name/label identifies a single strand, so it cannot be given to both new strands; it goes
+            # to the one keeping the 5' end, matching ligate and add_half_crossover
             strand_before: Strand = Strand(
                 domains=domains_before,
                 dna_sequence=seq_before_whole,
                 color=strand.color,
                 vendor_fields=strand.vendor_fields,
+                modification_5p=strand.modification_5p,
+                modifications_int=mods_int_before,
+                name=strand.name,
+                label=strand.label,
             )
 
             color_after = next(self.color_cycler) if new_color else strand.color
@@ -8755,8 +8800,12 @@ class Design(_JSONSerializable):
                 domains=domains_after,
                 dna_sequence=seq_after_whole,
                 color=color_after,
+                modification_3p=strand.modification_3p,
+                modifications_int=mods_int_after,
             )
 
+            # both new strands constructed successfully, so it is now safe to swap them in
+            self.strands.remove(strand)
             # TODO: put in same position as original strand
             self.strands.extend([strand_before, strand_after])
 
@@ -8886,26 +8935,56 @@ class Design(_JSONSerializable):
             strand = strand_left
             assert strand.first_bound_domain() is dom_5p
             assert strand.last_bound_domain() is dom_3p
+
+            # A circular strand cannot have a 5'/3' modification. Check before mutating the strand
+            # below, so that a strand that cannot legally be made circular is left untouched.
+            if strand.modification_5p is not None:
+                raise StrandError(strand, "cannot have a 5' modification on a circular strand")
+            if strand.modification_3p is not None:
+                raise StrandError(strand, "cannot have a 3' modification on a circular strand")
+
+            old_dna_sequence = strand.dna_sequence
+            # after joining, the strand starts at the 5' end of dom_3p rather than that of dom_5p
+            num_bases_rotated = dom_3p.dna_length()
+
             strand.domains[0] = dom_new  # set first domain equal to new joined domain
             strand.domains.pop()  # remove last domain
             strand.set_circular()
             for domain in strand.domains:
                 domain._parent_strand = strand
 
+            # dom_new is a fresh Domain with no DNA sequence, so the sequence must be re-assigned;
+            # the last num_bases_rotated bases (those of dom_3p) are now the first ones. The internal
+            # modification indices are rotated by the same amount to stay on the same bases.
+            if old_dna_sequence is not None:
+                strand.set_dna_sequence(
+                    old_dna_sequence[-num_bases_rotated:] + old_dna_sequence[:-num_bases_rotated]
+                )
+            dna_length = strand.dna_length()
+            strand.modifications_int = {
+                (idx + num_bases_rotated) % dna_length: mod for idx, mod in strand.modifications_int.items()
+            }
+
         else:
             # join strands
             old_strand_3p_dna_sequence = strand_3p.dna_sequence
             old_strand_5p_dna_sequence = strand_5p.dna_sequence
+            # number of bases strand_3p contributes to the front of the joined strand; must be read
+            # before its domains are merged with strand_5p's below
+            num_bases_strand_3p = strand_3p.dna_length()
 
             strand_3p.domains.pop()
             strand_3p.domains.append(dom_new)
             strand_3p.domains.extend(strand_5p.domains[1:])
             strand_3p.is_scaffold = strand_left.is_scaffold or strand_right.is_scaffold
-            if strand_5p.modification_3p is not None:
-                strand_3p.set_modification_3p(strand_5p.modification_3p)
+
+            # strand_3p supplies the 5' part of the joined strand, so it keeps its own 5' modification
+            # and its internal modification indices, but its 3' modification (if any) now sits at the
+            # ligated nick in the middle of the strand, so it is replaced by strand_5p's.
+            strand_3p.modification_3p = strand_5p.modification_3p
             for idx, mod in strand_5p.modifications_int.items():
-                new_idx = idx + strand_3p.dna_length()
-                strand_3p.set_modification_internal(new_idx, mod)
+                strand_3p.modifications_int[idx + num_bases_strand_3p] = mod
+
             if old_strand_3p_dna_sequence is not None and old_strand_5p_dna_sequence is not None:
                 strand_3p.set_dna_sequence(old_strand_3p_dna_sequence + old_strand_5p_dna_sequence)
             if strand_5p.is_scaffold and not strand_3p.is_scaffold and strand_5p.color is not None:
@@ -9022,12 +9101,28 @@ class Design(_JSONSerializable):
             raise IllegalDesignError(
                 "cannot add crossover between two strands if one has a DNA sequence and the other does not"
             )
+
+        # strand_first supplies the 5' part of the new strand and strand_last the 3' part, so the new
+        # strand takes its 5' modification from strand_first and its 3' modification from strand_last.
+        # (strand_first's 3' modification and strand_last's 5' modification are at the crossover, in the
+        # middle of the new strand, so they cannot be kept.) strand_first's internal modifications keep
+        # their indices, and strand_last's shift up by the number of bases now preceding them.
+        new_modifications_int = dict(strand_first.modifications_int)
+        for idx, mod in strand_last.modifications_int.items():
+            new_modifications_int[idx + strand_first.dna_length()] = mod
+
         new_strand: Strand = Strand(
             domains=new_domains,
             color=strand_first.color,
             dna_sequence=new_dna,
             vendor_fields=strand_first.vendor_fields,
             is_scaffold=strand1.is_scaffold or strand2.is_scaffold,
+            modification_5p=strand_first.modification_5p,
+            modification_3p=strand_last.modification_3p,
+            modifications_int=new_modifications_int,
+            # the new strand takes the name/label of the strand supplying its 5' end
+            name=strand_first.name,
+            label=strand_first.label,
         )
 
         # put new strand in place where strand_first was

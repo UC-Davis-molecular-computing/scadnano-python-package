@@ -3958,6 +3958,535 @@ class TestNickLigateAndCrossover(unittest.TestCase):
         self.assertIn(expected_strand2, design.strands)
 
 
+def base_addresses(strand: sc.Strand) -> list[tuple[int, bool, int]]:
+    """
+    Physical address (helix, forward, offset) of each base of `strand`, indexed by the base's position
+    in :data:`Strand.dna_sequence`, i.e., ``base_addresses(strand)[i]`` is the address of the base at
+    index `i` of the strand's DNA sequence. Accounts for deletions (the offset has no base) and
+    insertions (the offset has more than one base). Assumes `strand` has no loopouts/extensions.
+
+    This is an independent way of working out where each base physically sits, so a test can assert that
+    a strand edit left an internal modification on the same base it started on.
+    """
+    addresses = []
+    for domain in strand.domains:
+        offsets = range(domain.start, domain.end) if domain.forward else range(domain.end - 1, domain.start - 1, -1)
+        insertion_lengths = dict(domain.insertions)
+        for offset in offsets:
+            if offset in domain.deletions:
+                continue
+            num_bases = 1 + insertion_lengths.get(offset, 0)
+            addresses.extend([(domain.helix, domain.forward, offset)] * num_bases)
+    return addresses
+
+
+class TestModificationsOnStrandEdits(unittest.TestCase):
+    """
+    Tests that add_nick(), ligate(), add_half_crossover(), and add_full_crossover() preserve
+    :any:`Modification`'s on the :any:`Strand`'s they edit.
+
+    https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/321
+
+    When two strands are joined, with strand A supplying the 5' part of the joined strand and strand B
+    the 3' part, the joined strand's 5' modification is A's, its 3' modification is B's, and its internal
+    modifications are A's at unchanged indices together with B's shifted up by A's DNA length.
+    Splitting a strand is the reverse. In all cases an internal modification must stay attached to the
+    same physical base.
+    """
+
+    def assert_mods_on_same_bases(
+        self, strand: sc.Strand, expected: dict[tuple[int, bool, int], sc.ModificationInternal]
+    ) -> None:
+        """Assert that the internal mods of `strand` sit on the bases at the given physical addresses."""
+        addresses = base_addresses(strand)
+        actual = {addresses[idx]: mod_int for idx, mod_int in strand.modifications_int.items()}
+        self.assertDictEqual(expected, actual)
+
+    def setUp(self) -> None:
+        r"""
+        two_strand_design:
+            0        8        16
+            AACCGGTT AACCGGTT
+        0   [------- ------->
+        1   <------- -------]
+            TTGGCCAA TTGGCCAA
+        """
+        self.design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        self.design.draw_strand(0, 0).move(16)
+        self.design.draw_strand(1, 16).move(-16)
+        self.forward_strand = self.design.strands[0]
+        self.reverse_strand = self.design.strands[1]
+        self.forward_strand.set_dna_sequence("AACCGGTT" * 2)
+        self.reverse_strand.set_dna_sequence("TTGGCCAA" * 2)
+
+    ##############################################################################
+    # add_half_crossover
+
+    def test_add_half_crossover__preserves_modifications(self) -> None:
+        r"""
+        Joins the two strands at offset 15, so the forward strand supplies the 5' half of the joined
+        strand and the reverse strand the 3' half:
+
+            0        8        16
+        0   [------- --------\
+        1   <------- --------/
+        """
+        self.forward_strand.set_modification_5p(mod.biotin_5p)
+        self.forward_strand.set_modification_3p(mod.cy5_3p)  # at the junction; cannot survive
+        self.forward_strand.set_modification_internal(4, mod.cy3_int)
+        self.reverse_strand.set_modification_5p(mod.cy3_5p)  # at the junction; cannot survive
+        self.reverse_strand.set_modification_3p(mod.biotin_3p)
+        self.reverse_strand.set_modification_internal(2, mod.cy5_int)
+
+        self.design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+
+        self.assertEqual(1, len(self.design.strands))
+        strand = self.design.strands[0]
+        self.assertEqual(mod.biotin_5p, strand.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand.modification_3p)
+        # reverse strand's internal mod at index 2 shifts up by the forward strand's length (16)
+        self.assertDictEqual({4: mod.cy3_int, 18: mod.cy5_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(0, True, 4): mod.cy3_int, (1, False, 13): mod.cy5_int})
+
+    def test_add_half_crossover__preserves_modifications_other_strand_first(self) -> None:
+        r"""
+        Joins at offset 0, so now the *reverse* strand supplies the 5' half of the joined strand.
+        This exercises the other branch of add_half_crossover, where strand_first is strand2.
+
+            0        8        16
+        0   \------- ------->
+        1   /------- -------]
+        """
+        self.reverse_strand.set_modification_5p(mod.biotin_5p)
+        self.reverse_strand.set_modification_internal(2, mod.cy5_int)
+        self.forward_strand.set_modification_3p(mod.biotin_3p)
+        self.forward_strand.set_modification_internal(4, mod.cy3_int)
+
+        self.design.add_half_crossover(helix=0, helix2=1, offset=0, forward=True)
+
+        self.assertEqual(1, len(self.design.strands))
+        strand = self.design.strands[0]
+        self.assertEqual(mod.biotin_5p, strand.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand.modification_3p)
+        self.assertDictEqual({2: mod.cy5_int, 20: mod.cy3_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(1, False, 13): mod.cy5_int, (0, True, 4): mod.cy3_int})
+
+    def test_add_half_crossover__to_itself_with_terminal_modification_raises(self) -> None:
+        """A circular strand cannot carry a 5'/3' modification, so this must raise rather than
+        silently drop it."""
+        design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).cross(1).move(-8)
+        design.strands[0].set_modification_5p(mod.biotin_5p)
+        with self.assertRaises(sc.StrandError):
+            design.add_half_crossover(helix=0, helix2=1, offset=0, forward=True)
+
+    ##############################################################################
+    # add_full_crossover
+
+    def test_add_full_crossover__preserves_modifications(self) -> None:
+        r"""
+        add_full_crossover nicks both strands at offset 8 and then adds two half crossovers, turning the
+        two 16-base strands into two different 16-base strands, each half on helix 0 and half on helix 1:
+
+            0        8        16
+        0   [-------\ /------>
+        1   <-------/ \------]
+
+        Every internal modification must end up on the same physical base it started on, even though the
+        strand it belongs to, and its index within that strand, both change.
+        """
+        self.forward_strand.set_modification_5p(mod.biotin_5p)
+        self.forward_strand.set_modification_internal(4, mod.cy3_int)  # helix 0 offset 4
+        self.forward_strand.set_modification_internal(12, mod.fluorescein_int)  # helix 0 offset 12
+        self.reverse_strand.set_modification_3p(mod.biotin_3p)
+        self.reverse_strand.set_modification_internal(2, mod.cy5_int)  # helix 1 offset 13
+
+        self.design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+
+        self.assertEqual(2, len(self.design.strands))
+
+        # this strand runs from helix 0 offset 0 across to helix 1 and ends at helix 1 offset 0,
+        # so it keeps the forward strand's 5' mod and the reverse strand's 3' mod
+        strand_left = strand_matching(self.design.strands, 0, True, 0, 8)
+        self.assertEqual(mod.biotin_5p, strand_left.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand_left.modification_3p)
+        self.assertDictEqual({4: mod.cy3_int}, strand_left.modifications_int)
+        self.assert_mods_on_same_bases(strand_left, {(0, True, 4): mod.cy3_int})
+
+        # this strand runs from helix 1 offset 15 across to helix 0 and ends at helix 0 offset 15;
+        # it has no terminal mods, and picks up an internal mod from each of the original strands
+        strand_right = strand_matching(self.design.strands, 1, False, 8, 16)
+        self.assertIsNone(strand_right.modification_5p)
+        self.assertIsNone(strand_right.modification_3p)
+        self.assertDictEqual({2: mod.cy5_int, 12: mod.fluorescein_int}, strand_right.modifications_int)
+        self.assert_mods_on_same_bases(
+            strand_right, {(1, False, 13): mod.cy5_int, (0, True, 12): mod.fluorescein_int}
+        )
+
+    ##############################################################################
+    # ligate
+
+    def test_ligate__preserves_modifications(self) -> None:
+        r"""
+            0        8        16
+        0   [------> [------>
+        becomes
+        0   [------- ------->
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(8)
+        design.draw_strand(0, 8).move(8)
+        strand_left, strand_right = design.strands
+        strand_left.set_dna_sequence("AACCGGTT")
+        strand_right.set_dna_sequence("TTGGCCAA")
+        strand_left.set_modification_5p(mod.biotin_5p)
+        strand_left.set_modification_3p(mod.cy5_3p)  # at the nick; cannot survive
+        strand_left.set_modification_internal(2, mod.cy3_int)
+        strand_right.set_modification_5p(mod.cy3_5p)  # at the nick; cannot survive
+        strand_right.set_modification_3p(mod.biotin_3p)
+        strand_right.set_modification_internal(3, mod.cy5_int)
+
+        design.ligate(helix=0, offset=8, forward=True)
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual(mod.biotin_5p, strand.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand.modification_3p)
+        self.assertDictEqual({2: mod.cy3_int, 11: mod.cy5_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(0, True, 2): mod.cy3_int, (0, True, 11): mod.cy5_int})
+
+    def test_ligate__preserves_modifications_reverse(self) -> None:
+        r"""
+            0        8        16
+        0   <------] <------]
+        becomes
+        0   <------- -------]
+        The 5' end of the joined strand is on the *right*, so the right-hand strand supplies the 5' part.
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 16).move(-8)
+        design.draw_strand(0, 8).move(-8)
+        strand_right, strand_left = design.strands
+        strand_right.set_dna_sequence("AACCGGTT")
+        strand_left.set_dna_sequence("TTGGCCAA")
+        strand_right.set_modification_5p(mod.biotin_5p)
+        strand_right.set_modification_internal(2, mod.cy3_int)
+        strand_left.set_modification_3p(mod.biotin_3p)
+        strand_left.set_modification_internal(3, mod.cy5_int)
+
+        design.ligate(helix=0, offset=8, forward=False)
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual(mod.biotin_5p, strand.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand.modification_3p)
+        self.assertDictEqual({2: mod.cy3_int, 11: mod.cy5_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(0, False, 13): mod.cy3_int, (0, False, 4): mod.cy5_int})
+
+    def test_ligate__stale_3p_modification_at_nick_is_removed(self) -> None:
+        """
+        The 3' modification of the strand on the 5' side of the nick ends up in the middle of the
+        joined strand, so it must not be left behind as the joined strand's 3' modification.
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(8)
+        design.draw_strand(0, 8).move(8)
+        strand_left, strand_right = design.strands
+        strand_left.set_modification_3p(mod.cy5_3p)  # at the nick; must not survive
+
+        design.ligate(helix=0, offset=8, forward=True)
+
+        self.assertEqual(1, len(design.strands))
+        self.assertIsNone(design.strands[0].modification_3p)
+
+    def test_ligate__circular_rotates_dna_and_internal_modifications(self) -> None:
+        r"""
+        Ligating a strand to itself makes it circular, which rotates the strand's 5' end from the 5' end
+        of its first domain to the 5' end of its last domain. The DNA sequence and the internal
+        modification indices must follow.
+
+            0    4    8
+        0   /---][---\
+        1   \--------/
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        design.draw_strand(0, 4).move(4).cross(1).move(-8).cross(0).move(4)
+        strand = design.strands[0]
+        strand.set_dna_sequence("AAAA" + "CCCCGGGG" + "TTTT")
+        strand.set_modification_internal(0, mod.cy3_int)  # first 'A', at helix 0 offset 4
+        strand.set_modification_internal(12, mod.cy5_int)  # first 'T', at helix 0 offset 0
+
+        design.ligate(helix=0, offset=4, forward=True)
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertTrue(strand.circular)
+        # the joined domain (0, True, 0, 8) is now the strand's first domain, so the sequence starts
+        # with the 'TTTT' that used to be at the 3' end
+        self.assertEqual("TTTT" + "AAAA" + "CCCCGGGG", strand.dna_sequence)
+        self.assertDictEqual({4: mod.cy3_int, 0: mod.cy5_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(0, True, 4): mod.cy3_int, (0, True, 0): mod.cy5_int})
+
+    def test_ligate__to_itself_with_terminal_modification_raises_and_design_unchanged(self) -> None:
+        """A circular strand cannot carry a 5'/3' modification, so this must raise; and because the
+        check fails, the design must be left exactly as it was."""
+        design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        design.draw_strand(0, 4).move(4).cross(1).move(-8).cross(0).move(4)
+        strand = design.strands[0]
+        strand.set_dna_sequence("AAAA" + "CCCCGGGG" + "TTTT")
+        strand.set_modification_5p(mod.biotin_5p)
+
+        with self.assertRaises(sc.StrandError):
+            design.ligate(helix=0, offset=4, forward=True)
+
+        self.assertFalse(strand.circular)
+        self.assertEqual(3, len(strand.domains))
+        self.assertEqual("AAAA" + "CCCCGGGG" + "TTTT", strand.dna_sequence)
+
+    ##############################################################################
+    # add_nick
+
+    def test_add_nick__preserves_modifications(self) -> None:
+        r"""
+            0        8        16
+        0   [------- ------->
+        becomes
+        0   [------> [------>
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(16)
+        strand = design.strands[0]
+        strand.set_dna_sequence("AACCGGTT" * 2)
+        strand.set_modification_5p(mod.biotin_5p)
+        strand.set_modification_3p(mod.biotin_3p)
+        strand.set_modification_internal(2, mod.cy3_int)
+        strand.set_modification_internal(11, mod.cy5_int)
+
+        design.add_nick(helix=0, offset=8, forward=True)
+
+        self.assertEqual(2, len(design.strands))
+        strand_before = strand_matching(design.strands, 0, True, 0, 8)
+        strand_after = strand_matching(design.strands, 0, True, 8, 16)
+
+        self.assertEqual(mod.biotin_5p, strand_before.modification_5p)
+        self.assertIsNone(strand_before.modification_3p)
+        self.assertDictEqual({2: mod.cy3_int}, strand_before.modifications_int)
+        self.assert_mods_on_same_bases(strand_before, {(0, True, 2): mod.cy3_int})
+
+        self.assertIsNone(strand_after.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand_after.modification_3p)
+        # index 11 on the original strand is index 11 - 8 = 3 on the 3' strand
+        self.assertDictEqual({3: mod.cy5_int}, strand_after.modifications_int)
+        self.assert_mods_on_same_bases(strand_after, {(0, True, 11): mod.cy5_int})
+
+    def test_add_nick__preserves_modifications_reverse(self) -> None:
+        r"""
+            0        8        16
+        0   <------- -------]
+        becomes
+        0   <------] <------]
+        The 5' end is on the right, so the nick's "before" strand is the right-hand one.
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 16).move(-16)
+        strand = design.strands[0]
+        strand.set_dna_sequence("AACCGGTT" * 2)
+        strand.set_modification_5p(mod.biotin_5p)
+        strand.set_modification_3p(mod.biotin_3p)
+        strand.set_modification_internal(2, mod.cy3_int)
+        strand.set_modification_internal(11, mod.cy5_int)
+
+        design.add_nick(helix=0, offset=8, forward=False)
+
+        self.assertEqual(2, len(design.strands))
+        strand_before = strand_matching(design.strands, 0, False, 8, 16)
+        strand_after = strand_matching(design.strands, 0, False, 0, 8)
+
+        self.assertEqual(mod.biotin_5p, strand_before.modification_5p)
+        self.assertDictEqual({2: mod.cy3_int}, strand_before.modifications_int)
+        self.assert_mods_on_same_bases(strand_before, {(0, False, 13): mod.cy3_int})
+
+        self.assertEqual(mod.biotin_3p, strand_after.modification_3p)
+        self.assertDictEqual({3: mod.cy5_int}, strand_after.modifications_int)
+        self.assert_mods_on_same_bases(strand_after, {(0, False, 4): mod.cy5_int})
+
+    def test_add_nick__circular_rotates_dna_and_internal_modifications(self) -> None:
+        r"""
+        Nicking a circular strand makes it linear, rotating its domains so that the strand now starts
+        just 3' of the nick. The DNA sequence and internal modification indices must follow.
+
+            0        8
+        0   /-------\
+        1   \---]<--/
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        design.draw_strand(0, 0).move(8).cross(1).move(-8).as_circular()
+        strand = design.strands[0]
+        strand.set_dna_sequence("AAAACCCC" + "GGGGTTTT")
+        strand.set_modification_internal(0, mod.cy3_int)  # first 'A', at helix 0 offset 0
+        strand.set_modification_internal(8, mod.cy5_int)  # first 'G', at helix 1 offset 7
+
+        design.add_nick(helix=1, offset=4, forward=False)
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertFalse(strand.circular)
+        # new domain order is (1,False,0,4), (0,True,0,8), (1,False,4,8), so the sequence now starts
+        # with the 'TTTT' that the reverse domain reads out over offsets 3..0
+        self.assertEqual("TTTT" + "AAAACCCC" + "GGGG", strand.dna_sequence)
+        self.assertDictEqual({4: mod.cy3_int, 12: mod.cy5_int}, strand.modifications_int)
+        self.assert_mods_on_same_bases(strand, {(0, True, 0): mod.cy3_int, (1, False, 7): mod.cy5_int})
+
+    ##############################################################################
+    # deletions/insertions, which change Domain.dna_length() and so shift internal mod indices
+
+    def test_add_nick__carries_deletions_and_insertions_to_the_correct_side(self) -> None:
+        r"""
+        A deletion or insertion changes how many bases a domain has, so it changes the DNA index of every
+        base 3' of it. add_nick must give each deletion/insertion to the piece whose offsets contain it,
+        or the internal modifications (and the DNA sequence) end up on the wrong bases.
+
+            0    X   8       I  16          X = deletion at offset 4
+        0   [----------------------->       I = insertion of 2 at offset 12
+        """
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(16).with_deletions(4).with_insertions((12, 2))
+        strand = design.strands[0]
+        # 16 offsets - 1 deletion + 2 inserted bases = 17 bases
+        self.assertEqual(17, strand.dna_length())
+        strand.set_dna_sequence("AACCGGTTAACCGGTTA")
+        strand.set_modification_internal(2, mod.cy3_int)  # 5' of the nick, at helix 0 offset 2
+        strand.set_modification_internal(10, mod.cy5_int)  # 3' of the nick, at helix 0 offset 11
+
+        design.add_nick(helix=0, offset=8, forward=True)
+
+        strand_before = strand_matching(design.strands, 0, True, 0, 8)
+        strand_after = strand_matching(design.strands, 0, True, 8, 16)
+        # the deletion at offset 4 belongs to the 5' piece, the insertion at offset 12 to the 3' piece
+        self.assertEqual([4], strand_before.domains[0].deletions)
+        self.assertEqual([], strand_before.domains[0].insertions)
+        self.assertEqual([], strand_after.domains[0].deletions)
+        self.assertEqual([(12, 2)], strand_after.domains[0].insertions)
+        self.assertEqual(7, strand_before.dna_length())  # 8 offsets - 1 deletion
+        self.assertEqual(10, strand_after.dna_length())  # 8 offsets + 2 inserted bases
+        # and the DNA is intact: the two pieces still spell the original sequence
+        self.assertEqual("AACCGGT", strand_before.dna_sequence)
+        self.assertEqual("TAACCGGTTA", strand_after.dna_sequence)
+
+        self.assertDictEqual({2: mod.cy3_int}, strand_before.modifications_int)
+        self.assert_mods_on_same_bases(strand_before, {(0, True, 2): mod.cy3_int})
+        # DNA index 10 of the original strand is index 10 - 7 = 3 on the 3' piece
+        self.assertDictEqual({3: mod.cy5_int}, strand_after.modifications_int)
+        self.assert_mods_on_same_bases(strand_after, {(0, True, 11): mod.cy5_int})
+
+    def test_add_nick_then_ligate__round_trips_with_deletions_and_insertions(self) -> None:
+        """Nicking and then ligating at the same place must restore the original strand exactly."""
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(16).with_deletions(4).with_insertions((12, 2))
+        strand = design.strands[0]
+        strand.set_dna_sequence("AACCGGTTAACCGGTTA")
+        strand.set_modification_5p(mod.biotin_5p)
+        strand.set_modification_3p(mod.biotin_3p)
+        strand.set_modification_internal(2, mod.cy3_int)
+        strand.set_modification_internal(10, mod.cy5_int)
+
+        design.add_nick(helix=0, offset=8, forward=True)
+        design.ligate(helix=0, offset=8, forward=True)
+
+        self.assertEqual(1, len(design.strands))
+        strand = design.strands[0]
+        self.assertEqual([4], strand.domains[0].deletions)
+        self.assertEqual([(12, 2)], strand.domains[0].insertions)
+        self.assertEqual("AACCGGTTAACCGGTTA", strand.dna_sequence)
+        self.assertEqual(mod.biotin_5p, strand.modification_5p)
+        self.assertEqual(mod.biotin_3p, strand.modification_3p)
+        self.assertDictEqual({2: mod.cy3_int, 10: mod.cy5_int}, strand.modifications_int)
+
+
+class TestNamesOnStrandEdits(unittest.TestCase):
+    """
+    Tests that add_nick(), ligate(), add_half_crossover(), and add_full_crossover() preserve
+    :data:`Strand.name` and :data:`Strand.label`.
+
+    https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/320
+
+    The rule is that the name/label of the 5' :any:`Strand` wins: when two strands are joined, the joined
+    strand takes the name of the one supplying its 5' end, and when a strand is split, the piece keeping
+    the 5' end keeps the name. (:py:meth:`Design.ligate` already worked this way, since it joins by
+    mutating the 5' strand in place.)
+    """
+
+    def setUp(self) -> None:
+        r"""
+            0        8        16
+        0   [------- ------->    "forward"
+        1   <------- -------]    "reverse"
+        """
+        self.design = sc.Design(helices=[sc.Helix(max_offset=32) for _ in range(2)])
+        self.design.draw_strand(0, 0).move(16).with_name("forward").with_label("forward_label")
+        self.design.draw_strand(1, 16).move(-16).with_name("reverse").with_label("reverse_label")
+
+    def test_add_half_crossover__preserves_name_and_label_of_5p_strand(self) -> None:
+        """Joining at offset 15 makes the forward strand the 5' half, so its name/label win."""
+        self.design.add_half_crossover(helix=0, helix2=1, offset=15, forward=True)
+        self.assertEqual(1, len(self.design.strands))
+        self.assertEqual("forward", self.design.strands[0].name)
+        self.assertEqual("forward_label", self.design.strands[0].label)
+
+    def test_add_half_crossover__preserves_name_and_label_of_5p_strand_other_strand_first(self) -> None:
+        """Joining at offset 0 makes the reverse strand the 5' half, so now *its* name/label win.
+        This exercises the other branch of add_half_crossover, where strand_first is strand2."""
+        self.design.add_half_crossover(helix=0, helix2=1, offset=0, forward=True)
+        self.assertEqual(1, len(self.design.strands))
+        self.assertEqual("reverse", self.design.strands[0].name)
+        self.assertEqual("reverse_label", self.design.strands[0].label)
+
+    def test_add_nick__keeps_name_and_label_on_5p_strand(self) -> None:
+        """The piece keeping the 5' end keeps the name; the other piece gets no name (a name identifies
+        one strand, so it cannot be given to both pieces)."""
+        self.design.add_nick(helix=0, offset=8, forward=True)
+
+        strand_before = strand_matching(self.design.strands, 0, True, 0, 8)
+        strand_after = strand_matching(self.design.strands, 0, True, 8, 16)
+        self.assertEqual("forward", strand_before.name)
+        self.assertEqual("forward_label", strand_before.label)
+        self.assertIsNone(strand_after.name)
+        self.assertIsNone(strand_after.label)
+
+    def test_add_nick__keeps_name_on_5p_strand_reverse(self) -> None:
+        """For a reverse domain the 5' end is on the right, so the right-hand piece keeps the name."""
+        self.design.add_nick(helix=1, offset=8, forward=False)
+
+        strand_before = strand_matching(self.design.strands, 1, False, 8, 16)
+        strand_after = strand_matching(self.design.strands, 1, False, 0, 8)
+        self.assertEqual("reverse", strand_before.name)
+        self.assertIsNone(strand_after.name)
+
+    def test_add_full_crossover__preserves_names(self) -> None:
+        """add_full_crossover nicks and then joins, so both original names must survive, each on the
+        strand that inherits the corresponding 5' end."""
+        self.design.add_full_crossover(helix=0, helix2=1, offset=8, forward=True)
+
+        self.assertEqual(2, len(self.design.strands))
+        # starts at helix 0 offset 0, which was the forward strand's 5' end
+        self.assertEqual("forward", strand_matching(self.design.strands, 0, True, 0, 8).name)
+        # starts at helix 1 offset 15, which was the reverse strand's 5' end
+        self.assertEqual("reverse", strand_matching(self.design.strands, 1, False, 8, 16).name)
+
+    def test_ligate__preserves_name_and_label_of_5p_strand(self) -> None:
+        """Regression guard: ligate already keeps the 5' strand's name, since it joins by mutating that
+        strand in place."""
+        design = sc.Design(helices=[sc.Helix(max_offset=32)])
+        design.draw_strand(0, 0).move(8).with_name("five_prime").with_label("five_prime_label")
+        design.draw_strand(0, 8).move(8).with_name("three_prime")
+
+        design.ligate(helix=0, offset=8, forward=True)
+
+        self.assertEqual(1, len(design.strands))
+        self.assertEqual("five_prime", design.strands[0].name)
+        self.assertEqual("five_prime_label", design.strands[0].label)
+
+
 class TestAutocalculatedData(unittest.TestCase):
     def test_helix_min_max_offsets_illegal_explicitly_specified(self) -> None:
         helices = [sc.Helix(min_offset=5, max_offset=5)]
