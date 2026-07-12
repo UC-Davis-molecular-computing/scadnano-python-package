@@ -1,0 +1,17 @@
+version: 2
+
+updates:
+  # Keep the versions of the third-party actions used in .github/workflows up to date.
+  # Without this they go stale silently, until the Node runtime they run on is retired and the
+  # workflows start failing on GitHub's schedule rather than on ours.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      # one PR for all of them, rather than one PR per action
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "CI"
