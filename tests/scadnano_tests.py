@@ -4587,19 +4587,21 @@ class TestHelixGroups(unittest.TestCase):
         e = "east"
         s = "south"
         w = "west"
+        # when helices are given as a list, either all of them specify idx or none of them do, so since
+        # the last two need an explicit idx, all of them state theirs explicitly
         helices = [
-            sc.Helix(max_offset=20, group=n, grid_position=(1, 1)),  # 0
-            sc.Helix(max_offset=21, group=n, grid_position=(0, 1)),  # 1
-            sc.Helix(max_offset=19, group=n, grid_position=(0, 2)),  # 2
-            sc.Helix(max_offset=18, group=n, grid_position=(1, 2)),  # 3
-            sc.Helix(max_offset=17, group=n, grid_position=(2, 2)),  # 4
-            sc.Helix(max_offset=16, group=n, grid_position=(2, 1)),  # 5
-            sc.Helix(max_offset=24, group=s),  # 6
-            sc.Helix(max_offset=25, group=s),  # 7
-            sc.Helix(max_offset=26, group=w, position=sc.Position3D(x=0, y=0, z=0)),  # 8
-            sc.Helix(max_offset=27, group=w, position=sc.Position3D(x=0, y=2.5, z=0)),  # 9
-            sc.Helix(idx=13, max_offset=22, group=e),  # 13
-            sc.Helix(idx=15, max_offset=23, group=e),  # 15
+            sc.Helix(idx=0, max_offset=20, group=n, grid_position=(1, 1)),
+            sc.Helix(idx=1, max_offset=21, group=n, grid_position=(0, 1)),
+            sc.Helix(idx=2, max_offset=19, group=n, grid_position=(0, 2)),
+            sc.Helix(idx=3, max_offset=18, group=n, grid_position=(1, 2)),
+            sc.Helix(idx=4, max_offset=17, group=n, grid_position=(2, 2)),
+            sc.Helix(idx=5, max_offset=16, group=n, grid_position=(2, 1)),
+            sc.Helix(idx=6, max_offset=24, group=s),
+            sc.Helix(idx=7, max_offset=25, group=s),
+            sc.Helix(idx=8, max_offset=26, group=w, position=sc.Position3D(x=0, y=0, z=0)),
+            sc.Helix(idx=9, max_offset=27, group=w, position=sc.Position3D(x=0, y=2.5, z=0)),
+            sc.Helix(idx=13, max_offset=22, group=e),
+            sc.Helix(idx=15, max_offset=23, group=e),
         ]
         group_north = sc.HelixGroup(position=sc.Position3D(x=0, y=-200, z=0), grid=sc.honeycomb)
         group_south = sc.HelixGroup(position=sc.Position3D(x=0, y=70, z=0), helices_view_order=[7, 6], grid=sc.square)
@@ -4616,6 +4618,38 @@ class TestHelixGroups(unittest.TestCase):
         self.e = e
         self.s = s
         self.w = w
+
+    def test_helices_mixing_specified_and_unspecified_idx_raises_error(self) -> None:
+        """
+        When helices are given as a list, either all specify idx or none do. This is the mix that setUp
+        used to have (some helices with no idx, followed by helices with an explicit idx), which went
+        undetected: the check recorded only the *first* un-indexed helix, and once it had, the branch
+        that records an explicitly-indexed helix could no longer run, so the two were never seen
+        together and no error was raised.
+
+        The explicit indices here (13 and 15) are chosen so they cannot collide with the indices 0 and 1
+        that the first two helices would be auto-assigned. Otherwise the duplicate-index check would
+        raise instead, and this test would pass without ever exercising the mixing check.
+        """
+        helices = [
+            sc.Helix(max_offset=20),
+            sc.Helix(max_offset=21),
+            sc.Helix(idx=13, max_offset=22),
+            sc.Helix(idx=15, max_offset=23),
+        ]
+        with self.assertRaisesRegex(sc.IllegalDesignError, "either all helices must have idx"):
+            sc.Design(helices=helices, strands=[], grid=sc.square)
+
+    def test_helices_mixing_unspecified_and_specified_idx_raises_error(self) -> None:
+        """Same, but with the explicitly-indexed helices first, so that neither ordering can regress."""
+        helices = [
+            sc.Helix(idx=13, max_offset=22),
+            sc.Helix(idx=15, max_offset=23),
+            sc.Helix(max_offset=20),
+            sc.Helix(max_offset=21),
+        ]
+        with self.assertRaisesRegex(sc.IllegalDesignError, "either all helices must have idx"):
+            sc.Design(helices=helices, strands=[], grid=sc.square)
 
     def test_helix_groups(self) -> None:
         self._asserts_for_fixture(self.design)
