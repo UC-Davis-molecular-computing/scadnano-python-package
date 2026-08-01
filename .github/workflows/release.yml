@@ -1,34 +1,111 @@
 name: "release"
 
+# On every push to main: tag v{__version__}, create a GitHub release whose body
+# lists commits since the previous release, publish to PyPI, then close issues
+# referenced by closing keywords in those commits.
+#
+# INVARIANT: every push to main is a release. If __version__ in
+# scadnano/scadnano.py was not bumped, this workflow FAILS (red X) on purpose.
+#
+# NEVER substitute a personal access token (PAT) for GITHUB_TOKEN below.
+# Actions taken with GITHUB_TOKEN do not trigger other workflows, and this
+# design depends on that: the issue closes performed here must not trigger
+# reopen-dev-closes.yml, and the release created here must not trigger
+# changelog.yml (at creation time the title is still the "TODO" placeholder).
+
 on:
   push:
     branches:
       - "main"
 
+# Serialize runs so two quick merges to main cannot interleave tag creation or
+# PyPI publishing. Queued, not cancelled: every push must produce (or loudly
+# fail to produce) a release.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 jobs:
   release:
-    name: "Release"
-    runs-on: "ubuntu-latest"
+    name: "Create GitHub release"
+    runs-on: ubuntu-latest
     permissions:
-      # Required for trusted publishing to PyPI
-      id-token: write
-      contents: write
-
+      contents: write   # create the vX.Y.Z tag and the release
+    env:
+      GH_TOKEN: ${{ github.token }}   # gh CLI reads this; do NOT replace with a PAT
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prev_ref: ${{ steps.prev.outputs.prev_ref }}
     steps:
-      # ...
-      - name: "Build & test"
-        run: |
-          echo "done!"
-      - uses: "marvinpinto/action-automatic-releases@latest"
+      - uses: actions/checkout@v7
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "current"
-          prerelease: false
-          title: "Development Build [TODO: Replace label and number with version number]"
-          files: |
+          fetch-depth: 0   # full history + all tags, needed for `git log <prev>..HEAD`
+
+      - name: Extract version from scadnano/scadnano.py
+        id: version
+        run: |
+          version=$(sed -nE 's/^__version__ = "([^"]+)".*$/\1/p' scadnano/scadnano.py | head -1)
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error file=scadnano/scadnano.py::could not extract semantic version from the __version__ line (got: '$version')"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Fail loudly if version was not bumped (unless this is a re-run)
+        id: guard
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          if git rev-parse -q --verify "refs/tags/v$version^{commit}" > /dev/null; then
+            tag_commit=$(git rev-parse "refs/tags/v$version^{commit}")
+            if [ "$tag_commit" = "$GITHUB_SHA" ]; then
+              echo "Tag v$version already exists at this exact commit: re-run of a partially failed workflow. Skipping release creation."
+              echo "create_release=false" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Tag v$version already exists (at $tag_commit) but this push is $GITHUB_SHA. __version__ in scadnano/scadnano.py was not bumped before merging to main. Bump it on dev and merge dev to main again (see CONTRIBUTING.md); this red X is the intended reminder."
+              exit 1
+            fi
+          else
+            echo "create_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Determine previous release tag
+        id: prev
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          # Newest published, non-draft, non-prerelease release, excluding the
+          # release this run creates (matters on re-runs). Empty if none exists.
+          prev_ref=$(gh release list --exclude-drafts --exclude-pre-releases \
+            --limit 20 --json tagName \
+            --jq "[.[].tagName] | map(select(. != \"v$version\")) | first // empty")
+          echo "prev_ref=$prev_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Create release with commit list since previous release
+        if: steps.guard.outputs.create_release == 'true'
+        run: |
+          version='${{ steps.version.outputs.version }}'
+          prev_ref='${{ steps.prev.outputs.prev_ref }}'
+          if [ -n "$prev_ref" ]; then range="$prev_ref..HEAD"; else range="HEAD"; fi
+          {
+            echo "TODO: describe this release here, then retitle the release to \"v$version\"."
+            echo
+            echo "## Commits"
+            echo
+            git log --format='- %h: %s (%an)' "$range"
+          } > "$RUNNER_TEMP/release-notes.md"
+          gh release create "v$version" \
+            --target "$GITHUB_SHA" \
+            --title "TODO: edit release notes for v$version" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
             LICENSE.txt
 
-      # Publish to PyPI using Trusted Publishers
+  publish:
+    name: "Publish to PyPI"
+    needs: [release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read    # actions/checkout
+      id-token: write   # PyPI trusted publishing
+    steps:
       - uses: actions/checkout@v7
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -42,3 +119,44 @@ jobs:
         run: python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  close-issues:
+    name: "Close issues fixed by this release"
+    needs: [release, publish]   # only mark issues released after PyPI publish succeeds
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read   # actions/checkout
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.release.outputs.version }}
+      PREV_REF: ${{ needs.release.outputs.prev_ref }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Close issues referenced by closing keywords in released commits
+        run: |
+          if [ -n "$PREV_REF" ]; then range="$PREV_REF..HEAD"; else range="HEAD"; fi
+          # Same range as the release notes, so the issues closed here match the
+          # commits listed in the release. GitHub's closing keywords, optional
+          # colon, case-insensitive; issue numbers deduped by sort -un.
+          issues=$(git log --format=%B "$range" \
+            | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+#[0-9]+' \
+            | grep -oE '[0-9]+' | sort -un) || true
+          if [ -z "$issues" ]; then
+            echo "No closing keywords found in range $range; nothing to do."
+            exit 0
+          fi
+          for n in $issues; do
+            # `gh issue view` fails if #n is a pull request or does not exist; skip those.
+            state=$(gh issue view "$n" --json state --jq .state 2>/dev/null) \
+              || { echo "#$n is not an issue (probably a PR reference); skipping"; continue; }
+            if [ "$state" = "OPEN" ]; then
+              gh issue close "$n" --comment "Released in [v${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) and published to [PyPI](https://pypi.org/project/scadnano/${VERSION}/)."
+            else
+              echo "#$n already closed (e.g., manually); leaving its state alone"
+            fi
+            # Remove the dev-lifecycle label either way; harmless if absent.
+            gh issue edit "$n" --remove-label "closed in dev" > /dev/null 2>&1 || true
+          done
