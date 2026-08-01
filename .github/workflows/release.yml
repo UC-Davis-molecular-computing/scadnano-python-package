@@ -119,6 +119,14 @@ jobs:
         run: python -m build
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Without this, re-running the workflow after a partial failure (say
+          # close-issues died on a transient API error) aborts here, because
+          # PyPI rejects a duplicate file upload. That would contradict the
+          # re-run guard in the release job. `python -m build` produces
+          # deterministic filenames, so a re-run's artifacts match what is
+          # already on PyPI and are correctly skipped.
+          skip-existing: true
 
   close-issues:
     name: "Close issues fixed by this release"
