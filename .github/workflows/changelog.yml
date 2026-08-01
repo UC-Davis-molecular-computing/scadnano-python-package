@@ -12,6 +12,11 @@ name: "changelog"
 #     events use the workflow file at the tagged commit). Remedy: run this
 #     workflow manually via workflow_dispatch (Actions tab -> changelog -> Run
 #     workflow); every run regenerates the entire file, so one run heals all.
+#   - For the same reason, a release-triggered run uses the `args` and `header`
+#     frozen at THAT tag, not the current ones on dev. So after changing the
+#     formatting below, make a workflow_dispatch run the LAST run: an `edited`
+#     event on an older release would otherwise rewrite CHANGELOG.md in the old
+#     format. (workflow_dispatch always uses the branch you dispatch from.)
 #   - The push below uses GITHUB_TOKEN so it does NOT trigger release.yml.
 #     NEVER substitute a PAT here: that would trigger a (failing) release run
 #     on every changelog commit.
