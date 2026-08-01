@@ -5,6 +5,27 @@ This file is generated automatically from the project's
 by [changelog-from-release](https://github.com/rhysd/changelog-from-release).
 Do not edit it manually; edit the release notes instead.
 
+<a id="v0.21.1"></a>
+## [v0.21.1](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases/tag/v0.21.1) - 2026-08-01
+
+No changes, just redoing some release-related actions and switching back to `main` being the default branch.
+
+## Commits
+
+- b2d09d5: Merge pull request [#340](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/340) from UC-Davis-molecular-computing/dev (David Doty)
+- 98ae57e: Merge pull request [#339](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/339) from UC-Davis-molecular-computing/bump-version-0.21.1 (David Doty)
+- a616426: bump version to 0.21.1 (David Doty)
+- 10cba20: Merge pull request [#338](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/338) from UC-Davis-molecular-computing/automate-dev-branch-workflow (David Doty)
+- 029287f: automate the dev-branch workflow now that main is the default branch again (David Doty)
+- 0a88677: Merge pull request [#337](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/337) from UC-Davis-molecular-computing/dependabot-target-dev (David Doty)
+- b3e1408: point dependabot PRs at dev instead of the default branch main (David Doty)
+- 6c3b88a: Merge pull request [#336](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues/336) from UC-Davis-molecular-computing/main (David Doty)
+- fb50af6: update CHANGELOG.md for release v0.21.0 (dave-doty)
+
+
+[Changes][v0.21.1]
+
+
 <a id="v0.21.0"></a>
 ## [v0.21.0](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases/tag/v0.21.0) - 2026-08-01
 
@@ -1778,6 +1799,7 @@ See https://github.com/UC-Davis-molecular-computing/scadnano/blob/master/README.
 [Changes][v0.5.0]
 
 
+[v0.21.1]: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/compare/v0.21.0...v0.21.1
 [v0.21.0]: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/compare/v0.20.1...v0.21.0
 [v0.20.1]: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/compare/v0.20.0...v0.20.1
 [v0.20.0]: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/compare/v0.19.4...v0.20.0
