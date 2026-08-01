@@ -1,17 +1,19 @@
 name: "release"
 
 # On every push to main: tag v{__version__}, create a GitHub release whose body
-# lists commits since the previous release, publish to PyPI, then close issues
-# referenced by closing keywords in those commits.
+# lists commits since the previous release, and publish to PyPI.
+#
+# Issues are not touched here. main is the default branch, so GitHub itself
+# closes any issue referenced by a closing keyword in the commits this push
+# brings to main, and records the closing commit on the issue.
 #
 # INVARIANT: every push to main is a release. If __version__ in
 # scadnano/scadnano.py was not bumped, this workflow FAILS (red X) on purpose.
 #
 # NEVER substitute a personal access token (PAT) for GITHUB_TOKEN below.
-# Actions taken with GITHUB_TOKEN do not trigger other workflows, and this
-# design depends on that: the issue closes performed here must not trigger
-# reopen-dev-closes.yml, and the release created here must not trigger
-# changelog.yml (at creation time the title is still the "TODO" placeholder).
+# Actions taken with GITHUB_TOKEN do not trigger other workflows, and the
+# release created here depends on that: it must not trigger changelog.yml,
+# because at creation time its title is still the "TODO" placeholder.
 
 on:
   push:
@@ -126,71 +128,17 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          # Without this, re-running the workflow after a partial failure (say
-          # close-issues died on a transient API error) aborts here, because
-          # PyPI rejects a duplicate file upload. That would contradict the
-          # re-run guard in the release job. `python -m build` produces
-          # deterministic filenames, so a re-run's artifacts match what is
-          # already on PyPI and are correctly skipped.
+          # Without this, re-running the workflow after a partial failure aborts
+          # here, because PyPI rejects a duplicate file upload. That would
+          # contradict the re-run guard in the release job. `python -m build`
+          # produces deterministic filenames, so a re-run's artifacts match what
+          # is already on PyPI and are correctly skipped.
           skip-existing: true
 
-  annotate-issues:
-    name: "Annotate and clean up issues fixed by this release"
-    needs: [release, publish]   # only mark issues released after PyPI publish succeeds
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read   # actions/checkout
-      issues: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      VERSION: ${{ needs.release.outputs.version }}
-      PREV_REF: ${{ needs.release.outputs.prev_ref }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - name: Note the release on, and unlabel, issues fixed by it
-        run: |
-          # This job does NOT close issues. main is the default branch, so GitHub
-          # itself acts on the closing keywords the moment this push lands,
-          # seconds before this runs. What GitHub does not do is say WHICH
-          # release shipped the fix, or remove the "closed in dev" label that
-          # label-fixed-in-dev.yml applied while the fix was unreleased.
-          if [ -n "$PREV_REF" ]; then range="$PREV_REF..HEAD"; else range="HEAD"; fi
-          # Same range as the release notes, so the issues annotated here match
-          # the commits listed in the release. GitHub's closing keywords,
-          # optional colon, case-insensitive; numbers deduped by sort -un.
-          issues=$(git log --format=%B "$range" \
-            | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+#[0-9]+' \
-            | grep -oE '[0-9]+' | sort -un) || true
-          if [ -z "$issues" ]; then
-            echo "No closing keywords found in range $range; nothing to do."
-            exit 0
-          fi
-          released_note="Released in [v${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) and published to [PyPI](https://pypi.org/project/scadnano/${VERSION}/)."
-          for n in $issues; do
-            # A number matched here can be a pull request, or can simply not
-            # exist -- a commit message may mention "fixes #123" as an example of
-            # the syntax rather than as a real reference. The issues API returns
-            # a .pull_request field only for pull requests; commenting on one
-            # needs pull-requests: write, which this job deliberately lacks.
-            meta=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${n}" \
-                     --jq '[(.pull_request != null), .state] | @tsv' 2>/dev/null) \
-              || { echo "#$n does not exist; skipping"; continue; }
-            is_pr=$(printf '%s' "$meta" | cut -f1)
-            if [ "$is_pr" = "true" ]; then
-              echo "#$n is a pull request, not an issue; skipping"
-              continue
-            fi
-            # Record which release shipped the fix, unless that is already noted
-            # (so re-running this workflow does not post duplicate comments).
-            if gh issue view "$n" --json comments --jq '.comments[].body' 2>/dev/null \
-                 | grep -qF "releases/tag/v${VERSION}"; then
-              echo "#$n already notes v${VERSION}; not commenting again"
-            else
-              echo "#$n: noting that v${VERSION} shipped the fix"
-              gh issue comment "$n" --body "$released_note" > /dev/null
-            fi
-            # Remove the dev-lifecycle label; harmless if absent.
-            gh issue edit "$n" --remove-label "closed in dev" > /dev/null 2>&1 || true
-          done
+          # Nothing acts on issues after the release. main is the default branch,
+          # so GitHub itself closes any issue referenced by a closing keyword in
+          # the commits this push brings to main, and records the closing commit
+          # on the issue. The "closed in dev" label added by label-fixed-in-dev.yml
+          # is left in place; `is:open label:"closed in dev"` still finds exactly
+          # the fixes that are merged but not yet released, because released ones
+          # are closed.
