@@ -70,10 +70,15 @@ git clone https://github.com/UC-Davis-molecular-computing/scadnano-python-packag
 ```
 
 Changes to the scadnano package should be pushed to the
-[`dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/dev) branch,
-which is the default branch, so that is the branch you get when you clone. (The `main` branch
-holds released versions only; see
-[the section on pushing to main](#pushing-to-the-repository-main-branch-and-documenting-changes-done-less-frequently).)
+[`dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/dev) branch.
+`main` is the default branch, but it holds released versions only: every push to `main` publishes a
+new release to PyPI (see
+[the section on pushing to main](#pushing-to-the-repository-main-branch-and-documenting-changes-done-less-frequently)).
+So after cloning, switch to the `dev` branch:
+
+```
+git checkout dev
+```
 
 
 
@@ -93,7 +98,27 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 1. If there is not already a GitHub issue describing the desired change, make one. Make sure that its title is a self-contained description, and that it describes the change we would like to make to the software. For example, *"problem with importing gridless design"* is a bad title. A better title is *"fix problem where importing gridless design with negative x coordinates throws exception"*.
 
-2. Make a new branch specifically for the issue. Since `dev` is the default branch, new branches are based off of `dev` automatically. The title of the issue (with appropriate hyphenation) is a good name for the branch. (In GitHub Desktop, if you paste the title of the issue, it automatically adds the hyphens.)
+2. Make a new branch specifically for the issue, **based on `dev`**.
+
+    The easiest way is the helper script in the root of the repository, which takes the issue number:
+
+    ```
+    .\branch-for-issue.ps1 123      # Windows PowerShell
+    ./branch-for-issue.sh 123       # macOS / Linux / Git Bash
+    ```
+
+    It names the branch from the issue number and title, creates it from `dev`, links it to the
+    issue (so it appears in the issue's "Development" section), and checks it out. It needs the
+    [GitHub CLI](https://cli.github.com/): `winget install --id GitHub.cli -e` on Windows or
+    `brew install gh` on macOS, then `gh auth login`.
+
+    **Do not use the "Create a branch" link on the issue page.** It always bases the new branch on
+    the default branch, `main`, with no option to choose `dev`, and there is no equivalent
+    issue-aware command in GitHub Desktop. The script exists precisely to work around this.
+
+    If you create the branch by hand instead, make sure `dev` is checked out first, since both
+    `git checkout -b` and GitHub Desktop base a new branch on whatever is currently checked out.
+    The title of the issue (with appropriate hyphenation) is a good name for the branch.
 
 3. If it is about fixing a bug, *first* add tests to reproduce the bug before working on fixing it. (This is so-called [test-driven development](https://www.google.com/search?q=test-driven+development))
 
@@ -105,7 +130,12 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 7. Commit the changes. In the commit message, reference the issue using the phrase "fixes #123" or "closes #123" (see [here](https://docs.github.com/en/enterprise/2.16/user/github/managing-your-work-on-github/closing-issues-using-keywords)). Also, in the commit message, describe the issue that was fixed (one easy way is to copy the title of the issue); this message will show up in automatically generated release notes, so this is part of the official documentation of what changed.
 
-8. Create a pull request (PR). Since `dev` is the default branch, the PR targets `dev` automatically.
+8. Create a pull request (PR) into `dev`. GitHub will propose `main` as the base, because `main` is
+   the default branch — but **you do not need to remember to change it**: a workflow retargets any
+   newly opened PR from `main` to `dev` automatically and leaves a comment saying so. (If you ever
+   genuinely mean to target `main`, just change the base back; the workflow only runs when a PR is
+   first opened.) Branches created with `branch-for-issue` also record `dev` as their base, so
+   `gh pr create` targets `dev` directly.
 
 9. Wait for all checks to complete (see next section), and then merge the changes from the new branch into `dev`. This will typically require someone else to review the code first and possibly request changes.
 
@@ -115,15 +145,19 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 ### What happens to the issue when you merge to dev
 
-Because `dev` is the default branch, GitHub automatically closes issue #123 as soon as a commit
-saying "fixes #123" reaches `dev`. But the fix is *not released* at that point: users install from
-PyPI, which is published only from `main`. So a bot immediately reopens the issue, adds the label
-[`closed in dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/labels/closed%20in%20dev),
-and leaves a comment explaining that the fix is merged but not yet released.
+When a commit saying "fixes #123" reaches `dev`, issue #123 gets the label
+[`closed in dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/labels/closed%20in%20dev)
+and **stays open**. That is deliberate: the fix exists, but users install from PyPI, which is
+published only from `main`, so the issue is not really resolved for anyone yet. The label is applied
+automatically; you no longer need to remember to add it.
 
-This close-then-reopen pair is expected; don't fight it. The issue is closed for good — with a
-comment linking the release and the PyPI package — by the release workflow, after the version
-containing the fix is actually published. Issues you close *by hand* are left alone by the bot.
+GitHub's own "fixes #123" auto-closing only acts on commits reaching the **default** branch, which
+is `main`. That is the main reason `main` is kept as the default: it means merging a fix to `dev`
+does not prematurely tell users the issue is done.
+
+The issue is closed for good, with a comment linking the release and the PyPI package, by the
+release workflow once the fix is actually published — which also removes the `closed in dev` label.
+Issues you close by hand are not touched by any of this.
 
 
 
@@ -139,8 +173,10 @@ Less frequently, pull requests (abbreviated PR) can be made from `dev` to `main`
 
 **WARNING:** Always wait for the checks to complete. This is important to ensure that unit tests pass. 
 
-**WARNING:** This is the one PR whose base branch you must set by hand. `dev` is the default branch,
-so GitHub proposes `dev` as the base; for a release PR, change the base to `main`.
+The release PR is the one PR that really does target `main`. Since `main` is the default branch,
+GitHub proposes it as the base, so there is nothing to change. The workflow that retargets PRs to
+`dev` deliberately skips this one, recognizing it by its `dev` head branch *in this repository*
+(a contributor's fork may also have a `dev` branch, and those PRs are retargeted normally).
 
 **Every push to `main` is a release.** The release workflow reads `__version__` from
 [scadnano/scadnano.py](scadnano/scadnano.py), creates the tag `v{version}`, creates a GitHub release,
@@ -189,8 +225,8 @@ So the steps for committing to the main branch are:
 
 4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install sphinx sphinx_rtd_theme`. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
 
-5. Create a PR to merge changes from dev into main. **Remember to change the base branch to `main`**;
-   it defaults to `dev`.
+5. Create a PR to merge changes from dev into main. `main` is the default base, so there is nothing
+   to change here.
 
 6. Once the PR is reviewed and approved, do the merge.
 

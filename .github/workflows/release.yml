@@ -162,14 +162,28 @@ jobs:
             echo "No closing keywords found in range $range; nothing to do."
             exit 0
           fi
+          released_note="Released in [v${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) and published to [PyPI](https://pypi.org/project/scadnano/${VERSION}/)."
           for n in $issues; do
             # `gh issue view` fails if #n is a pull request or does not exist; skip those.
             state=$(gh issue view "$n" --json state --jq .state 2>/dev/null) \
               || { echo "#$n is not an issue (probably a PR reference); skipping"; continue; }
             if [ "$state" = "OPEN" ]; then
-              gh issue close "$n" --comment "Released in [v${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) and published to [PyPI](https://pypi.org/project/scadnano/${VERSION}/)."
+              gh issue close "$n" --comment "$released_note"
             else
-              echo "#$n already closed (e.g., manually); leaving its state alone"
+              # Already closed -- most often because main is the default branch,
+              # so GitHub acted on the closing keyword the moment this push
+              # landed, seconds before this job ran. Comment anyway, so the issue
+              # still records which release shipped the fix; do not touch state,
+              # in case it was closed by hand for an unrelated reason.
+              # Skip if such a note is already there, so re-running this workflow
+              # does not post duplicate comments.
+              if gh issue view "$n" --json comments --jq '.comments[].body' 2>/dev/null \
+                   | grep -qF "releases/tag/v${VERSION}"; then
+                echo "#$n already closed and already notes v${VERSION}; skipping"
+              else
+                echo "#$n already closed; commenting without changing its state"
+                gh issue comment "$n" --body "$released_note" > /dev/null
+              fi
             fi
             # Remove the dev-lifecycle label either way; harmless if absent.
             gh issue edit "$n" --remove-label "closed in dev" > /dev/null 2>&1 || true
