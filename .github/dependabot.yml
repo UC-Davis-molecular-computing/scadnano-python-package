@@ -8,6 +8,11 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
+    # Without this, dependabot opens its PRs against the default branch, main.
+    # Every push to main is a release, so such a PR would either be merged
+    # without a version bump (failing the release workflow) or have to be
+    # retargeted by hand each month. Send them to dev like all other changes.
+    target-branch: "dev"
     groups:
       # one PR for all of them, rather than one PR per action
       actions:
