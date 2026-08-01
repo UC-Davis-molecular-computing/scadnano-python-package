@@ -79,6 +79,12 @@ jobs:
             --jq "[.[].tagName] | map(select(. != \"v$version\")) | first // empty")
           echo "prev_ref=$prev_ref" >> "$GITHUB_OUTPUT"
 
+      # The commit list is built here with `git log` rather than with GitHub's
+      # own `gh release create --generate-notes`. Do not "simplify" this to
+      # --generate-notes: that generator is PR-based only. It lists the titles
+      # of merged pull requests and silently omits commits pushed directly to a
+      # branch, of which this repo has many. Losing those from the release notes
+      # is the regression this workflow was written to avoid.
       - name: Create release with commit list since previous release
         if: steps.guard.outputs.create_release == 'true'
         run: |
