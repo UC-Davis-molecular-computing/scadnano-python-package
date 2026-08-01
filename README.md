@@ -65,7 +65,7 @@ pip install scadnano
 Read below for troubleshooting suggestions if that didn't work.
 
 ### Getting Python
-The scadnano Python package requires Python version 3.9 or later.
+The scadnano Python package requires Python version 3.10 or later.
 
 To check your current version of Python, open a command line and type
 
@@ -79,7 +79,7 @@ If it is version 2.7 or below, type
 python3 --version
 ```
 
-If that fails, or reports Python version 3.8 or below, you will have to install a later version of Python. Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
+If that fails, or reports Python version 3.10 or below, you will have to install a later version of Python. Follow [this link](https://www.python.org/downloads/) to install Python. You may also use an alternative Python distribution, such as [Anaconda](https://www.anaconda.com/products/individual#Downloads).
 
 
 

@@ -70,11 +70,10 @@ git clone https://github.com/UC-Davis-molecular-computing/scadnano-python-packag
 ```
 
 Changes to the scadnano package should be pushed to the
-[`dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/dev) branch. So switch to the `dev` branch:
-
-```
-git checkout dev
-```
+[`dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/tree/dev) branch,
+which is the default branch, so that is the branch you get when you clone. (The `main` branch
+holds released versions only; see
+[the section on pushing to main](#pushing-to-the-repository-main-branch-and-documenting-changes-done-less-frequently).)
 
 
 
@@ -94,7 +93,7 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 1. If there is not already a GitHub issue describing the desired change, make one. Make sure that its title is a self-contained description, and that it describes the change we would like to make to the software. For example, *"problem with importing gridless design"* is a bad title. A better title is *"fix problem where importing gridless design with negative x coordinates throws exception"*.
 
-2. Make a new branch specifically for the issue. Base this branch off of `dev` (**WARNING**: in GitHub desktop, the default is to base it off of `main`, so switch that). The title of the issue (with appropriate hyphenation) is a good name for the branch. (In GitHub Desktop, if you paste the title of the issue, it automatically adds the hyphens.)
+2. Make a new branch specifically for the issue. Since `dev` is the default branch, new branches are based off of `dev` automatically. The title of the issue (with appropriate hyphenation) is a good name for the branch. (In GitHub Desktop, if you paste the title of the issue, it automatically adds the hyphens.)
 
 3. If it is about fixing a bug, *first* add tests to reproduce the bug before working on fixing it. (This is so-called [test-driven development](https://www.google.com/search?q=test-driven+development))
 
@@ -106,13 +105,25 @@ For any more significant change that is made (e.g., closing an issue, adding a n
 
 7. Commit the changes. In the commit message, reference the issue using the phrase "fixes #123" or "closes #123" (see [here](https://docs.github.com/en/enterprise/2.16/user/github/managing-your-work-on-github/closing-issues-using-keywords)). Also, in the commit message, describe the issue that was fixed (one easy way is to copy the title of the issue); this message will show up in automatically generated release notes, so this is part of the official documentation of what changed.
 
-8. Create a pull request (PR). **WARNING:** by default, it will want to merge into the `main` branch. Change the destination branch to `dev`.
+8. Create a pull request (PR). Since `dev` is the default branch, the PR targets `dev` automatically.
 
 9. Wait for all checks to complete (see next section), and then merge the changes from the new branch into `dev`. This will typically require someone else to review the code first and possibly request changes.
 
 10. After merging, it will say that the branch you just merged from can be safely deleted. Delete the branch.
 
 11. Locally, remember to switch back to the `dev` branch and pull it. (Although you added those changes locally, they revert back once you switch to your local `dev` branch, which needs to be synced with the remote repo for you to see the changes that were just merged from the now-deleted temporary branch.)
+
+### What happens to the issue when you merge to dev
+
+Because `dev` is the default branch, GitHub automatically closes issue #123 as soon as a commit
+saying "fixes #123" reaches `dev`. But the fix is *not released* at that point: users install from
+PyPI, which is published only from `main`. So a bot immediately reopens the issue, adds the label
+[`closed in dev`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/labels/closed%20in%20dev),
+and leaves a comment explaining that the fix is merged but not yet released.
+
+This close-then-reopen pair is expected; don't fight it. The issue is closed for good — with a
+comment linking the release and the PyPI package — by the release workflow, after the version
+containing the fix is actually published. Issues you close *by hand* are left alone by the bot.
 
 
 
@@ -128,13 +139,26 @@ Less frequently, pull requests (abbreviated PR) can be made from `dev` to `main`
 
 **WARNING:** Always wait for the checks to complete. This is important to ensure that unit tests pass. 
 
-We have an automated release system (through a GitHub action) that automatically creates release notes when changes are merged into the main branch.
+**WARNING:** This is the one PR whose base branch you must set by hand. `dev` is the default branch,
+so GitHub proposes `dev` as the base; for a release PR, change the base to `main`.
+
+**Every push to `main` is a release.** The release workflow reads `__version__` from
+[scadnano/scadnano.py](scadnano/scadnano.py), creates the tag `v{version}`, creates a GitHub release,
+and publishes to PyPI. So you **must bump `__version__` on `dev` before merging `dev` into `main`**.
+If you forget, the release workflow fails with a red X and an explanatory message, and nothing is
+tagged or published; bump the version on `dev` and merge again to recover. (Practically, this means
+there is no such thing as a casual push to `main` — even a README typo fix rides along with a version
+bump, or waits for the next release.)
+
+We have an automated release system (through a GitHub action) that automatically creates the version
+tag and release notes when changes are merged into the main branch, publishes to PyPI, and closes the
+issues fixed by the release.
 
 Although the GitHub web interface abbreviates long commit messages, the full commit message is included for each commit in a PR.
 
 However, commit descriptions are not shown in the release notes. In GitHub desktop these are two separate fields; on the command line they appear to be indicated by two separate usages of the `-m` flag: https://stackoverflow.com/questions/16122234/how-to-commit-a-change-with-both-message-and-description-from-the-command-li.
 
-So make sure that everything people should see in the automatically generated release notes is included in the commit message. (If not, then more manual editing of the release notes is required.) GitHub lets you [automatically close](https://docs.github.com/en/enterprise/2.16/user/github/managing-your-work-on-github/closing-issues-using-keywords) an issue by putting a phrase such as "closes #14". Although the release notes will link to the issue that was closed, they [will not describe it in any other way](https://github.com/marvinpinto/actions/issues/34). So it is important, for the sake of having readable release notes, to describe briefly the issue that was closed in the commit message.
+So make sure that everything people should see in the automatically generated release notes is included in the commit message. (If not, then more manual editing of the release notes is required.) GitHub lets you [automatically close](https://docs.github.com/en/enterprise/2.16/user/github/managing-your-work-on-github/closing-issues-using-keywords) an issue by putting a phrase such as "closes #14". The release notes link to the issue that was closed, but do not describe it in any other way. So it is important, for the sake of having readable release notes, to describe briefly the issue that was closed in the commit message.
 
 One simple way to do this is to copy/paste the title of the issue into the commit message. For this reason, issue titles should be stated in terms of what change should happen to handle an issue. For example, instead of the title being *"3D position is improperly calculated from grid position"*, a better issue title is *"calculate 3D position correctly from grid position"*. That way, when the issue is fixed in a commit, that title can simply be copied and pasted as the description of what was done for the commit message. (But you should still add "fixes #<issue_number>" in the commit message, e.g., the full commit message could be *"fixes #101; calculate 3D position correctly from grid position"* .)
 
@@ -148,9 +172,16 @@ So the steps for committing to the main branch are:
 
 1. If necessary, follow the instructions above to merge changes from a temporary branch to the `dev` branch. There will typically be several of these. Despite GitHub's suggestions to keep commit messages short and put longer text in descriptions, because only the commit message is included in the release notes, it's okay to put more detail in the message (but very long stuff should go in the description, or possibly documentation such as the README.md file).
 
-    One of the changes committed should change the version number. We follow [semantic versioning](https://semver.org/). This is a string of the form `"MAJOR.MINOR.PATCH"`, e.g., `"0.9.3"`
+2. Bump the version number on `dev`. This is **required** before every merge into `main`; the release
+   workflow fails if the version was not bumped. We follow [semantic versioning](https://semver.org/):
+   a string of the form `"MAJOR.MINOR.PATCH"`, e.g., `"0.9.3"`. Bump PATCH for bug fixes only, and
+   MINOR for backwards-compatible feature additions.
     - For the web interface repo scadnano, this is located at the top of the file https://github.com/UC-Davis-molecular-computing/scadnano/blob/main/lib/src/constants.dart
-    - For the Python library repo scadnano-python-package, this is located in two places: the bottom of the file https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/scadnano/_version.py (as `__version__ = "0.9.3"` or something similar) and the near the top of the file https://github.com/UC-Davis-molecular-computing/scadnano-python-package/blob/main/scadnano/scadnano.py (as `__version__ = "0.9.3"` or something similar). This latter one is only there for users who do not install from PyPI, and who simply download the file scadnano.py to put it in a directory with their script).
+    - For the Python library repo scadnano-python-package, there is a single source of truth: the
+      `__version__` line near the top of the file
+      [scadnano/scadnano.py](scadnano/scadnano.py) (as `__version__ = "0.9.3"` or something similar).
+      Keep the trailing `# version line; WARNING: ...` comment intact — `setup.py` finds this line by
+      searching for that comment, and the release workflow reads the same line.
 
     The PATCH version numbers are not always synced between the two repos, but, they should stay synced on MAJOR and MINOR versions. **Note:** right now this isn't quite true since MINOR versions deal with backwards-compatible feature additions, and some features are supported on one but not the other; e.g., modifications can be made in the Python package but not the web interface, and calculating helix rolls/positions from crossovers can be done in the web interface but not the Python package. But post-version-1.0.0, the major and minor versions of the  should be enforced.
 
@@ -158,13 +189,40 @@ So the steps for committing to the main branch are:
 
 4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install sphinx sphinx_rtd_theme`. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
 
-5. Create a PR to merge changes from dev into main. 
+5. Create a PR to merge changes from dev into main. **Remember to change the base branch to `main`**;
+   it defaults to `dev`.
 
-6. One the PR is reviewed and approved, do the merge.
+6. Once the PR is reviewed and approved, do the merge.
 
-7. Once the PR changes are merged, a release will be automatically created here: https://github.com/UC-Davis-molecular-computing/scadnano/releases or https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases. It will have a title that is a placerholder, which is a reminder to change its title and tag. Each commit will be documented, with the commit message (but not description) included in the release notes.
+7. The merge triggers the release workflow, which automatically:
+    - creates the tag `v{version}` at the merge commit — **no manual tagging or retagging is needed
+      any more**;
+    - creates a release here: https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases,
+      titled `TODO: edit release notes for v{version}` (a deliberate placeholder reminding you to do
+      step 8), whose body lists every commit since the previous release, with the commit message (but
+      not description) included;
+    - publishes the package to PyPI;
+    - closes every issue referenced with a closing keyword in those commits, commenting with links to
+      the release and the PyPI package, and removes their `closed in dev` labels.
 
-8. Change *both* the title *and* tag to the version number with a `v` prepended, e.g., `v0.9.3`. It is imperative to change the tag before the next merge into main, or else the release (which defaults to the tag `latest`) will be overwritten.
+8. Edit the release: replace the placeholder title with the version number with a `v` prepended, e.g.,
+   `v0.9.3`, and write a human summary of the release above the auto-generated `## Commits` list.
+   Breaking changes belong at the top here. Saving this edit is also what regenerates `CHANGELOG.md`
+   (see below).
+
+9. Back-merge `main` into `dev`, so that `dev` picks up the release merge commit and the
+   `CHANGELOG.md` commits.
+
+### CHANGELOG.md
+
+[CHANGELOG.md](CHANGELOG.md) is generated automatically from the GitHub releases; **never edit it by
+hand**, since the next run overwrites it. Edit the release notes instead — saving an edit to a release
+regenerates the whole file and commits it to `main`.
+
+Because the file is regenerated from scratch every time, a missed update is never permanent: go to the
+Actions tab, select the `changelog` workflow, and press "Run workflow". This is also the remedy for
+editing a *very old* release (one tagged before this automation existed), which does not trigger the
+workflow on its own.
 
 
 
@@ -178,5 +236,5 @@ So the steps for committing to the main branch are:
 
 Follow the [Python style guide](https://www.python.org/dev/peps/pep-0008/), which should come along in most IDEs in the form of plugins and extensions. 
 
-The line length should be configured to 110, as the style guide limit of 79 is a bit too restrictive.
+The line length should be configured to 120, as the style guide limit of 79 is a bit too restrictive.
 

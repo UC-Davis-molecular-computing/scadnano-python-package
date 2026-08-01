@@ -1,0 +1,94 @@
+name: "reopen issues closed by dev commits"
+
+# Once dev is the default branch, closing keywords ("fixes #123") in commits
+# pushed to dev, or in PRs merged into dev, auto-close issues even though the
+# fix is not yet released. This workflow reopens such issues, labels them
+# "closed in dev", and explains. Manual closes are untouched (their ClosedEvent
+# has no Commit/PullRequest closer). Closes performed by release.yml's
+# close-issues job use GITHUB_TOKEN, whose events do not trigger workflows, so
+# released issues are never reopened by this.
+#
+# NEVER substitute a PAT for GITHUB_TOKEN in release.yml: doing so would make
+# this workflow instantly reopen every issue that a release just closed.
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  reopen:
+    name: "Reopen if closed by a commit or PR"
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const issue_number = context.payload.issue.number;
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $number) {
+                    timelineItems(last: 5, itemTypes: [CLOSED_EVENT]) {
+                      nodes {
+                        ... on ClosedEvent {
+                          closer {
+                            __typename
+                            ... on Commit { abbreviatedOid }
+                            ... on PullRequest { number }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`;
+
+            // closer may not be populated the instant the closed event fires;
+            // retry a few times with backoff before concluding "manual close".
+            let closer = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                number: issue_number,
+              });
+              const nodes = result.repository.issue.timelineItems.nodes;
+              closer = nodes.length > 0 ? nodes[nodes.length - 1].closer : null;
+              if (closer !== null) break;
+              if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 5000));
+            }
+
+            // ClosedEvent.closer is a union of Commit | ProjectV2 | PullRequest,
+            // or null for manual closes. Only Commit/PullRequest mean "fixed in dev".
+            if (closer === null || !['Commit', 'PullRequest'].includes(closer.__typename)) {
+              core.info(`#${issue_number}: closed manually (closer: ${closer ? closer.__typename : 'none'}); leaving closed.`);
+              return;
+            }
+
+            const what = closer.__typename === 'Commit'
+              ? `commit ${closer.abbreviatedOid}`
+              : `PR #${closer.number}`;
+            core.info(`#${issue_number}: closed by ${what}; reopening and labeling.`);
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              state: 'open',
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              labels: ['closed in dev'],
+            });
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number,
+              body: 'Reopening: the fix for this issue was merged to the `dev` branch, '
+                + 'but is not yet released. It will be closed automatically when the fix '
+                + 'is released to `main` and published to PyPI.',
+            });
