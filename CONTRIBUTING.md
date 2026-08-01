@@ -155,9 +155,10 @@ GitHub's own "fixes #123" auto-closing only acts on commits reaching the **defau
 is `main`. That is the main reason `main` is kept as the default: it means merging a fix to `dev`
 does not prematurely tell users the issue is done.
 
-The issue is closed for good, with a comment linking the release and the PyPI package, by the
-release workflow once the fix is actually published — which also removes the `closed in dev` label.
-Issues you close by hand are not touched by any of this.
+The issue is closed for good once the fix is actually released. GitHub does that itself: the
+release merges those same commits into `main`, the default branch, where its "fixes #123" handling
+applies. The release workflow then adds a comment linking the release and the PyPI package, and
+removes the `closed in dev` label. Issues you close by hand are not touched by any of this.
 
 
 
@@ -238,8 +239,9 @@ So the steps for committing to the main branch are:
       step 8), whose body lists every commit since the previous release, with the commit message (but
       not description) included;
     - publishes the package to PyPI;
-    - closes every issue referenced with a closing keyword in those commits, commenting with links to
-      the release and the PyPI package, and removes their `closed in dev` labels.
+    - comments on every issue referenced with a closing keyword in those commits, with links to the
+      release and the PyPI package, and removes their `closed in dev` labels. (The issues are
+      *closed* by GitHub itself, since those commits reach `main`, the default branch.)
 
 8. Edit the release: replace the placeholder title with the version number with a `v` prepended, e.g.,
    `v0.9.3`, and write a human summary of the release above the auto-generated `## Commits` list.

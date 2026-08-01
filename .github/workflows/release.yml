@@ -134,8 +134,8 @@ jobs:
           # already on PyPI and are correctly skipped.
           skip-existing: true
 
-  close-issues:
-    name: "Close issues fixed by this release"
+  annotate-issues:
+    name: "Annotate and clean up issues fixed by this release"
     needs: [release, publish]   # only mark issues released after PyPI publish succeeds
     runs-on: ubuntu-latest
     permissions:
@@ -149,12 +149,17 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Close issues referenced by closing keywords in released commits
+      - name: Note the release on, and unlabel, issues fixed by it
         run: |
+          # This job does NOT close issues. main is the default branch, so GitHub
+          # itself acts on the closing keywords the moment this push lands,
+          # seconds before this runs. What GitHub does not do is say WHICH
+          # release shipped the fix, or remove the "closed in dev" label that
+          # label-fixed-in-dev.yml applied while the fix was unreleased.
           if [ -n "$PREV_REF" ]; then range="$PREV_REF..HEAD"; else range="HEAD"; fi
-          # Same range as the release notes, so the issues closed here match the
-          # commits listed in the release. GitHub's closing keywords, optional
-          # colon, case-insensitive; issue numbers deduped by sort -un.
+          # Same range as the release notes, so the issues annotated here match
+          # the commits listed in the release. GitHub's closing keywords,
+          # optional colon, case-insensitive; numbers deduped by sort -un.
           issues=$(git log --format=%B "$range" \
             | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+#[0-9]+' \
             | grep -oE '[0-9]+' | sort -un) || true
@@ -164,27 +169,28 @@ jobs:
           fi
           released_note="Released in [v${VERSION}](https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}) and published to [PyPI](https://pypi.org/project/scadnano/${VERSION}/)."
           for n in $issues; do
-            # `gh issue view` fails if #n is a pull request or does not exist; skip those.
-            state=$(gh issue view "$n" --json state --jq .state 2>/dev/null) \
-              || { echo "#$n is not an issue (probably a PR reference); skipping"; continue; }
-            if [ "$state" = "OPEN" ]; then
-              gh issue close "$n" --comment "$released_note"
-            else
-              # Already closed -- most often because main is the default branch,
-              # so GitHub acted on the closing keyword the moment this push
-              # landed, seconds before this job ran. Comment anyway, so the issue
-              # still records which release shipped the fix; do not touch state,
-              # in case it was closed by hand for an unrelated reason.
-              # Skip if such a note is already there, so re-running this workflow
-              # does not post duplicate comments.
-              if gh issue view "$n" --json comments --jq '.comments[].body' 2>/dev/null \
-                   | grep -qF "releases/tag/v${VERSION}"; then
-                echo "#$n already closed and already notes v${VERSION}; skipping"
-              else
-                echo "#$n already closed; commenting without changing its state"
-                gh issue comment "$n" --body "$released_note" > /dev/null
-              fi
+            # A number matched here can be a pull request, or can simply not
+            # exist -- a commit message may mention "fixes #123" as an example of
+            # the syntax rather than as a real reference. The issues API returns
+            # a .pull_request field only for pull requests; commenting on one
+            # needs pull-requests: write, which this job deliberately lacks.
+            meta=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${n}" \
+                     --jq '[(.pull_request != null), .state] | @tsv' 2>/dev/null) \
+              || { echo "#$n does not exist; skipping"; continue; }
+            is_pr=$(printf '%s' "$meta" | cut -f1)
+            if [ "$is_pr" = "true" ]; then
+              echo "#$n is a pull request, not an issue; skipping"
+              continue
             fi
-            # Remove the dev-lifecycle label either way; harmless if absent.
+            # Record which release shipped the fix, unless that is already noted
+            # (so re-running this workflow does not post duplicate comments).
+            if gh issue view "$n" --json comments --jq '.comments[].body' 2>/dev/null \
+                 | grep -qF "releases/tag/v${VERSION}"; then
+              echo "#$n already notes v${VERSION}; not commenting again"
+            else
+              echo "#$n: noting that v${VERSION} shipped the fix"
+              gh issue comment "$n" --body "$released_note" > /dev/null
+            fi
+            # Remove the dev-lifecycle label; harmless if absent.
             gh issue edit "$n" --remove-label "closed in dev" > /dev/null 2>&1 || true
           done
