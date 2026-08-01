@@ -1,0 +1,56 @@
+name: "changelog"
+
+# Regenerates CHANGELOG.md from ALL GitHub releases and commits it directly to
+# main whenever a release is published, edited, or deleted.
+#
+# Interactions to be aware of:
+#   - release.yml creates releases with GITHUB_TOKEN, whose events do not
+#     trigger workflows, so `published` does NOT run this. CHANGELOG.md updates
+#     when a maintainer EDITS the release (replacing the placeholder title and
+#     notes) -- exactly when the notes become worth recording.
+#   - Editing a release whose tag predates this file produces NO run (release
+#     events use the workflow file at the tagged commit). Remedy: run this
+#     workflow manually via workflow_dispatch (Actions tab -> changelog -> Run
+#     workflow); every run regenerates the entire file, so one run heals all.
+#   - The push below uses GITHUB_TOKEN so it does NOT trigger release.yml.
+#     NEVER substitute a PAT here: that would trigger a (failing) release run
+#     on every changelog commit.
+#   - Requires the "github-actions" app as a bypass actor for required pull
+#     request reviews on the protected main branch.
+
+on:
+  release:
+    types: [published, edited, deleted]
+  workflow_dispatch:
+
+# A retitle + notes edit can emit two `edited` events back to back; keep only
+# the newest run. Safe because each run regenerates the whole file from scratch.
+concurrency:
+  group: changelog
+  cancel-in-progress: true
+
+jobs:
+  changelog:
+    name: "Regenerate CHANGELOG.md from releases"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main   # always regenerate and commit on main, whatever triggered us
+      - uses: rhysd/changelog-from-release/action@v3
+        with:
+          file: CHANGELOG.md
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          commit_summary_template: 'update CHANGELOG.md for release %s'
+          # -l 2: release titles become "##" headings; -d=false: exclude drafts;
+          # -i: defensively ignore the legacy floating tag if it ever reappears
+          args: -l 2 -d=false -i ^current$
+          header: |
+            # Changelog
+
+            This file is generated automatically from the project's
+            [GitHub releases](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/releases)
+            by [changelog-from-release](https://github.com/rhysd/changelog-from-release).
+            Do not edit it manually; edit the release notes instead.
