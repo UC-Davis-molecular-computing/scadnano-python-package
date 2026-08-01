@@ -157,8 +157,12 @@ does not prematurely tell users the issue is done.
 
 The issue is closed for good once the fix is actually released. GitHub does that itself: the
 release merges those same commits into `main`, the default branch, where its "fixes #123" handling
-applies. The release workflow then adds a comment linking the release and the PyPI package, and
-removes the `closed in dev` label. Issues you close by hand are not touched by any of this.
+applies, and it records the closing commit on the issue. Issues you close by hand are unaffected.
+
+The `closed in dev` label is not removed at that point, so to find fixes that are merged but not yet
+released, search for
+[`is:open label:"closed in dev"`](https://github.com/UC-Davis-molecular-computing/scadnano-python-package/issues?q=is%3Aopen+label%3A%22closed+in+dev%22)
+— once released, the issue is closed, so it drops out of that list.
 
 
 
@@ -238,10 +242,10 @@ So the steps for committing to the main branch are:
       titled `TODO: edit release notes for v{version}` (a deliberate placeholder reminding you to do
       step 8), whose body lists every commit since the previous release, with the commit message (but
       not description) included;
-    - publishes the package to PyPI;
-    - comments on every issue referenced with a closing keyword in those commits, with links to the
-      release and the PyPI package, and removes their `closed in dev` labels. (The issues are
-      *closed* by GitHub itself, since those commits reach `main`, the default branch.)
+    - publishes the package to PyPI.
+
+    Issues referenced with a closing keyword in those commits are closed by GitHub itself, since the
+    commits reach `main`, the default branch; the workflow does not touch issues at all.
 
 8. Edit the release: replace the placeholder title with the version number with a `v` prepended, e.g.,
    `v0.9.3`, and write a human summary of the release above the auto-generated `## Commits` list.
