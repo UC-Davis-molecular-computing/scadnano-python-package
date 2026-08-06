@@ -1,6 +1,16 @@
-mkdocs>=1.4.2
-mkdocstrings>=0.20.0
-mkdocstrings-python>=0.8.3
-mkdocs-material>=9.1.0
-openpyxl>=3.0.0
-tabulate>=0.9.0
+# Dependencies for building the Sphinx documentation in this directory.
+#
+# Used by Read the Docs (see readthedocs.yml in the repository root) and by the
+# "Docs Check" GitHub Actions workflow, so that both build the docs with the
+# same set of packages.
+
+# Sphinx itself, plus the HTML theme selected in conf.py.
+sphinx>=8.0,<10
+alabaster>=1.0,<2
+
+# Runtime dependencies of the scadnano package. autodoc imports scadnano to
+# extract its docstrings and type hints, so these must be importable even
+# though they are not used by Sphinx directly. Keep in sync with
+# install_requires in setup.py.
+openpyxl>=3.1,<4
+tabulate>=0.9,<1
