@@ -18,7 +18,7 @@ jobs:
       # the runner image ships only one Python on PATH; this is what actually selects the version
       # named by the matrix
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install openpyxl,tabulate with pip
