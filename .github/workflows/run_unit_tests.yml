@@ -21,7 +21,10 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install openpyxl,tabulate with pip
-        run: pip install openpyxl tabulate
+      # Editable, so the tests still exercise the checked-out source (they read
+      # data from tests_inputs/ relative to the repo root). The install is what
+      # registers the distribution metadata that scadnano.__version__ reads.
+      - name: Install scadnano and test dependencies
+        run: pip install -e .[tests]
       - name: Test with unittest
         run: python -m unittest -v tests/scadnano_tests.py

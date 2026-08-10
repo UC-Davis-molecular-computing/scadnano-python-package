@@ -19,3 +19,36 @@ jobs:
           pip install build
       - name: Build
         run: python -m build
+
+      # Everything above only proves the artifacts can be produced. This installs
+      # the built wheel the way a user would and imports it from a directory with
+      # no source tree in it, so nothing can be satisfied by the checkout: the
+      # repo uses a flat layout, so running from the repo root would import
+      # scadnano/ directly and prove nothing about the wheel.
+      - name: Install the built wheel and import it as a user would
+        run: |
+          python -m venv /tmp/wheel-check
+          /tmp/wheel-check/bin/pip install --quiet dist/*.whl
+          mkdir -p /tmp/neutral
+          cd /tmp/neutral
+          /tmp/wheel-check/bin/python - <<'PY'
+          import os, pathlib, sys, tomllib
+          import scadnano, scadnano.modifications, scadnano.origami_rectangle
+
+          # Quoted heredoc, so the shell expands nothing; read the workspace path
+          # from the environment instead.
+          pyproject = pathlib.Path(os.environ["GITHUB_WORKSPACE"]) / "pyproject.toml"
+          expected = tomllib.loads(pyproject.read_text())["project"]["version"]
+
+          if scadnano.__version__ != expected:
+              sys.exit(
+                  f"scadnano.__version__ is {scadnano.__version__!r}, but "
+                  f"pyproject.toml declares {expected!r}"
+              )
+
+          # Exercising a real design keeps this from passing on an import alone.
+          design = scadnano.Design(helices=[scadnano.Helix(max_offset=16)], strands=[])
+          assert design.to_json(), "design serialized to nothing"
+
+          print(f"ok: installed wheel imports and reports version {expected}")
+          PY

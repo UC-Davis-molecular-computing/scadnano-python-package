@@ -1,4 +1,4 @@
-import origami_rectangle as rect
+import scadnano.origami_rectangle as rect
 import scadnano as sc
 
 

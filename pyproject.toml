@@ -10,6 +10,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scadnano"
+
+# THE single source of truth for the version. Bump this line and nothing else.
+# scadnano.__version__ is read back from the installed distribution metadata at
+# run time, and release.yml reads this file to decide the release tag.
+version = "0.21.1"
+
 description = "Python scripting library for generating designs readable by scadnano."
 readme = { file = "README.md", content-type = "text/markdown; variant=GFM" }
 license = "MIT"
@@ -17,16 +23,12 @@ license-files = ["LICENSE.txt"]
 authors = [{ name = "David Doty", email = "doty@ucdavis.edu" }]
 requires-python = ">=3.10"
 
-# Deliberately minimal; see "Keeping the scadnano package simple for users to
-# install" in CONTRIBUTING.md.
+# Deliberately minimal, so that installing scadnano pulls in as little as
+# possible.
 dependencies = [
     "openpyxl",
     "tabulate",
 ]
-
-# Read from the __version__ line in scadnano/scadnano.py, which stays the single
-# source of truth for the version. release.yml reads that same line.
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/UC-Davis-molecular-computing/scadnano-python-package"
@@ -50,6 +52,3 @@ tests = [
 
 [tool.setuptools]
 packages = ["scadnano"]
-
-[tool.setuptools.dynamic]
-version = { attr = "scadnano.scadnano.__version__" }

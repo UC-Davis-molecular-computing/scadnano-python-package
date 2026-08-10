@@ -1,14 +1,14 @@
 name: "release"
 
-# On every push to main: tag v{__version__}, create a GitHub release whose body
+# On every push to main: tag v{version}, create a GitHub release whose body
 # lists commits since the previous release, and publish to PyPI.
 #
 # Issues are not touched here. main is the default branch, so GitHub itself
 # closes any issue referenced by a closing keyword in the commits this push
 # brings to main, and records the closing commit on the issue.
 #
-# INVARIANT: every push to main is a release. If __version__ in
-# scadnano/scadnano.py was not bumped, this workflow FAILS (red X) on purpose.
+# INVARIANT: every push to main is a release. If the version in pyproject.toml
+# was not bumped, this workflow FAILS (red X) on purpose.
 #
 # NEVER substitute a personal access token (PAT) for GITHUB_TOKEN below.
 # Actions taken with GITHUB_TOKEN do not trigger other workflows, and the
@@ -43,12 +43,15 @@ jobs:
         with:
           fetch-depth: 0   # full history + all tags, needed for `git log <prev>..HEAD`
 
-      - name: Extract version from scadnano/scadnano.py
+      - name: Extract version from pyproject.toml
         id: version
         run: |
-          version=$(sed -nE 's/^__version__ = "([^"]+)".*$/\1/p' scadnano/scadnano.py | head -1)
+          # Parsed with tomllib rather than a regex so that comments, quoting
+          # style and key order in pyproject.toml cannot silently change the
+          # answer. tomllib is stdlib from 3.11; the runner image ships newer.
+          version=$(python3 -c 'import tomllib, pathlib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"])')
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error file=scadnano/scadnano.py::could not extract semantic version from the __version__ line (got: '$version')"
+            echo "::error file=pyproject.toml::could not extract a semantic version from [project] version (got: '$version')"
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -63,7 +66,7 @@ jobs:
               echo "Tag v$version already exists at this exact commit: re-run of a partially failed workflow. Skipping release creation."
               echo "create_release=false" >> "$GITHUB_OUTPUT"
             else
-              echo "::error::Tag v$version already exists (at $tag_commit) but this push is $GITHUB_SHA. __version__ in scadnano/scadnano.py was not bumped before merging to main. Bump it on dev and merge dev to main again (see CONTRIBUTING.md); this red X is the intended reminder."
+              echo "::error::Tag v$version already exists (at $tag_commit) but this push is $GITHUB_SHA. The version in pyproject.toml was not bumped before merging to main. Bump it on dev and merge dev to main again (see CONTRIBUTING.md); this red X is the intended reminder."
               exit 1
             fi
           else

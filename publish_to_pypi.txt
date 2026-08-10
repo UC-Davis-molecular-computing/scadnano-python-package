@@ -8,6 +8,6 @@ the workflow later tries to publish will make it fail.
 
 The manual equivalent, for reference, is:
 
-rem !!!bump __version__ in scadnano/scadnano.py first!!!
+rem !!!bump version in pyproject.toml first!!!
 python -m build
 twine upload dist/*

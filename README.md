@@ -85,65 +85,51 @@ If that fails, or reports Python version 3.10 or below, you will have to install
 
 ### Installing the scadnano Python package
 
-Once Python is installed, there are two ways you can install the scadnano Python package:
+Once Python is installed, use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
 
-1. pip (recommended)
+```console
+pip install scadnano
+```
 
-    Use [pip](https://pypi.org/project/pip/) to install the package by executing the following at the command line:
-    ```console
-    pip install scadnano
-    ```
+If it worked, you should be able to open a Python interpreter and import the scadnano module:
 
-    If it worked, you should be able to open a Python interpreter and import the scadnano module:
+```console
+Python 3.12.5 (main, Sep 11 2024, 12:00:00) [MSC v.1929 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import scadnano as sc
+>>> print(sc.Domain(helix=1, forward=True, start=0, end=8))
+Domain(, helix=1, forward=True, start=0, end=8)
+>>>
+```
 
-    ```console
-    Python 3.7.9 (default, Aug 31 2020, 17:10:11) [MSC v.1916 64 bit (AMD64)] :: Anaconda, Inc. on win32
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> import scadnano as sc
-    >>> print(sc.Domain(helix=1, forward=True, start=0, end=8))
-    Domain(, helix=1, forward=True, start=0, end=8)
-    >>>
-    ```
+Two optional submodules are installed along with it: `scadnano.modifications`, which contains common
+DNA modifications such as biotin and Cy3, and `scadnano.origami_rectangle`, which helps create
+origami rectangles.
 
-    ### Troubleshooting
-    If the above does not work for you, here are some things to try.
+### Troubleshooting
+If the above does not work for you, here are some things to try.
 
-    If your Python installation does not already have pip installed, you may have to install it. 
-    Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work; 
-    see also 
-    https://docs.python.org/3/installing/index.html 
-    or 
-    https://www.liquidweb.com/kb/install-pip-windows/.
+If your Python installation does not already have pip installed, you may have to install it.
+Executing [this Python script](https://bootstrap.pypa.io/get-pip.py) should work;
+see also
+https://docs.python.org/3/installing/index.html
+or
+https://www.liquidweb.com/kb/install-pip-windows/.
 
-    Once pip is installed, or if you believe it is already installed, check your version of `pip` by typing 
-    ```
-    pip --version
-    ```
-    It should say something like 
-    ```
-    pip 19.3.1 from ...lib\site-packages\pip (python 3.8)
-    ```
-    If the version of Python at the end is Python 3.9 or higher, you are good. If it is version 2.7 or lower, type
-    ```
-    pip3 --version
-    ```
-    If that works and shows Python 3.9 or higher, you are good, but you should type `pip3` in the subsequent instructions instead of `pip`.
+Once pip is installed, or if you believe it is already installed, check your version of `pip` by typing
+```
+pip --version
+```
+It should say something like
+```
+pip 19.3.1 from ...lib\site-packages\pip (python 3.8)
+```
+If the version of Python at the end is Python 3.10 or higher, you are good. If it is version 2.7 or lower, type
+```
+pip3 --version
+```
+If that works and shows Python 3.10 or higher, you are good, but you should type `pip3` in the subsequent instructions instead of `pip`.
 
-    
-2. download
-
-    As a simple alternative (in case you run into trouble using pip), you can simply download the scadnano.py file. However, you need to first install two packages that are required by scadnano: Install [openpyxl](https://pypi.org/project/openpyxl/) and [tabulate](https://pypi.org/project/tabulate/) by typing the following at the command line: `pip install openpyxl tabulate`.
-    
-    Download and place the following files in your [PYTHONPATH](https://docs.python.org/3/using/cmdline.html#envvar-PYTHONPATH) (e.g., in the same directory as the scripts you are running). **Note:** If you are reading this on the PyPI website or anywhere other than GitHub, the links below won't work. They are relative links intended to be read on the [GitHub README page](https://github.com/UC-Davis-molecular-computing/scadnano-python-package#readme).
-
-    - *required*: [scadnano.py](scadnano/scadnano.py) 
-    - *optional*: [modifications.py](scadnano/modifications.py); This contains some common DNA modifications such as biotin and Cy3. 
-    - *optional*: [origami_rectangle.py](scadnano/origami_rectangle.py); This can help create origami rectangles, but it is not necessary to use scadnano.
-    
-    To download them, right-click on "Raw" near the top and select (in Chrome or Firefox) "Save link as...":
-    ![](images/download_raw_screenshot.png)
-    
-    The scadnano package uses the Python package [xlwt](https://pypi.org/project/xlwt/) to write Excel files, so xlwt must be installed in order to call the method [`Design.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.Design.write_idt_plate_excel_file) to export an Excel file with DNA sequences. To install xlwt, type `pip install xlwt` at the command line. (If you instead use pip to install the scadnano package, xlwt will be automatically installed.)
 
 
 
@@ -161,7 +147,7 @@ The following Python script produces this design.
 
 ```python
 import scadnano as sc
-import modifications as mod
+import scadnano.modifications as mod
 
 
 def create_design() -> sc.Design:
