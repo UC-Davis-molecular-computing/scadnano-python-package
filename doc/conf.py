@@ -21,23 +21,13 @@ import sys
 sys.path.insert(0, os.path.abspath('../scadnano'))
 # print(sys.path)
 
-# this is ugly, but appears to be standard practice:
-# https://stackoverflow.com/questions/17583443/what-is-the-correct-way-to-share-package-version-with-setup-py-and-the-package/17626524#17626524
-def extract_version(filename: str):
-    with open(filename) as f:
-        lines = f.readlines()
-    version_comment = '# version line; WARNING: do not remove or change this line or comment'
-    for line in lines:
-        if version_comment in line:
-            idx = line.index(version_comment)
-            line_prefix = line[:idx]
-            parts = line_prefix.split('=')
-            stripped_parts = [part.strip() for part in parts]
-            version_str = stripped_parts[-1].replace('"', '')
-            return version_str
-    raise AssertionError(f'could not find version in {filename}')
+# autodoc imports this same module in order to document it (see the
+# `automodule:: scadnano` directive in index.rst), so ask it for the version
+# rather than parsing scadnano.py by hand. The import has to come after the
+# sys.path line above, which is what makes it resolvable.
+import scadnano  # noqa: E402
 
-__version__ = extract_version('../scadnano/scadnano.py')
+__version__ = scadnano.__version__
 
 
 # Type "make html" at the command line to generate the documentation.

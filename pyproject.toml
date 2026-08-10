@@ -1,0 +1,55 @@
+# Packaging metadata for the scadnano package, in the standard PEP 621 form.
+#
+# This replaces setup.py, setup.cfg and MANIFEST. Both .github/workflows/release.yml
+# (which publishes to PyPI) and .github/workflows/check_pypi_packaging.yml build
+# with `python -m build`, which reads this file.
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scadnano"
+description = "Python scripting library for generating designs readable by scadnano."
+readme = { file = "README.md", content-type = "text/markdown; variant=GFM" }
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "David Doty", email = "doty@ucdavis.edu" }]
+requires-python = ">=3.10"
+
+# Deliberately minimal; see "Keeping the scadnano package simple for users to
+# install" in CONTRIBUTING.md.
+dependencies = [
+    "openpyxl",
+    "tabulate",
+]
+
+# Read from the __version__ line in scadnano/scadnano.py, which stays the single
+# source of truth for the version. release.yml reads that same line.
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/UC-Davis-molecular-computing/scadnano-python-package"
+Documentation = "https://scadnano-python-package.readthedocs.io"
+
+[project.optional-dependencies]
+# Building the Sphinx documentation in doc/. Installed by Read the Docs (see
+# readthedocs.yml) and by the "Docs Check" workflow, so both use the same
+# packages. sphinx and alabaster are the only additions: autodoc imports
+# scadnano, whose own dependencies are already covered by `dependencies` above.
+docs = [
+    "sphinx>=8.0,<10",
+    "alabaster>=1.0,<2",
+]
+
+# Running the unit tests. Replaces setup.py's `tests_require`, which setuptools
+# no longer recognizes.
+tests = [
+    "openpyxl",
+]
+
+[tool.setuptools]
+packages = ["scadnano"]
+
+[tool.setuptools.dynamic]
+version = { attr = "scadnano.scadnano.__version__" }

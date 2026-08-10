@@ -221,14 +221,16 @@ So the steps for committing to the main branch are:
     - For the Python library repo scadnano-python-package, there is a single source of truth: the
       `__version__` line near the top of the file
       [scadnano/scadnano.py](scadnano/scadnano.py) (as `__version__ = "0.9.3"` or something similar).
-      Keep the trailing `# version line; WARNING: ...` comment intact — `setup.py` finds this line by
-      searching for that comment, and the release workflow reads the same line.
+      Keep the format of that line exactly as it is. Three things read it: the release workflow
+      (with `sed`), `pyproject.toml` (which declares the version `dynamic` and reads the
+      `__version__` attribute), and `doc/conf.py` (which imports it). None of them tolerate the
+      line being reformatted.
 
     The PATCH version numbers are not always synced between the two repos, but, they should stay synced on MAJOR and MINOR versions. **Note:** right now this isn't quite true since MINOR versions deal with backwards-compatible feature additions, and some features are supported on one but not the other; e.g., modifications can be made in the Python package but not the web interface, and calculating helix rolls/positions from crossovers can be done in the web interface but not the Python package. But post-version-1.0.0, the major and minor versions of the  should be enforced.
 
 3. Ensure all unit tests pass.
 
-4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install sphinx sphinx_rtd_theme`. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
+4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install .[docs]` from the repository root. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
 
 5. Create a PR to merge changes from dev into main. `main` is the default base, so there is nothing
    to change here.

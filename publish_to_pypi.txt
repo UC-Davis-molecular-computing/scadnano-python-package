@@ -1,6 +1,13 @@
-rem https://medium.com/@joel.barmettler/how-to-upload-your-python-package-to-pypi-65edc5fe9c56
+Publishing to PyPI is automated. Merging dev into main triggers
+.github/workflows/release.yml, which tags the release, creates the GitHub
+release, and publishes to PyPI. See the "Pushing to the repository main branch"
+section of CONTRIBUTING.md.
 
-rem !!!change current version number in scadnano.py!!!
-python setup.py sdist
-rem twine upload dist/*
-twine upload dist/scadnano-x.x.x.tar.gz
+Do not publish by hand unless that workflow is broken: uploading a version that
+the workflow later tries to publish will make it fail.
+
+The manual equivalent, for reference, is:
+
+rem !!!bump __version__ in scadnano/scadnano.py first!!!
+python -m build
+twine upload dist/*

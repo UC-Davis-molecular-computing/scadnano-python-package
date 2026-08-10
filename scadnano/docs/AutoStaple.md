@@ -71,7 +71,7 @@ source env/bin/activate
 3. Run the following command to install dependencies.
 
 ```shell
-python setup.py install
+pip install -e .
 ```
 
 4. Inside the repository root, create a file called `test_autostaple.py` file within the `scadnano` directory. Use the contents below as a starting point.
