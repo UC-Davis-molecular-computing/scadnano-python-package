@@ -1,8 +1,8 @@
 import math
 import dataclasses
-import origami_rectangle as rect
+import scadnano.origami_rectangle as rect
 import scadnano as sc
-import modifications as mod
+import scadnano.modifications as mod
 
 
 def create_design() -> sc.Design:

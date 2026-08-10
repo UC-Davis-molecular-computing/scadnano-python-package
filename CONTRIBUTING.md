@@ -28,19 +28,23 @@ The scadnano Python package requires at least Python 3.7. See the [README for in
 
 Follow the [installation instructions](README.md#installation) to install the correct version of Python if you don't have it already.
 
-It is actually unnecessary for you to install scadnano via pip, so you can skip that step. In developing, you will have a local version of the package that you run and modify.
+Install your clone in editable mode from the repository root: `pip install -e .[tests]`. You still run and modify the local source — editable mode means your edits take effect immediately, with no reinstall — but the install is required, because `scadnano.__version__` is read from the installed distribution's metadata.
 
 I suggest using a powerful IDE such as [PyCharm](https://www.jetbrains.com/pycharm/download/download-thanks.html). [Visual Studio Code](https://code.visualstudio.com/) is also good with the right plugins. The scadnano Python package uses type hints, and these tools are very helpful in giving static analysis warnings about the code that may represent errors that will manifest at run time.
 
 ### Keeping the scadnano package simple for users to install
 
-One goal is to make the package as easy to install as possible, even for users who have trouble installing scadnano via pip. For this reason, we have two self-imposed constraints:
+One self-imposed constraint remains: keep package dependencies minimal. scadnano depends only on
+[openpyxl](https://pypi.org/project/openpyxl/) and [tabulate](https://pypi.org/project/tabulate/),
+both declared in [pyproject.toml](pyproject.toml), and it should stay that way unless there is a
+strong reason otherwise.
 
-1. There are minimal package dependencies. scadnano can be run in most circumstances with a standard Python 3.7 (or above) installation. (One exception is the package [xlwt](https://pypi.org/project/xlwt/), which is required to call the method [`Design.write_idt_plate_excel_file()`](https://scadnano-python-package.readthedocs.io/#scadnano.Design.write_idt_plate_excel_file).)
-
-2. All the required code is in a single file, [scadnano.py](scadnano/scadnano.py). This is one reason an IDE will help, because navigating a large source code file is easier in an IDE.
-
-These two constraints imply that a user who has trouble installing via pip can simply copy the file scadnano.py into their working directory (or in some directory on their `PYTHONPATH`) and import it as normal.
+scadnano is installed as a normal Python package, so `pip install scadnano` is the only supported
+way to get it. It used to be possible to copy [scadnano.py](scadnano/scadnano.py) into your working
+directory and import it without installing anything, and most of the code is still in that one file,
+which is why an IDE helps for navigating it. But that is no longer a supported workflow: the package
+reads its own version from the installed distribution's metadata, so importing it requires a real
+install.
 
 
 ### git
@@ -183,9 +187,9 @@ GitHub proposes it as the base, so there is nothing to change. The workflow that
 `dev` deliberately skips this one, recognizing it by its `dev` head branch *in this repository*
 (a contributor's fork may also have a `dev` branch, and those PRs are retargeted normally).
 
-**Every push to `main` is a release.** The release workflow reads `__version__` from
-[scadnano/scadnano.py](scadnano/scadnano.py), creates the tag `v{version}`, creates a GitHub release,
-and publishes to PyPI. So you **must bump `__version__` on `dev` before merging `dev` into `main`**.
+**Every push to `main` is a release.** The release workflow reads `version` from
+[pyproject.toml](pyproject.toml), creates the tag `v{version}`, creates a GitHub release,
+and publishes to PyPI. So you **must bump the version on `dev` before merging `dev` into `main`**.
 If you forget, the release workflow fails with a red X and an explanatory message, and nothing is
 tagged or published; bump the version on `dev` and merge again to recover. (Practically, this means
 there is no such thing as a casual push to `main` — even a README typo fix rides along with a version
@@ -219,16 +223,21 @@ So the steps for committing to the main branch are:
    MINOR for backwards-compatible feature additions.
     - For the web interface repo scadnano, this is located at the top of the file https://github.com/UC-Davis-molecular-computing/scadnano/blob/main/lib/src/constants.dart
     - For the Python library repo scadnano-python-package, there is a single source of truth: the
-      `__version__` line near the top of the file
-      [scadnano/scadnano.py](scadnano/scadnano.py) (as `__version__ = "0.9.3"` or something similar).
-      Keep the trailing `# version line; WARNING: ...` comment intact — `setup.py` finds this line by
-      searching for that comment, and the release workflow reads the same line.
+      `version` field under `[project]` in [pyproject.toml](pyproject.toml)
+      (as `version = "0.9.3"` or something similar). That is the only place to edit.
+
+      Everything else derives from it. `scadnano.__version__` — which is what stamps the version
+      into every `.sc` file the library writes — is read at import time from the installed
+      distribution's metadata via `importlib.metadata`, and the release workflow parses
+      `pyproject.toml` directly. One consequence worth knowing: after bumping the version, run
+      `pip install -e .` again before running any script whose output you care about, or the
+      metadata (and therefore the version written into `.sc` files) will still be the old one.
 
     The PATCH version numbers are not always synced between the two repos, but, they should stay synced on MAJOR and MINOR versions. **Note:** right now this isn't quite true since MINOR versions deal with backwards-compatible feature additions, and some features are supported on one but not the other; e.g., modifications can be made in the Python package but not the web interface, and calculating helix rolls/positions from crossovers can be done in the web interface but not the Python package. But post-version-1.0.0, the major and minor versions of the  should be enforced.
 
 3. Ensure all unit tests pass.
 
-4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install sphinx sphinx_rtd_theme`. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
+4. In the Python repo, ensure that the documentation is generated without errors. First, run `pip install .[docs]` from the repository root. This installs [Sphinx](https://www.sphinx-doc.org/en/main/), which is the most well-supported documentation generator for Python. (It's not very friendly, the syntax for things like links in docstrings is awkward, but it's well supported, so we use it.) Then, from within the subfolder `doc`, run the command `make html` (or `make.bat html` on Windows), ensure there are no errors, and inspect the documentation it generates in the folder `_build`.
 
 5. Create a PR to merge changes from dev into main. `main` is the default base, so there is nothing
    to change here.

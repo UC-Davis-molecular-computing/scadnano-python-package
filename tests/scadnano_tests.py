@@ -1,5 +1,6 @@
 import dataclasses
 import os
+import pathlib
 import sys
 import tempfile
 import unittest
@@ -15,6 +16,11 @@ import scadnano.origami_rectangle as rect
 import scadnano.modifications as mod
 
 from scadnano.scadnano import _convert_design_to_oxdna_system
+
+try:
+    import tomllib  # standard library from Python 3.11
+except ModuleNotFoundError:  # only on Python 3.10, which the CI matrix still covers
+    tomllib = None  # type: ignore[assignment]
 
 
 def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, start: int, end: int) -> sc.Strand:
@@ -34,6 +40,36 @@ def strand_matching(strands: Iterable[sc.Strand], helix: int, forward: bool, sta
 def remove_whitespace(sequence: str) -> str:
     sequence = re.sub(r"\s*", "", sequence)
     return sequence
+
+
+class TestVersion(unittest.TestCase):
+    """
+    The version is declared once, as ``version`` under ``[project]`` in pyproject.toml.
+    ``sc.__version__`` does not read that file: it reads the metadata of the *installed*
+    distribution, which pip writes once at install time. An editable install keeps the
+    source live but not that metadata, so bumping the version without reinstalling leaves
+    ``sc.__version__`` reporting the previous value -- which then gets written into the
+    "version" field of every .sc file produced. This test turns that silent staleness into
+    an immediate, self-explanatory failure.
+    """
+
+    def test_version_matches_pyproject(self) -> None:
+        if tomllib is None:
+            self.skipTest("tomllib requires Python 3.11 or later")
+        # Tests are run from the repository root; outside a checkout there is nothing to
+        # compare against, and the installed metadata is authoritative by definition.
+        pyproject = pathlib.Path("pyproject.toml")
+        if not pyproject.is_file():
+            self.skipTest("not running from a source checkout")
+
+        declared = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+        self.assertEqual(
+            declared,
+            sc.__version__,
+            f"pyproject.toml declares version {declared}, but the installed scadnano "
+            f"distribution reports {sc.__version__}. If you just bumped the version, "
+            f"reinstall so the metadata catches up: pip install -e .[tests]",
+        )
 
 
 class TestCreateStrandChainedMethods(unittest.TestCase):

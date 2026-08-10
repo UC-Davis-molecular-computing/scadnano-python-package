@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         # "3.x" means the newest released Python, so the latest version is always tested even if this
-        # list is not kept up to date. setup.py requires >= 3.10.
+        # list is not kept up to date. pyproject.toml requires >= 3.10.
         python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
 
     steps:
@@ -21,7 +21,10 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install openpyxl,tabulate with pip
-        run: pip install openpyxl tabulate
+      # Editable, so the tests still exercise the checked-out source (they read
+      # data from tests_inputs/ relative to the repo root). The install is what
+      # registers the distribution metadata that scadnano.__version__ reads.
+      - name: Install scadnano and test dependencies
+        run: pip install -e .[tests]
       - name: Test with unittest
         run: python -m unittest -v tests/scadnano_tests.py
