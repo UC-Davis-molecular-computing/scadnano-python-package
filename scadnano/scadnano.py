@@ -105,6 +105,9 @@ except ImportError:
 default_scadnano_file_extension = "sc"
 """Default filename extension when writing a scadnano file."""
 
+excel_sheet_name_max_length = 31
+# maximum length of an Excel sheet name, used to check if plate name exceeds this length
+
 VStrands = dict[int, dict[str, Any]]
 
 
@@ -8104,6 +8107,7 @@ class Design(_JSONSerializable):
         use_default_plates: bool = True,
         warn_using_default_plates: bool = True,
         plate_type: PlateType = PlateType.wells96,
+        raise_exception_if_plate_name_long: bool = True,
         export_non_modified_strand_version: bool = False,
     ) -> None:
         """
@@ -8161,11 +8165,28 @@ class Design(_JSONSerializable):
             if the `use_default_plates` parameter is ``True``.
             Ignored if `use_default_plates` is ``False``, because in that case the wells are explicitly set
             by the user, who is free to use coordinates for either plate type.
+        :param raise_exception_if_plate_name_long:
+            Excel will not allow a sheet name longer than 31 characters. If this parameter is True (the default), then
+            an exception is raised if any :data:`VendorFields.plate` field is longer than 31 characters for any strand.
+            Set this parameter to False to allow the program to automatically truncate any plate name longer than
+            31 characters.
+            If set to False and any plate name exceeds 31 characters, a warning is printed for any plate name that
+            is truncated, reminding the user to manually change the plate name on IDT's website.
+            Since plate names are chosen by this method (``plate1``, ``plate2``, ...) rather than by the user
+            when `use_default_plates` is ``True``, they can never be too long in that case, so setting this
+            parameter to False requires also setting `use_default_plates` to ``False``.
+            Two plates cannot share one sheet, so if two plate names are identical in their first
+            31 characters, an exception is raised regardless of the value of this parameter.
         :param export_non_modified_strand_version:
             For any :any:`Strand` with a :any:`Modification`, also export a version of the :any:`Strand`
             without any modifications. The name for this :any:`Strand` is the original name with
             '_nomods' appended to it.
         """
+
+        if (not raise_exception_if_plate_name_long) and use_default_plates:
+            raise ValueError(
+                "If raise_exception_if_plate_name_long is False then use_default_plates must also be False"
+            )
 
         strands_to_export = self._idt_strands_to_export(
             key=key,
@@ -8180,7 +8201,12 @@ class Design(_JSONSerializable):
                 raise ValueError(
                     "parameters use_default_plates and only_strands_with_vendor_fields cannot both be False"
                 )
-            self._write_plates_assuming_explicit_plates_in_each_strand(directory, filename, strands_to_export)
+            self._write_plates_assuming_explicit_plates_in_each_strand(
+                directory,
+                filename,
+                strands_to_export,
+                raise_exception_if_plate_name_long=raise_exception_if_plate_name_long,
+            )
         else:
             self._write_plates_default(
                 directory=directory,
@@ -8190,10 +8216,53 @@ class Design(_JSONSerializable):
                 warn_using_default_plates=warn_using_default_plates,
             )
 
+    @staticmethod
+    def _msg_plate_name_too_long(plate_name: str, err: bool) -> str:
+        msg_prefix = (
+            f'The plate name "{plate_name}" is longer than {excel_sheet_name_max_length} characters, '
+            f"which is the maximum allowed by Excel."
+        )
+        if err:
+            msg = (
+                msg_prefix
+                + """
+    Please shorten the plate name in the VendorFields.plate field of the strands in this plate,
+    or set the parameter raise_exception_if_plate_name_long=False in the call to Design.write_idt_plate_excel_file.
+            """
+            )
+        else:
+            msg = f"""\
+WARNING: {msg_prefix}
+The plate name will be truncated to {excel_sheet_name_max_length} characters in the Excel file:
+"{plate_name[:excel_sheet_name_max_length]}"
+Please manually change the plate name on IDT's website if you want to retain the original name
+{plate_name}
+        """
+        return msg
+
+    @staticmethod
+    def _msg_plate_names_share_sheet_name(plate_name1: str, plate_name2: str, sheet_name: str) -> str:
+        return f"""\
+The plate names
+"{plate_name1}"
+"{plate_name2}"
+would both be written to a sheet named
+"{sheet_name}"
+since Excel allows at most {excel_sheet_name_max_length} characters in a sheet name,
+and two plates cannot share one sheet.
+Please shorten the plate names in the VendorFields.plate field of the strands on these plates so that
+they differ within their first {excel_sheet_name_max_length} characters.
+Setting raise_exception_if_plate_name_long=False does not avoid this error.
+        """
+
     def _write_plates_assuming_explicit_plates_in_each_strand(
-        self, directory: str, filename: str | None, strands_to_export: list[Strand]
+        self,
+        directory: str,
+        filename: str | None,
+        strands_to_export: list[Strand],
+        raise_exception_if_plate_name_long: bool,
     ) -> None:
-        plates = list(
+        plate_names = list(
             {
                 strand.vendor_fields.plate
                 for strand in strands_to_export
@@ -8201,7 +8270,7 @@ class Design(_JSONSerializable):
                 if strand.vendor_fields.plate is not None
             }
         )
-        if len(plates) == 0:
+        if len(plate_names) == 0:
             raise ValueError(
                 "Cannot write a a plate file since no plate data exists in any Strands "
                 "in the design.\n"
@@ -8209,15 +8278,47 @@ class Design(_JSONSerializable):
                 "Design.write_idt_plate_excel_file\nif you don't want to enter plate "
                 "and well positions for each Strand you wish to write to the Excel file."
             )
-        plates.sort()
+        plate_names.sort()
+
+        # Excel cannot handle a sheet name longer than excel_sheet_name_max_length, so each plate name is
+        # mapped to the name of the sheet it will be written to, which is the plate name itself unless it
+        # is too long and we were asked to truncate rather than raise. The plate name itself is still what
+        # identifies the strands on the plate, so the two must be kept separate.
+        sheet_name_of_plate: dict[str, str] = {}
+        plate_of_sheet_name: dict[str, str] = {}
+        truncated_plate_names: list[str] = []
+        for plate_name in plate_names:
+            if len(plate_name) <= excel_sheet_name_max_length:
+                sheet_name = plate_name
+            elif raise_exception_if_plate_name_long:
+                msg = self._msg_plate_name_too_long(plate_name, err=True)
+                raise ValueError(msg)
+            else:
+                sheet_name = plate_name[:excel_sheet_name_max_length]
+                truncated_plate_names.append(plate_name)
+
+            # Distinct plate names can collapse to the same sheet name once truncated, and two plates
+            # cannot share one sheet, so this is an error even though we were asked not to raise an
+            # exception for a long plate name.
+            if sheet_name in plate_of_sheet_name:
+                msg = self._msg_plate_names_share_sheet_name(plate_of_sheet_name[sheet_name], plate_name, sheet_name)
+                raise ValueError(msg)
+            plate_of_sheet_name[sheet_name] = plate_name
+            sheet_name_of_plate[plate_name] = sheet_name
+
+        # warn only once the names of all sheets are known to be usable, so that no warning is printed
+        # about a plate name that one of the exceptions above then rejects the whole file for
+        for plate_name in truncated_plate_names:
+            print(self._msg_plate_name_too_long(plate_name, err=False))
+
         filename_plate, workbook = self._setup_excel_file(directory, filename)
-        for plate in plates:
-            worksheet = self._add_new_excel_plate_sheet(plate, workbook)
+        for plate_name in plate_names:
+            worksheet = self._add_new_excel_plate_sheet(sheet_name_of_plate[plate_name], workbook)
 
             strands_in_plate = [
                 strand
                 for strand in strands_to_export
-                if strand.vendor_fields is not None and strand.vendor_fields.plate == plate
+                if strand.vendor_fields is not None and strand.vendor_fields.plate == plate_name
             ]
 
             strands_in_plate.sort(key=lambda s: (int(s.vendor_fields.well[1:]), s.vendor_fields.well[0]))  # type: ignore
@@ -8258,14 +8359,14 @@ class Design(_JSONSerializable):
         directory: str,
         filename: str | None,
         strands: list[Strand],
-        plate_type: PlateType = PlateType.wells96,
-        warn_using_default_plates: bool = True,
+        plate_type: PlateType,
+        warn_using_default_plates: bool,
     ) -> None:
         plate_coord = PlateCoordinate(plate_type=plate_type)
-        plate = 1
+        plate_idx = 1
         excel_row = 1
         filename_plate, workbook = self._setup_excel_file(directory, filename)
-        worksheet = self._add_new_excel_plate_sheet(f"plate{plate}", workbook)
+        worksheet = self._add_new_excel_plate_sheet(f"plate{plate_idx}", workbook)
 
         num_strands_per_plate = plate_type.num_wells_per_plate()
         num_plates_needed = len(strands) // num_strands_per_plate
@@ -8313,10 +8414,10 @@ class Design(_JSONSerializable):
             else:
                 plate_coord.advance()
 
-            if plate != plate_coord.plate():
+            if plate_idx != plate_coord.plate():
                 workbook.save(filename_plate)
-                plate = plate_coord.plate()
-                worksheet = self._add_new_excel_plate_sheet(f"plate{plate}", workbook)
+                plate_idx = plate_coord.plate()
+                worksheet = self._add_new_excel_plate_sheet(f"plate{plate_idx}", workbook)
                 excel_row = 1
             else:
                 excel_row += 1
@@ -8782,13 +8883,9 @@ class Design(_JSONSerializable):
 
             # 5' modification stays with the strand keeping the 5' end, 3' modification with the other,
             # and each internal modification goes to whichever side of the nick its base is on
-            mods_int_before = {
-                idx: mod for idx, mod in strand.modifications_int.items() if idx < num_bases_before
-            }
+            mods_int_before = {idx: mod for idx, mod in strand.modifications_int.items() if idx < num_bases_before}
             mods_int_after = {
-                idx - num_bases_before: mod
-                for idx, mod in strand.modifications_int.items()
-                if idx >= num_bases_before
+                idx - num_bases_before: mod for idx, mod in strand.modifications_int.items() if idx >= num_bases_before
             }
 
             # a name/label identifies a single strand, so it cannot be given to both new strands; it goes
@@ -8966,9 +9063,7 @@ class Design(_JSONSerializable):
             # the last num_bases_rotated bases (those of dom_3p) are now the first ones. The internal
             # modification indices are rotated by the same amount to stay on the same bases.
             if old_dna_sequence is not None:
-                strand.set_dna_sequence(
-                    old_dna_sequence[-num_bases_rotated:] + old_dna_sequence[:-num_bases_rotated]
-                )
+                strand.set_dna_sequence(old_dna_sequence[-num_bases_rotated:] + old_dna_sequence[:-num_bases_rotated])
             dna_length = strand.dna_length()
             strand.modifications_int = {
                 (idx + num_bases_rotated) % dna_length: mod for idx, mod in strand.modifications_int.items()

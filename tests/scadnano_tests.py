@@ -5,6 +5,8 @@ import sys
 import tempfile
 import unittest
 import re
+import io
+import contextlib
 import json
 import math
 from typing import Iterable, Union, Dict, Any
@@ -1441,6 +1443,340 @@ col major top-left domain start: ABCDEFLHJGIKMNOPQR
         )
         contents = design.to_idt_bulk_input_format()
         self.assertEqual("strand,AAAAATTTAAAAA,25nm,STD", contents)
+
+
+class TestWriteIdtPlateExcelFilePlateNames(unittest.TestCase):
+    """
+    Tests the interaction of the parameters `raise_exception_if_plate_name_long` and `use_default_plates`
+    of :py:meth:`scadnano.Design.write_idt_plate_excel_file`.
+
+    Each plate becomes one worksheet, named after the plate, and Excel silently truncates a worksheet name
+    longer than :py:data:`scadnano.excel_sheet_name_max_length` characters, so a long
+    :py:data:`scadnano.VendorFields.plate` name would otherwise be corrupted without the user noticing.
+    """
+
+    strand_len = 10
+    dna_sequence = "T" * strand_len
+    header_row = ["Well Position", "Name", "Sequence"]
+
+    def setUp(self) -> None:
+        self.max_len = sc.excel_sheet_name_max_length
+        tmpdir = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(tmpdir.cleanup)
+        self.filename = os.path.join(tmpdir.name, "plates.xlsx")
+
+    @classmethod
+    def design_with_plates(cls, plates_and_wells: list[tuple[str, str]]) -> sc.Design:
+        """
+        Design with one strand per (plate, well) pair given, the strand at index i being named ``si``.
+        """
+        max_offset = cls.strand_len * len(plates_and_wells)
+        design = sc.Design(helices=[sc.Helix(max_offset=max_offset)], strands=[], grid=sc.square)
+        for idx, (plate, well) in enumerate(plates_and_wells):
+            design.draw_strand(0, cls.strand_len * idx).move(cls.strand_len).with_name(f"s{idx}").with_sequence(
+                cls.dna_sequence
+            ).with_vendor_fields(plate=plate, well=well)
+        return design
+
+    def load_sheets(self) -> list[tuple[str, list[list[Any]]]]:
+        """
+        Contents of the written file as a list of (worksheet name, rows) pairs, in worksheet order.
+        """
+        book = openpyxl.load_workbook(filename=self.filename)
+        return [(sheet.title, [[cell.value for cell in row] for row in sheet.iter_rows()]) for sheet in book.worksheets]
+
+    def sheet_names(self) -> list[str]:
+        return [name for name, _ in self.load_sheets()]
+
+    def strand_row(self, well: str, name: str) -> list[Any]:
+        return [well, name, self.dna_sequence]
+
+    def test_excel_sheet_name_max_length(self) -> None:
+        # the tests below build plate names relative to this constant; 31 is the limit Excel itself imposes
+        self.assertEqual(31, sc.excel_sheet_name_max_length)
+
+    #################################################
+    # raise_exception_if_plate_name_long=False requires use_default_plates=False
+
+    def test_raise_false_with_default_plates_true_rejected(self) -> None:
+        design = self.design_with_plates([("plate_a", "A1")])
+        with self.assertRaises(ValueError) as cm:
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=True,
+                raise_exception_if_plate_name_long=False,
+            )
+        msg = str(cm.exception)
+        self.assertIn("raise_exception_if_plate_name_long", msg)
+        self.assertIn("use_default_plates", msg)
+        self.assertFalse(os.path.exists(self.filename))
+
+    def test_raise_false_with_default_plates_omitted_rejected(self) -> None:
+        # use_default_plates defaults to True, so omitting it is the same as passing True
+        design = self.design_with_plates([("plate_a", "A1")])
+        with self.assertRaises(ValueError):
+            design.write_idt_plate_excel_file(filename=self.filename, raise_exception_if_plate_name_long=False)
+        self.assertFalse(os.path.exists(self.filename))
+
+    #################################################
+    # use_default_plates=True: plates are named plate1, plate2, ..., so no plate name can be too long
+
+    def test_default_plates_ignore_long_plate_names(self) -> None:
+        long_name = "L" * (self.max_len + 9)
+        design = self.design_with_plates([(long_name, "A1"), (long_name, "A2")])
+        design.write_idt_plate_excel_file(
+            filename=self.filename,
+            use_default_plates=True,
+            warn_using_default_plates=False,
+            raise_exception_if_plate_name_long=True,
+        )
+        # the explicit plate names are discarded in favor of default plate/well addressing
+        self.assertEqual(
+            [("plate1", [self.header_row, self.strand_row("A1", "s0"), self.strand_row("B1", "s1")])],
+            self.load_sheets(),
+        )
+
+    def test_default_plates_with_only_strands_with_vendor_fields_false(self) -> None:
+        # this is the default combination of parameters, so it must be accepted
+        design = self.design_with_plates([("plate_a", "A1"), ("plate_a", "A2")])
+        design.write_idt_plate_excel_file(
+            filename=self.filename,
+            use_default_plates=True,
+            only_strands_with_vendor_fields=False,
+            warn_using_default_plates=False,
+            raise_exception_if_plate_name_long=True,
+        )
+        self.assertEqual(["plate1"], self.sheet_names())
+
+    #################################################
+    # use_default_plates=False, raise_exception_if_plate_name_long=True
+
+    def test_explicit_plates_short_names_unchanged(self) -> None:
+        design = self.design_with_plates([("plate_c", "A1"), ("plate_a", "A1"), ("plate_b", "A1"), ("plate_a", "A2")])
+        design.write_idt_plate_excel_file(
+            filename=self.filename,
+            use_default_plates=False,
+            only_strands_with_vendor_fields=True,
+            raise_exception_if_plate_name_long=True,
+        )
+        self.assertEqual(
+            [
+                ("plate_a", [self.header_row, self.strand_row("A1", "s1"), self.strand_row("A2", "s3")]),
+                ("plate_b", [self.header_row, self.strand_row("A1", "s2")]),
+                ("plate_c", [self.header_row, self.strand_row("A1", "s0")]),
+            ],
+            self.load_sheets(),
+        )
+
+    def test_explicit_plates_long_name_raises(self) -> None:
+        long_name = "targ_1995_larg_frag_newM13_shrt_int_adps"  # the example from issue #348
+        self.assertGreater(len(long_name), self.max_len)
+        design = self.design_with_plates([(long_name, "A1"), ("plate_a", "A1")])
+        with self.assertRaises(ValueError) as cm:
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=True,
+            )
+        msg = str(cm.exception)
+        self.assertIn(long_name, msg)
+        self.assertIn(str(self.max_len), msg)
+        self.assertIn("raise_exception_if_plate_name_long=False", msg)
+        # nothing is written, rather than a file missing the offending plate
+        self.assertFalse(os.path.exists(self.filename))
+
+    def test_explicit_plates_long_name_raises_by_default(self) -> None:
+        # raise_exception_if_plate_name_long defaults to True
+        design = self.design_with_plates([("P" * (self.max_len + 1), "A1")])
+        with self.assertRaises(ValueError):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+            )
+        self.assertFalse(os.path.exists(self.filename))
+
+    def test_explicit_plates_name_of_exactly_max_length_allowed(self) -> None:
+        name = "P" * self.max_len
+        design = self.design_with_plates([(name, "A1")])
+        design.write_idt_plate_excel_file(
+            filename=self.filename,
+            use_default_plates=False,
+            only_strands_with_vendor_fields=True,
+            raise_exception_if_plate_name_long=True,
+        )
+        self.assertEqual([(name, [self.header_row, self.strand_row("A1", "s0")])], self.load_sheets())
+
+    def test_explicit_plates_name_one_over_max_length_raises(self) -> None:
+        name = "P" * (self.max_len + 1)
+        design = self.design_with_plates([(name, "A1")])
+        with self.assertRaises(ValueError):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=True,
+            )
+
+    def test_long_plate_name_only_on_unexported_scaffold_does_not_raise(self) -> None:
+        # the length check applies to the strands actually exported, not to every strand in the design
+        long_name = "S" * (self.max_len + 5)
+        design = sc.Design(helices=[sc.Helix(max_offset=2 * self.strand_len)], strands=[], grid=sc.square)
+        design.draw_strand(0, 0).move(self.strand_len).with_name("scaf").with_sequence(
+            self.dna_sequence
+        ).with_vendor_fields(plate=long_name, well="A1").as_scaffold()
+        design.draw_strand(0, self.strand_len).move(self.strand_len).with_name("s0").with_sequence(
+            self.dna_sequence
+        ).with_vendor_fields(plate="plate_a", well="A1")
+
+        design.write_idt_plate_excel_file(
+            filename=self.filename,
+            use_default_plates=False,
+            only_strands_with_vendor_fields=True,
+            raise_exception_if_plate_name_long=True,
+        )
+        self.assertEqual([("plate_a", [self.header_row, self.strand_row("A1", "s0")])], self.load_sheets())
+
+        # but exporting the scaffold brings its long plate name into the scope of the check
+        with self.assertRaises(ValueError):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                export_scaffold=True,
+                raise_exception_if_plate_name_long=True,
+            )
+
+    #################################################
+    # use_default_plates=False, raise_exception_if_plate_name_long=False
+
+    def test_explicit_plates_long_name_truncated(self) -> None:
+        long_name = "targ_1995_larg_frag_newM13_shrt_int_adps"  # the example from issue #348
+        truncated_name = long_name[: self.max_len]
+        design = self.design_with_plates([(long_name, "A1"), (long_name, "A2"), ("plate_a", "A1")])
+
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=False,
+            )
+
+        # worksheets are ordered by the original plate names, but named by the truncated ones
+        self.assertEqual(
+            [
+                ("plate_a", [self.header_row, self.strand_row("A1", "s2")]),
+                # the strands on the long-named plate must survive the truncation of its name
+                (truncated_name, [self.header_row, self.strand_row("A1", "s0"), self.strand_row("A2", "s1")]),
+            ],
+            self.load_sheets(),
+        )
+        for name in self.sheet_names():
+            self.assertLessEqual(len(name), self.max_len)
+
+        # the warning names the plate both as it was and as it will appear in the file
+        warning = printed.getvalue()
+        self.assertIn(long_name, warning)
+        self.assertIn(truncated_name, warning)
+        self.assertIn(str(self.max_len), warning)
+
+    def test_explicit_plates_short_names_not_truncated_and_no_warning(self) -> None:
+        design = self.design_with_plates([("plate_a", "A1"), ("P" * self.max_len, "A1")])
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=False,
+            )
+        self.assertEqual(["P" * self.max_len, "plate_a"], self.sheet_names())
+        self.assertEqual("", printed.getvalue())
+
+    #################################################
+    # two plate names that are identical in their first excel_sheet_name_max_length characters would name
+    # the same sheet, which is an error however raise_exception_if_plate_name_long is set
+
+    def test_explicit_plates_two_long_names_colliding_after_truncation_raises(self) -> None:
+        shared_prefix = "targ_1995_larg_frag_newM13_shrt"
+        self.assertEqual(self.max_len, len(shared_prefix))
+        long_name1 = shared_prefix + "_int_adps"
+        long_name2 = shared_prefix + "_ext_adps"
+        design = self.design_with_plates([(long_name1, "A1"), (long_name2, "A1"), ("plate_a", "A1")])
+
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            with self.assertRaises(ValueError) as cm:
+                design.write_idt_plate_excel_file(
+                    filename=self.filename,
+                    use_default_plates=False,
+                    only_strands_with_vendor_fields=True,
+                    raise_exception_if_plate_name_long=False,
+                )
+        msg = str(cm.exception)
+        self.assertIn(long_name1, msg)
+        self.assertIn(long_name2, msg)
+        self.assertIn(shared_prefix, msg)
+        self.assertFalse(os.path.exists(self.filename))
+        # no truncation warning is printed for a file that is then rejected anyway
+        self.assertEqual("", printed.getvalue())
+
+    def test_explicit_plates_long_name_colliding_with_short_name_raises(self) -> None:
+        # the shorter name is not truncated at all, but the longer one truncates onto it
+        short_name = "targ_1995_larg_frag_newM13_shrt"
+        self.assertEqual(self.max_len, len(short_name))
+        long_name = short_name + "_int_adps"
+        design = self.design_with_plates([(short_name, "A1"), (long_name, "A1")])
+
+        with self.assertRaises(ValueError) as cm:
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=False,
+            )
+        msg = str(cm.exception)
+        self.assertIn(short_name, msg)
+        self.assertIn(long_name, msg)
+        self.assertFalse(os.path.exists(self.filename))
+
+    def test_explicit_plates_colliding_names_raise_for_being_long_when_raise_true(self) -> None:
+        # with raise_exception_if_plate_name_long=True the names are rejected for their length, before
+        # there is any truncation for them to collide under
+        shared_prefix = "P" * self.max_len
+        design = self.design_with_plates([(shared_prefix + "1", "A1"), (shared_prefix + "2", "A1")])
+        with self.assertRaises(ValueError) as cm:
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=True,
+            )
+        self.assertIn("raise_exception_if_plate_name_long=False", str(cm.exception))
+
+    def test_explicit_plates_long_names_differing_before_truncation_do_not_collide(self) -> None:
+        # the names differ in their last character before the cutoff, so truncating them keeps them distinct
+        name1 = "P" * (self.max_len - 1) + "1" + "X" * 9
+        name2 = "P" * (self.max_len - 1) + "2" + "X" * 9
+        design = self.design_with_plates([(name1, "A1"), (name2, "A1")])
+        with contextlib.redirect_stdout(io.StringIO()):
+            design.write_idt_plate_excel_file(
+                filename=self.filename,
+                use_default_plates=False,
+                only_strands_with_vendor_fields=True,
+                raise_exception_if_plate_name_long=False,
+            )
+        self.assertEqual([name1[: self.max_len], name2[: self.max_len]], self.sheet_names())
+        self.assertEqual(
+            [
+                (name1[: self.max_len], [self.header_row, self.strand_row("A1", "s0")]),
+                (name2[: self.max_len], [self.header_row, self.strand_row("A1", "s1")]),
+            ],
+            self.load_sheets(),
+        )
 
 
 class TestExportCadnanoV2(unittest.TestCase):
