@@ -8121,6 +8121,10 @@ class Design(_JSONSerializable):
         For instance, if the script is named ``my_origami.py``,
         then the sequences will be written to ``my_origami.xlsx``.
 
+        This includes adding a sheet for each plate name found, which IDT's site interprets as a separate plate.
+        Note that although IDT allows long plate names, Excel limits sheet names to 31 characters;
+        see parameter `raise_exception_if_plate_name_long` for how this is handled.
+
         If the last plate as fewer than 24 strands for a 96-well plate, or fewer than 96 strands for a
         384-well plate, then the last two plates are rebalanced to ensure that each plate has at least
         that number of strands, because IDT charges extra for a plate with too few strands:
